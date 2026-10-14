@@ -7,7 +7,7 @@ const messages: Record<MessageKey, string> = zhTW;
 
 export function t(key: MessageKey, vars?: Record<string, string | number>): string {
   let text = messages[key];
-  if (vars) for (const [name, value] of Object.entries(vars)) text = text.replace(`{${name}}`, String(value));
+  if (vars) for (const [name, value] of Object.entries(vars)) text = text.replaceAll(`{${name}}`, String(value));
   return text;
 }
 

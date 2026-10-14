@@ -11,6 +11,7 @@ export const fileTools: Tool[] = [stripMetadata];
 // 從空白開始的工具
 export const createTools: CreateTool[] = [
   { id: "qrcode", output: "file" },
+  { id: "url-check", output: "text" },
   { id: "passphrase", output: "text" },
 ];
 

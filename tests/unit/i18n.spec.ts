@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { FINDING_CODES, SEGMENT_CODES } from "../../src/core/tool.ts";
+import { tDynamic } from "../../src/i18n/index.ts";
 import { zhTW } from "../../src/i18n/zh-TW.ts";
 import { createTools, fileTools, toolIds } from "../../src/tools/index.ts";
 
@@ -15,4 +16,8 @@ test("每個代碼與工具都有正體中文的字串", () => {
     ...[...fileTools, ...createTools.filter((tool) => tool.output === "file")].map((tool) => `file.version.${tool.id}`),
   ];
   expect(expected.filter((k) => !keys.has(k))).toEqual([]);
+});
+
+test("同一個變數出現兩次，兩處都會替換", () => {
+  expect(tDynamic("url.warn.brandSubdomain", { detail: "shopee" })).toBe("「shopee」出現在子網域裡，網站本身並不是 shopee");
 });
