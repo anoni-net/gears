@@ -10,7 +10,8 @@
 
 ## 原則
 
-- 明文不離開裝置。檔案在你的瀏覽器裡處理，要傳送時先加密，伺服器只取得密文
+- 預設在你的瀏覽器裡處理，要傳送時先加密，伺服器只取得密文
+- 影片這類比較吃重的處理，另外提供上傳到社群伺服器處理的選項。上傳前會告知檔案送到哪裡、誰看得到、保留多久，由你決定要不要上傳
 - 需要連網的功能在畫面上標示，並寫明送出了什麼
 - 先支援 Brave、Safari 與 Firefox
 
@@ -32,7 +33,8 @@ Gears is still being planned and there is no usable release yet. The existing to
 
 ## Principles
 
-- Files never leave your device unencrypted. Processing happens in your browser, and anything sent is encrypted first, so the server only receives ciphertext
+- Processing happens in your browser by default, and anything sent is encrypted first, so the server only receives ciphertext
+- For heavier jobs such as video, you can choose to upload a file to a community server instead. Before anything is uploaded, Gears tells you where the file goes, who can see it and how long it is kept, and the choice is yours
 - Features that need the network are labelled, along with what they send
 - Brave, Safari and Firefox are supported first
 
