@@ -41,6 +41,10 @@ body {
   margin: 0;
 }
 
+a {
+  color: var(--accent);
+}
+
 button,
 .button {
   font: inherit;
@@ -654,6 +658,34 @@ footer a {
   padding: 2rem 1rem;
   text-align: center;
   max-width: 20rem;
+}
+
+/* 密語與密碼產生器 */
+
+.secret {
+  display: block;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 1.35rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+  user-select: all;
+}
+
+.passphrase .buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.25rem;
+}
+
+.passphrase fieldset {
+  margin-top: 1rem;
 }
 
 .drop-overlay {

@@ -68,7 +68,6 @@ export function Desktop({ onTask }: Props) {
           <li>{t("desk.soon.redact")}</li>
           <li>{t("desk.soon.encrypt")}</li>
           <li>{t("desk.soon.url")}</li>
-          <li>{t("desk.soon.password")}</li>
         </ul>
       </section>
     </div>

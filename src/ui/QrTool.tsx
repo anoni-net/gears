@@ -2,11 +2,7 @@ import { useMemo, useState } from "preact/hooks";
 import { t } from "../i18n/index.ts";
 import { type Ecc, MARGIN, QrTooLong, type WifiSecurity, encodeQr, qrPath, qrPng, qrSvg, wifiPayload } from "../tools/qrcode/index.ts";
 import { saveBlob } from "./save.ts";
-
-export interface CreateToolProps {
-  preset?: string;
-  onCreate(file: File): void;
-}
+import type { CreateToolProps } from "./types.ts";
 
 const ECC: Ecc[] = ["L", "M", "Q", "H"];
 const SECURITY: WifiSecurity[] = ["WPA", "WEP", "nopass"];

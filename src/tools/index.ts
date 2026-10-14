@@ -9,7 +9,10 @@ import { stripMetadata } from "./strip-metadata/index.ts";
 export const fileTools: Tool[] = [stripMetadata];
 
 // 從空白開始的工具
-export const createTools: CreateTool[] = [{ id: "qrcode", output: "file" }];
+export const createTools: CreateTool[] = [
+  { id: "qrcode", output: "file" },
+  { id: "passphrase", output: "text" },
+];
 
 export const toolIds = [...fileTools.map((t) => t.id), ...createTools.map((t) => t.id)];
 
