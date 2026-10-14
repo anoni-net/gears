@@ -3,7 +3,13 @@ import { t } from "../i18n/index.ts";
 import { tray } from "../state.ts";
 import { useObjectUrl } from "./hooks.ts";
 
-function Item({ file, selected }: { file: TrayFile; selected: boolean }) {
+interface ItemProps {
+  file: TrayFile;
+  selected: boolean;
+  onSelect(id: number): void;
+}
+
+function Item({ file, selected, onSelect }: ItemProps) {
   const current = file.versions.at(-1)!;
   const url = useObjectUrl(current.format === "unknown" ? undefined : current.blob);
   const status =
@@ -14,7 +20,7 @@ function Item({ file, selected }: { file: TrayFile; selected: boolean }) {
         : t("tray.clean");
   return (
     <li class={selected ? "item selected" : "item"}>
-      <button type="button" class="pick" aria-current={selected} onClick={() => tray.select(file.id)}>
+      <button type="button" class="pick" aria-current={selected} onClick={() => onSelect(file.id)}>
         {url ? <img src={url} alt="" /> : <span class="thumb" aria-hidden="true" />}
         <span class="meta">
           <span class="name">{file.name}</span>
@@ -31,15 +37,41 @@ function Item({ file, selected }: { file: TrayFile; selected: boolean }) {
   );
 }
 
-export function TrayList({ files, selected }: { files: TrayFile[]; selected: number | null }) {
+interface Props {
+  files: TrayFile[];
+  selected: number | null;
+  onSelect(id: number): void;
+  onPick(): void;
+  compact: boolean; // 在工具裡、暫存區又是空的，手機上收起來，不擋在工具前面
+}
+
+// 暫存區一直放在桌面上。空的時候就是拖放區。
+export function TrayList({ files, selected, onSelect, onPick, compact }: Props) {
   return (
-    <section class="tray" aria-labelledby="tray-title">
+    <section class={compact ? "tray compact" : "tray"} aria-labelledby="tray-title">
       <h2 id="tray-title">{t("tray.title")}</h2>
-      <ul>
-        {files.map((file) => (
-          <Item key={file.id} file={file} selected={file.id === selected} />
-        ))}
-      </ul>
+      {files.length ? (
+        <>
+          <ul>
+            {files.map((file) => (
+              <Item key={file.id} file={file} selected={file.id === selected} onSelect={onSelect} />
+            ))}
+          </ul>
+          <button type="button" class="add" onClick={onPick}>
+            {t("tray.add")}
+          </button>
+        </>
+      ) : (
+        <div class="drop">
+          <p>
+            {t("tray.empty")}{" "}
+            <button type="button" class="primary" onClick={onPick}>
+              {t("tray.pick")}
+            </button>
+          </p>
+          <p class="hint">{t("tray.hint")}</p>
+        </div>
+      )}
     </section>
   );
 }

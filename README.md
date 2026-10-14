@@ -6,7 +6,7 @@
 
 隱私工作台，在瀏覽器裡處理要交出去的檔案：清除照片與文件的中繼資料、遮蔽畫面上的個資、加密之後再傳送。由[匿名網路社群 anoni.net](https://anoni.net/) 維護，網址是 <https://anoni.net/gears/>。
 
-目前在開發中，還沒有部署。第一版可以清除 JPEG 與 PNG 照片裡的拍攝位置、手機型號與拍攝時間。已經上線的小工具在[文件站的小工具區](https://anoni.net/docs/utils/)，兩邊各自開發。
+目前在開發中，還沒有部署。第一版可以清除 JPEG 與 PNG 照片裡的拍攝位置、手機型號與拍攝時間，以及產生網址、文字與 Wi-Fi 密碼的 QR code。已經上線的小工具在[文件站的小工具區](https://anoni.net/docs/utils/)，兩邊各自開發。
 
 ## 原則
 
@@ -39,7 +39,7 @@ npm test
 
 anoni.net Gears is a privacy workbench for the files you are about to hand over. It strips metadata from photos and documents, redacts personal details on screen, and encrypts files before they are sent. Maintained by the [anoni.net community](https://anoni.net/) at <https://anoni.net/gears/>.
 
-Gears is under development and not deployed yet. The first version strips location, device model and capture time from JPEG and PNG photos. The tools already online live in the [utilities section of the docs site](https://anoni.net/docs/en/utils/), which is developed separately.
+Gears is under development and not deployed yet. The first version strips location, device model and capture time from JPEG and PNG photos, and generates QR codes for links, text and Wi-Fi passwords. The tools already online live in the [utilities section of the docs site](https://anoni.net/docs/en/utils/), which is developed separately.
 
 ## Principles
 

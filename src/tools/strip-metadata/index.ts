@@ -1,10 +1,11 @@
 import type { Format } from "../../core/bytes.ts";
-import { type Finding, type RunResult, type Tool, ToolError, mergeFindings } from "../../core/tool.ts";
+import { FINDING_CODES, type Finding, type RunResult, type Tool, ToolError, mergeFindings } from "../../core/tool.ts";
 import { inspectJpeg, stripJpeg } from "./jpeg.ts";
 import { inspectPng, stripPng } from "./png.ts";
 
 export const stripMetadata: Tool = {
   id: "strip-metadata",
+  resolves: FINDING_CODES,
 
   accepts(format: Format) {
     return format === "jpeg" || format === "png";

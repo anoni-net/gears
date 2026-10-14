@@ -4,7 +4,7 @@ import { type Report, ToolError } from "../core/tool.ts";
 import type { TrayFile, Version } from "../core/tray.ts";
 import { t, tDynamic } from "../i18n/index.ts";
 import { tray } from "../state.ts";
-import { tools } from "../tools/index.ts";
+import { fileTools } from "../tools/index.ts";
 import { useObjectUrl } from "./hooks.ts";
 
 function versionLabel(v: Version) {
@@ -73,7 +73,14 @@ function Output({ version, name }: { version: Version; name: string }) {
   );
 }
 
-export function FileView({ file, index, busy }: { file: TrayFile; index: number; busy: boolean }) {
+interface Props {
+  file: TrayFile;
+  index: number;
+  busy: boolean;
+  preferred?: string; // 從工具的網址進來時，那個工具排在最前面
+}
+
+export function FileView({ file, index, busy, preferred }: Props) {
   const current = file.versions.at(-1)!;
   const preview = useObjectUrl(current.format === "unknown" ? undefined : current.blob);
   const [error, setError] = useState<string>();
@@ -88,7 +95,7 @@ export function FileView({ file, index, busy }: { file: TrayFile; index: number;
   }
 
   const run = async (toolId: string) => {
-    const tool = tools.find((x) => x.id === toolId)!;
+    const tool = fileTools.find((x) => x.id === toolId)!;
     setError(undefined);
     try {
       await tray.apply(file.id, tool);
@@ -102,6 +109,13 @@ export function FileView({ file, index, busy }: { file: TrayFile; index: number;
   };
 
   const outputName = `gears-${index + 1}.${EXTENSION[current.format]}`;
+
+  // 適用這個格式的工具。能處理目前找到的資訊的標成建議，排在前面
+  const found = new Set(current.findings.map((f) => f.code));
+  const shelf = fileTools
+    .filter((tool) => tool.accepts(current.format))
+    .map((tool) => ({ tool, recommended: tool.resolves.some((code) => found.has(code)) }))
+    .sort((a, b) => Number(b.tool.id === preferred) - Number(a.tool.id === preferred) || Number(b.recommended) - Number(a.recommended));
 
   return (
     <section class="file" aria-labelledby="file-title">
@@ -122,26 +136,38 @@ export function FileView({ file, index, busy }: { file: TrayFile; index: number;
           <h3>{t("findings.title")}</h3>
           <Findings version={current} />
 
-          <div class="actions">
-            {tools
-              .filter((tool) => tool.accepts(current.format))
-              .map((tool) =>
-                current.tool === tool.id ? (
-                  <p key={tool.id} class="done">
-                    {t("tool.strip-metadata.done")}
-                  </p>
+          <h3>{t("tools.title")}</h3>
+          <ul class="shelf">
+            {shelf.map(({ tool, recommended }) => (
+              <li key={tool.id}>
+                <span class="shelf-name">
+                  <strong>{tDynamic(`tool.${tool.id}`)}</strong>
+                  {recommended ? <span class="badge">{t("tools.recommended")}</span> : null}
+                  <small>{tDynamic(`tool.${tool.id}.desc`)}</small>
+                </span>
+                {current.tool === tool.id ? (
+                  <span class="done">{t("tools.done")}</span>
                 ) : (
-                  <button key={tool.id} type="button" class="primary" disabled={busy} onClick={() => run(tool.id)}>
-                    {busy ? t("tool.busy") : tDynamic(`tool.${tool.id}`)}
+                  <button
+                    type="button"
+                    class={recommended ? "primary" : ""}
+                    disabled={busy}
+                    aria-label={tDynamic(`tool.${tool.id}`)}
+                    onClick={() => run(tool.id)}
+                  >
+                    {busy ? t("tools.busy") : t("tools.run")}
                   </button>
-                ),
-              )}
-            {file.versions.length > 1 ? (
+                )}
+              </li>
+            ))}
+          </ul>
+          {file.versions.length > 1 ? (
+            <p class="actions">
               <button type="button" onClick={() => tray.undo(file.id)} disabled={busy}>
                 {t("file.undo")}
               </button>
-            ) : null}
-          </div>
+            </p>
+          ) : null}
           {error ? (
             <p class="error" role="alert">
               {error}

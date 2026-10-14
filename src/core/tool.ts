@@ -64,11 +64,21 @@ export interface RunResult {
   report: Report;
 }
 
+// 處理檔案的工具：從暫存區裡的檔案開始，產生新版本。
 export interface Tool {
   id: string;
+  // 能處理哪幾種找到的資訊。檔案裡有這些資訊時，工具列把這個工具標成建議
+  resolves: readonly FindingCode[];
   accepts(format: Format): boolean;
   inspect(data: Uint8Array, format: Format): Finding[];
   run(data: Uint8Array, format: Format): RunResult;
+}
+
+// 從空白開始的工具：讀者在工具裡填寫，產出檔案或文字。產出的檔案放進暫存區，
+// 可以接著交給處理檔案的工具。填寫用的介面元件登記在 src/ui/registry.ts。
+export interface CreateTool {
+  id: string;
+  output: "file" | "text";
 }
 
 // 檔案結構有問題、無法安全處理時丟出。寧可停下來，也不交出一份沒處理乾淨的檔案。

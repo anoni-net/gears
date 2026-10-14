@@ -8,7 +8,7 @@ import { type Finding, type Report, type Tool, ToolError } from "./tool.ts";
 
 export interface Version {
   id: number;
-  tool: string | null; // null 是原檔
+  tool: string | null; // 產生這個版本的工具，null 是讀者加入的原檔
   blob: Blob;
   format: Format;
   findings: Finding[];
@@ -62,7 +62,8 @@ export function createTray(tools: Tool[], verify?: Verifier) {
       };
     },
 
-    async add(files: File[]) {
+    // origin 是產生這些檔案的工具（例如 QR code 產生器），讀者自己加入的檔案不帶
+    async add(files: File[], origin: string | null = null) {
       const added: TrayFile[] = [];
       for (const file of files) {
         const bytes = new Uint8Array(await file.arrayBuffer());
@@ -70,14 +71,14 @@ export function createTray(tools: Tool[], verify?: Verifier) {
         added.push({
           id: nextId++,
           name: file.name,
-          versions: [{ id: nextId++, tool: null, blob: file, format, findings: inspect(bytes, format) }],
+          versions: [{ id: nextId++, tool: origin, blob: file, format, findings: inspect(bytes, format) }],
         });
       }
       if (!added.length) return;
       set({ files: [...state.files, ...added], selected: added[0]!.id });
     },
 
-    select(id: number) {
+    select(id: number | null) {
       set({ selected: id });
     },
 

@@ -1,34 +1,13 @@
-import { type Page, expect, test } from "@playwright/test";
-import { readFile } from "node:fs/promises";
+import type { Page } from "@playwright/test";
+import { downloadFrom, expect, test } from "./guard.ts";
 import { indexOf, sniff } from "../../src/core/bytes.ts";
 import { parseExif } from "../../src/tools/strip-metadata/exif.ts";
 import { stripMetadata } from "../../src/tools/strip-metadata/index.ts";
 import { exifSegment, insertIntoJpeg, insertIntoPng, metadataChunks, sampleTiff, bytes as text } from "../helpers/fixtures.ts";
 import { concat } from "../../src/core/bytes.ts";
 
-// 每個測試都記下頁面發出的請求與主控台錯誤。CSP 擋下東西時會在主控台留下錯誤，
-// 對外連線則會出現在請求清單裡，兩者都不該有。
-let requests: string[];
-let errors: string[];
-
-test.beforeEach(async ({ page, baseURL }) => {
-  requests = [];
-  errors = [];
-  const origin = new URL(baseURL!).origin;
-  page.on("request", (r) => {
-    const url = r.url();
-    if (!url.startsWith(origin) && !url.startsWith("blob:") && !url.startsWith("data:")) requests.push(url);
-  });
-  page.on("console", (m) => {
-    if (m.type() === "error") errors.push(m.text());
-  });
-  page.on("pageerror", (e) => errors.push(e.message));
+test.beforeEach(async ({ page }) => {
   await page.goto("./");
-});
-
-test.afterEach(() => {
-  expect(requests, "對外連線").toEqual([]);
-  expect(errors, "主控台錯誤").toEqual([]);
 });
 
 // 在瀏覽器裡用 canvas 畫一張真的可以解碼的圖，回到 Node 再塞進中繼資料
@@ -53,9 +32,9 @@ async function addFile(page: Page, name: string, mimeType: string, data: Uint8Ar
 }
 
 async function download(page: Page): Promise<Uint8Array> {
-  const [file] = await Promise.all([page.waitForEvent("download"), page.getByRole("link", { name: "下載" }).click()]);
-  expect(file.suggestedFilename()).toMatch(/^gears-1\.(jpg|png)$/);
-  return new Uint8Array(await readFile((await file.path())!));
+  const file = await downloadFrom(page, () => page.getByRole("link", { name: "下載" }).click());
+  expect(file.name).toMatch(/^gears-1\.(jpg|png)$/);
+  return file.data;
 }
 
 async function previewLoaded(page: Page) {
@@ -64,10 +43,15 @@ async function previewLoaded(page: Page) {
   expect(await img.evaluate((el: HTMLImageElement) => el.naturalWidth)).toBeGreaterThan(0);
 }
 
-test("起始頁有任務入口，沒有檔案時不顯示清空按鈕", async ({ page }) => {
+test("桌面有暫存區、任務捷徑與兩組工具，沒有檔案時不顯示清空按鈕", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "隱私工作台" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "暫存區" })).toBeVisible();
   await expect(page.getByRole("button", { name: /分享照片前，拿掉拍攝位置/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /把 Wi-Fi 密碼傳給朋友/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "處理檔案" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "從空白開始" })).toBeVisible();
   await expect(page.getByRole("button", { name: "清空暫存區" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "回到桌面" })).toHaveCount(0);
 });
 
 test("JPEG：找出位置、清除、下載，旋轉方向保留", async ({ page }) => {
@@ -75,7 +59,7 @@ test("JPEG：找出位置、清除、下載，旋轉方向保留", async ({ page
   const withTrailer = concat([jpeg, text("MOTION-PHOTO-SECRET")]);
   await addFile(page, "IMG_20261014_093000.jpg", "image/jpeg", withTrailer);
 
-  await expect(page.getByText("拍攝位置")).toBeVisible();
+  await expect(page.getByText("拍攝位置", { exact: true })).toBeVisible();
   await expect(page.getByText("25.03300, 121.56540")).toBeVisible();
   await expect(page.getByText("TestMaker SECRET-MODEL")).toBeVisible();
   await previewLoaded(page);
@@ -101,19 +85,20 @@ test("退回上一步，再清空暫存區", async ({ page }) => {
   await expect(page.getByText("沒有找到可能透露身分的中繼資料。")).toBeVisible();
 
   await page.getByRole("button", { name: "退回上一步" }).click();
-  await expect(page.getByText("拍攝位置")).toBeVisible();
+  await expect(page.getByText("拍攝位置", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "退回上一步" })).toHaveCount(0);
 
   await page.getByRole("button", { name: "清空暫存區" }).click();
   await expect(page.getByRole("button", { name: /分享照片前，拿掉拍攝位置/ })).toBeVisible();
-  await expect(page.locator(".tray")).toHaveCount(0);
+  await expect(page.locator(".tray .item")).toHaveCount(0);
+  await expect(page.getByText("把檔案拖進來，或")).toBeVisible();
 });
 
 test("PNG：文字欄位與 eXIf 一起拿掉", async ({ page }) => {
   const png = insertIntoPng(await canvasImage(page, "image/png"), ...metadataChunks());
   await addFile(page, "screenshot.png", "image/png", png);
   await expect(page.getByText("作者或擁有者的名字")).toBeVisible();
-  await expect(page.getByText("拍攝位置")).toBeVisible();
+  await expect(page.getByText("拍攝位置", { exact: true })).toBeVisible();
 
   await page.getByRole("button", { name: "清除中繼資料" }).click();
   await expect(page.getByText("沒有找到可能透露身分的中繼資料。")).toBeVisible();
@@ -145,7 +130,7 @@ test("一次加入多個檔案，可以在暫存區切換", async ({ page }) => 
 test("很長的檔名不會把版面撐出橫向捲軸", async ({ page }) => {
   const jpeg = insertIntoJpeg(await canvasImage(page, "image/jpeg"), exifSegment(sampleTiff()));
   await addFile(page, `IMG_20261014_093000_${"very_long_name_".repeat(6)}.jpg`, "image/jpeg", jpeg);
-  await expect(page.getByText("拍攝位置")).toBeVisible();
+  await expect(page.getByText("拍攝位置", { exact: true })).toBeVisible();
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(0);
 });
@@ -156,7 +141,7 @@ test("不支援的檔案說明清楚，不提供處理", async ({ page }) => {
   await expect(page.getByRole("button", { name: "清除中繼資料" })).toHaveCount(0);
 });
 
-test("正式建置帶著 CSP，限制頁面能連線的對象", async ({ page }) => {
+test("正式建置帶著 CSP，限制頁面能連線的對象", async ({ page, guard }) => {
   const csp = await page.locator('meta[http-equiv="Content-Security-Policy"]').getAttribute("content");
   expect(csp).toContain("default-src 'none'");
   expect(csp).toContain("connect-src 'self'");
@@ -170,6 +155,6 @@ test("正式建置帶著 CSP，限制頁面能連線的對象", async ({ page })
   });
   expect(blocked).toBe(true);
   // CSP 擋下時瀏覽器會在主控台留下錯誤，這裡是預期中的
-  errors = [];
-  requests = requests.filter((url) => !url.startsWith("https://example.com"));
+  guard.errors = [];
+  guard.requests = guard.requests.filter((url) => !url.startsWith("https://example.com"));
 });
