@@ -18,9 +18,16 @@ async function image(page: Page, mime: "image/png" | "image/jpeg") {
   return Buffer.from(data);
 }
 
+// 畫布先捲進畫面再讀位置，畫面外的座標不會觸發事件（CI 沒有中文字型，版面比本機高）
+async function canvasBox(page: Page) {
+  const canvas = page.getByTestId("redact-canvas");
+  await canvas.scrollIntoViewIfNeeded();
+  return (await canvas.boundingBox())!;
+}
+
 // 在畫布上依圖片的相對位置拖一個框
 async function drag(page: Page, from: [number, number], to: [number, number]) {
-  const box = (await page.getByTestId("redact-canvas").boundingBox())!;
+  const box = await canvasBox(page);
   await page.mouse.move(box.x + box.width * from[0], box.y + box.height * from[1]);
   await page.mouse.down();
   await page.mouse.move(box.x + box.width * ((from[0] + to[0]) / 2), box.y + box.height * ((from[1] + to[1]) / 2));
@@ -73,7 +80,7 @@ test("從工具列打開，點一下框好的範圍可以刪掉，取消不產�
   await expect(page.getByText("已經框了 2 個範圍")).toBeVisible();
 
   // 觸控螢幕用點擊的方式跟真實操作一致，桌機用滑鼠
-  const box = (await page.getByTestId("redact-canvas").boundingBox())!;
+  const box = await canvasBox(page);
   const [x, y] = [box.x + box.width * 0.2, box.y + box.height * 0.2];
   if (test.info().project.use.hasTouch) await page.touchscreen.tap(x, y);
   else await page.mouse.click(x, y);
