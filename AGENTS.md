@@ -37,12 +37,14 @@ npm run test:unit    # 只執行單元測試，不需要瀏覽器
 |---|---|
 | `src/core/` | 位元組工具、工具模組的介面（`tool.ts`）、檔案暫存區（`tray.ts`）、不經過 canvas 的 PNG 編碼（`png-encode.ts`） |
 | `src/tools/` | 各個工具的純邏輯，一個工具一個目錄，在 `src/tools/index.ts` 登記 |
-| `src/ui/`、`src/app.tsx` | 介面元件。`src/ui/registry.tsx` 登記從空白開始的工具用的元件 |
+| `src/ui/`、`src/app.tsx` | 介面元件。`src/ui/registry.tsx` 登記從空白開始的工具用的元件，`src/ui/tool-meta.ts` 是每個工具的圖示與類別 |
 | `src/router.ts` | 每個工具的網址 |
 | `src/i18n/` | 介面字串，第一版只有正體中文 |
 | `tests/unit/` | 在 Node 裡測純邏輯 |
 | `tests/e2e/` | 在 Chromium、WebKit、Firefox 與 iPhone 尺寸上測整個流程 |
 | `tests/helpers/` | 產生測試檔案的程式 |
+| `public/` | 網站圖示、主畫面圖示與 manifest |
+| `licenses/` | 第三方圖示的授權全文 |
 
 ## 工具模組
 
@@ -90,9 +92,21 @@ node scripts/fetch-165.mjs   # 下載並整理成 public/data/165.txt
 
 ## 測試用的檔案
 
-照片與圖檔不進 repo。單元測試用 `tests/helpers/fixtures.ts` 組出結構完整的檔案。瀏覽器測試先用 canvas 產生一張可以解碼的圖，再塞進中繼資料。
+照片與圖檔不進 repo，品牌圖示（`public/icons/`）例外。單元測試用 `tests/helpers/fixtures.ts` 組出結構完整的檔案。瀏覽器測試先用 canvas 產生一張可以解碼的圖，再塞進中繼資料。
 
-QR code 的測試把產生的 PNG 解碼回像素，用 `jsQR`（只在開發相依）讀出文字，跟輸入比對，中文與 Wi-Fi 的特殊字元都要測。編碼寫錯的典型後果是掃得出來、內容卻錯。
+QR code 的測試把產生的 PNG 解碼回像素，用 `jsQR` 讀出文字，跟輸入比對，中文與 Wi-Fi 的特殊字元都要測。編碼寫錯的典型後果是掃得出來、內容卻錯。
+
+## Logo、圖示與配色
+
+照社群的[品牌素材](https://anoni.net/brand/)，配色與社群首頁的 `static/css/site.css` 用同一組數值：
+
+- logo 是 V3 cyan tonal（三個六角形），頁首內嵌在 `src/ui/Logo.tsx`，網站圖示是 `public/favicon.svg`，兩者跟社群首頁的 `static/favicon.svg` 同一份
+- 頁首用 `--brand-cyan-50` 淡藍底，在社群首頁的白底與文件站的 `cyan-800` 之間，讀者換到工作台時看得出換了網站。深色模式改用比背景亮一階的藍灰
+- 主色只用 `--brand-cyan-*`，灰階用品牌的中性色，深色模式的背景是 `#00202d`
+- 工具的圖示用 Material Design Icons，跟文件站小工具區的同一個工具一致，路徑內嵌在 `src/ui/icon-paths.ts`，授權全文在 `licenses/material-design-icons.txt`
+- 圖示圈的顏色照品牌素材頁的「圖示的分類色」：跟個人隱私有關的用 `--cat-privacy`，處理機敏資料與密碼的用 `--cat-secure`。新增工具時在 `src/ui/tool-meta.ts` 指定圖示與類別，`tests/unit/tool-meta.spec.ts` 會檢查
+
+主畫面用的 PNG 圖示（`public/icons/`）由 `node scripts/make-icons.mjs` 從 `public/favicon.svg` 產生，進版控，logo 沒有改就不必重新產生。iPhone 的「加入主畫面」只吃 PNG，Android 與 Brave 的安裝讀 `public/manifest.webmanifest`。
 
 ## 介面文字
 
@@ -105,4 +119,5 @@ QR code 的測試把產生的 PNG 解碼回像素，用 `jsQR`（只在開發相
 ## 第三方資料
 
 - 密語的字詞表來自 [asian-diceware](https://github.com/anoni-net/asian-diceware) `v0.4.0`，CC BY 4.0，畫面上標示出處
+- 工具的圖示來自 [Material Design Icons](https://pictogrammers.com/library/mdi/)，Pictogrammers Free License
 - 165 反詐騙清單見上方，部署時下載，不進版控

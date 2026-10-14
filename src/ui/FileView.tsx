@@ -6,6 +6,8 @@ import { t, tDynamic } from "../i18n/index.ts";
 import { tray } from "../state.ts";
 import { editorTools, fileTools } from "../tools/index.ts";
 import { FileEditorView } from "./registry.tsx";
+import { IconCircle } from "./Icon.tsx";
+import { TOOL_META } from "./tool-meta.ts";
 import { useObjectUrl } from "./hooks.ts";
 import { QrContentView } from "./QrContentView.tsx";
 import { decodeQrFromBlob } from "./qr-scan.ts";
@@ -190,7 +192,10 @@ export function FileView({ file, index, busy, preferred, onOpenTool }: Props) {
 
       {editing ? (
         <section class="editor" aria-labelledby="editor-title">
-          <h3 id="editor-title">{tDynamic(`tool.${editing}`)}</h3>
+          <h3 id="editor-title" class="tool-title">
+            <IconCircle name={TOOL_META[editing]!.icon} cat={TOOL_META[editing]!.cat} />
+            {tDynamic(`tool.${editing}`)}
+          </h3>
           <FileEditorView
             id={editing}
             blob={current.blob}
@@ -230,6 +235,7 @@ export function FileView({ file, index, busy, preferred, onOpenTool }: Props) {
           <ul class="shelf">
             {shelf.map(({ tool, editor, recommended, applied }) => (
               <li key={tool.id}>
+                <IconCircle name={TOOL_META[tool.id]!.icon} cat={TOOL_META[tool.id]!.cat} />
                 <span class="shelf-name">
                   <strong>{tDynamic(`tool.${tool.id}`)}</strong>
                   {applied ? <span class="badge done">{t("tools.done")}</span> : null}

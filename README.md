@@ -34,7 +34,7 @@ npm test
 
 ## 授權
 
-程式碼以 [MIT](./LICENSE) 授權。密語的字詞表來自 [asian-diceware](https://github.com/anoni-net/asian-diceware)，以 CC BY 4.0 授權。
+程式碼以 [MIT](./LICENSE) 授權。密語的字詞表來自 [asian-diceware](https://github.com/anoni-net/asian-diceware)，以 CC BY 4.0 授權。工具的圖示來自 [Material Design Icons](https://pictogrammers.com/library/mdi/)，授權全文在 [licenses/](./licenses/)。
 
 ---
 
@@ -74,4 +74,4 @@ See [AGENTS.md](./AGENTS.md) (in Chinese) for details on development and testing
 
 ## License
 
-The code is released under the [MIT License](./LICENSE). The passphrase wordlist comes from [asian-diceware](https://github.com/anoni-net/asian-diceware) under CC BY 4.0.
+The code is released under the [MIT License](./LICENSE). The passphrase wordlist comes from [asian-diceware](https://github.com/anoni-net/asian-diceware) under CC BY 4.0. Tool icons come from [Material Design Icons](https://pictogrammers.com/library/mdi/); see [licenses/](./licenses/).
