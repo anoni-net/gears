@@ -542,6 +542,13 @@ footer a {
   color: var(--ok);
 }
 
+.shelf .nothing {
+  flex: none;
+  max-width: 8rem;
+  text-align: right;
+  font-size: 0.8rem;
+}
+
 .shelf .done {
   white-space: nowrap;
   font-weight: 600;

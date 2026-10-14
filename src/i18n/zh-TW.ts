@@ -88,6 +88,7 @@ export const zhTW = {
   "tools.title": "工具",
   "tools.recommended": "建議",
   "tools.done": "已處理",
+  "tools.nothing": "目前沒有需要清除的",
   "tools.busy": "處理中…",
 
   "file.versions": "版本",
@@ -103,6 +104,8 @@ export const zhTW = {
 
   "findings.title": "檔案裡找到的資訊",
   "findings.none": "沒有找到可能透露身分的中繼資料。",
+  "findings.removed": "上一步（{tool}）拿掉了原本找到的 {n} 項資訊。",
+  "findings.reencoded": "遮蔽時重新產生了整張圖，原檔的中繼資料不會帶過去。需要保留原檔的拍攝資訊時（例如當作證據），請另外留一份原檔。",
   "finding.location": "拍攝位置",
   "finding.device": "相機或手機型號",
   "finding.serial": "機身序號",

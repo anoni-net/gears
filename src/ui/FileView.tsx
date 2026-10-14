@@ -22,17 +22,39 @@ function versionLabel(v: Version) {
   return v.tool ? tDynamic(`file.version.${v.tool}`) : t("file.original");
 }
 
-function Findings({ version }: { version: Version }) {
-  if (!version.findings.length) return <p class="ok">{t("findings.none")}</p>;
+// 跟上一個版本比，說明這一步拿掉了哪些資訊。遮蔽這類會重新編碼的工具，中繼資料是
+// 順帶拿掉的，讀者沒有主動要求，不說的話看起來像資料平白消失。
+function RemovedNote({ version, previous }: { version: Version; previous?: Version }) {
+  if (!previous || !version.tool) return null;
+  const now = new Set(version.findings.map((f) => f.code));
+  const gone = previous.findings.filter((f) => !now.has(f.code));
+  if (!gone.length) return null;
+  const reencoded = version.report?.removed.some((r) => r.code === "reencode");
   return (
-    <ul class="findings">
-      {version.findings.map((f) => (
-        <li key={f.code}>
-          <span>{tDynamic(`finding.${f.code}`)}</span>
-          {f.value ? <code>{f.value}</code> : null}
-        </li>
-      ))}
-    </ul>
+    <p class="note" data-testid="removed-note">
+      {t("findings.removed", { tool: tDynamic(`tool.${version.tool}`), n: gone.length })}
+      {reencoded ? t("findings.reencoded") : null}
+    </p>
+  );
+}
+
+function Findings({ version, previous }: { version: Version; previous?: Version }) {
+  return (
+    <>
+      {version.findings.length ? (
+        <ul class="findings">
+          {version.findings.map((f) => (
+            <li key={f.code}>
+              <span>{tDynamic(`finding.${f.code}`)}</span>
+              {f.value ? <code>{f.value}</code> : null}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p class="ok">{t("findings.none")}</p>
+      )}
+      <RemovedNote version={version} previous={previous} />
+    </>
   );
 }
 
@@ -196,7 +218,7 @@ export function FileView({ file, index, busy, preferred, onOpenTool }: Props) {
           {isImage ? (
             <>
               <h3>{t("findings.title")}</h3>
-              <Findings version={current} />
+              <Findings version={current} previous={file.versions.at(-2)} />
             </>
           ) : (
             <p class="note">{t(current.format === "age" ? "file.encrypted" : "file.unsupported")}</p>
@@ -214,8 +236,10 @@ export function FileView({ file, index, busy, preferred, onOpenTool }: Props) {
                   {recommended ? <span class="badge">{t("tools.recommended")}</span> : null}
                   <small>{tDynamic(`tool.${tool.id}.desc`)}</small>
                 </span>
-                {/* 處理過、又沒有剩下要處理的東西，就不再顯示按鈕。需要編輯畫面的工具可以再做一次 */}
-                {applied && !editor && !recommended ? null : (
+                {/* 處理檔案的工具沒有東西可處理時不顯示按鈕，免得讀者以為還要按。需要編輯畫面的工具可以再做一次 */}
+                {!editor && !recommended ? (
+                  applied ? null : <span class="hint nothing">{t("tools.nothing")}</span>
+                ) : (
                   <button
                     type="button"
                     class={recommended ? "primary" : ""}

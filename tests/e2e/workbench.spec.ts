@@ -180,7 +180,8 @@ test("做了第二個工具之後，前面處理過的仍標示已處理", async
   await page.mouse.up();
   await page.getByRole("button", { name: "套用遮蔽" }).click();
 
-  // 兩個工具都標示已處理，遮蔽可以再框一次
+  // 兩個工具都標示已處理，遮蔽可以再框一次。清除之後已經沒有中繼資料，遮蔽這一步不用再說明
+  await expect(page.getByTestId("removed-note")).toHaveCount(0);
   await expect(strip.getByText("已處理")).toBeVisible();
   await expect(redact.getByText("已處理")).toBeVisible();
   await expect(redact.getByRole("button", { name: "再框選一次" })).toBeVisible();
@@ -190,4 +191,26 @@ test("做了第二個工具之後，前面處理過的仍標示已處理", async
   await expect(redact.getByText("已處理")).toHaveCount(0);
   await expect(redact.getByRole("button", { name: "開始框選" })).toBeVisible();
   await expect(strip.getByText("已處理")).toBeVisible();
+});
+
+test("先遮蔽：說明中繼資料是重新產生整張圖時一起拿掉的", async ({ page }) => {
+  const jpeg = insertIntoJpeg(await canvasImage(page, "image/jpeg"), exifSegment(sampleTiff()));
+  await addFile(page, "photo.jpg", "image/jpeg", jpeg);
+  await page.getByRole("button", { name: "開始框選" }).click();
+  const canvas = page.getByTestId("redact-canvas");
+  await canvas.scrollIntoViewIfNeeded();
+  const b = (await canvas.boundingBox())!;
+  await page.mouse.move(b.x + b.width * 0.1, b.y + b.height * 0.1);
+  await page.mouse.down();
+  await page.mouse.move(b.x + b.width * 0.4, b.y + b.height * 0.4);
+  await page.mouse.up();
+  await page.getByRole("button", { name: "套用遮蔽" }).click();
+
+  const note = page.getByTestId("removed-note");
+  await expect(note).toContainText("上一步（遮蔽）拿掉了原本找到的 7 項資訊。遮蔽時重新產生了整張圖");
+  // 已經沒有中繼資料，清除中繼資料不顯示按鈕
+  const strip = page.locator(".shelf li", { hasText: "清除中繼資料" });
+  await expect(strip.getByRole("button")).toHaveCount(0);
+  await expect(strip.getByText("目前沒有需要清除的")).toBeVisible();
+  await expect(note).toContainText("遮蔽時重新產生了整張圖");
 });
