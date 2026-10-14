@@ -72,8 +72,11 @@ test("從工具列打開，點一下框好的範圍可以刪掉，取消不產�
   await drag(page, [0.6, 0.6], [0.9, 0.9]);
   await expect(page.getByText("已經框了 2 個範圍")).toBeVisible();
 
+  // 觸控螢幕用點擊的方式跟真實操作一致，桌機用滑鼠
   const box = (await page.getByTestId("redact-canvas").boundingBox())!;
-  await page.mouse.click(box.x + box.width * 0.2, box.y + box.height * 0.2);
+  const [x, y] = [box.x + box.width * 0.2, box.y + box.height * 0.2];
+  if (test.info().project.use.hasTouch) await page.touchscreen.tap(x, y);
+  else await page.mouse.click(x, y);
   await expect(page.getByText("已經框了 1 個範圍")).toBeVisible();
   await page.getByRole("button", { name: "復原上一個框" }).click();
   await expect(page.getByText("已經框了 0 個範圍")).toBeVisible();
