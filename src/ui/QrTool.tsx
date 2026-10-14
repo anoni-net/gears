@@ -12,7 +12,8 @@ const SECURITY: WifiSecurity[] = ["WPA", "WEP", "nopass"];
 // 容錯度之前，輸入的時候就看得到結果。
 export function QrTool({ preset, onCreate }: CreateToolProps) {
   const [mode, setMode] = useState<"text" | "wifi">(preset === "wifi" ? "wifi" : "text");
-  const [text, setText] = useState("");
+  // 其他工具帶入的內容（例如金鑰產生器的公鑰）直接放進文字欄位
+  const [text, setText] = useState(preset && preset !== "wifi" ? preset : "");
   const [ssid, setSsid] = useState("");
   const [password, setPassword] = useState("");
   const [security, setSecurity] = useState<WifiSecurity>("WPA");

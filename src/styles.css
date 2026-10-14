@@ -965,6 +965,36 @@ footer a {
   padding: 0.75rem 1rem;
 }
 
+/* 金鑰產生器 */
+
+.keygen section {
+  margin-top: 1.5rem;
+}
+
+.keygen .buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.secret.key {
+  font-size: 0.95rem;
+}
+
+/* 看起來像連結的按鈕，用在站內導覽：一般的連結會重新載入頁面，暫存區會被清空 */
+button.link {
+  display: inline;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--link);
+  text-decoration: underline;
+  font-size: inherit;
+}
+
 .drop-overlay {
   position: fixed;
   inset: 0;

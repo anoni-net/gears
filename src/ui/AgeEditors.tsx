@@ -1,6 +1,7 @@
 import { useState } from "preact/hooks";
 import type { Report } from "../core/tool.ts";
 import { t } from "../i18n/index.ts";
+import { navigate } from "../router.ts";
 import { decrypt, encrypt, parseRecipients } from "../tools/age/index.ts";
 import { cryptoRandom, parseWordlist, pickWords } from "../tools/passphrase/index.ts";
 import wordlistText from "../tools/passphrase/asian-diceware-7776.txt?raw";
@@ -77,7 +78,12 @@ export function EncryptEditor({ blob, onDone, onCancel }: FileEditorProps) {
             <textarea rows={4} value={recipients} spellcheck={false} autocomplete="off" placeholder="age1…" onInput={(e) => setRecipients(e.currentTarget.value)} />
           </label>
           {parsed.invalid.length ? <p class="error">{t("age.invalidRecipients", { list: parsed.invalid.join("、") })}</p> : null}
-          <p class="hint">{t("age.recipientsNote")}</p>
+          <p class="hint">
+            {t("age.recipientsNote")}{" "}
+            <button type="button" class="link" onClick={() => navigate("age-keygen")}>
+              {t("age.toKeygen")}
+            </button>
+          </p>
         </>
       )}
 
