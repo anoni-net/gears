@@ -74,7 +74,7 @@ test("從任務選檔案，直接打開遮蔽畫面，塗黑之後產生新版�
 test("從工具列打開，點一下框好的範圍可以刪掉，取消不產生新版本", async ({ page }) => {
   await page.goto("./");
   await page.getByTestId("file-input").setInputFiles({ name: "photo.jpg", mimeType: "image/jpeg", buffer: await image(page, "image/jpeg") });
-  await page.getByRole("button", { name: "遮蔽" }).click();
+  await page.getByRole("button", { name: "開始框選" }).click();
   await drag(page, [0.1, 0.1], [0.3, 0.3]);
   await drag(page, [0.6, 0.6], [0.9, 0.9]);
   await expect(page.getByText("已經框了 2 個範圍")).toBeVisible();

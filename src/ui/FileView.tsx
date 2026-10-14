@@ -145,7 +145,13 @@ export function FileView({ file, index, busy, preferred, onOpenTool }: Props) {
   const found = new Set(current.findings.map((f) => f.code));
   const shelf = [...fileTools.map((tool) => ({ tool, editor: false })), ...editorTools.map((tool) => ({ tool, editor: true }))]
     .filter(({ tool }) => tool.accepts(current.format))
-    .map(({ tool, editor }) => ({ tool, editor, recommended: tool.resolves.some((code) => found.has(code)) }))
+    .map(({ tool, editor }) => ({
+      tool,
+      editor,
+      recommended: tool.resolves.some((code) => found.has(code)),
+      // 看整個版本紀錄，不只看最新的版本：做了別的工具之後，前面處理過的仍然算數
+      applied: file.versions.some((v) => v.tool === tool.id),
+    }))
     .sort((a, b) => Number(b.tool.id === preferred) - Number(a.tool.id === preferred) || Number(b.recommended) - Number(a.recommended));
 
   return (
@@ -200,24 +206,23 @@ export function FileView({ file, index, busy, preferred, onOpenTool }: Props) {
 
           <h3>{t("tools.title")}</h3>
           <ul class="shelf">
-            {shelf.map(({ tool, editor, recommended }) => (
+            {shelf.map(({ tool, editor, recommended, applied }) => (
               <li key={tool.id}>
                 <span class="shelf-name">
                   <strong>{tDynamic(`tool.${tool.id}`)}</strong>
+                  {applied ? <span class="badge done">{t("tools.done")}</span> : null}
                   {recommended ? <span class="badge">{t("tools.recommended")}</span> : null}
                   <small>{tDynamic(`tool.${tool.id}.desc`)}</small>
                 </span>
-                {current.tool === tool.id ? (
-                  <span class="done">{t("tools.done")}</span>
-                ) : (
+                {/* 處理過、又沒有剩下要處理的東西，就不再顯示按鈕。需要編輯畫面的工具可以再做一次 */}
+                {applied && !editor && !recommended ? null : (
                   <button
                     type="button"
                     class={recommended ? "primary" : ""}
                     disabled={busy}
-                    aria-label={tDynamic(`tool.${tool.id}`)}
                     onClick={() => (editor ? setEditing(tool.id) : run(tool.id))}
                   >
-                    {busy ? t("tools.busy") : t(editor ? "tools.open" : "tools.run")}
+                    {busy ? t("tools.busy") : tDynamic(`tool.${tool.id}.${applied && editor ? "again" : "action"}`)}
                   </button>
                 )}
               </li>

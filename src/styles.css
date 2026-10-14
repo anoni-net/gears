@@ -536,6 +536,12 @@ footer a {
   flex: none;
 }
 
+.badge.done {
+  background: transparent;
+  border: 1px solid var(--ok);
+  color: var(--ok);
+}
+
 .shelf .done {
   white-space: nowrap;
   font-weight: 600;

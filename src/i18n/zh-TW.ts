@@ -60,12 +60,19 @@ export const zhTW = {
 
   "tool.strip-metadata": "清除中繼資料",
   "tool.strip-metadata.desc": "拿掉照片裡的拍攝位置、手機型號與拍攝時間。",
+  "tool.strip-metadata.action": "清除",
   "tool.redact": "遮蔽",
   "tool.redact.desc": "在圖片上框出名字、頭像與電話，塗成實心黑色。",
+  "tool.redact.action": "開始框選",
+  "tool.redact.again": "再框選一次",
   "tool.encrypt": "加密",
   "tool.encrypt.desc": "用密語或對方的公鑰加密任何檔案（age 格式）。",
+  "tool.encrypt.action": "開始加密",
+  "tool.encrypt.again": "再加密一次",
   "tool.decrypt": "解密",
   "tool.decrypt.desc": "用密語或私鑰解開 .age 檔案。",
+  "tool.decrypt.action": "開始解密",
+  "tool.decrypt.again": "再解密一次",
   "tool.qrcode": "QR code 產生器",
   "tool.qrcode.desc": "把網址、文字或 Wi-Fi 密碼變成 QR code。",
   "tool.url-check": "網址檢查",
@@ -80,8 +87,6 @@ export const zhTW = {
 
   "tools.title": "工具",
   "tools.recommended": "建議",
-  "tools.run": "執行",
-  "tools.open": "開啟",
   "tools.done": "已處理",
   "tools.busy": "處理中…",
 

@@ -64,7 +64,7 @@ test("JPEG：找出位置、清除、下載，旋轉方向保留", async ({ page
   await expect(page.getByText("TestMaker SECRET-MODEL")).toBeVisible();
   await previewLoaded(page);
 
-  await page.getByRole("button", { name: "清除中繼資料" }).click();
+  await page.getByRole("button", { name: "清除", exact: true }).click();
   await expect(page.getByText("沒有找到可能透露身分的中繼資料。")).toBeVisible();
   await expect(page.getByText("EXIF：位置、手機型號、拍攝時間與縮圖")).toBeVisible();
   await expect(page.getByText("旋轉方向，直拍的照片才不會變成橫的")).toBeVisible();
@@ -81,7 +81,7 @@ test("JPEG：找出位置、清除、下載，旋轉方向保留", async ({ page
 test("退回上一步，再清空暫存區", async ({ page }) => {
   const jpeg = insertIntoJpeg(await canvasImage(page, "image/jpeg"), exifSegment(sampleTiff()));
   await addFile(page, "photo.jpg", "image/jpeg", jpeg);
-  await page.getByRole("button", { name: "清除中繼資料" }).click();
+  await page.getByRole("button", { name: "清除", exact: true }).click();
   await expect(page.getByText("沒有找到可能透露身分的中繼資料。")).toBeVisible();
 
   await page.getByRole("button", { name: "退回上一步" }).click();
@@ -100,7 +100,7 @@ test("PNG：文字欄位與 eXIf 一起拿掉", async ({ page }) => {
   await expect(page.getByText("作者或擁有者的名字")).toBeVisible();
   await expect(page.getByText("拍攝位置", { exact: true })).toBeVisible();
 
-  await page.getByRole("button", { name: "清除中繼資料" }).click();
+  await page.getByRole("button", { name: "清除", exact: true }).click();
   await expect(page.getByText("沒有找到可能透露身分的中繼資料。")).toBeVisible();
   await previewLoaded(page);
 
@@ -139,8 +139,8 @@ test("不能預覽的檔案說明清楚，只提供加密", async ({ page }) => 
   await addFile(page, "notes.txt", "text/plain", text("hello"));
   await expect(page.getByText("這種檔案不能預覽")).toBeVisible();
   await expect(page.locator(".tray .item")).toContainText("不能預覽");
-  await expect(page.getByRole("button", { name: "清除中繼資料" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "加密" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "清除", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "開始加密" })).toBeVisible();
 });
 
 test("正式建置帶著 CSP，限制頁面能連線的對象", async ({ page, guard }) => {
@@ -159,4 +159,35 @@ test("正式建置帶著 CSP，限制頁面能連線的對象", async ({ page, g
   // CSP 擋下時瀏覽器會在主控台留下錯誤，這裡是預期中的
   guard.errors = [];
   guard.requests = guard.requests.filter((url) => !url.startsWith("https://example.com"));
+});
+
+test("做了第二個工具之後，前面處理過的仍標示已處理", async ({ page }) => {
+  const jpeg = insertIntoJpeg(await canvasImage(page, "image/jpeg"), exifSegment(sampleTiff()));
+  await addFile(page, "photo.jpg", "image/jpeg", jpeg);
+  const strip = page.locator(".shelf li", { hasText: "清除中繼資料" });
+  const redact = page.locator(".shelf li", { hasText: "遮蔽" });
+  await expect(strip.getByText("建議")).toBeVisible();
+  await strip.getByRole("button", { name: "清除", exact: true }).click();
+
+  await expect(strip.getByText("已處理")).toBeVisible();
+  await expect(strip.getByRole("button")).toHaveCount(0);
+  await redact.getByRole("button", { name: "開始框選" }).click();
+  await page.getByTestId("redact-canvas").scrollIntoViewIfNeeded();
+  const b = (await page.getByTestId("redact-canvas").boundingBox())!;
+  await page.mouse.move(b.x + b.width * 0.1, b.y + b.height * 0.1);
+  await page.mouse.down();
+  await page.mouse.move(b.x + b.width * 0.4, b.y + b.height * 0.4);
+  await page.mouse.up();
+  await page.getByRole("button", { name: "套用遮蔽" }).click();
+
+  // 兩個工具都標示已處理，遮蔽可以再框一次
+  await expect(strip.getByText("已處理")).toBeVisible();
+  await expect(redact.getByText("已處理")).toBeVisible();
+  await expect(redact.getByRole("button", { name: "再框選一次" })).toBeVisible();
+
+  // 退回上一步，遮蔽的版本拿掉，已處理也跟著消失
+  await page.getByRole("button", { name: "退回上一步" }).click();
+  await expect(redact.getByText("已處理")).toHaveCount(0);
+  await expect(redact.getByRole("button", { name: "開始框選" })).toBeVisible();
+  await expect(strip.getByText("已處理")).toBeVisible();
 });
