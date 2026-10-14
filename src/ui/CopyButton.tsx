@@ -2,13 +2,21 @@ import { useEffect, useState } from "preact/hooks";
 import { t } from "../i18n/index.ts";
 
 // 複製到剪貼簿。navigator.clipboard 只在 HTTPS 下能用，失敗時請讀者自行選取。
-export function CopyButton({ text, label, primary = true }: { text: string; label?: string; primary?: boolean }) {
+interface Props {
+  text: string;
+  label?: string;
+  primary?: boolean;
+  onCopied?: () => void;
+}
+
+export function CopyButton({ text, label, primary = true, onCopied }: Props) {
   const [state, setState] = useState<"idle" | "done" | "failed">("idle");
   useEffect(() => setState("idle"), [text]);
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(text);
       setState("done");
+      onCopied?.();
     } catch {
       setState("failed");
     }

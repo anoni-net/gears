@@ -1,4 +1,5 @@
 import { decrypt, encrypt } from "../../src/tools/age/index.ts";
+import { decodeQrPng } from "../helpers/qr-decode.ts";
 import { downloadFrom, expect, test } from "./guard.ts";
 
 test("產生金鑰組：私鑰預設遮住，下載的金鑰檔解得開用公鑰加密的檔案", async ({ page }) => {
@@ -27,23 +28,60 @@ test("產生金鑰組：私鑰預設遮住，下載的金鑰檔解得開用公�
   await expect(page.getByTestId("recipient")).not.toHaveText(recipient, { timeout: 10_000 });
 });
 
-test("公鑰做成 QR code，金鑰檔放進暫存區之後可以加密", async ({ page }) => {
+test("公鑰的 QR code 直接顯示，金鑰檔放進暫存區之後可以加密", async ({ page }) => {
   await page.goto("./age-keygen/");
   await page.getByRole("button", { name: "產生一組金鑰" }).click();
   const recipient = (await page.getByTestId("recipient").textContent())!;
 
+  // 留在金鑰產生器裡，不跳到 QR code 產生器
+  await page.getByRole("button", { name: "顯示 QR code" }).click();
+  await expect(page).toHaveURL(/\/gears\/age-keygen\/$/);
+  await expect(page.getByRole("img", { name: "公鑰的 QR code" })).toBeVisible();
+  const png = await downloadFrom(page, () => page.getByRole("button", { name: "下載 PNG" }).click());
+  expect(decodeQrPng(png.data)).toBe(recipient);
+
   await page.getByRole("button", { name: "放進暫存區，用密語加密再存" }).click();
   await expect(page.getByRole("heading", { name: "age-key.txt" })).toBeVisible();
   await expect(page.getByRole("button", { name: "開始加密" })).toBeVisible();
+});
 
+test("到其他工具再回來，金鑰還在", async ({ page }) => {
   await page.goto("./age-keygen/");
   await page.getByRole("button", { name: "產生一組金鑰" }).click();
-  const second = (await page.getByTestId("recipient").textContent())!;
-  expect(second).not.toBe(recipient);
-  await page.getByRole("button", { name: "做成 QR code" }).click();
-  await expect(page).toHaveURL(/\/gears\/qrcode\/$/);
-  await expect(page.getByLabel("要放進 QR code 的內容")).toHaveValue(second);
-  await expect(page.getByRole("img", { name: "QR code 預覽" })).toBeVisible();
+  const recipient = (await page.getByTestId("recipient").textContent())!;
+  await page.getByRole("button", { name: "回到桌面" }).click();
+  await page.getByRole("button", { name: /QR code 產生器/ }).click();
+  await page.goBack();
+  await page.goBack();
+  await expect(page).toHaveURL(/\/gears\/age-keygen\/$/);
+  await expect(page.getByTestId("recipient")).toHaveText(recipient);
+});
+
+test("私鑰還沒存下來，重新整理之前先確認", async ({ page }) => {
+  await page.goto("./age-keygen/");
+  await page.getByRole("button", { name: "產生一組金鑰" }).click();
+  await expect(page.getByTestId("recipient")).toBeVisible();
+  const asked: string[] = [];
+  page.on("dialog", async (dialog) => {
+    asked.push(dialog.type());
+    await dialog.dismiss();
+  });
+  await page.close({ runBeforeUnload: true });
+  await expect.poll(() => asked).toEqual(["beforeunload"]);
+});
+
+test("私鑰下載之後，關掉分頁不再確認", async ({ page }) => {
+  await page.goto("./age-keygen/");
+  await page.getByRole("button", { name: "產生一組金鑰" }).click();
+  await downloadFrom(page, () => page.getByRole("button", { name: "下載金鑰檔" }).click());
+  const asked: string[] = [];
+  page.on("dialog", async (dialog) => {
+    asked.push(dialog.type());
+    await dialog.dismiss();
+  });
+  await page.close({ runBeforeUnload: true });
+  await expect.poll(() => page.isClosed()).toBe(true);
+  expect(asked).toEqual([]);
 });
 
 test("從加密畫面連到金鑰產生器，暫存區不會被清空", async ({ page }) => {

@@ -979,6 +979,15 @@ footer a {
   margin-bottom: 0.5rem;
 }
 
+.key-qr {
+  margin: 0.5rem 0 1rem;
+}
+
+.key-qr .qr-preview {
+  max-width: 14rem;
+  margin-bottom: 0.5rem;
+}
+
 .secret.key {
   font-size: 0.95rem;
 }
