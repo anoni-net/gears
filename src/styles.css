@@ -742,6 +742,46 @@ footer a {
   align-items: center;
 }
 
+/* QR code 讀取 */
+
+.qr-read .buttons,
+.qr-content .buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.camera {
+  width: 100%;
+  max-width: 28rem;
+  border-radius: var(--radius);
+  background: #000;
+  display: block;
+  margin-bottom: 0.75rem;
+}
+
+.wifi {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.25rem 1rem;
+  margin: 0 0 0.75rem;
+}
+
+.wifi dt {
+  color: var(--muted);
+}
+
+.wifi dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.qr-found {
+  margin-top: 1.25rem;
+}
+
 .drop-overlay {
   position: fixed;
   inset: 0;

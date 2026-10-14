@@ -89,6 +89,12 @@ export function App() {
     if (isCreateTool(route)) navigate("");
   };
 
+  const openTool = (id: string, value?: string) => {
+    tray.select(null);
+    setPreset(value);
+    navigate(id);
+  };
+
   const onTask = (task: Task) => {
     tray.select(null);
     setPreset(task.preset);
@@ -107,11 +113,17 @@ export function App() {
       <section class="create" aria-labelledby="create-title">
         <h2 id="create-title">{tDynamic(`tool.${route}`)}</h2>
         <p class="hint">{tDynamic(`tool.${route}.desc`)}</p>
-        <CreateToolView key={`${route}-${preset ?? ""}`} id={route} preset={preset} onCreate={(file) => void addFiles([file], route)} />
+        <CreateToolView
+          key={`${route}-${preset ?? ""}`}
+          id={route}
+          preset={preset}
+          onCreate={(file) => void addFiles([file], route)}
+          onOpenTool={openTool}
+        />
       </section>
     );
   } else if (selected) {
-    view = <FileView key={selected.id} file={selected} index={selectedIndex} busy={state.busy} preferred={route} />;
+    view = <FileView key={selected.id} file={selected} index={selectedIndex} busy={state.busy} preferred={route} onOpenTool={openTool} />;
   } else if (isFileTool(route)) {
     view = <ToolIntro id={route} onPick={pick} />;
   } else {

@@ -20,6 +20,8 @@ export const zhTW = {
   "meta.qrcode.description": "把網址、文字或 Wi-Fi 密碼變成 QR code，在你的瀏覽器裡產生，可以下載 PNG 或 SVG。",
   "meta.url-check.title": "網址檢查 | 隱私工作台",
   "meta.url-check.description": "比對 165 反詐騙的停止解析清單、標出真正的網域、清除網址裡的追蹤碼，網址不會送出。",
+  "meta.qr-read.title": "QR code 讀取 | 隱私工作台",
+  "meta.qr-read.description": "用相機或照片讀出 QR code 的內容，網址可以接著檢查，在你的瀏覽器裡解讀，不會送出。",
   "meta.passphrase.title": "密語與密碼產生器 | 隱私工作台",
   "meta.passphrase.description": "產生好記又夠強的 Diceware 密語，或隨機密碼，用瀏覽器的密碼學亂數，不會送出也不會存起來。",
 
@@ -54,6 +56,8 @@ export const zhTW = {
   "tool.qrcode.desc": "把網址、文字或 Wi-Fi 密碼變成 QR code。",
   "tool.url-check": "網址檢查",
   "tool.url-check.desc": "比對 165 反詐騙清單、標出真正的網域、清除追蹤碼。",
+  "tool.qr-read": "QR code 讀取",
+  "tool.qr-read.desc": "用相機或照片讀出 QR code 的內容，掃到網址可以先檢查再打開。",
   "tool.passphrase": "密語與密碼產生器",
   "tool.passphrase.desc": "產生好記又夠強的密語，或一串隨機密碼。",
 
@@ -167,6 +171,20 @@ export const zhTW = {
   "url.owner.wicked": "Wicked Reports 的追蹤碼",
   "url.owner.matomo": "Matomo 流量統計的活動標籤",
   "url.owner.shopee": "蝦皮的分享與推薦追蹤",
+
+  "qrread.camera": "用相機掃描",
+  "qrread.stop": "停止掃描",
+  "qrread.photo": "選擇照片",
+  "qrread.noCamera": "相機只能在 HTTPS 的頁面上使用，可以改選一張拍好的照片。",
+  "qrread.reading": "讀取中…",
+  "qrread.notFound": "照片裡找不到 QR code，可以靠近一點、拍正一點再試一次。",
+  "qrread.cameraError": "沒有辦法使用相機，可能是沒有允許存取，可以改選一張拍好的照片。",
+  "qrread.privacy": "相機畫面與照片只在你的瀏覽器裡解讀，不會送出，也不會存起來。",
+  "qrread.checkUrl": "用網址檢查",
+  "qrread.copyPassword": "複製密碼",
+  "qrread.urlNote": "QR code 很容易被貼上假的，打開之前先檢查網址。",
+  "qrread.inImage": "圖片裡的 QR code",
+  "qrread.inImageNote": "拍到這張圖的人都讀得出 QR code 的內容。登機證、票券與收據上的 QR code 常帶有姓名或訂單資料，分享前可以先遮住。",
 
   "pw.mode": "種類",
   "pw.mode.words": "密語",

@@ -9,6 +9,7 @@ const loaders: Record<string, () => Promise<ComponentType<CreateToolProps>>> = {
   qrcode: () => import("./QrTool.tsx").then((m) => m.QrTool),
   passphrase: () => import("./PassphraseTool.tsx").then((m) => m.PassphraseTool),
   "url-check": () => import("./UrlCheckTool.tsx").then((m) => m.UrlCheckTool),
+  "qr-read": () => import("./QrReadTool.tsx").then((m) => m.QrReadTool),
 };
 
 export function CreateToolView({ id, ...props }: CreateToolProps & { id: string }) {

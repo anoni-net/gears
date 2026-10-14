@@ -12,6 +12,7 @@ export const fileTools: Tool[] = [stripMetadata];
 export const createTools: CreateTool[] = [
   { id: "qrcode", output: "file" },
   { id: "url-check", output: "text" },
+  { id: "qr-read", output: "text" },
   { id: "passphrase", output: "text" },
 ];
 

@@ -1,4 +1,4 @@
-import { useState } from "preact/hooks";
+import { useEffect, useState } from "preact/hooks";
 import { EXTENSION } from "../core/bytes.ts";
 import { type Report, ToolError } from "../core/tool.ts";
 import type { TrayFile, Version } from "../core/tray.ts";
@@ -6,6 +6,8 @@ import { t, tDynamic } from "../i18n/index.ts";
 import { tray } from "../state.ts";
 import { fileTools } from "../tools/index.ts";
 import { useObjectUrl } from "./hooks.ts";
+import { QrContentView } from "./QrContentView.tsx";
+import { decodeQrFromBlob } from "./qr-scan.ts";
 
 function versionLabel(v: Version) {
   return v.tool ? tDynamic(`file.version.${v.tool}`) : t("file.original");
@@ -78,9 +80,31 @@ interface Props {
   index: number;
   busy: boolean;
   preferred?: string; // 從工具的網址進來時，那個工具排在最前面
+  onOpenTool(id: string, preset?: string): void;
 }
 
-export function FileView({ file, index, busy, preferred }: Props) {
+// 圖片裡的 QR code 任何人拍到都讀得出來，登機證、票券上的常帶有個資，所以自動讀一次
+function QrInImage({ blob, onOpenTool }: { blob: Blob; onOpenTool: Props["onOpenTool"] }) {
+  const [text, setText] = useState<string | null>(null);
+  useEffect(() => {
+    let alive = true;
+    setText(null);
+    void decodeQrFromBlob(blob).then((found) => alive && setText(found));
+    return () => {
+      alive = false;
+    };
+  }, [blob]);
+  if (text === null) return null;
+  return (
+    <section class="qr-found" aria-labelledby="qr-found-title">
+      <h3 id="qr-found-title">{t("qrread.inImage")}</h3>
+      <p class="hint">{t("qrread.inImageNote")}</p>
+      <QrContentView text={text} onOpenTool={onOpenTool} />
+    </section>
+  );
+}
+
+export function FileView({ file, index, busy, preferred, onOpenTool }: Props) {
   const current = file.versions.at(-1)!;
   const preview = useObjectUrl(current.format === "unknown" ? undefined : current.blob);
   const [error, setError] = useState<string>();
@@ -135,6 +159,8 @@ export function FileView({ file, index, busy, preferred }: Props) {
         <div class="panel">
           <h3>{t("findings.title")}</h3>
           <Findings version={current} />
+
+          {file.versions[0]!.tool === null ? <QrInImage blob={current.blob} onOpenTool={onOpenTool} /> : null}
 
           <h3>{t("tools.title")}</h3>
           <ul class="shelf">
