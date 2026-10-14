@@ -30,6 +30,8 @@ export function CreateToolView({ id, ...props }: CreateToolProps & { id: string 
 // 需要編輯畫面的檔案工具，對應 src/tools/index.ts 的 editorTools
 const editors: Record<string, () => Promise<ComponentType<FileEditorProps>>> = {
   redact: () => import("./RedactEditor.tsx").then((m) => m.RedactEditor),
+  encrypt: () => import("./AgeEditors.tsx").then((m) => m.EncryptEditor),
+  decrypt: () => import("./AgeEditors.tsx").then((m) => m.DecryptEditor),
 };
 
 export function FileEditorView({ id, ...props }: FileEditorProps & { id: string }) {

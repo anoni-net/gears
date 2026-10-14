@@ -47,6 +47,10 @@ export const SEGMENT_CODES = [
   "orientation",
   "redaction",
   "reencode",
+  "age-passphrase",
+  "age-recipients",
+  "age-armor",
+  "age-decrypted",
 ] as const;
 
 export type SegmentCode = (typeof SEGMENT_CODES)[number];
@@ -60,6 +64,7 @@ export interface ReportItem {
 export interface Report {
   removed: ReportItem[];
   kept: ReportItem[];
+  notes?: ReportItem[]; // 不屬於拿掉或保留的說明，例如用了哪種方式加密
 }
 
 export interface RunResult {

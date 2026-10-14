@@ -3,7 +3,7 @@ import { navigate } from "../router.ts";
 import { createTools, editorTools, fileTools } from "../tools/index.ts";
 
 export interface Task {
-  id: "photo" | "redact" | "wifi";
+  id: "photo" | "redact" | "encrypt" | "wifi";
   tool: string;
   preset?: string;
   pick?: boolean; // 處理檔案的任務，點了直接請讀者選檔案
@@ -14,6 +14,7 @@ export interface Task {
 export const TASKS: Task[] = [
   { id: "photo", tool: "strip-metadata", pick: true },
   { id: "redact", tool: "redact", pick: true },
+  { id: "encrypt", tool: "encrypt", pick: true },
   { id: "wifi", tool: "qrcode", preset: "wifi" },
 ];
 
@@ -63,10 +64,6 @@ export function Desktop({ onTask }: Props) {
           {createTools.map((tool) => (
             <ToolCard key={tool.id} id={tool.id} />
           ))}
-        </ul>
-        <h3>{t("desk.soon")}</h3>
-        <ul class="soon">
-          <li>{t("desk.soon.encrypt")}</li>
         </ul>
       </section>
     </div>

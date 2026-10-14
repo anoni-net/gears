@@ -225,6 +225,10 @@ h4 {
   color: var(--ok);
 }
 
+.item .status.muted {
+  color: var(--muted);
+}
+
 .item .status.warn {
   color: var(--warn);
 }
@@ -266,6 +270,12 @@ h4 {
   display: grid;
   gap: 1.25rem;
   align-items: start;
+}
+
+@media (min-width: 64rem) {
+  .columns.single {
+    grid-template-columns: minmax(0, 40rem);
+  }
 }
 
 /* 手機上先看到找到的資訊與按鈕，預覽放在後面，也不讓它佔掉整個畫面 */
@@ -799,6 +809,22 @@ footer a {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+}
+
+/* 加密與解密 */
+
+.age .buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.note {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 0.75rem 1rem;
 }
 
 .drop-overlay {

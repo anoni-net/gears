@@ -11,11 +11,14 @@ interface ItemProps {
 
 function Item({ file, selected, onSelect }: ItemProps) {
   const current = file.versions.at(-1)!;
-  const url = useObjectUrl(current.format === "unknown" ? undefined : current.blob);
+  const isImage = current.format === "jpeg" || current.format === "png";
+  const url = useObjectUrl(isImage ? current.blob : undefined);
   const status =
-    current.format === "unknown"
-      ? t("tray.unsupported")
-      : current.findings.length
+    current.format === "age"
+      ? t("tray.encrypted")
+      : !isImage
+        ? t("tray.unsupported")
+        : current.findings.length
         ? t("tray.found", { n: current.findings.length })
         : t("tray.clean");
   return (
@@ -24,7 +27,7 @@ function Item({ file, selected, onSelect }: ItemProps) {
         {url ? <img src={url} alt="" /> : <span class="thumb" aria-hidden="true" />}
         <span class="meta">
           <span class="name">{file.name}</span>
-          <span class={current.findings.length ? "status warn" : "status"}>
+          <span class={!isImage ? "status muted" : current.findings.length ? "status warn" : "status"}>
             {status}
             {file.versions.length > 1 ? ` · ${t("tray.versions", { n: file.versions.length })}` : ""}
           </span>

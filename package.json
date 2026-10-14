@@ -17,6 +17,7 @@
     "test:unit": "playwright test --project=unit"
   },
   "dependencies": {
+    "age-encryption": "0.3.1",
     "jsqr": "1.4.0",
     "preact": "11.0.1",
     "qrcode-generator": "2.0.4"

@@ -11,6 +11,8 @@ export const fileTools: Tool[] = [stripMetadata];
 // 需要編輯畫面的檔案工具
 export const editorTools: EditorTool[] = [
   { id: "redact", resolves: [], accepts: (format) => format === "jpeg" || format === "png" },
+  { id: "encrypt", resolves: [], accepts: (format) => format !== "age" },
+  { id: "decrypt", resolves: [], accepts: (format) => format === "age" },
 ];
 
 // 從空白開始的工具

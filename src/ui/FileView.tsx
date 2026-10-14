@@ -10,6 +10,14 @@ import { useObjectUrl } from "./hooks.ts";
 import { QrContentView } from "./QrContentView.tsx";
 import { decodeQrFromBlob } from "./qr-scan.ts";
 
+// 下載的檔名不沿用原檔名（常帶有拍攝日期），只決定副檔名。不能預覽的檔案沒有
+// 可靠的格式判斷，沿用原檔名的副檔名，解密時先拿掉 .age
+function extension(name: string, format: Version["format"]): string {
+  if (format !== "unknown") return EXTENSION[format];
+  const ext = /\.([a-z0-9]{1,5})$/i.exec(name.replace(/\.age$/i, ""))?.[1];
+  return ext ? ext.toLowerCase() : EXTENSION.unknown;
+}
+
 function versionLabel(v: Version) {
   return v.tool ? tDynamic(`file.version.${v.tool}`) : t("file.original");
 }
@@ -51,6 +59,7 @@ function ReportView({ report }: { report: Report }) {
           <ul>{rows(report.kept)}</ul>
         </div>
       ) : null}
+      {report.notes?.length ? <ul>{rows(report.notes)}</ul> : null}
     </div>
   );
 }
@@ -108,21 +117,13 @@ function QrInImage({ blob, onOpenTool }: { blob: Blob; onOpenTool: Props["onOpen
 
 export function FileView({ file, index, busy, preferred, onOpenTool }: Props) {
   const current = file.versions.at(-1)!;
-  const preview = useObjectUrl(current.format === "unknown" ? undefined : current.blob);
+  const isImage = current.format === "jpeg" || current.format === "png";
+  const preview = useObjectUrl(isImage ? current.blob : undefined);
   const [error, setError] = useState<string>();
   // 從編輯類工具的網址進來（例如遮蔽的任務），選好檔案就直接打開編輯畫面
   const [editing, setEditing] = useState<string | null>(() =>
     editorTools.some((tool) => tool.id === preferred && tool.accepts(current.format)) && current.tool !== preferred ? preferred! : null,
   );
-
-  if (current.format === "unknown") {
-    return (
-      <section class="file">
-        <h2>{file.name}</h2>
-        <p class="error">{t("file.unsupported")}</p>
-      </section>
-    );
-  }
 
   const run = async (toolId: string) => {
     const tool = fileTools.find((x) => x.id === toolId)!;
@@ -138,7 +139,7 @@ export function FileView({ file, index, busy, preferred, onOpenTool }: Props) {
     }
   };
 
-  const outputName = `gears-${index + 1}.${EXTENSION[current.format]}`;
+  const outputName = `gears-${index + 1}.${extension(file.name, current.format)}`;
 
   // 適用這個格式的工具。能處理目前找到的資訊的標成建議，排在前面
   const found = new Set(current.findings.map((f) => f.code));
@@ -182,14 +183,20 @@ export function FileView({ file, index, busy, preferred, onOpenTool }: Props) {
           ) : null}
         </section>
       ) : (
-      <div class="columns">
-        <figure class="preview">{preview ? <img src={preview} alt="" /> : null}</figure>
+      <div class={isImage ? "columns" : "columns single"}>
+        {isImage ? <figure class="preview">{preview ? <img src={preview} alt="" /> : null}</figure> : null}
 
         <div class="panel">
-          <h3>{t("findings.title")}</h3>
-          <Findings version={current} />
+          {isImage ? (
+            <>
+              <h3>{t("findings.title")}</h3>
+              <Findings version={current} />
+            </>
+          ) : (
+            <p class="note">{t(current.format === "age" ? "file.encrypted" : "file.unsupported")}</p>
+          )}
 
-          {file.versions[0]!.tool === null ? <QrInImage blob={current.blob} onOpenTool={onOpenTool} /> : null}
+          {isImage && file.versions[0]!.tool === null ? <QrInImage blob={current.blob} onOpenTool={onOpenTool} /> : null}
 
           <h3>{t("tools.title")}</h3>
           <ul class="shelf">

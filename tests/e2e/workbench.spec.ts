@@ -135,10 +135,12 @@ test("很長的檔名不會把版面撐出橫向捲軸", async ({ page }) => {
   expect(overflow).toBeLessThanOrEqual(0);
 });
 
-test("不支援的檔案說明清楚，不提供處理", async ({ page }) => {
+test("不能預覽的檔案說明清楚，只提供加密", async ({ page }) => {
   await addFile(page, "notes.txt", "text/plain", text("hello"));
-  await expect(page.getByText("這種檔案目前還不支援")).toBeVisible();
+  await expect(page.getByText("這種檔案不能預覽")).toBeVisible();
+  await expect(page.locator(".tray .item")).toContainText("不能預覽");
   await expect(page.getByRole("button", { name: "清除中繼資料" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "加密" })).toBeVisible();
 });
 
 test("正式建置帶著 CSP，限制頁面能連線的對象", async ({ page, guard }) => {
