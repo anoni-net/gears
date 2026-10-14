@@ -3,6 +3,14 @@ import { Decrypter, Encrypter, armor, generateX25519Identity, identityToRecipien
 // age 加密與解密。用的是 age 的官方 TypeScript 實作 typage（npm 的 age-encryption），
 // 輸出的檔案可以用命令列的 age、rage 或其他相容的工具解開。
 
+// 公鑰與私鑰要用 WebCrypto 的 X25519。瀏覽器只在 HTTPS（或 localhost、.onion）上提供
+// crypto.subtle，HTTP 頁面上是 undefined。typage 在瀏覽器不支援 X25519 時會改用 noble 的
+// 實作，但 crypto.subtle 整個不存在時拋出的是 TypeError，它不會接住，所以先在這裡檢查。
+// 用密語加密走 scrypt 與 ChaCha20-Poly1305 的純 JavaScript 實作，不受影響。
+export function keysAvailable(): boolean {
+  return typeof globalThis.crypto?.subtle !== "undefined";
+}
+
 const ARMOR_HEADER = "-----BEGIN AGE ENCRYPTED FILE-----";
 
 export function isArmored(data: Uint8Array): boolean {

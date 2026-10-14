@@ -1,6 +1,6 @@
 import { useState } from "preact/hooks";
 import { t } from "../i18n/index.ts";
-import { generateKeyPair, keyFileText } from "../tools/age/index.ts";
+import { generateKeyPair, keyFileText, keysAvailable } from "../tools/age/index.ts";
 import { CopyButton } from "./CopyButton.tsx";
 import { saveBlob } from "./save.ts";
 import type { CreateToolProps } from "./types.ts";
@@ -12,11 +12,18 @@ const KEY_FILE = "age-key.txt";
 export function KeygenTool({ onCreate, onOpenTool }: CreateToolProps) {
   const [pair, setPair] = useState<{ identity: string; recipient: string; file: string } | null>(null);
   const [shown, setShown] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const available = keysAvailable();
 
   const generate = async () => {
-    const { identity, recipient } = await generateKeyPair();
-    setPair({ identity, recipient, file: keyFileText(identity, recipient, new Date()) });
-    setShown(false);
+    setFailed(false);
+    try {
+      const { identity, recipient } = await generateKeyPair();
+      setPair({ identity, recipient, file: keyFileText(identity, recipient, new Date()) });
+      setShown(false);
+    } catch {
+      setFailed(true);
+    }
   };
 
   const keyFile = () => new File([pair!.file], KEY_FILE, { type: "text/plain" });
@@ -24,11 +31,21 @@ export function KeygenTool({ onCreate, onOpenTool }: CreateToolProps) {
   return (
     <div class="keygen">
       <p class="hint">{t("keygen.intro")}</p>
+      {!available ? (
+        <p class="alert danger" role="alert">
+          {t("age.needsHttps")}
+        </p>
+      ) : null}
       <div class="buttons">
-        <button type="button" class={pair ? "" : "primary"} onClick={generate}>
+        <button type="button" class={pair ? "" : "primary"} disabled={!available} onClick={generate}>
           {pair ? t("keygen.again") : t("keygen.generate")}
         </button>
       </div>
+      {failed ? (
+        <p class="error" role="alert">
+          {t("keygen.failed")}
+        </p>
+      ) : null}
       {pair ? <p class="hint">{t("keygen.againNote")}</p> : null}
 
       {pair ? (

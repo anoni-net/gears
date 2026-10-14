@@ -2,7 +2,7 @@ import { useState } from "preact/hooks";
 import type { Report } from "../core/tool.ts";
 import { t } from "../i18n/index.ts";
 import { navigate } from "../router.ts";
-import { decrypt, encrypt, parseRecipients } from "../tools/age/index.ts";
+import { decrypt, encrypt, keysAvailable, parseRecipients } from "../tools/age/index.ts";
 import { cryptoRandom, parseWordlist, pickWords } from "../tools/passphrase/index.ts";
 import wordlistText from "../tools/passphrase/asian-diceware-7776.txt?raw";
 import type { FileEditorProps } from "./types.ts";
@@ -18,8 +18,11 @@ export function EncryptEditor({ blob, onDone, onCancel }: FileEditorProps) {
   const [status, setStatus] = useState<"idle" | "working" | "failed">("idle");
 
   const parsed = parseRecipients(recipients);
+  const available = keysAvailable();
   const ready =
-    mode === "passphrase" ? passphrase.length >= MIN_PASSPHRASE : parsed.valid.length > 0 && parsed.invalid.length === 0;
+    mode === "passphrase"
+      ? passphrase.length >= MIN_PASSPHRASE
+      : available && parsed.valid.length > 0 && parsed.invalid.length === 0;
 
   const generate = () => setPassphrase(pickWords(parseWordlist(wordlistText), 6, cryptoRandom).join(" "));
 
@@ -77,6 +80,7 @@ export function EncryptEditor({ blob, onDone, onCancel }: FileEditorProps) {
             {t("age.recipients")}
             <textarea rows={4} value={recipients} spellcheck={false} autocomplete="off" placeholder="age1…" onInput={(e) => setRecipients(e.currentTarget.value)} />
           </label>
+          {!available ? <p class="alert danger">{t("age.needsHttps")}</p> : null}
           {parsed.invalid.length ? <p class="error">{t("age.invalidRecipients", { list: parsed.invalid.join("、") })}</p> : null}
           <p class="hint">
             {t("age.recipientsNote")}{" "}
@@ -114,6 +118,8 @@ export function EncryptEditor({ blob, onDone, onCancel }: FileEditorProps) {
 export function DecryptEditor({ blob, onDone, onCancel }: FileEditorProps) {
   const [key, setKey] = useState("");
   const [status, setStatus] = useState<"idle" | "working" | "failed">("idle");
+  const usesIdentity = key.includes("AGE-SECRET-KEY-");
+  const blocked = usesIdentity && !keysAvailable();
 
   const apply = async () => {
     setStatus("working");
@@ -132,8 +138,9 @@ export function DecryptEditor({ blob, onDone, onCancel }: FileEditorProps) {
         <textarea rows={3} value={key} spellcheck={false} autocomplete="off" onInput={(e) => setKey(e.currentTarget.value)} />
       </label>
       <p class="hint">{t("age.keyNote")}</p>
+      {blocked ? <p class="alert danger">{t("age.needsHttps")}</p> : null}
       <div class="buttons">
-        <button type="button" class="primary" disabled={!key.trim() || status === "working"} onClick={apply}>
+        <button type="button" class="primary" disabled={!key.trim() || blocked || status === "working"} onClick={apply}>
           {status === "working" ? t("age.working") : t("age.decrypt")}
         </button>
         <button type="button" onClick={onCancel}>

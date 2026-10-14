@@ -237,6 +237,7 @@ export const zhTW = {
   "age.decrypt": "解密",
   "age.working": "處理中…",
   "age.encryptFailed": "加密沒有成功，原檔維持原樣。用公鑰加密時，請確認公鑰完整。",
+  "age.needsHttps": "公鑰與私鑰要用到瀏覽器的密碼學功能，只有 https:// 開頭的網址才能使用。用密語加密不受影響。",
   "age.toKeygen": "還沒有金鑰？請對方用金鑰產生器產生一組",
   "age.compat": "使用 age 格式，對方也可以用 age 或 rage 命令列工具解開。",
   "age.key": "密語或私鑰",
@@ -245,6 +246,7 @@ export const zhTW = {
 
   "keygen.intro": "金鑰分成兩把。公鑰交給要傳檔案給你的人，他們用它加密。私鑰留在你身邊，只有它解得開。不必事先約定密語，也不怕密語在路上被看到。",
   "keygen.generate": "產生一組金鑰",
+  "keygen.failed": "產生金鑰沒有成功，可能是瀏覽器版本太舊，請更新瀏覽器之後再試一次。",
   "keygen.again": "重新產生",
   "keygen.againNote": "重新產生之後，畫面上這一組就不見了，用它加密的檔案只能靠存下來的私鑰解開。",
   "keygen.recipient": "公鑰",
