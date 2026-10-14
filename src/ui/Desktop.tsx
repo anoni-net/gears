@@ -1,9 +1,9 @@
 import { t, tDynamic } from "../i18n/index.ts";
 import { navigate } from "../router.ts";
-import { createTools, fileTools } from "../tools/index.ts";
+import { createTools, editorTools, fileTools } from "../tools/index.ts";
 
 export interface Task {
-  id: "photo" | "wifi";
+  id: "photo" | "redact" | "wifi";
   tool: string;
   preset?: string;
   pick?: boolean; // 處理檔案的任務，點了直接請讀者選檔案
@@ -13,6 +13,7 @@ export interface Task {
 // 也放在這裡。
 export const TASKS: Task[] = [
   { id: "photo", tool: "strip-metadata", pick: true },
+  { id: "redact", tool: "redact", pick: true },
   { id: "wifi", tool: "qrcode", preset: "wifi" },
 ];
 
@@ -53,7 +54,7 @@ export function Desktop({ onTask }: Props) {
         <h2 id="tools-title">{t("desk.tools")}</h2>
         <h3>{t("desk.group.file")}</h3>
         <ul class="cards">
-          {fileTools.map((tool) => (
+          {[...fileTools, ...editorTools].map((tool) => (
             <ToolCard key={tool.id} id={tool.id} />
           ))}
         </ul>
@@ -65,7 +66,6 @@ export function Desktop({ onTask }: Props) {
         </ul>
         <h3>{t("desk.soon")}</h3>
         <ul class="soon">
-          <li>{t("desk.soon.redact")}</li>
           <li>{t("desk.soon.encrypt")}</li>
         </ul>
       </section>

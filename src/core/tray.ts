@@ -52,6 +52,15 @@ export function createTray(tools: Tool[], verify?: Verifier) {
     set({ files: state.files.map((f) => (f.id === id ? update(f) : f)) });
   };
 
+  const addVersion = async (fileId: number, input: Blob, toolId: string, report?: Report) => {
+    const data = new Uint8Array(await input.arrayBuffer());
+    const format = sniff(data);
+    const blob = new Blob([data], { type: MIME[format] });
+    if (verify) await verify(blob, format);
+    const version: Version = { id: nextId++, tool: toolId, blob, format, findings: inspect(data, format), report };
+    updateFile(fileId, (f) => ({ ...f, versions: [...f.versions, version] }));
+  };
+
   return {
     get: () => state,
 
@@ -92,23 +101,21 @@ export function createTray(tools: Tool[], verify?: Verifier) {
     },
 
     async apply(fileId: number, tool: Tool) {
-      const file = state.files.find((f) => f.id === fileId);
-      const current = file?.versions.at(-1);
-      if (!file || !current) return;
+      const current = state.files.find((f) => f.id === fileId)?.versions.at(-1);
+      if (!current) return;
       if (!tool.accepts(current.format)) throw new ToolError("unsupported");
       set({ busy: true });
       try {
         const input = new Uint8Array(await current.blob.arrayBuffer());
         const { data, report } = tool.run(input, current.format);
-        const format = sniff(data);
-        const blob = new Blob([data as Uint8Array<ArrayBuffer>], { type: MIME[format] });
-        if (verify) await verify(blob, format);
-        const version: Version = { id: nextId++, tool: tool.id, blob, format, findings: inspect(data, format), report };
-        updateFile(fileId, (f) => ({ ...f, versions: [...f.versions, version] }));
+        await addVersion(fileId, new Blob([data as Uint8Array<ArrayBuffer>]), tool.id, report);
       } finally {
         set({ busy: false });
       }
     },
+
+    // 編輯畫面產生的結果也走這裡：先實際解碼一次，再當成新版本加在檔案底下
+    addVersion: (fileId: number, blob: Blob, toolId: string, report?: Report) => addVersion(fileId, blob, toolId, report),
 
     undo(fileId: number) {
       updateFile(fileId, (f) => (f.versions.length > 1 ? { ...f, versions: f.versions.slice(0, -1) } : f));

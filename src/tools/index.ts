@@ -1,4 +1,4 @@
-import type { CreateTool, Tool } from "../core/tool.ts";
+import type { CreateTool, EditorTool, Tool } from "../core/tool.ts";
 import { stripMetadata } from "./strip-metadata/index.ts";
 
 // 工作台上的所有工具。新增工具時加在這裡，暫存區不必改。
@@ -8,6 +8,11 @@ import { stripMetadata } from "./strip-metadata/index.ts";
 // 處理檔案的工具
 export const fileTools: Tool[] = [stripMetadata];
 
+// 需要編輯畫面的檔案工具
+export const editorTools: EditorTool[] = [
+  { id: "redact", resolves: [], accepts: (format) => format === "jpeg" || format === "png" },
+];
+
 // 從空白開始的工具
 export const createTools: CreateTool[] = [
   { id: "qrcode", output: "file" },
@@ -16,6 +21,6 @@ export const createTools: CreateTool[] = [
   { id: "passphrase", output: "text" },
 ];
 
-export const toolIds = [...fileTools.map((t) => t.id), ...createTools.map((t) => t.id)];
+export const toolIds = [...fileTools, ...editorTools, ...createTools].map((t) => t.id);
 
 export { stripMetadata };

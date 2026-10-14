@@ -782,6 +782,25 @@ footer a {
   margin-top: 1.25rem;
 }
 
+/* 遮蔽 */
+
+.redact-canvas {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  cursor: crosshair;
+  touch-action: none;
+  margin: 0.5rem 0;
+}
+
+.redact .buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
 .drop-overlay {
   position: fixed;
   inset: 0;

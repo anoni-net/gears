@@ -4,7 +4,8 @@ import { type Report, ToolError } from "../core/tool.ts";
 import type { TrayFile, Version } from "../core/tray.ts";
 import { t, tDynamic } from "../i18n/index.ts";
 import { tray } from "../state.ts";
-import { fileTools } from "../tools/index.ts";
+import { editorTools, fileTools } from "../tools/index.ts";
+import { FileEditorView } from "./registry.tsx";
 import { useObjectUrl } from "./hooks.ts";
 import { QrContentView } from "./QrContentView.tsx";
 import { decodeQrFromBlob } from "./qr-scan.ts";
@@ -32,7 +33,8 @@ function ReportView({ report }: { report: Report }) {
     items.map((item, i) => (
       <li key={i}>
         <span>{tDynamic(`segment.${item.code}`)}</span>
-        <small>{t("report.bytes", { n: item.bytes.toLocaleString() })}</small>
+        {item.count !== undefined ? <small>{t("report.count", { n: item.count })}</small> : null}
+        {item.bytes !== undefined ? <small>{t("report.bytes", { n: item.bytes.toLocaleString() })}</small> : null}
       </li>
     ));
   return (
@@ -108,6 +110,10 @@ export function FileView({ file, index, busy, preferred, onOpenTool }: Props) {
   const current = file.versions.at(-1)!;
   const preview = useObjectUrl(current.format === "unknown" ? undefined : current.blob);
   const [error, setError] = useState<string>();
+  // 從編輯類工具的網址進來（例如遮蔽的任務），選好檔案就直接打開編輯畫面
+  const [editing, setEditing] = useState<string | null>(() =>
+    editorTools.some((tool) => tool.id === preferred && tool.accepts(current.format)) && current.tool !== preferred ? preferred! : null,
+  );
 
   if (current.format === "unknown") {
     return (
@@ -136,9 +142,9 @@ export function FileView({ file, index, busy, preferred, onOpenTool }: Props) {
 
   // 適用這個格式的工具。能處理目前找到的資訊的標成建議，排在前面
   const found = new Set(current.findings.map((f) => f.code));
-  const shelf = fileTools
-    .filter((tool) => tool.accepts(current.format))
-    .map((tool) => ({ tool, recommended: tool.resolves.some((code) => found.has(code)) }))
+  const shelf = [...fileTools.map((tool) => ({ tool, editor: false })), ...editorTools.map((tool) => ({ tool, editor: true }))]
+    .filter(({ tool }) => tool.accepts(current.format))
+    .map(({ tool, editor }) => ({ tool, editor, recommended: tool.resolves.some((code) => found.has(code)) }))
     .sort((a, b) => Number(b.tool.id === preferred) - Number(a.tool.id === preferred) || Number(b.recommended) - Number(a.recommended));
 
   return (
@@ -153,6 +159,29 @@ export function FileView({ file, index, busy, preferred, onOpenTool }: Props) {
         ))}
       </ol>
 
+      {editing ? (
+        <section class="editor" aria-labelledby="editor-title">
+          <h3 id="editor-title">{tDynamic(`tool.${editing}`)}</h3>
+          <FileEditorView
+            id={editing}
+            blob={current.blob}
+            format={current.format}
+            onCancel={() => setEditing(null)}
+            onDone={(blob, report) => {
+              setError(undefined);
+              tray
+                .addVersion(file.id, blob, editing, report)
+                .then(() => setEditing(null))
+                .catch(() => setError(t("tool.error.verify")));
+            }}
+          />
+          {error ? (
+            <p class="error" role="alert">
+              {error}
+            </p>
+          ) : null}
+        </section>
+      ) : (
       <div class="columns">
         <figure class="preview">{preview ? <img src={preview} alt="" /> : null}</figure>
 
@@ -164,7 +193,7 @@ export function FileView({ file, index, busy, preferred, onOpenTool }: Props) {
 
           <h3>{t("tools.title")}</h3>
           <ul class="shelf">
-            {shelf.map(({ tool, recommended }) => (
+            {shelf.map(({ tool, editor, recommended }) => (
               <li key={tool.id}>
                 <span class="shelf-name">
                   <strong>{tDynamic(`tool.${tool.id}`)}</strong>
@@ -179,9 +208,9 @@ export function FileView({ file, index, busy, preferred, onOpenTool }: Props) {
                     class={recommended ? "primary" : ""}
                     disabled={busy}
                     aria-label={tDynamic(`tool.${tool.id}`)}
-                    onClick={() => run(tool.id)}
+                    onClick={() => (editor ? setEditing(tool.id) : run(tool.id))}
                   >
-                    {busy ? t("tools.busy") : t("tools.run")}
+                    {busy ? t("tools.busy") : t(editor ? "tools.open" : "tools.run")}
                   </button>
                 )}
               </li>
@@ -204,6 +233,7 @@ export function FileView({ file, index, busy, preferred, onOpenTool }: Props) {
           {current.tool ? <Output version={current} name={outputName} /> : null}
         </div>
       </div>
+      )}
     </section>
   );
 }

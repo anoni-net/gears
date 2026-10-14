@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import { t, tDynamic } from "./i18n/index.ts";
 import { navigate, routeUrl, useRoute } from "./router.ts";
 import { tray } from "./state.ts";
-import { createTools, fileTools } from "./tools/index.ts";
+import { createTools, editorTools, fileTools } from "./tools/index.ts";
 import { Desktop, type Task } from "./ui/Desktop.tsx";
 import { FileView } from "./ui/FileView.tsx";
 import { ToolIntro } from "./ui/ToolIntro.tsx";
@@ -11,7 +11,7 @@ import { useTray } from "./ui/hooks.ts";
 import { CreateToolView } from "./ui/registry.tsx";
 
 const isCreateTool = (id: string) => createTools.some((tool) => tool.id === id);
-const isFileTool = (id: string) => fileTools.some((tool) => tool.id === id);
+const isFileTool = (id: string) => [...fileTools, ...editorTools].some((tool) => tool.id === id);
 
 // 整個頁面都能拖放，不必瞄準某一塊區域。
 function useDropAnywhere(onFiles: (files: File[]) => void) {

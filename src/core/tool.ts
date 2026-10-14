@@ -45,13 +45,16 @@ export const SEGMENT_CODES = [
   "icc",
   "adobe",
   "orientation",
+  "redaction",
+  "reencode",
 ] as const;
 
 export type SegmentCode = (typeof SEGMENT_CODES)[number];
 
 export interface ReportItem {
   code: SegmentCode;
-  bytes: number;
+  bytes?: number;
+  count?: number;
 }
 
 export interface Report {
@@ -72,6 +75,14 @@ export interface Tool {
   accepts(format: Format): boolean;
   inspect(data: Uint8Array, format: Format): Finding[];
   run(data: Uint8Array, format: Format): RunResult;
+}
+
+// 需要編輯畫面的檔案工具，例如遮蔽：讀者在畫面上操作，結果由介面產生之後交給
+// 暫存區（tray.addVersion）。編輯畫面登記在 src/ui/registry.tsx。
+export interface EditorTool {
+  id: string;
+  resolves: readonly FindingCode[];
+  accepts(format: Format): boolean;
 }
 
 // 從空白開始的工具：讀者在工具裡填寫，產出檔案或文字。產出的檔案放進暫存區，
