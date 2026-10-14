@@ -248,6 +248,7 @@ export const zhTW = {
   "keygen.generate": "產生一組金鑰",
   "keygen.failed": "產生金鑰沒有成功，可能是瀏覽器版本太舊，請更新瀏覽器之後再試一次。",
   "keygen.again": "重新產生",
+  "keygen.busy": "產生中…",
   "keygen.againNote": "重新產生之後，畫面上這一組就不見了，用它加密的檔案只能靠存下來的私鑰解開。",
   "keygen.recipient": "公鑰",
   "keygen.recipientNote": "可以公開，貼在網站、名片或訊息裡都沒關係。",

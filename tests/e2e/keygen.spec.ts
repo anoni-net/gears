@@ -21,8 +21,10 @@ test("產生金鑰組：私鑰預設遮住，下載的金鑰檔解得開用公�
   const out = await encrypt(secret, { recipients: [recipient], armored: false });
   expect(await decrypt(out, text)).toEqual(secret);
 
-  await page.getByRole("button", { name: "重新產生" }).click();
-  await expect(page.getByTestId("recipient")).not.toHaveText(recipient);
+  const again = page.getByRole("button", { name: "重新產生" });
+  await expect(again).toBeEnabled();
+  await again.click();
+  await expect(page.getByTestId("recipient")).not.toHaveText(recipient, { timeout: 10_000 });
 });
 
 test("公鑰做成 QR code，金鑰檔放進暫存區之後可以加密", async ({ page }) => {

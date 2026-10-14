@@ -13,16 +13,20 @@ export function KeygenTool({ onCreate, onOpenTool }: CreateToolProps) {
   const [pair, setPair] = useState<{ identity: string; recipient: string; file: string } | null>(null);
   const [shown, setShown] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [busy, setBusy] = useState(false);
   const available = keysAvailable();
 
   const generate = async () => {
     setFailed(false);
+    setBusy(true);
     try {
       const { identity, recipient } = await generateKeyPair();
       setPair({ identity, recipient, file: keyFileText(identity, recipient, new Date()) });
       setShown(false);
     } catch {
       setFailed(true);
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -37,8 +41,8 @@ export function KeygenTool({ onCreate, onOpenTool }: CreateToolProps) {
         </p>
       ) : null}
       <div class="buttons">
-        <button type="button" class={pair ? "" : "primary"} disabled={!available} onClick={generate}>
-          {pair ? t("keygen.again") : t("keygen.generate")}
+        <button type="button" class={pair ? "" : "primary"} disabled={!available || busy} onClick={generate}>
+          {busy ? t("keygen.busy") : pair ? t("keygen.again") : t("keygen.generate")}
         </button>
       </div>
       {failed ? (
