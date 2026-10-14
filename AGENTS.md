@@ -7,7 +7,7 @@
 - 預設在瀏覽器裡處理。之後若提供上傳到社群伺服器的選項，上傳前要在畫面上寫清楚檔案送到哪裡、誰看得到、保留多久、伺服器會不會留下紀錄，由讀者決定
 - 上傳端點不經過 Cloudflare。Cloudflare 在邊緣解開 TLS，經過的檔案對它是明文
 - 頁面能連線的對象寫死在 CSP 裡（`vite.config.ts`），新增任何對外連線都要改那裡，並在畫面上標示
-- 執行期的相依套件只有 `preact` 與 QR code 產生器用的 `qrcode-generator`。新增套件前先想能不能自己寫，必要時鎖定確切的版本
+- 執行期的相依套件只有 `preact`、`qrcode-generator`（QR code 產生）、`jsqr`（QR code 讀取）與 `age-encryption`（加密，連同它相依的 noble 系列）。新增套件前先想能不能自己寫，必要時鎖定確切的版本。工具用到的套件在打開工具時才載入
 - 結構有問題的檔案就停下來，不交出一份沒處理乾淨的檔案
 
 ## 支援的瀏覽器
@@ -46,26 +46,38 @@ npm run test:unit    # 只執行單元測試，不需要瀏覽器
 
 ## 工具模組
 
-工具分兩種，都在 `src/tools/index.ts` 登記：
+工具分三種，都在 `src/tools/index.ts` 登記：
 
-| | 處理檔案的工具（`fileTools`） | 從空白開始的工具（`createTools`） |
-|---|---|---|
-| 例子 | 清除中繼資料 | QR code 產生器 |
-| 介面 | `src/core/tool.ts` 的 `Tool` | `CreateTool`，填寫用的元件登記在 `src/ui/registry.tsx` |
-| 結果 | 暫存區裡那個檔案的新版本 | 新檔案放進暫存區，或直接下載 |
+| | 處理檔案的工具（`fileTools`） | 需要編輯畫面的工具（`editorTools`） | 從空白開始的工具（`createTools`） |
+|---|---|---|---|
+| 例子 | 清除中繼資料 | 遮蔽、加密、解密 | QR code 產生器與讀取、網址檢查、密語與密碼產生器 |
+| 介面 | `src/core/tool.ts` 的 `Tool` | `EditorTool`，編輯畫面登記在 `src/ui/registry.tsx` | `CreateTool`，元件登記在 `src/ui/registry.tsx` |
+| 結果 | 暫存區裡那個檔案的新版本 | 同左，由 `tray.addVersion` 加入 | 產出檔案的放進暫存區，產出文字的只顯示在畫面上 |
 
 `Tool` 宣告可處理的格式與 `resolves`（能處理哪幾種找到的資訊），`inspect` 列出檔案裡找到的資訊，`run` 輸入位元組、輸出新的位元組與處理報告。工具只用 `Uint8Array` 與純資料，不碰 DOM，網頁版、Web Worker 與之後的瀏覽器擴充套件都能直接呼叫。檔案畫面的工具列依 `resolves` 把能處理目前問題的工具標成建議。
 
-從空白開始的工具，元件與它用到的函式庫在打開工具時才下載（`import()`），桌面維持輕量。產出的檔案用 `tray.add(files, 工具 id)` 放進暫存區，版本列會標出是哪個工具建立的。
+需要編輯畫面的工具，讀者在畫面上操作，結果交給 `tray.addVersion`，一樣先解碼檢查再加成新版本。純邏輯（座標換算、加解密）仍然放在 `src/tools/<工具>/`，有單元測試。從工具的網址或任務進來時，選好檔案就直接打開編輯畫面。
+
+從空白開始的工具，元件與它用到的函式庫在打開工具時才下載（`import()`），桌面維持輕量。產出的檔案用 `tray.add(files, 工具 id)` 放進暫存區，版本列會標出是哪個工具建立的。要打開另一個工具並帶入內容（例如把讀到的網址交給網址檢查）用 `onOpenTool`。
 
 新增工具的步驟：
 
 1. 純邏輯放 `src/tools/<工具>/`，在 `src/tools/index.ts` 加進其中一份清單
-2. 從空白開始的工具在 `src/ui/registry.tsx` 加上元件
-3. 在語系檔加上 `tool.<id>`、`tool.<id>.desc`、`file.version.<id>`、`meta.<id>.title` 與 `meta.<id>.description`，用到新的 `FindingCode` 或 `SegmentCode` 時也要加，`tests/unit/i18n.spec.ts` 會檢查
+2. 編輯畫面或從空白開始的元件登記在 `src/ui/registry.tsx`
+3. 在語系檔加上 `tool.<id>`、`tool.<id>.desc`、`meta.<id>.title` 與 `meta.<id>.description`，會在暫存區留下版本的工具另外加 `file.version.<id>`，用到新的 `FindingCode` 或 `SegmentCode` 時也要加，`tests/unit/i18n.spec.ts` 會檢查
 4. 單元測試放 `tests/unit/`，流程測試放 `tests/e2e/`
 
-暫存區每次處理都產生新版本並保留原檔，處理完的影像會先實際解碼一次（`src/state.ts`），解不開就放棄這次的結果。
+暫存區每次處理都產生新版本並保留原檔。處理完的影像會先實際解碼一次（`src/state.ts`），解不開就放棄這次的結果。加密檔由加密工具自己驗證，用密語加密時會用同一組密語解密一次。
+
+## 165 反詐騙清單
+
+網址檢查比對 165 反詐騙諮詢專線公開的「遭停止解析涉詐網站」清單（政府資料開放平台資料集 176455，內政部警政署，政府資料開放授權條款第 1 版），每月更新。
+
+```bash
+node scripts/fetch-165.mjs   # 下載並整理成 public/data/165.txt
+```
+
+檔案約 1.5 MB，不進版控，部署時先執行一次再建置。沒有這個檔案時建置照樣成功，網址檢查顯示清單無法載入，其他檢查不受影響。瀏覽器測試攔截這個請求，改給固定的測試清單，結果不隨每月的資料變動。
 
 ## 網址
 
@@ -73,7 +85,7 @@ npm run test:unit    # 只執行單元測試，不需要瀏覽器
 
 ## 介面上的限制
 
-- 不用 canvas 輸出圖檔。Brave 預設會擾動 canvas 讀出來的像素，QR code 的 PNG 由 `src/core/png-encode.ts` 直接寫位元組
+- 能不用 canvas 輸出圖檔就不用。Brave 預設會擾動 canvas 讀出來的像素，QR code 的 PNG 由 `src/core/png-encode.ts` 直接寫位元組。遮蔽與 QR code 讀取必須解碼影像，只能用 canvas：遮蔽輸出後抽查每個框是否夠黑，門檻容許這點雜訊。QR code 讀取對雜訊不敏感
 - 不用 `<select>`。Linux 版 WebKit 建立下拉選單時，內部的樣式表會被 CSP 擋下，主控台留下錯誤。選項不多時改用攤開的選項按鈕，手機上也少點一下
 
 ## 測試用的檔案
@@ -88,4 +100,9 @@ QR code 的測試把產生的 PNG 解碼回像素，用 `jsQR`（只在開發相
 
 ## 規劃
 
-產品規劃記錄在社群的工作區，還沒有公開。目前完成第一階段：桌面、檔案暫存區、清除 JPEG 與 PNG 的中繼資料、QR code 產生器、下載與系統分享。部署到 `anoni.net/gears/` 是下一步。
+產品規劃記錄在社群的工作區，還沒有公開。目前完成第一階段：桌面、檔案暫存區，以及清除中繼資料（JPEG、PNG）、遮蔽、加密與解密、QR code 產生器與讀取、網址檢查、密語與密碼產生器，可以下載與系統分享。部署到 `anoni.net/gears/` 是下一步。
+
+## 第三方資料
+
+- 密語的字詞表來自 [asian-diceware](https://github.com/anoni-net/asian-diceware) `v0.4.0`，CC BY 4.0，畫面上標示出處
+- 165 反詐騙清單見上方，部署時下載，不進版控
