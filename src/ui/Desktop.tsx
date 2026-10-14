@@ -1,6 +1,8 @@
 import { t, tDynamic } from "../i18n/index.ts";
 import { navigate } from "../router.ts";
 import { createTools, editorTools, fileTools } from "../tools/index.ts";
+import { IconCircle } from "./Icon.tsx";
+import { TOOL_META } from "./tool-meta.ts";
 
 export interface Task {
   id: "photo" | "redact" | "encrypt" | "wifi";
@@ -26,8 +28,11 @@ function ToolCard({ id }: { id: string }) {
   return (
     <li>
       <button type="button" class="card" onClick={() => navigate(id)}>
-        <strong>{tDynamic(`tool.${id}`)}</strong>
-        <span>{tDynamic(`tool.${id}.desc`)}</span>
+        <IconCircle name={TOOL_META[id]!.icon} cat={TOOL_META[id]!.cat} />
+        <span class="card-text">
+          <strong>{tDynamic(`tool.${id}`)}</strong>
+          <span>{tDynamic(`tool.${id}.desc`)}</span>
+        </span>
       </button>
     </li>
   );
@@ -43,8 +48,11 @@ export function Desktop({ onTask }: Props) {
           {TASKS.map((task) => (
             <li key={task.id}>
               <button type="button" class="card task" onClick={() => onTask(task)}>
-                <strong>{tDynamic(`task.${task.id}`)}</strong>
-                <span>{tDynamic(`task.${task.id}.desc`)}</span>
+                <IconCircle name={TOOL_META[task.tool]!.icon} cat={TOOL_META[task.tool]!.cat} />
+                <span class="card-text">
+                  <strong>{tDynamic(`task.${task.id}`)}</strong>
+                  <span>{tDynamic(`task.${task.id}.desc`)}</span>
+                </span>
               </button>
             </li>
           ))}

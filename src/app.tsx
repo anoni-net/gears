@@ -9,6 +9,9 @@ import { ToolIntro } from "./ui/ToolIntro.tsx";
 import { TrayList } from "./ui/TrayList.tsx";
 import { useTray } from "./ui/hooks.ts";
 import { CreateToolView } from "./ui/registry.tsx";
+import { IconCircle } from "./ui/Icon.tsx";
+import { Logo } from "./ui/Logo.tsx";
+import { TOOL_META } from "./ui/tool-meta.ts";
 
 const isCreateTool = (id: string) => createTools.some((tool) => tool.id === id);
 const isFileTool = (id: string) => [...fileTools, ...editorTools].some((tool) => tool.id === id);
@@ -111,7 +114,10 @@ export function App() {
   if (isCreateTool(route)) {
     view = (
       <section class="create" aria-labelledby="create-title">
-        <h2 id="create-title">{tDynamic(`tool.${route}`)}</h2>
+        <h2 id="create-title" class="tool-title">
+          <IconCircle name={TOOL_META[route]!.icon} cat={TOOL_META[route]!.cat} />
+          {tDynamic(`tool.${route}`)}
+        </h2>
         <p class="hint">{tDynamic(`tool.${route}.desc`)}</p>
         <CreateToolView
           key={`${route}-${preset ?? ""}`}
@@ -132,32 +138,35 @@ export function App() {
 
   return (
     <div class={dragging ? "app dragging" : "app"}>
-      <header>
-        <div>
-          <h1>
-            <a href={routeUrl("")} onClick={home}>
-              {t("app.title")}
-            </a>
-          </h1>
-          <p>{t("app.tagline")}</p>
-        </div>
-        <div class="header-actions">
-          {!atHome ? (
-            <button type="button" onClick={home}>
-              {t("app.home")}
-            </button>
-          ) : null}
-          {state.files.length ? (
-            <button type="button" class="danger" onClick={() => tray.clear()}>
-              {t("app.clear")}
-            </button>
-          ) : null}
+      <header class="site-header">
+        <div class="frame">
+          <div class="brand">
+            <h1>
+              <a href={routeUrl("")} onClick={home}>
+                <Logo />
+                {t("app.title")}
+              </a>
+            </h1>
+            <p class="tagline">{t("app.tagline")}</p>
+          </div>
+          <div class="header-actions">
+            {!atHome ? (
+              <button type="button" onClick={home}>
+                {t("app.home")}
+              </button>
+            ) : null}
+            {state.files.length ? (
+              <button type="button" class="danger" onClick={() => tray.clear()}>
+                {t("app.clear")}
+              </button>
+            ) : null}
+          </div>
         </div>
       </header>
 
       <input ref={input} type="file" multiple hidden onChange={onChange} data-testid="file-input" />
 
-      <main class="workbench">
+      <main class="workbench frame">
         <TrayList
           files={state.files}
           selected={state.selected}
@@ -168,7 +177,7 @@ export function App() {
         <div class="view">{view}</div>
       </main>
 
-      <footer>
+      <footer class="frame">
         <p>{t("app.memoryNote")}</p>
         <p>
           <a href="https://anoni.net/">{t("app.footer.community")}</a>
