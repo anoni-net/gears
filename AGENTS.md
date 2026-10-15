@@ -130,6 +130,15 @@ node scripts/fetch-165.mjs   # 下載並整理成 public/data/165.txt
 - 解碼圖片一律用 `src/ui/image-decode.ts` 的 `decodeImage()`，不要直接呼叫 `createImageBitmap()`，HEIC 才會在不支援的瀏覽器上改用 libheif
 - 不用 `<select>`。Linux 版 WebKit 建立下拉選單時，內部的樣式表會被 CSP 擋下，主控台留下錯誤。選項不多時改用攤開的選項按鈕，手機上也少點一下
 
+## 無障礙
+
+以 WCAG 2.1 AA 為目標。`tests/e2e/a11y.spec.ts` 用 axe-core 檢查每個工具頁、加入檔案與清除之後的畫面，以及深色模式，有違規就失敗。新增工具或改版面之後，記得把新的頁面或狀態加進去。
+
+- 顏色：主要按鈕的白字要有 4.5:1 的對比，深色模式也用 `cyan-800`，`cyan-700` 只有 3.93:1
+- 遮蔽的畫布可以用鍵盤操作：方向鍵移動游標、Enter 標出兩個角、Delete 刪掉最後一個框、Escape 取消。畫布是 `role="application"`，操作說明用 `aria-describedby` 接上
+- 處理中、找到幾個框這類會變動的訊息用 `role="status"` 或 `aria-live`，讀螢幕軟體才唸得到
+- 自動檢查抓不到的部分（讀螢幕軟體實際唸出來的內容、操作順序）要人工確認
+
 ## 測試用的檔案
 
 照片與圖檔不進 repo，品牌圖示（`public/icons/`）例外。單元測試用 `tests/helpers/fixtures.ts` 組出結構完整的檔案。瀏覽器測試先用 canvas 產生一張可以解碼的圖，再塞進中繼資料。

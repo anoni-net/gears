@@ -66,6 +66,9 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
   const start = useRef<[number, number] | null>(null);
   // 畫布上的手指。兩根以上就改成捲動頁面，記下上一次的中點
   const touches = useRef(new Map<number, [number, number]>());
+  // 鍵盤操作：方向鍵移動游標，Enter 先標一個角、再標對角
+  const [cursor, setCursor] = useState<[number, number] | null>(null);
+  const [corner, setCorner] = useState<[number, number] | null>(null);
   const panning = useRef<number | null>(null);
   const middle = () => [...touches.current.values()].reduce((n, [, y]) => n + y, 0) / touches.current.size;
   // 自動尋找：哪一種正在跑、找到幾個，文字辨識另外留下每一行的範圍
@@ -120,7 +123,49 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
       ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
       ctx.fillRect(draft.x * scale, draft.y * scale, draft.w * scale, draft.h * scale);
     }
-  }, [bitmap, boxes, draft, scale]);
+    if (cursor) {
+      // 鍵盤的游標：十字線，標了第一個角時畫出預覽的框
+      const [cx, cy] = [cursor[0] * scale, cursor[1] * scale];
+      if (corner) {
+        const b = boxFromPoints(corner[0], corner[1], cursor[0], cursor[1], bitmap.width, bitmap.height);
+        ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+        ctx.fillRect(b.x * scale, b.y * scale, b.w * scale, b.h * scale);
+      }
+      ctx.strokeStyle = "#e53935";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(cx - 12, cy);
+      ctx.lineTo(cx + 12, cy);
+      ctx.moveTo(cx, cy - 12);
+      ctx.lineTo(cx, cy + 12);
+      ctx.stroke();
+    }
+  }, [bitmap, boxes, draft, scale, cursor, corner]);
+
+  const keyDown = (e: KeyboardEvent) => {
+    if (!bitmap || status !== "ready") return;
+    const [x, y] = cursor ?? [bitmap.width / 2, bitmap.height / 2];
+    const step = (e.shiftKey ? 0.1 : 0.02) * Math.max(bitmap.width, bitmap.height);
+    const moves: Record<string, [number, number]> = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] };
+    const move = moves[e.key];
+    if (move) {
+      e.preventDefault();
+      setCursor([Math.min(bitmap.width, Math.max(0, x + move[0])), Math.min(bitmap.height, Math.max(0, y + move[1]))]);
+    } else if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      if (!cursor) return setCursor([x, y]);
+      if (!corner) return setCorner([x, y]);
+      const box = boxFromPoints(corner[0], corner[1], x, y, bitmap.width, bitmap.height);
+      if (isUsable(box, 4)) setBoxes((list) => [...list, box]);
+      setCorner(null);
+    } else if (e.key === "Escape" && corner) {
+      e.preventDefault();
+      setCorner(null);
+    } else if ((e.key === "Delete" || e.key === "Backspace") && boxes.length) {
+      e.preventDefault();
+      setBoxes((list) => list.slice(0, -1));
+    }
+  };
 
   // 畫面上的座標換回原圖的像素
   const toImage = (e: PointerEvent): [number, number] => {
@@ -272,6 +317,12 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
         ref={canvas}
         class="redact-canvas"
         data-testid="redact-canvas"
+        tabIndex={0}
+        role="application"
+        aria-label={t("redact.canvasLabel")}
+        aria-describedby="redact-keys"
+        onKeyDown={keyDown}
+        onBlur={() => setCorner(null)}
         onPointerDown={down}
         onPointerMove={move}
         onPointerUp={up}
@@ -281,8 +332,11 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
           setDraft(null);
         }}
       />
+      <p class="hint" id="redact-keys">
+        {t("redact.keys")}
+      </p>
       <p class="hint" aria-live="polite">
-        {t("redact.count", { n: boxes.length })}
+        {corner ? t("redact.cornerSet") : t("redact.count", { n: boxes.length })}
       </p>
       {exif ? (
         <label class="check">

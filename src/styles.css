@@ -66,7 +66,8 @@
     --strong: #ffffff;
     --muted: #9db7c2;
     --icon: #9db7c2;
-    --accent: var(--brand-cyan-700);
+    /* cyan-700 配白字只有 3.93:1，不到 WCAG AA 的 4.5:1，深色模式也用 cyan-800 */
+    --accent: var(--brand-cyan-800);
     --link: var(--brand-cyan-200);
     --focus: var(--brand-cyan-400);
     /* 深色模式不用淡藍底，改用比背景亮一階的藍灰，頁首仍然跟內容分得開 */

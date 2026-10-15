@@ -287,6 +287,9 @@ export const zhTW = {
   "url.owner.shopee": "蝦皮的分享與推薦追蹤",
 
   "redact.help": "在圖片上拖拉，框出要遮住的範圍。點一下已經框好的範圍可以刪掉它。手機上用兩根手指捲動。",
+  "redact.canvasLabel": "要遮蔽的圖片",
+  "redact.keys": "用鍵盤操作：按 Tab 移到圖片上，方向鍵移動游標（按住 Shift 移動得比較多），按 Enter 標出一個角，移到對角再按一次就加成一個框。Delete 刪掉最後一個框，Escape 取消標了一半的框。",
+  "redact.cornerSet": "標好第一個角了，移到對角再按 Enter。",
   "redact.undo": "復原上一個框",
   "redact.clear": "清除所有框",
   "redact.apply": "套用遮蔽",
