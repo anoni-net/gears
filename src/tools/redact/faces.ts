@@ -11,21 +11,22 @@ const GRIDS = [1, 2, 4, 8, 12];
 const MIN_TILE = 120;
 const OVERLAP = 0.25;
 
-// 衣服上的圖案、按鈕與婚紗的皺褶容易被當成臉，這類誤判多半只在某一種切法出現。
-// 分數低於這個值的，要在另一種切法的同一個位置也找到才算，整張圖偵測的那一次也一樣
-// （婚紗照的整張圖偵測曾把裙襬認成 0.55 分的大臉）。實測九張照片（大合照、三人合照、
-// 特寫、翻拍、婚紗照、臉佔滿畫面的自拍），找到的臉跟所有切法加起來一樣多，誤判是零。
-// 自拍的臉在整張圖偵測時都有 0.9 分以上，不需要其他切法確認
+// 分數夠高的直接採用。衣服上的圖案、招牌的字與花叢也常被認成臉，分數多在 0.5 到 0.75，
+// 跟歪著頭、被手遮住一半的真臉差不多，只看分數分不開。所以分數不夠高的再做兩道檢查：
+//
+// 1. 特徵點要像一張臉：BlazeFace 給的兩眼連線傾斜在 35° 以內，嘴巴在兩眼下方至少
+//    框高的 0.28。實測 230 個真臉的偵測都在範圍內，誤判常常歪斜或把嘴巴擠在眼睛旁邊
+// 2. 重新偵測：以它為中心裁一塊（框的 2 倍與 3 倍，各加左右翻轉），依兩眼的連線轉正
+//    之後再偵測，四次都在 0.6 分以上才算。真臉擺在畫面中間、轉正之後幾乎都認得出來，
+//    實測 95 個真臉的候選有 93 個四次都過，65 個誤判沒有一個四次都過
+//
+// 實測 12 張照片（大合照、婚紗照、店內照片、臉佔滿畫面的自拍、歪著頭又被花瓣遮住嘴的臉），
+// 找到的臉跟所有切法加起來一樣多，誤判是零
 export const CONFIRMED_SCORE = 0.85;
-
-// 分數不夠高的再看 BlazeFace 給的特徵點（兩眼、鼻子、嘴巴，座標是整張圖的像素）。
-// 實測 230 個真臉的偵測，兩眼連線的傾斜在 35° 以內，嘴巴在兩眼下方至少框高的 0.3。
-// 招牌的字與紋路被認成臉時，特徵點常常歪斜，或擠在框的上半部。
-// 兩種切法互相確認時，同一張真臉的特徵點會落在差不多的位置（四個點的平均距離在框寬的
-// 四分之一以內），紋路在不同切法下給的特徵點常常對不上
+export const VERIFY_SCORE = 0.6;
+export const VERIFY_SCALES = [2, 3]; // 重新偵測時裁切的範圍，框的幾倍
 const MAX_EYE_TILT = 35;
 const MIN_MOUTH_DROP = 0.28;
-const MAX_KEYPOINT_DRIFT = 0.25;
 
 export interface Detection {
   box: Box;
@@ -72,36 +73,38 @@ const contains = (outer: Box, inner: Box) => {
 
 // 特徵點的排列像不像一張臉。沒有特徵點時不判斷
 function faceLike(d: Detection): boolean {
+  const tilt = eyeTilt(d);
+  if (tilt === null) return true;
+  const [[, ry], [, ly], , [, my]] = d.keypoints as [number, number][];
+  return Math.abs(tilt) <= MAX_EYE_TILT && (my - (ry + ly) / 2) / d.box.h >= MIN_MOUTH_DROP;
+}
+
+// 兩眼連線的傾斜，-90° 到 90°，重新偵測時依它轉正。沒有特徵點時是 null
+export function eyeTilt(d: Detection): number | null {
   const k = d.keypoints;
-  if (!k || k.length < 4) return true;
-  const [[rx, ry], [lx, ly], , [, my]] = k as [number, number][];
-  let tilt = Math.abs((Math.atan2(ly - ry, lx - rx) * 180) / Math.PI);
-  if (tilt > 90) tilt = 180 - tilt;
-  return tilt <= MAX_EYE_TILT && (my - (ry + ly) / 2) / d.box.h >= MIN_MOUTH_DROP;
+  if (!k || k.length < 4) return null;
+  const [[rx, ry], [lx, ly]] = k as [number, number][];
+  let tilt = (Math.atan2(ly - ry, lx - rx) * 180) / Math.PI;
+  if (tilt > 90) tilt -= 180;
+  if (tilt < -90) tilt += 180;
+  return tilt;
 }
 
-// 兩次偵測的眼睛、鼻子、嘴巴是否落在差不多的位置
-function sameFace(a: Detection, b: Detection): boolean {
-  if (iou(a.box, b.box) <= 0.3) return false;
-  const ka = a.keypoints;
-  const kb = b.keypoints;
-  if (!ka || !kb || ka.length < 4 || kb.length < 4) return true;
-  let drift = 0;
-  for (let i = 0; i < 4; i++) drift += Math.hypot(ka[i]![0] - kb[i]![0], ka[i]![1] - kb[i]![1]);
-  return drift / 4 / ((a.box.w + b.box.w) / 2) <= MAX_KEYPOINT_DRIFT;
-}
+// 以候選為中心重新偵測，回傳每一次的分數（沒找到是 0）。由 src/ui/redact-detect.ts 提供
+export type Verify = (d: Detection) => Promise<number[]>;
 
-// 篩選與合併：分數不夠高的，特徵點要像一張臉，而且要有另一種切法在同一個位置找到、
-// 特徵點也對得上。不同區塊找到的同一張臉只留分數最高的（IoU 超過 0.3 算同一張）。
+// 從分數高的開始看，同一張臉（IoU 超過 0.3）已經有框就跳過，不必再重新偵測。
 // 同時包住兩張以上臉的大框是誤判，拿掉
-export function mergeFaces(found: Detection[]): Box[] {
-  const candidates = found.filter((d) => d.score >= CONFIRMED_SCORE || faceLike(d));
-  const confirmed = candidates.filter(
-    (d) => d.score >= CONFIRMED_SCORE || candidates.some((o) => o.grid !== d.grid && sameFace(o, d)),
-  );
+export async function selectFaces(found: Detection[], verify: Verify): Promise<Box[]> {
   const kept: Box[] = [];
-  for (const { box } of confirmed.sort((a, b) => b.score - a.score)) {
-    if (!kept.some((k) => iou(k, box) > 0.3)) kept.push(box);
+  for (const d of [...found].sort((a, b) => b.score - a.score)) {
+    if (kept.some((k) => iou(k, d.box) > 0.3)) continue;
+    if (d.score < CONFIRMED_SCORE) {
+      if (!faceLike(d)) continue;
+      const scores = await verify(d);
+      if (!scores.length || scores.some((score) => score < VERIFY_SCORE)) continue;
+    }
+    kept.push(d.box);
   }
   return kept.filter((b) => kept.filter((k) => k !== b && contains(b, k)).length < 2);
 }
