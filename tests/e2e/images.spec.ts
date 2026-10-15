@@ -20,7 +20,7 @@ async function cleanAndDownload(page: Page, format: Format, ext: string) {
   const file = await downloadFrom(page, () => page.getByRole("link", { name: "下載" }).click());
   expect(file.name).toBe(`gears-1.${ext}`);
   expect(sniff(file.data)).toBe(format);
-  expect(stripMetadata.inspect(file.data, format)).toEqual([]);
+  expect((await stripMetadata.inspect(file.data, format))).toEqual([]);
 }
 
 for (const [ext, format, finding] of [

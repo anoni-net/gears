@@ -86,8 +86,9 @@ export interface Tool {
   // 能處理哪幾種找到的資訊。檔案裡有這些資訊時，工具列把這個工具標成建議
   resolves: readonly FindingCode[];
   accepts(format: Format): boolean;
-  inspect(data: Uint8Array, format: Format): Finding[];
-  run(data: Uint8Array, format: Format): RunResult;
+  // 文件類的格式要先解壓縮或載入 pdf-lib，所以兩者都可以是非同步的
+  inspect(data: Uint8Array, format: Format): Finding[] | Promise<Finding[]>;
+  run(data: Uint8Array, format: Format): RunResult | Promise<RunResult>;
 }
 
 // 需要編輯畫面的檔案工具，例如遮蔽：讀者在畫面上操作，結果由介面產生之後交給

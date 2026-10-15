@@ -12,7 +12,12 @@ import { inspectTiff, stripTiff } from "./tiff.ts";
 import { inspectWebp, stripWebp } from "./webp.ts";
 
 // 各格式的檢查與清除。格式的範圍參考 mat2（Tails 的 Metadata Cleaner 背後的工具）
-const HANDLERS: Partial<Record<Format, { inspect(data: Uint8Array): Finding[]; strip(data: Uint8Array): RunResult }>> = {
+type Handler = {
+  inspect(data: Uint8Array): Finding[] | Promise<Finding[]>;
+  strip(data: Uint8Array): RunResult | Promise<RunResult>;
+};
+
+const HANDLERS: Partial<Record<Format, Handler>> = {
   jpeg: { inspect: inspectJpeg, strip: stripJpeg },
   png: { inspect: inspectPng, strip: stripPng },
   heic: { inspect: inspectHeif, strip: stripHeif },
@@ -36,12 +41,12 @@ export const stripMetadata: Tool = {
     return format in HANDLERS;
   },
 
-  inspect(data: Uint8Array, format: Format): Finding[] {
+  async inspect(data: Uint8Array, format: Format): Promise<Finding[]> {
     const handler = HANDLERS[format];
-    return handler ? mergeFindings(handler.inspect(data)) : [];
+    return handler ? mergeFindings(await handler.inspect(data)) : [];
   },
 
-  run(data: Uint8Array, format: Format): RunResult {
+  async run(data: Uint8Array, format: Format): Promise<RunResult> {
     const handler = HANDLERS[format];
     if (!handler) throw new ToolError("unsupported");
     return handler.strip(data);

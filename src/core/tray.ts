@@ -42,9 +42,16 @@ export function createTray(tools: Tool[], verify?: Verifier) {
     for (const listener of listeners) listener();
   };
 
-  const inspect = (bytes: Uint8Array, format: Format) => {
+  const inspect = async (bytes: Uint8Array, format: Format) => {
     const findings: Finding[] = [];
-    for (const tool of tools) if (tool.accepts(format)) findings.push(...tool.inspect(bytes, format));
+    for (const tool of tools) {
+      if (!tool.accepts(format)) continue;
+      try {
+        findings.push(...(await tool.inspect(bytes, format)));
+      } catch {
+        // 檢查失敗不影響加入暫存區，清除時會再遇到同樣的問題並停下來
+      }
+    }
     return findings;
   };
 
@@ -57,7 +64,7 @@ export function createTray(tools: Tool[], verify?: Verifier) {
     const format = sniff(data);
     const blob = new Blob([data], { type: MIME[format] });
     if (verify) await verify(blob, format);
-    const version: Version = { id: nextId++, tool: toolId, blob, format, findings: inspect(data, format), report };
+    const version: Version = { id: nextId++, tool: toolId, blob, format, findings: await inspect(data, format), report };
     updateFile(fileId, (f) => ({ ...f, versions: [...f.versions, version] }));
   };
 
@@ -80,7 +87,7 @@ export function createTray(tools: Tool[], verify?: Verifier) {
         added.push({
           id: nextId++,
           name: file.name,
-          versions: [{ id: nextId++, tool: origin, blob: file, format, findings: inspect(bytes, format) }],
+          versions: [{ id: nextId++, tool: origin, blob: file, format, findings: await inspect(bytes, format) }],
         });
       }
       if (!added.length) return;
@@ -107,7 +114,7 @@ export function createTray(tools: Tool[], verify?: Verifier) {
       set({ busy: true });
       try {
         const input = new Uint8Array(await current.blob.arrayBuffer());
-        const { data, report } = tool.run(input, current.format);
+        const { data, report } = await tool.run(input, current.format);
         await addVersion(fileId, new Blob([data as Uint8Array<ArrayBuffer>]), tool.id, report);
       } finally {
         set({ busy: false });

@@ -72,7 +72,7 @@ test("JPEG：找出位置、清除、下載，旋轉方向保留", async ({ page
 
   const out = await download(page);
   expect(sniff(out)).toBe("jpeg");
-  expect(stripMetadata.inspect(out, "jpeg")).toEqual([]);
+  expect((await stripMetadata.inspect(out, "jpeg"))).toEqual([]);
   expect(Buffer.from(out).includes("MOTION-PHOTO-SECRET")).toBe(false);
   const exifAt = indexOf(out, "Exif\0\0");
   expect(parseExif(out.subarray(exifAt + 6)).orientation).toBe(6);
@@ -106,7 +106,7 @@ test("PNG：文字欄位與 eXIf 一起拿掉", async ({ page }) => {
 
   const out = await download(page);
   expect(sniff(out)).toBe("png");
-  expect(stripMetadata.inspect(out, "png")).toEqual([]);
+  expect((await stripMetadata.inspect(out, "png"))).toEqual([]);
   expect(Buffer.from(out).includes("Jane Doe")).toBe(false);
 });
 
