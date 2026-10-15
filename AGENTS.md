@@ -88,11 +88,14 @@ node scripts/fetch-165.mjs   # 下載並整理成 public/data/165.txt
 ## 介面上的限制
 
 - 能不用 canvas 輸出圖檔就不用。Brave 預設會擾動 canvas 讀出來的像素，QR code 的 PNG 由 `src/core/png-encode.ts` 直接寫位元組。遮蔽與 QR code 讀取必須解碼影像，只能用 canvas：遮蔽輸出後抽查每個框是否夠黑，門檻容許這點雜訊。QR code 讀取對雜訊不敏感
+- HEIC 只有 Safari 能顯示。預覽與暫存區的縮圖載入失敗時改成說明或灰色方塊，中繼資料仍然能讀取與清除。遮蔽與讀取 QR code 要解碼影像，目前不提供給 HEIC
 - 不用 `<select>`。Linux 版 WebKit 建立下拉選單時，內部的樣式表會被 CSP 擋下，主控台留下錯誤。選項不多時改用攤開的選項按鈕，手機上也少點一下
 
 ## 測試用的檔案
 
 照片與圖檔不進 repo，品牌圖示（`public/icons/`）例外。單元測試用 `tests/helpers/fixtures.ts` 組出結構完整的檔案。瀏覽器測試先用 canvas 產生一張可以解碼的圖，再塞進中繼資料。
+
+HEIC 的測試檔也在測試裡組出來，結構完整但不能解碼。要用真的 HEIC 驗證時，在本機用 libheif 產生（例如 `uv run --with pillow-heif`），帶入 EXIF 與 GPS 之後清除，再用 libheif 解碼確認像素沒有改變，檔案不進 repo。
 
 QR code 的測試把產生的 PNG 解碼回像素，用 `jsQR` 讀出文字，跟輸入比對，中文與 Wi-Fi 的特殊字元都要測。編碼寫錯的典型後果是掃得出來、內容卻錯。
 
@@ -114,7 +117,7 @@ QR code 的測試把產生的 PNG 解碼回像素，用 `jsQR` 讀出文字，�
 
 ## 規劃
 
-產品規劃記錄在社群的工作區，還沒有公開。目前完成第一階段：桌面、檔案暫存區，以及清除中繼資料（JPEG、PNG）、遮蔽、加密與解密、QR code 產生器與讀取、網址檢查、密語與密碼產生器，可以下載與系統分享。部署到 `anoni.net/gears/` 是下一步。
+產品規劃記錄在社群的工作區，還沒有公開。目前完成第一階段：桌面、檔案暫存區，以及清除中繼資料（JPEG、PNG、HEIC）、遮蔽、加密與解密、QR code 產生器與讀取、網址檢查、密語與密碼產生器，可以下載與系統分享。部署到 `anoni.net/gears/` 是下一步。
 
 ## 第三方資料
 

@@ -245,3 +245,59 @@ export function syntheticPng(): Uint8Array {
 export function contains(haystack: Uint8Array, needle: string): boolean {
   return Buffer.from(haystack).includes(needle);
 }
+
+// --- HEIC（HEIF） ---
+//
+// 結構完整、不能解碼的 HEIF：一個假的 hvc1 影像 item、一個 Exif item、一個 XMP item。
+// Exif 放在 mdat（construction_method 0），XMP 放在 meta 裡的 idat（construction_method 1），
+// 兩種存放方式都測到。真的 HEIC 在本機用 libheif 產生來驗證，不進 repo。
+
+export function heifBox(type: string, ...payload: Uint8Array[]): Uint8Array {
+  const body = concat(payload);
+  const head = new Uint8Array(8);
+  new DataView(head.buffer).setUint32(0, 8 + body.length);
+  head.set(bytes(type), 4);
+  return concat([head, body]);
+}
+
+const fullBox = (type: string, version: number, ...payload: Uint8Array[]) =>
+  heifBox(type, new Uint8Array([version, 0, 0, 0]), ...payload);
+
+const u16 = (n: number) => new Uint8Array([n >> 8, n & 0xff]);
+const u32 = (n: number) => new Uint8Array([n >>> 24, (n >> 16) & 0xff, (n >> 8) & 0xff, n & 0xff]);
+
+export const HEVC_DATA = bytes("FAKE-HEVC-IMAGE-DATA-0123456789");
+export const XMP_DATA = bytes('<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF exif:GPSLatitude="25,1.98N"/></x:xmpmeta>');
+
+export function syntheticHeif(ilocVersion: 0 | 1 = 1): Uint8Array {
+  const exifPayload = concat([u32(6), bytes("Exif\0\0"), sampleTiff()]);
+  const ftyp = heifBox("ftyp", bytes("heic"), u32(0), bytes("mif1heic"));
+  const infe = (id: number, type: string, extra: string) => fullBox("infe", 2, u16(id), u16(0), bytes(type), bytes(`\0${extra}`));
+  const iinf = fullBox("iinf", 0, u16(3), infe(1, "hvc1", ""), infe(2, "Exif", ""), infe(3, "mime", "application/rdf+xml\0"));
+  const idat = heifBox("idat", XMP_DATA);
+
+  // iloc 先用佔位的位移組出來，算出 mdat 的位置之後再填
+  const build = (mdatData: number, idatBase: number) => {
+    const sizes = u16((4 << 12) | (4 << 8) | (0 << 4) | 0);
+    const item = (id: number, method: number, offset: number, length: number) =>
+      concat([
+        u16(id),
+        ...(ilocVersion >= 1 ? [u16(method)] : []),
+        u16(0),
+        u16(1),
+        u32(offset),
+        u32(length),
+      ]);
+    const items =
+      ilocVersion >= 1
+        ? [item(1, 0, mdatData, HEVC_DATA.length), item(2, 0, mdatData + HEVC_DATA.length, exifPayload.length), item(3, 1, idatBase, XMP_DATA.length)]
+        : [item(1, 0, mdatData, HEVC_DATA.length), item(2, 0, mdatData + HEVC_DATA.length, exifPayload.length)];
+    const iloc = fullBox("iloc", ilocVersion, sizes, u16(items.length), ...items);
+    const meta = fullBox("meta", 0, fullBox("hdlr", 0, u32(0), bytes("pict"), new Uint8Array(13)), fullBox("pitm", 0, u16(1)), iinf, iloc, idat);
+    return meta;
+  };
+  const metaLength = build(0, 0).length;
+  const mdatData = ftyp.length + metaLength + 8;
+  const meta = build(mdatData, 0);
+  return concat([ftyp, meta, heifBox("mdat", HEVC_DATA, exifPayload)]);
+}

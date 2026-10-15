@@ -46,21 +46,38 @@ export function u32be(bytes: Uint8Array, at: number): number {
 }
 
 // 從檔案開頭的特徵判斷格式，不相信副檔名與瀏覽器給的 MIME type。
-export type Format = "jpeg" | "png" | "age" | "unknown";
+export type Format = "jpeg" | "png" | "heic" | "age" | "unknown";
 
 const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
 
 export function sniff(bytes: Uint8Array): Format {
   if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return "jpeg";
   if (bytes.length >= 8 && PNG_SIGNATURE.every((b, i) => bytes[i] === b)) return "png";
+  if (isHeifBrand(bytes)) return "heic";
   // age 的二進位格式與 ASCII armor 文字格式
   if (startsWith(bytes, 0, "age-encryption.org/v1\n") || startsWith(bytes, 0, "-----BEGIN AGE ENCRYPTED FILE-----")) return "age";
   return "unknown";
 }
 
+// HEIC（HEIF）：ftyp box 的主要或相容品牌是 HEIF 家族
+const HEIF_BRANDS = new Set(["heic", "heix", "hevc", "hevx", "heim", "heis", "mif1", "msf1"]);
+
+export function isHeifBrand(bytes: Uint8Array): boolean {
+  if (bytes.length < 12 || ascii(bytes, 4, 4) !== "ftyp") return false;
+  const size = u32be(bytes, 0);
+  if (size < 16 || size > bytes.length) return false;
+  if (HEIF_BRANDS.has(ascii(bytes, 8, 4))) return true;
+  for (let i = 16; i + 4 <= size; i += 4) if (HEIF_BRANDS.has(ascii(bytes, i, 4))) return true;
+  return false;
+}
+
+// 照片類的格式。HEIC 只有 Safari 能直接顯示，其他瀏覽器仍然能讀取與清除中繼資料
+export const isPhoto = (format: Format) => format === "jpeg" || format === "png" || format === "heic";
+
 export const MIME: Record<Format, string> = {
   jpeg: "image/jpeg",
   png: "image/png",
+  heic: "image/heic",
   age: "application/octet-stream",
   unknown: "application/octet-stream",
 };
@@ -68,6 +85,7 @@ export const MIME: Record<Format, string> = {
 export const EXTENSION: Record<Format, string> = {
   jpeg: "jpg",
   png: "png",
+  heic: "heic",
   age: "age",
   unknown: "bin",
 };

@@ -1,6 +1,8 @@
+import { isPhoto } from "../core/bytes.ts";
 import type { TrayFile } from "../core/tray.ts";
 import { t } from "../i18n/index.ts";
 import { tray } from "../state.ts";
+import { useState } from "preact/hooks";
 import { useObjectUrl } from "./hooks.ts";
 
 interface ItemProps {
@@ -11,8 +13,10 @@ interface ItemProps {
 
 function Item({ file, selected, onSelect }: ItemProps) {
   const current = file.versions.at(-1)!;
-  const isImage = current.format === "jpeg" || current.format === "png";
+  const isImage = isPhoto(current.format);
   const url = useObjectUrl(isImage ? current.blob : undefined);
+  // Chrome、Firefox 不能顯示 HEIC，縮圖載入失敗時改成灰色方塊，不顯示破圖
+  const [broken, setBroken] = useState(false);
   const status =
     current.format === "age"
       ? t("tray.encrypted")
@@ -24,7 +28,11 @@ function Item({ file, selected, onSelect }: ItemProps) {
   return (
     <li class={selected ? "item selected" : "item"}>
       <button type="button" class="pick" aria-current={selected} onClick={() => onSelect(file.id)}>
-        {url ? <img src={url} alt="" /> : <span class="thumb" aria-hidden="true" />}
+        {url && !broken ? (
+          <img src={url} alt="" onError={() => setBroken(true)} />
+        ) : (
+          <span class="thumb" aria-hidden="true" />
+        )}
         <span class="meta">
           <span class="name">{file.name}</span>
           <span class={!isImage ? "status muted" : current.findings.length ? "status warn" : "status"}>
