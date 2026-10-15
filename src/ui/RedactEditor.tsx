@@ -64,6 +64,10 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
   const [draft, setDraft] = useState<Box | null>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "working" | "failed" | "decodeFailed">("loading");
   const start = useRef<[number, number] | null>(null);
+  // 畫布上的手指。兩根以上就改成捲動頁面，記下上一次的中點
+  const touches = useRef(new Map<number, [number, number]>());
+  const panning = useRef<number | null>(null);
+  const middle = () => [...touches.current.values()].reduce((n, [, y]) => n + y, 0) / touches.current.size;
   // 自動尋找：哪一種正在跑、找到幾個，文字辨識另外留下每一行的範圍
   const [auto, setAuto] = useState<{ kind: "faces" | "text" | "lines"; state: "running" | "done" | "failed" | "noWebgl"; n: number } | null>(null);
   const [textLines, setTextLines] = useState<Box[]>([]);
@@ -127,15 +131,41 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
   const down = (e: PointerEvent) => {
     if (!bitmap || status !== "ready") return;
     e.preventDefault();
+    touches.current.set(e.pointerId, [e.clientX, e.clientY]);
+    if (touches.current.size >= 2) {
+      // 第二根手指放下：放棄正在拉的框，改成捲動
+      start.current = null;
+      setDraft(null);
+      panning.current = middle();
+      return;
+    }
     canvas.current!.setPointerCapture(e.pointerId);
     start.current = toImage(e);
   };
   const move = (e: PointerEvent) => {
+    if (touches.current.has(e.pointerId)) touches.current.set(e.pointerId, [e.clientX, e.clientY]);
+    if (panning.current !== null) {
+      const now = middle();
+      window.scrollBy(0, panning.current - now);
+      panning.current = now;
+      return;
+    }
     if (!start.current || !bitmap) return;
     const [x, y] = toImage(e);
     setDraft(boxFromPoints(start.current[0], start.current[1], x, y, bitmap.width, bitmap.height));
   };
+  const release = (e: PointerEvent) => {
+    touches.current.delete(e.pointerId);
+    if (touches.current.size < 2) panning.current = null;
+  };
+
   const up = (e: PointerEvent) => {
+    const wasPanning = panning.current !== null || touches.current.size > 1;
+    release(e);
+    if (wasPanning) {
+      start.current = null;
+      return;
+    }
     if (!start.current || !bitmap) return;
     const [x, y] = toImage(e);
     const box = boxFromPoints(start.current[0], start.current[1], x, y, bitmap.width, bitmap.height);
@@ -245,7 +275,8 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
         onPointerDown={down}
         onPointerMove={move}
         onPointerUp={up}
-        onPointerCancel={() => {
+        onPointerCancel={(e) => {
+          release(e);
           start.current = null;
           setDraft(null);
         }}

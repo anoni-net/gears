@@ -280,7 +280,7 @@ export const zhTW = {
   "url.owner.matomo": "Matomo 流量統計的活動標籤",
   "url.owner.shopee": "蝦皮的分享與推薦追蹤",
 
-  "redact.help": "在圖片上拖拉，框出要遮住的範圍。點一下已經框好的範圍可以刪掉它。",
+  "redact.help": "在圖片上拖拉，框出要遮住的範圍。點一下已經框好的範圍可以刪掉它。手機上用兩根手指捲動。",
   "redact.undo": "復原上一個框",
   "redact.clear": "清除所有框",
   "redact.apply": "套用遮蔽",

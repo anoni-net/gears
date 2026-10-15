@@ -983,9 +983,14 @@ footer a {
 
 /* 遮蔽 */
 
+/* 最高只佔畫面的 70%，長截圖在手機上也留得下可以捲動的地方。畫布上一根手指框選、
+   兩根手指捲動（RedactEditor.tsx） */
 .redact-canvas {
   display: block;
   max-width: 100%;
+  max-height: 70vh;
+  max-height: 70svh;
+  width: auto;
   height: auto;
   border: 1px solid var(--line);
   border-radius: 6px;
