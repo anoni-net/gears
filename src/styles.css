@@ -1015,7 +1015,30 @@ footer a {
   border-radius: 6px;
   cursor: crosshair;
   touch-action: none;
+}
+
+/* 畫布的外框跟畫布一樣大，處理中的遮罩蓋在上面 */
+.redact-stage {
+  position: relative;
+  width: fit-content;
+  max-width: 100%;
   margin: 0.5rem 0;
+}
+
+/* 自動尋找的訊息區：所有訊息疊在同一格，高度由最長的那一則決定 */
+.redact-auto-message {
+  display: grid;
+}
+
+.redact-auto-message > *,
+.redact-auto-message .sizer > p {
+  grid-area: 1 / 1;
+  margin: 0;
+}
+
+.redact-auto-message .sizer {
+  display: grid;
+  visibility: hidden;
 }
 
 .redact-auto {
@@ -1025,28 +1048,40 @@ footer a {
   margin-bottom: 0.5rem;
 }
 
-/* 自動尋找的進度條 */
+/* 自動尋找的進度條，蓋在圖片上 */
 .auto-progress {
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
-  margin-bottom: 0.5rem;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--bg) 55%, transparent);
+  pointer-events: none;
 }
 
 .auto-progress span {
   min-width: 3em;
-  color: var(--muted);
+  padding: 0.1rem 0.4rem;
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
   font-variant-numeric: tabular-nums;
+}
+
+.auto-progress span:empty {
+  visibility: hidden;
 }
 
 .auto-progress-track {
   position: relative;
-  flex: 1;
-  max-width: 24rem;
+  width: min(60%, 20rem);
   height: 0.5rem;
   overflow: hidden;
   border-radius: 999px;
-  background: var(--hair);
+  background: var(--surface);
+  box-shadow: 0 0 0 1px var(--line);
 }
 
 .auto-progress-bar {

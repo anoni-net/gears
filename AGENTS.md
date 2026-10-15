@@ -86,11 +86,11 @@ npm run test:unit    # 只執行單元測試，不需要瀏覽器
 遮蔽畫面有「找人臉」與「找電話、Email 等個資」兩個按鈕，找到的範圍直接加成框，讀者逐一確認、點一下刪掉框錯的。自動尋找一定會漏，畫面上寫明，不自動套用（`src/ui/redact-detect.ts`）。
 
 - 人臉：MediaPipe 的 BlazeFace 短距離模型（`public/models/`，進版控，約 230 KB）。模型以 128 像素的縮圖偵測，臉要佔畫面的一成以上才認得出來，所以整張圖偵測一次，再切成 2×2、4×4、8×8、12×12 的重疊區塊各偵測一次（區塊小於 120 像素就不再切），用分數與 IoU 合併，拿掉同時包住兩張臉的大框。切塊之後容易把衣服上的按鈕當成臉，這類誤判多半只在一種切法出現，所以區塊裡分數低於 0.85 的，要在另一種切法的同一個位置也找到才算。切法與合併在 `src/tools/redact/faces.ts`，有單元測試。MediaPipe 一定要用 WebGL，關閉 WebGL 的瀏覽器顯示說明
-- 個資：Tesseract 用正體中文與英文辨識文字，`src/tools/redact/pii.ts` 把同一行的字接起來比對電話、Email、身分證與居留證、卡號、長串數字、網址與 @帳號，再把對到的字合成一個框。辨識完也可以把每一行文字都框起來
+- 個資：Tesseract 用正體中文與英文辨識文字，`src/tools/redact/pii.ts` 把同一行的字接起來比對電話、Email、身分證與居留證、卡號、長串數字、網址與 @帳號，再把對到的字合成一個框。「框起所有文字」把每一行文字都框起來，還沒辨識過時先辨識
 - WebAssembly 與語言資料由 `scripts/copy-vendor.mjs` 從 `node_modules` 複製到 `public/vendor/`（不進版控，`npm run build` 與 `npm run dev` 之前自動執行），按下按鈕時才下載，人臉約 13 MB、文字約 9 MB
 - `@mediapipe/tasks-vision` 停在 0.10.35：1.0.0 起會把使用紀錄送到 `odml.pa.googleapis.com`。CSP 擋得下，但不該靠 CSP，升級前先在套件裡搜尋對外的網址
 - Tesseract 的語言資料不寫進 IndexedDB（`cacheMethod: "none"`），靠瀏覽器的 HTTP 快取
-- 處理中顯示進度條：載入模型時不知道要多久，條紋來回移動，偵測時顯示百分比。人臉的偵測在主執行緒上，每 100 ms 讓出一次，畫面才更新得了進度。文字的進度取自 Tesseract 的 `logger`
+- 處理中在圖片上蓋一層遮罩，中間顯示進度條：載入模型時不知道要多久，條紋來回移動，偵測時顯示百分比。按鈕下方的訊息區高度固定，所有可能出現的訊息疊在同一格、由最長的那一則撐開，換訊息時圖片不會跳動。人臉的偵測在主執行緒上，每 100 ms 讓出一次，畫面才更新得了進度。文字的進度取自 Tesseract 的 `logger`
 - 授權與來源寫在 `licenses/redact-detect.txt`
 
 兩者的 WebAssembly 會把執行紀錄寫到標準錯誤輸出，瀏覽器當成 `console.error`。瀏覽器測試的守門程式（`tests/e2e/guard.ts`）把這幾種已知的訊息列為例外。

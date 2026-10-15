@@ -311,7 +311,7 @@ export const zhTW = {
   "redact.decodeFailed": "沒有辦法開啟這張圖片。",
   "redact.findFaces": "找人臉",
   "redact.findText": "找電話、Email 等個資",
-  "redact.findLines": "框起所有文字（{n} 行）",
+  "redact.findLines": "框起所有文字",
   "redact.loadingFaces": "載入辨識模型中…第一次使用要下載約 13 MB。",
   "redact.findingFaces": "尋找人臉中…",
   "redact.loadingText": "載入辨識模型中…第一次使用要下載約 9 MB。",

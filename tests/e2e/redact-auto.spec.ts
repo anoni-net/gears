@@ -60,12 +60,25 @@ test("找人臉：載入模型與尋找時顯示進度，完成後拿掉", async
     await route.continue();
   });
   await openRedact(page, await screenshot(page, false));
+  // 訊息區與進度條都不佔額外的版面，圖片從頭到尾不會移動
+  const canvasTop = () => page.getByTestId("redact-canvas").evaluate((el) => Math.round(el.getBoundingClientRect().top));
+  const top = await canvasTop();
   await page.getByRole("button", { name: "找人臉" }).click();
   const bar = page.getByRole("progressbar", { name: "找人臉" });
   await expect(bar).toBeVisible();
+  expect(await canvasTop()).toBe(top);
   await expect(bar).not.toHaveAttribute("aria-valuenow");
   await expect(page.getByTestId("redact-auto-status")).toHaveText("載入辨識模型中…第一次使用要下載約 13 MB。");
   await expect(page.getByRole("button", { name: "找人臉" })).toBeDisabled();
   await expect(page.getByTestId("redact-auto-status")).toHaveText("沒有找到。自動尋找會漏掉，請自己再看一次整張圖。", { timeout: 90_000 });
   await expect(bar).toBeHidden();
+  expect(await canvasTop()).toBe(top);
+});
+
+test("還沒辨識過文字時按框起所有文字，先辨識再把每一行框起來", async ({ page }) => {
+  test.setTimeout(120_000);
+  await openRedact(page, await screenshot(page, true));
+  await page.getByRole("button", { name: "框起所有文字" }).click();
+  await expect(page.getByTestId("redact-auto-status")).toHaveText("加了 3 個框，請逐一確認，框錯的點一下就會拿掉。", { timeout: 90_000 });
+  await expect(page.getByText("已經框了 3 個範圍")).toBeVisible();
 });

@@ -244,8 +244,13 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
     return next.length - latest.current.length;
   };
 
-  const runAuto = async (kind: "faces" | "text") => {
+  const runAuto = async (kind: "faces" | "text" | "lines") => {
     if (!bitmap) return;
+    // 已經辨識過文字，直接把每一行框起來
+    if (kind === "lines" && textLines.length) {
+      setAuto({ kind, state: "done", n: addFound(textLines) });
+      return;
+    }
     let detectError: (new () => Error) | undefined;
     setAuto({ kind, state: "running", n: 0, progress: null });
     const onProgress = (progress: number | null) =>
@@ -259,11 +264,25 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
       } else {
         const { pii, lines } = await findText(bitmap, onProgress);
         setTextLines(lines);
-        setAuto({ kind, state: "done", n: addFound(pii.map((m) => m.box)) || pii.length });
+        const found = kind === "lines" ? lines : pii.map((m) => m.box);
+        setAuto({ kind, state: "done", n: addFound(found) || found.length });
       }
     } catch (e) {
       setAuto({ kind, state: detectError && e instanceof detectError ? "noWebgl" : "failed", n: 0 });
     }
+  };
+
+  const running = auto?.state === "running";
+
+  const autoMessage = (a: typeof auto): string => {
+    if (!a) return t("redact.autoNote");
+    if (a.state === "noWebgl") return t("redact.noWebgl");
+    if (a.state === "failed") return t("redact.findFailed");
+    if (a.state === "running") {
+      if (a.kind === "faces") return t(a.progress == null ? "redact.loadingFaces" : "redact.findingFaces");
+      return t(a.progress == null ? "redact.loadingText" : "redact.findingText");
+    }
+    return a.n ? t("redact.found", { n: a.n }) : t("redact.foundNone");
   };
 
   const apply = async () => {
@@ -292,57 +311,51 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
         </p>
       ) : null}
       <div class="redact-auto">
-        <button type="button" disabled={!bitmap || auto?.state === "running"} onClick={() => runAuto("faces")}>
+        <button type="button" disabled={!bitmap || running} onClick={() => runAuto("faces")}>
           {t("redact.findFaces")}
         </button>
-        <button type="button" disabled={!bitmap || auto?.state === "running"} onClick={() => runAuto("text")}>
+        <button type="button" disabled={!bitmap || running} onClick={() => runAuto("text")}>
           {t("redact.findText")}
         </button>
-        {textLines.length ? (
-          <button
-            type="button"
-            disabled={auto?.state === "running"}
-            onClick={() => setAuto({ kind: "lines", state: "done", n: addFound(textLines) })}
-          >
-            {t("redact.findLines", { n: textLines.length })}
-          </button>
-        ) : null}
+        <button type="button" disabled={!bitmap || running} onClick={() => runAuto("lines")}>
+          {t("redact.findLines")}
+        </button>
       </div>
-      {auto ? (
-        <p class={auto.state === "failed" || auto.state === "noWebgl" ? "error" : "hint"} role="status" data-testid="redact-auto-status">
-          {auto.state === "noWebgl"
-            ? t("redact.noWebgl")
-            : auto.state === "running"
-            ? auto.progress == null
-              ? t(auto.kind === "faces" ? "redact.loadingFaces" : "redact.loadingText")
-              : t(auto.kind === "faces" ? "redact.findingFaces" : "redact.findingText")
-            : auto.state === "failed"
-              ? t("redact.findFailed")
-              : auto.n
-                ? t("redact.found", { n: auto.n })
-                : t("redact.foundNone")}
+      {/* 訊息區的高度固定：所有可能出現的訊息疊在同一格，用最長的那一則撐開，
+          換訊息時下面的圖片不會跳動。看得到、唸得出來的只有目前那一則 */}
+      <div class="redact-auto-message">
+        <p class={auto?.state === "failed" || auto?.state === "noWebgl" ? "error" : "hint"} role="status" data-testid="redact-auto-status">
+          {autoMessage(auto)}
         </p>
-      ) : null}
-      {auto?.state === "running" ? <AutoProgress label={t(auto.kind === "faces" ? "redact.findFaces" : "redact.findText")} value={auto.progress ?? null} /> : null}
-      <canvas
-        ref={canvas}
-        class="redact-canvas"
-        data-testid="redact-canvas"
-        tabIndex={0}
-        role="application"
-        aria-label={t("redact.canvasLabel")}
-        aria-describedby="redact-keys"
-        onKeyDown={keyDown}
-        onBlur={() => setCorner(null)}
-        onPointerDown={down}
-        onPointerMove={move}
-        onPointerUp={up}
-        onPointerCancel={(e) => {
-          release(e);
-          start.current = null;
-          setDraft(null);
-        }}
-      />
+        <div class="sizer" aria-hidden="true">
+          {AUTO_MESSAGES.map((key) => (
+            <p key={key}>{t(key, { n: 999 })}</p>
+          ))}
+        </div>
+      </div>
+      <div class="redact-stage">
+        <canvas
+          ref={canvas}
+          class="redact-canvas"
+          data-testid="redact-canvas"
+          tabIndex={0}
+          role="application"
+          aria-label={t("redact.canvasLabel")}
+          aria-describedby="redact-keys"
+          onKeyDown={keyDown}
+          onBlur={() => setCorner(null)}
+          onPointerDown={down}
+          onPointerMove={move}
+          onPointerUp={up}
+          onPointerCancel={(e) => {
+            release(e);
+            start.current = null;
+            setDraft(null);
+          }}
+        />
+        {/* 處理中蓋在圖片上，不佔版面 */}
+        {running ? <AutoProgress label={t(auto!.kind === "faces" ? "redact.findFaces" : auto!.kind === "lines" ? "redact.findLines" : "redact.findText")} value={auto!.progress ?? null} /> : null}
+      </div>
       <p class="hint" id="redact-keys">
         {t("redact.keys")}
       </p>
@@ -377,13 +390,25 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
           {t("redact.failed")}
         </p>
       ) : null}
-      <p class="hint">{t("redact.autoNote")}</p>
       <p class="hint">{t("redact.note")}</p>
     </div>
   );
 }
 
-// 自動尋找的進度條。載入模型時不知道要多久，顯示來回移動的條紋；偵測時顯示百分比
+// 訊息區可能出現的每一則訊息，用來撐開固定的高度
+const AUTO_MESSAGES = [
+  "redact.autoNote",
+  "redact.noWebgl",
+  "redact.findFailed",
+  "redact.loadingFaces",
+  "redact.findingFaces",
+  "redact.loadingText",
+  "redact.findingText",
+  "redact.found",
+  "redact.foundNone",
+] as const;
+
+// 自動尋找的進度條，蓋在圖片上。載入模型時不知道要多久，顯示來回移動的條紋；偵測時顯示百分比
 function AutoProgress({ label, value }: { label: string; value: number | null }) {
   const percent = value === null ? null : Math.round(value * 100);
   return (
