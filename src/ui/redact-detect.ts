@@ -1,6 +1,6 @@
 import type { Box } from "../tools/redact/index.ts";
 import type { FaceDetector } from "@mediapipe/tasks-vision";
-import { CONFIRMED_SCORE, type Detection, VERIFY_SCALES, eyeTilt, faceTiles, selectFaces } from "../tools/redact/faces.ts";
+import { CONFIRMED_SCORE, type Detection, type FaceSelection, VERIFY_SCALES, eyeTilt, faceTiles, selectFaces } from "../tools/redact/faces.ts";
 import { type PiiMatch, type Word, findPii, pad } from "../tools/redact/pii.ts";
 import { type OcrWord, textSpans } from "../tools/redact/text-lines.ts";
 
@@ -46,7 +46,7 @@ function hasWebGL(): boolean {
   }
 }
 
-export async function findFaces(bitmap: ImageBitmap, onProgress?: OnProgress): Promise<Box[]> {
+export async function findFaces(bitmap: ImageBitmap, onProgress?: OnProgress): Promise<FaceSelection> {
   if (!hasWebGL()) throw new NoWebGLError();
   onProgress?.(null);
   const { FilesetResolver, FaceDetector } = await import("@mediapipe/tasks-vision");
@@ -85,33 +85,35 @@ export async function findFaces(bitmap: ImageBitmap, onProgress?: OnProgress): P
     const pending = Math.max(1, found.filter((d) => d.score < CONFIRMED_SCORE).length);
     let checked = 0;
     const checks: { box: Box; score: number; grid: number; verify: number[] }[] = [];
-    const faces = await selectFaces(found, async (d) => {
+    const { faces, maybe } = await selectFaces(found, async (d) => {
       const scores = verifyFace(detector, bitmap, d);
       if (DEBUG) checks.push({ box: d.box, score: d.score, grid: d.grid, verify: scores });
       await pause(0.9 + 0.1 * Math.min(1, ++checked / pending));
       return scores;
     });
-    if (DEBUG) logFaces(bitmap, found, checks, faces);
+    if (DEBUG) logFaces(bitmap, found, checks, faces, maybe);
     onProgress?.(1);
-    return faces.map((box) => pad(box, 0.2, bitmap.width, bitmap.height));
+    const padded = (box: Box) => pad(box, 0.2, bitmap.width, bitmap.height);
+    return { faces: faces.map(padded), maybe: maybe.map(padded) };
   } finally {
     detector.close();
   }
 }
 
-function logFaces(bitmap: ImageBitmap, found: Detection[], checks: { box: Box; score: number; grid: number; verify: number[] }[], faces: Box[]) {
+function logFaces(bitmap: ImageBitmap, found: Detection[], checks: { box: Box; score: number; grid: number; verify: number[] }[], faces: Box[], maybe: Box[]) {
   const r = (n: number) => Math.round(n);
   const f = (n: number) => n.toFixed(2);
   const kept = (b: Box) => faces.some((k) => k.x === b.x && k.y === b.y);
+  const possible = (b: Box) => maybe.some((k) => k.x === b.x && k.y === b.y);
   // 純文字一行一筆，讀者整段複製貼上就能回報
   const rows = [...found]
     .sort((a, b) => b.score - a.score)
     .map((d) => {
       const check = checks.find((c) => c.box === d.box);
-      return [d.grid, f(d.score), r(d.box.x), r(d.box.y), r(d.box.w), f(eyeTilt(d) ?? 0), kept(d.box) ? "採用" : "", check ? check.verify.map(f).join(" ") : ""].join("\t");
+      return [d.grid, f(d.score), r(d.box.x), r(d.box.y), r(d.box.w), f(eyeTilt(d) ?? 0), kept(d.box) ? "採用" : possible(d.box) ? "可能" : "", check ? check.verify.map(f).join(" ") : ""].join("\t");
     });
   console.info(
-    [`[gears] ${__GEARS_COMMIT__} 找人臉 ${bitmap.width}×${bitmap.height}，${found.length} 次偵測，採用 ${faces.length} 個`, "grid\tscore\tx\ty\tw\ttilt\t結果\t重新偵測", ...rows].join("\n"),
+    [`[gears] ${__GEARS_COMMIT__} 找人臉 ${bitmap.width}×${bitmap.height}，${found.length} 次偵測，採用 ${faces.length} 個，可能 ${maybe.length} 個`, "grid\tscore\tx\ty\tw\ttilt\t結果\t重新偵測", ...rows].join("\n"),
   );
 }
 

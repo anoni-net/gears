@@ -1031,8 +1031,12 @@ footer a {
 }
 
 .redact-auto-message > *,
-.redact-auto-message .sizer > p {
+.redact-auto-message .sizer > * {
   grid-area: 1 / 1;
+  margin: 0;
+}
+
+.redact-auto-message p {
   margin: 0;
 }
 
