@@ -1,3 +1,4 @@
+import { execSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
@@ -109,8 +110,18 @@ function serviceWorker(base: string): Plugin {
   };
 }
 
+// 建置時的 commit，偵錯輸出用來確認讀者跑的是哪一版。不在 git 裡建置時是 unknown
+function commit(): string {
+  try {
+    return execSync("git rev-parse --short HEAD", { stdio: ["ignore", "pipe", "ignore"] }).toString().trim();
+  } catch {
+    return "unknown";
+  }
+}
+
 export default defineConfig({
   base: "/gears/",
+  define: { __GEARS_COMMIT__: JSON.stringify(commit()) },
   plugins: [csp(), toolPages(), serviceWorker("/gears/")],
   oxc: {
     jsx: { runtime: "automatic", importSource: "preact" },

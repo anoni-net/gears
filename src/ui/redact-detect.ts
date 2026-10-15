@@ -12,6 +12,10 @@ import { type OcrWord, textSpans } from "../tools/redact/text-lines.ts";
 
 const BASE = new URL(import.meta.env.BASE_URL, location.href).href;
 
+// 網址帶 ?debug-faces 時，在主控台印出版本與每個候選的分數，讀者回報漏判、誤判時用。
+// 只有數字與座標，不含圖片的內容
+const DEBUG = new URLSearchParams(location.search).has("debug-faces");
+
 // 進度：0 到 1，null 表示還在下載或載入模型，不知道要多久
 export type OnProgress = (progress: number | null) => void;
 
@@ -80,16 +84,35 @@ export async function findFaces(bitmap: ImageBitmap, onProgress?: OnProgress): P
     }
     const pending = Math.max(1, found.filter((d) => d.score < CONFIRMED_SCORE).length);
     let checked = 0;
+    const checks: { box: Box; score: number; grid: number; verify: number[] }[] = [];
     const faces = await selectFaces(found, async (d) => {
       const scores = verifyFace(detector, bitmap, d);
+      if (DEBUG) checks.push({ box: d.box, score: d.score, grid: d.grid, verify: scores });
       await pause(0.9 + 0.1 * Math.min(1, ++checked / pending));
       return scores;
     });
+    if (DEBUG) logFaces(bitmap, found, checks, faces);
     onProgress?.(1);
     return faces.map((box) => pad(box, 0.2, bitmap.width, bitmap.height));
   } finally {
     detector.close();
   }
+}
+
+function logFaces(bitmap: ImageBitmap, found: Detection[], checks: { box: Box; score: number; grid: number; verify: number[] }[], faces: Box[]) {
+  const r = (n: number) => Math.round(n);
+  const f = (n: number) => n.toFixed(2);
+  const kept = (b: Box) => faces.some((k) => k.x === b.x && k.y === b.y);
+  // 純文字一行一筆，讀者整段複製貼上就能回報
+  const rows = [...found]
+    .sort((a, b) => b.score - a.score)
+    .map((d) => {
+      const check = checks.find((c) => c.box === d.box);
+      return [d.grid, f(d.score), r(d.box.x), r(d.box.y), r(d.box.w), f(eyeTilt(d) ?? 0), kept(d.box) ? "採用" : "", check ? check.verify.map(f).join(" ") : ""].join("\t");
+    });
+  console.info(
+    [`[gears] ${__GEARS_COMMIT__} 找人臉 ${bitmap.width}×${bitmap.height}，${found.length} 次偵測，採用 ${faces.length} 個`, "grid\tscore\tx\ty\tw\ttilt\t結果\t重新偵測", ...rows].join("\n"),
+  );
 }
 
 // 以候選為中心裁一塊正方形，依兩眼的連線轉正（左右翻轉時一起翻），再偵測一次。
