@@ -68,6 +68,51 @@ const REMOVED_PARTS = [
   /^docMetadata\//,
 ];
 
+// 讀者選擇刪除註解時，一併拿掉的部件：Word 的註解與討論串、Excel 的註解與討論串、
+// PowerPoint 的註解與註解作者
+const COMMENT_PARTS = [
+  /^word\/comments(Extended|Ids|Extensible)?\.xml$/,
+  /^xl\/comments[^/]*\.xml$/,
+  /^xl\/comments\/[^/]+$/,
+  /^xl\/threadedComments\//,
+  /^xl\/persons\//,
+  /^ppt\/comments\//,
+  /^ppt\/commentAuthors\.xml$/,
+  /^ppt\/authors\.xml$/,
+];
+
+// Excel 註解的方塊畫在 VML 裡，裡面是 ObjectType="Note"
+const isCommentVml = (part: Part) => /\.vml$/i.test(part.name) && new TextDecoder().decode(part.data).includes('ObjectType="Note"');
+
+// 指向註解的元素，關聯拿掉之後整個拿掉，留著會是缺少必填屬性的元素
+const COMMENT_POINTERS = new Set(["legacyDrawing", "commentRel"]);
+
+// 接受修訂：刪除的內容與格式修訂前的舊值整個拿掉，插入的內容拿掉標籤、留下文字
+const REVISION_DROP = new Set([
+  "del",
+  "moveFrom",
+  "moveFromRangeStart",
+  "moveFromRangeEnd",
+  "moveToRangeStart",
+  "moveToRangeEnd",
+  "rPrChange",
+  "pPrChange",
+  "sectPrChange",
+  "tblPrChange",
+  "tblPrExChange",
+  "trPrChange",
+  "tcPrChange",
+  "tblGridChange",
+  "numberingChange",
+  "cellIns",
+  "cellDel",
+  "customXmlDelRangeStart",
+  "customXmlDelRangeEnd",
+  "customXmlInsRangeStart",
+  "customXmlInsRangeEnd",
+]);
+const REVISION_UNWRAP = new Set(["ins", "moveTo"]);
+
 const segmentOf = (name: string) =>
   /^docProps\/thumbnail/.test(name)
     ? "doc-thumbnail"
@@ -128,8 +173,38 @@ function xmlValues(text: string): string {
 }
 
 // 各部件的改寫規則。authors 是 Excel 註解的作者，舊版的 Excel 會把作者名字寫進註解內文的開頭
-function rules(tally: Tally, removedIds: Set<string>, authors: Set<string>): XmlRules {
+interface Choices {
+  removeComments: boolean;
+  acceptRevisions: boolean;
+  deletedRows: Set<number>; // 刪除的表格列（w:trPr 裡有 w:del），接受修訂時整列拿掉
+}
+
+// 刪除的表格列：先掃描一次，記下那些 w:tr 的位置
+function deletedRows(text: string): Set<number> {
+  const rows = new Set<number>();
+  walkXml(text, (el, value) => {
+    if (value !== null || !is(el, "w", "del")) return;
+    const parents = el.parents as XmlElement[];
+    if (parents.at(-1) && is(parents.at(-1)!, "w", "trPr") && parents.at(-2) && is(parents.at(-2)!, "w", "tr")) rows.add(parents.at(-2)!.index);
+  });
+  return rows;
+}
+
+function rules(tally: Tally, removedIds: Set<string>, authors: Set<string>, choices: Choices): XmlRules {
   const drop = (el: XmlElement) => {
+    if (choices.removeComments) {
+      if (is(el, "w", "commentRangeStart") || is(el, "w", "commentRangeEnd") || is(el, "w", "commentReference")) {
+        tally.add("doc-comments-removed");
+        return true;
+      }
+      if (COMMENT_POINTERS.has(el.local) && el.attrs.some((a) => is(a, "r") && removedIds.has(a.value))) return true;
+    }
+    if (choices.acceptRevisions && is(el, "w")) {
+      if (REVISION_DROP.has(el.local) || (el.local === "tr" && choices.deletedRows.has(el.index))) {
+        tally.add("doc-revisions-accepted");
+        return true;
+      }
+    }
     if (is(el, "w", "rsids") || is(el, "w", "rsid") || is(el, "w14", "docId") || is(el, "w15", "docId") || is(el, "xr", "revisionPtr")) {
       tally.add("doc-ids");
       return true;
@@ -166,6 +241,11 @@ function rules(tally: Tally, removedIds: Set<string>, authors: Set<string>): Xml
   return {
     keepComments: true,
     dropElement: drop,
+    unwrapElement(el) {
+      if (!choices.acceptRevisions || !is(el, "w") || !REVISION_UNWRAP.has(el.local)) return false;
+      tally.add("doc-revisions-accepted");
+      return true;
+    },
     attr(a, el) {
       // 被拿掉的部件，指向它的 r:id 一併拿掉
       if (is(a, "r") && removedIds.has(a.value)) return null;
@@ -226,10 +306,15 @@ export async function stripOoxml(bytes: Uint8Array, inner: Inner): Promise<RunRe
   const all = await readParts(bytes);
   const tally = new Tally();
   const removed = new Set<string>();
+  const { removeComments = false, acceptRevisions = false } = inner.options;
   for (const part of all) {
-    if (!isRemoved(part.name)) continue;
-    removed.add(part.name);
-    tally.add(segmentOf(part.name));
+    if (isRemoved(part.name)) {
+      removed.add(part.name);
+      tally.add(segmentOf(part.name));
+    } else if (removeComments && (COMMENT_PARTS.some((re) => re.test(part.name)) || isCommentVml(part))) {
+      removed.add(part.name);
+      tally.add("doc-comments-removed");
+    }
   }
   const parts = all.filter((p) => !removed.has(p.name));
 
@@ -288,7 +373,9 @@ export async function stripOoxml(bytes: Uint8Array, inner: Inner): Promise<RunRe
       setText(part, APP_XML);
       tally.add("doc-properties");
     } else if (isXml(part.name) && relsSource(part.name) === null && part.name !== "[Content_Types].xml") {
-      setText(part, rewriteXml(partText(part), rules(tally, removedIds.get(part.name) ?? new Set(), authors)).text);
+      const text = partText(part);
+      const choices = { removeComments, acceptRevisions, deletedRows: acceptRevisions ? deletedRows(text) : new Set<number>() };
+      setText(part, rewriteXml(text, rules(tally, removedIds.get(part.name) ?? new Set(), authors, choices)).text);
     }
   }
 

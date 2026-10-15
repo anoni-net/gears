@@ -83,6 +83,8 @@ export const SEGMENT_CODES = [
   "doc-images",
   "doc-unused",
   "doc-content",
+  "doc-comments-removed",
+  "doc-revisions-accepted",
   "media-tags",
   "media-times",
   "media-timed",
@@ -117,6 +119,12 @@ export interface RunResult {
   report: Report;
 }
 
+// 讀者在畫面上選的處理方式。文件的註解與追蹤修訂是內容，預設保留，讀者勾選才拿掉
+export interface RunOptions {
+  removeComments?: boolean;
+  acceptRevisions?: boolean;
+}
+
 // 處理檔案的工具：從暫存區裡的檔案開始，產生新版本。
 export interface Tool {
   id: string;
@@ -125,7 +133,7 @@ export interface Tool {
   accepts(format: Format): boolean;
   // 文件類的格式要先解壓縮或載入 pdf-lib，所以兩者都可以是非同步的
   inspect(data: Uint8Array, format: Format): Finding[] | Promise<Finding[]>;
-  run(data: Uint8Array, format: Format): RunResult | Promise<RunResult>;
+  run(data: Uint8Array, format: Format, options?: RunOptions): RunResult | Promise<RunResult>;
   // 太大、不能一次讀進記憶體的檔案（例如好幾 GB 的影片）。支援的格式才有，只讀需要的部分
   acceptsLarge?(format: Format): boolean;
   inspectLarge?(blob: Blob, format: Format): Promise<Finding[]>;

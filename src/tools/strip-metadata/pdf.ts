@@ -110,6 +110,24 @@ export async function stripPdf(bytes: Uint8Array, inner: Inner): Promise<RunResu
   context.trailerInfo.Info = undefined;
   context.trailerInfo.ID = undefined;
 
+  // 讀者選擇刪除註解：頁面的註解清單拿掉標記類的註解與它們的彈出視窗，
+  // 註解物件之後沒有被引用，最後清理時一起拿掉
+  if (inner.options.removeComments) {
+    for (const page of doc.getPages()) {
+      const annots = page.node.Annots();
+      if (!annots) continue;
+      const kept = annots.asArray().filter((item) => {
+        const annot = context.lookup(item);
+        const subtype = annot instanceof lib.PDFDict ? nameOf(lib, annot, "Subtype") : undefined;
+        return !(subtype && (MARKUP.has(subtype) || subtype === "Popup"));
+      });
+      if (kept.length === annots.size()) continue;
+      tally.add("doc-comments-removed");
+      if (kept.length) page.node.set(lib.PDFName.of("Annots"), context.obj(kept));
+      else page.node.delete(lib.PDFName.of("Annots"));
+    }
+  }
+
   // 簽章：拿掉欄位的值，簽章的權限設定（/Perms）也一併拿掉
   let signatures = 0;
   for (const [, obj] of context.enumerateIndirectObjects()) {

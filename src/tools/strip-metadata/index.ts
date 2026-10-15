@@ -1,5 +1,5 @@
 import { type Format, sniff } from "../../core/bytes.ts";
-import { CONTENT_FINDINGS, FINDING_CODES, type Finding, type RunResult, type Tool, ToolError, mergeFindings } from "../../core/tool.ts";
+import { CONTENT_FINDINGS, FINDING_CODES, type Finding, type RunOptions, type RunResult, type Tool, ToolError, mergeFindings } from "../../core/tool.ts";
 import { inspectBmp, stripBmp } from "./bmp.ts";
 import { inspectGif, stripGif } from "./gif.ts";
 import { inspectHeif, stripHeif } from "./heif.ts";
@@ -82,20 +82,21 @@ const HANDLERS: Partial<Record<Format, Handler>> = {
 // 文件裡的圖片與內嵌的文件交回這裡處理。內嵌的層數有上限，避免刻意做成的檔案無限遞迴
 const MAX_DEPTH = 3;
 
-function inner(depth: number): Inner {
+function inner(depth: number, options: RunOptions = {}): Inner {
   const handler = (data: Uint8Array) => {
     if (depth >= MAX_DEPTH) throw new ToolError("unsupported");
     const format = sniff(data);
     return HANDLERS[format] ? { handler: HANDLERS[format], format } : null;
   };
   return {
+    options,
     async inspect(data) {
       const found = handler(data);
-      return found ? found.handler.inspect(data, inner(depth + 1)) : null;
+      return found ? found.handler.inspect(data, inner(depth + 1, options)) : null;
     },
     async strip(data) {
       const found = handler(data);
-      return found ? found.handler.strip(data, inner(depth + 1)) : null;
+      return found ? found.handler.strip(data, inner(depth + 1, options)) : null;
     },
   };
 }
@@ -132,9 +133,9 @@ export const stripMetadata: Tool = {
     return stripMp4Blob(blob);
   },
 
-  async run(data: Uint8Array, format: Format): Promise<RunResult> {
+  async run(data: Uint8Array, format: Format, options?: RunOptions): Promise<RunResult> {
     const handler = HANDLERS[format];
     if (!handler) throw new ToolError("unsupported");
-    return handler.strip(data, inner(0));
+    return handler.strip(data, inner(0, options));
   },
 };

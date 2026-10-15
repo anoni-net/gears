@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import { VIDEO_FORMATS, isMedia, isPhoto } from "../core/bytes.ts";
-import { CONTENT_FINDINGS, type Report, ToolError } from "../core/tool.ts";
+import { CONTENT_FINDINGS, type Report, type RunOptions, ToolError } from "../core/tool.ts";
 import type { TrayFile, Version } from "../core/tray.ts";
 import { t, tDynamic } from "../i18n/index.ts";
 import { tray } from "../state.ts";
@@ -115,8 +115,46 @@ function FindingList({ findings }: { findings: Version["findings"] }) {
   );
 }
 
+// 文件的註解與追蹤修訂：預設保留，讀者勾選之後才拿掉
+function ContentChoices({ version, busy, onApply }: { version: Version; busy: boolean; onApply?: (options: RunOptions) => void }) {
+  const hasComments = version.findings.some((f) => f.code === "doc-comments");
+  const hasRevisions = version.findings.some((f) => f.code === "revisions");
+  const [removeComments, setRemoveComments] = useState(false);
+  const [acceptRevisions, setAcceptRevisions] = useState(false);
+  if (!onApply || (!hasComments && !hasRevisions)) return null;
+  return (
+    <div class="content-choices">
+      {hasComments ? (
+        <label class="check">
+          <input type="checkbox" checked={removeComments} onChange={(e) => setRemoveComments((e.currentTarget as HTMLInputElement).checked)} />
+          <span>
+            {t("content.removeComments")}
+            <small>{t("content.removeCommentsNote")}</small>
+          </span>
+        </label>
+      ) : null}
+      {hasRevisions ? (
+        <label class="check">
+          <input type="checkbox" checked={acceptRevisions} onChange={(e) => setAcceptRevisions((e.currentTarget as HTMLInputElement).checked)} />
+          <span>
+            {t("content.acceptRevisions")}
+            <small>{t("content.acceptRevisionsNote")}</small>
+          </span>
+        </label>
+      ) : null}
+      <button
+        type="button"
+        disabled={busy || (!removeComments && !acceptRevisions)}
+        onClick={() => onApply({ removeComments: hasComments && removeComments, acceptRevisions: hasRevisions && acceptRevisions })}
+      >
+        {t("content.apply")}
+      </button>
+    </div>
+  );
+}
+
 // 文件的註解、追蹤修訂與附加檔案是內容，清除之後仍然在，跟中繼資料分開列
-function Findings({ version, previous }: { version: Version; previous?: Version }) {
+function Findings({ version, previous, busy, onApply }: { version: Version; previous?: Version; busy?: boolean; onApply?: (options: RunOptions) => void }) {
   const metadata = version.findings.filter((f) => !CONTENT_FINDINGS.includes(f.code));
   const content = version.findings.filter((f) => CONTENT_FINDINGS.includes(f.code));
   return (
@@ -128,6 +166,7 @@ function Findings({ version, previous }: { version: Version; previous?: Version 
           <h4>{t("findings.content")}</h4>
           <FindingList findings={content} />
           <p class="hint">{t("findings.contentNote")}</p>
+          <ContentChoices version={version} busy={!!busy} onApply={onApply} key={version.id} />
         </div>
       ) : null}
     </>
@@ -228,11 +267,11 @@ export function FileView({ file, index, busy, preferred, onOpenTool }: Props) {
     editorTools.some((tool) => tool.id === preferred && tool.accepts(current.format)) && current.tool !== preferred ? preferred! : null,
   );
 
-  const run = async (toolId: string) => {
+  const run = async (toolId: string, options?: RunOptions) => {
     const tool = fileTools.find((x) => x.id === toolId)!;
     setError(undefined);
     try {
-      await tray.apply(file.id, tool);
+      await tray.apply(file.id, tool, options);
     } catch (e) {
       setError(
         e instanceof ToolError
@@ -302,7 +341,12 @@ export function FileView({ file, index, busy, preferred, onOpenTool }: Props) {
           {canInspect ? (
             <>
               <h3>{t("findings.title")}</h3>
-              <Findings version={current} previous={file.versions.at(-2)} />
+              <Findings
+                version={current}
+                previous={file.versions.at(-2)}
+                busy={busy}
+                onApply={current.large ? undefined : (options) => void run("strip-metadata", options)}
+              />
             </>
           ) : (
             <p class="note">{t(current.large ? "file.tooLarge" : current.format === "age" ? "file.encrypted" : "file.unsupported")}</p>

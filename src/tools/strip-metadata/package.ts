@@ -1,4 +1,4 @@
-import { type Finding, type ReportItem, type RunResult, type SegmentCode, ToolError } from "../../core/tool.ts";
+import { type Finding, type ReportItem, type RunOptions, type RunResult, type SegmentCode, ToolError } from "../../core/tool.ts";
 import { decodeUtf8, tokenizeXml } from "../../core/xml.ts";
 import { entryData, readZip, writeZip } from "../../core/zip.ts";
 
@@ -44,6 +44,7 @@ export function setText(part: Part, text: string) {
 export interface Inner {
   inspect(data: Uint8Array): Promise<Finding[] | null>;
   strip(data: Uint8Array): Promise<RunResult | null>;
+  options: RunOptions; // 讀者選的處理方式，內嵌的文件也照同樣的選擇處理
 }
 
 // 註解與修訂的作者一律改成這個名字，時間改成固定的值。用英文是因為它寫在檔案裡，

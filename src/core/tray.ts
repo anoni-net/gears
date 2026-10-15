@@ -1,5 +1,5 @@
 import { type Format, MIME, sniff } from "./bytes.ts";
-import { type Finding, LARGE_FILE, type Report, type Tool, ToolError } from "./tool.ts";
+import { type Finding, LARGE_FILE, type Report, type RunOptions, type Tool, ToolError } from "./tool.ts";
 
 // 檔案暫存區。所有工具共用，每次處理產生一個新版本、原檔保留，可以退回上一步。
 //
@@ -133,7 +133,7 @@ export function createTray(tools: Tool[], verify?: Verifier) {
       set({ files: [], selected: null, failed: [] });
     },
 
-    async apply(fileId: number, tool: Tool) {
+    async apply(fileId: number, tool: Tool, options?: RunOptions) {
       const current = state.files.find((f) => f.id === fileId)?.versions.at(-1);
       if (!current) return;
       const large = current.large;
@@ -146,7 +146,7 @@ export function createTray(tools: Tool[], verify?: Verifier) {
           return;
         }
         const input = new Uint8Array(await current.blob.arrayBuffer());
-        const { data, report } = await tool.run(input, current.format);
+        const { data, report } = await tool.run(input, current.format, options);
         await addVersion(fileId, new Blob([data as Uint8Array<ArrayBuffer>]), tool.id, report);
       } finally {
         set({ busy: false });
