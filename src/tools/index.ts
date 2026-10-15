@@ -28,6 +28,7 @@ export const createTools: CreateTool[] = [
   { id: "qr-read", output: "text" },
   { id: "passphrase", output: "text" },
   { id: "age-keygen", output: "text" },
+  { id: "text-crypt", output: "text" },
 ];
 
 export const toolIds = [...fileTools, ...editorTools, ...createTools].map((t) => t.id);

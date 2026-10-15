@@ -31,6 +31,11 @@ export function QrContentView({ text, onOpenTool }: { text: string; onOpenTool(i
             {t("qrread.checkUrl")}
           </button>
         ) : null}
+        {text.includes("-----BEGIN AGE ENCRYPTED FILE-----") ? (
+          <button type="button" onClick={() => onOpenTool("text-crypt", text)}>
+            {t("qrread.decryptText")}
+          </button>
+        ) : null}
       </div>
       {content.kind === "url" ? <p class="hint">{t("qrread.urlNote")}</p> : null}
     </div>

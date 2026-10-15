@@ -11,6 +11,7 @@ const loaders: Record<string, () => Promise<ComponentType<CreateToolProps>>> = {
   "url-check": () => import("./UrlCheckTool.tsx").then((m) => m.UrlCheckTool),
   "qr-read": () => import("./QrReadTool.tsx").then((m) => m.QrReadTool),
   "age-keygen": () => import("./KeygenTool.tsx").then((m) => m.KeygenTool),
+  "text-crypt": () => import("./TextCryptTool.tsx").then((m) => m.TextCryptTool),
 };
 
 export function CreateToolView({ id, ...props }: CreateToolProps & { id: string }) {
