@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "preact/hooks";
-import { EXTENSION, VIDEO_FORMATS, isMedia, isPhoto } from "../core/bytes.ts";
+import { VIDEO_FORMATS, isMedia, isPhoto } from "../core/bytes.ts";
 import { CONTENT_FINDINGS, type Report, ToolError } from "../core/tool.ts";
 import type { TrayFile, Version } from "../core/tray.ts";
 import { t, tDynamic } from "../i18n/index.ts";
@@ -12,19 +12,7 @@ import { useObjectUrl } from "./hooks.ts";
 import { QrContentView } from "./QrContentView.tsx";
 import { decodeImage } from "./image-decode.ts";
 import { decodeQrFromBlob } from "./qr-scan.ts";
-
-// 下載的檔名不沿用原檔名（常帶有拍攝日期），只決定副檔名。不能預覽的檔案沒有
-// 可靠的格式判斷，沿用原檔名的副檔名，解密時先拿掉 .age
-function extension(name: string, format: Version["format"]): string {
-  // PNM 有 pbm、pgm、ppm、pam 幾種副檔名，沿用原本的
-  if (format === "pnm") return /\.(pbm|pgm|ppm|pnm|pam)$/i.exec(name)?.[1]?.toLowerCase() ?? EXTENSION.pnm;
-  // 壓縮檔沿用原本的副檔名：jar、cbz 這類也是 ZIP，.tar.gz 是兩層
-  if (format === "gz") return /\.(tar\.gz|tgz|svgz|gz)$/i.exec(name)?.[1]?.toLowerCase() ?? EXTENSION.gz;
-  if (format === "zip") return /\.([a-z0-9]{2,5})$/i.exec(name)?.[1]?.toLowerCase() ?? EXTENSION.zip;
-  if (format !== "unknown") return EXTENSION[format];
-  const ext = /\.([a-z0-9]{1,5})$/i.exec(name.replace(/\.age$/i, ""))?.[1];
-  return ext ? ext.toLowerCase() : EXTENSION.unknown;
-}
+import { outputName } from "./output-name.ts";
 
 // 預覽圖。Brave、Chrome、Firefox 不能直接顯示 HEIC，載入失敗時改用 libheif 解碼，
 // 畫成 PNG 再顯示。解碼也失敗時說明原因，中繼資料照樣能處理
@@ -254,7 +242,6 @@ export function FileView({ file, index, busy, preferred, onOpenTool }: Props) {
     }
   };
 
-  const outputName = `gears-${index + 1}.${extension(file.name, current.format)}`;
 
   // 適用這個格式的工具。能處理目前找到的資訊的標成建議，排在前面
   const found = new Set(current.findings.map((f) => f.code));
@@ -364,7 +351,7 @@ export function FileView({ file, index, busy, preferred, onOpenTool }: Props) {
           ) : null}
 
           {current.report ? <ReportView report={current.report} /> : null}
-          {current.tool ? <Output version={current} name={outputName} /> : null}
+          {current.tool ? <Output version={current} name={outputName(file, index)} /> : null}
         </div>
       </div>
       )}

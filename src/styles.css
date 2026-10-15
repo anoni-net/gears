@@ -566,6 +566,19 @@ footer a {
   width: 100%;
 }
 
+/* 一次處理全部的檔案 */
+.batch {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 0.5rem;
+}
+
+.batch p {
+  margin: 0;
+}
+
 /* 桌面 */
 
 .desktop section + section {

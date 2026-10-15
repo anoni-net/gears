@@ -5,6 +5,7 @@ import { t } from "../i18n/index.ts";
 import { tray } from "../state.ts";
 import { fileTools } from "../tools/index.ts";
 import { useState } from "preact/hooks";
+import { BatchActions } from "./BatchActions.tsx";
 import { useObjectUrl } from "./hooks.ts";
 
 interface ItemProps {
@@ -84,6 +85,7 @@ export function TrayList({ files, selected, onSelect, onPick, busy, failed, comp
           <button type="button" class="add" onClick={onPick}>
             {t("tray.add")}
           </button>
+          <BatchActions files={files} busy={busy} />
         </>
       ) : (
         <div class="drop">
