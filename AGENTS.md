@@ -132,6 +132,7 @@ node scripts/fetch-165.mjs   # 下載並整理成 public/data/165.txt
 - 能不用 canvas 輸出圖檔就不用。Brave 預設會擾動 canvas 讀出來的像素，QR code 的 PNG 由 `src/core/png-encode.ts` 直接寫位元組。遮蔽與 QR code 讀取必須解碼影像，只能用 canvas：遮蔽輸出後抽查每個框是否夠黑，門檻容許這點雜訊。QR code 讀取對雜訊不敏感
 - 站內導覽不用一般的 `<a href>`。一般的連結會重新載入頁面，暫存區只在記憶體裡，會整個清空。改用 `src/router.ts` 的 `navigate()`，外觀要像連結時用 `button.link`
 - 解碼圖片一律用 `src/ui/image-decode.ts` 的 `decodeImage()`，不要直接呼叫 `createImageBitmap()`，HEIC 才會在不支援的瀏覽器上改用 libheif
+- 遮蔽畫面分成兩區：會改變框的動作（自動尋找、復原、清除）在圖片上方，套用與取消在圖片下方的完成列，完成列捲動時固定在畫面底部（`position: sticky`）。窄螢幕的復原、清除只顯示圖示，文字留在按鈕裡給讀螢幕軟體
 - 不用 `<select>`。Linux 版 WebKit 建立下拉選單時，內部的樣式表會被 CSP 擋下，主控台留下錯誤。選項不多時改用攤開的選項按鈕，手機上也少點一下
 
 ## 無障礙

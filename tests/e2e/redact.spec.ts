@@ -148,3 +148,25 @@ test("用鍵盤框選：方向鍵移動、Enter 標兩個角，Delete 刪掉", a
   await page.keyboard.press("Delete");
   await expect(page.getByText("已經框了 0 個範圍")).toBeVisible();
 });
+
+test("圖片很高時，套用與取消固定在畫面底部，打開就看得到", async ({ page }) => {
+  await page.goto("./redact/");
+  const data = await page.evaluate(async () => {
+    const c = document.createElement("canvas");
+    c.width = 600;
+    c.height = 1800;
+    const g = c.getContext("2d")!;
+    g.fillStyle = "#d22";
+    g.fillRect(0, 0, c.width, c.height);
+    const b = await new Promise<Blob>((r) => c.toBlob((x) => r(x!), "image/png"));
+    return Array.from(new Uint8Array(await b.arrayBuffer()));
+  });
+  await page.getByTestId("file-input").setInputFiles({ name: "tall.png", mimeType: "image/png", buffer: Buffer.from(data) });
+  await page.getByTestId("redact-canvas").scrollIntoViewIfNeeded();
+  const viewport = page.viewportSize()!;
+  for (const name of ["取消", "套用遮蔽"]) {
+    const box = (await page.getByRole("button", { name }).boundingBox())!;
+    expect(box.y).toBeGreaterThanOrEqual(0);
+    expect(box.y + box.height).toBeLessThanOrEqual(viewport.height);
+  }
+});
