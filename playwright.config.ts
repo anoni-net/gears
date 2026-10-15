@@ -11,7 +11,9 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? [["github"], ["list"]] : "list",
-  use: { baseURL: BASE },
+  // service worker 會接手頁面的請求，page.route 攔不到（165 清單的測試要攔截）。
+  // 預設擋掉，離線使用的測試（tests/e2e/offline.spec.ts）自己打開
+  use: { baseURL: BASE, serviceWorkers: "block" },
   webServer: {
     command: "npm run build && npm run preview",
     url: BASE,

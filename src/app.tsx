@@ -7,6 +7,7 @@ import { Desktop, type Task } from "./ui/Desktop.tsx";
 import { FileView } from "./ui/FileView.tsx";
 import { ToolIntro } from "./ui/ToolIntro.tsx";
 import { TrayList } from "./ui/TrayList.tsx";
+import { useOffline } from "./ui/offline.ts";
 import { useTray } from "./ui/hooks.ts";
 import { CreateToolView } from "./ui/registry.tsx";
 import { IconCircle } from "./ui/Icon.tsx";
@@ -60,6 +61,7 @@ export function App() {
   const route = useRoute();
   const input = useRef<HTMLInputElement>(null);
   const [preset, setPreset] = useState<string>();
+  const offline = useOffline();
 
   // 加入檔案之後顯示那個檔案。正在用從空白開始的工具時，先回到桌面
   const addFiles = async (files: File[], origin: string | null = null) => {
@@ -166,6 +168,15 @@ export function App() {
 
       <input ref={input} type="file" multiple hidden onChange={onChange} data-testid="file-input" />
 
+      {offline.update ? (
+        <div class="update-bar frame" role="status">
+          <span>{t("app.update")}</span>
+          <button type="button" class="primary" onClick={offline.update}>
+            {t("app.updateReload")}
+          </button>
+        </div>
+      ) : null}
+
       <main class="workbench frame">
         <TrayList
           files={state.files}
@@ -181,6 +192,7 @@ export function App() {
 
       <footer class="frame">
         <p>{t("app.memoryNote")}</p>
+        {offline.ready ? <p data-testid="offline-ready">{t("app.offlineReady")}</p> : null}
         <p>
           <a href="https://anoni.net/">{t("app.footer.community")}</a>
           {" · "}
