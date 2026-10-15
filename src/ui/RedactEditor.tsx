@@ -4,6 +4,7 @@ import type { Report } from "../core/tool.ts";
 import { t } from "../i18n/index.ts";
 import { type Box, boxFromPoints, isDark, isUsable, samplePoints } from "../tools/redact/index.ts";
 import { decodeImage } from "./image-decode.ts";
+import { overlaps } from "../tools/redact/pii.ts";
 import type { FileEditorProps } from "./types.ts";
 
 // 編輯時畫面上的圖最多 1600 像素寬，框的座標一律存成原圖的像素
@@ -52,9 +53,15 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
   const canvas = useRef<HTMLCanvasElement>(null);
   const [bitmap, setBitmap] = useState<ImageBitmap | null>(null);
   const [boxes, setBoxes] = useState<Box[]>([]);
+  // 自動尋找是非同步的，找完時要拿最新的框，不是按下按鈕那時候的
+  const latest = useRef<Box[]>([]);
+  latest.current = boxes;
   const [draft, setDraft] = useState<Box | null>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "working" | "failed" | "decodeFailed">("loading");
   const start = useRef<[number, number] | null>(null);
+  // 自動尋找：哪一種正在跑、找到幾個，文字辨識另外留下每一行的範圍
+  const [auto, setAuto] = useState<{ kind: "faces" | "text" | "lines"; state: "running" | "done" | "failed" | "noWebgl"; n: number } | null>(null);
+  const [textLines, setTextLines] = useState<Box[]>([]);
 
   useEffect(() => {
     let alive = true;
@@ -127,6 +134,34 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
     }
   };
 
+  // 找到的框加進去，跟已經有的框重疊的不重複加
+  const addFound = (found: Box[]) => {
+    const next = [...latest.current];
+    for (const box of found) if (!next.some((b) => overlaps(b, box))) next.push(box);
+    setBoxes(next);
+    return next.length - latest.current.length;
+  };
+
+  const runAuto = async (kind: "faces" | "text") => {
+    if (!bitmap) return;
+    let detectError: (new () => Error) | undefined;
+    setAuto({ kind, state: "running", n: 0 });
+    try {
+      const { findFaces, findText, NoWebGLError } = await import("./redact-detect.ts");
+      detectError = NoWebGLError;
+      if (kind === "faces") {
+        const faces = await findFaces(bitmap);
+        setAuto({ kind, state: "done", n: addFound(faces) || faces.length });
+      } else {
+        const { pii, lines } = await findText(bitmap);
+        setTextLines(lines);
+        setAuto({ kind, state: "done", n: addFound(pii.map((m) => m.box)) || pii.length });
+      }
+    } catch (e) {
+      setAuto({ kind, state: detectError && e instanceof detectError ? "noWebgl" : "failed", n: 0 });
+    }
+  };
+
   const apply = async () => {
     if (!bitmap || !boxes.length) return;
     setStatus("working");
@@ -146,6 +181,36 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
       {status === "decodeFailed" ? (
         <p class="error" role="alert">
           {t("redact.decodeFailed")}
+        </p>
+      ) : null}
+      <div class="redact-auto">
+        <button type="button" disabled={!bitmap || auto?.state === "running"} onClick={() => runAuto("faces")}>
+          {t("redact.findFaces")}
+        </button>
+        <button type="button" disabled={!bitmap || auto?.state === "running"} onClick={() => runAuto("text")}>
+          {t("redact.findText")}
+        </button>
+        {textLines.length ? (
+          <button
+            type="button"
+            disabled={auto?.state === "running"}
+            onClick={() => setAuto({ kind: "lines", state: "done", n: addFound(textLines) })}
+          >
+            {t("redact.findLines", { n: textLines.length })}
+          </button>
+        ) : null}
+      </div>
+      {auto ? (
+        <p class={auto.state === "failed" || auto.state === "noWebgl" ? "error" : "hint"} role="status" data-testid="redact-auto-status">
+          {auto.state === "noWebgl"
+            ? t("redact.noWebgl")
+            : auto.state === "running"
+            ? t(auto.kind === "faces" ? "redact.findingFaces" : "redact.findingText")
+            : auto.state === "failed"
+              ? t("redact.findFailed")
+              : auto.n
+                ? t("redact.found", { n: auto.n })
+                : t("redact.foundNone")}
         </p>
       ) : null}
       <canvas
@@ -182,6 +247,7 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
           {t("redact.failed")}
         </p>
       ) : null}
+      <p class="hint">{t("redact.autoNote")}</p>
       <p class="hint">{t("redact.note")}</p>
     </div>
   );
