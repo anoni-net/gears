@@ -226,3 +226,13 @@ export function inspectJpeg(bytes: Uint8Array): Finding[] {
   if (result.trailer < bytes.length) findings.push({ code: "trailer" });
   return findings;
 }
+
+// 遮蔽時要保留拍攝資訊，取出原檔的 EXIF（TIFF 結構），沒有就回傳 null
+export function exifOfJpeg(bytes: Uint8Array): Uint8Array | null {
+  try {
+    const s = walk(bytes).segments.find((seg) => classify(bytes, seg) === "exif");
+    return s ? bytes.subarray(body(s) + 6, s.end) : null;
+  } catch {
+    return null;
+  }
+}

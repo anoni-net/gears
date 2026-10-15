@@ -97,7 +97,7 @@ function RemovedNote({ version, previous }: { version: Version; previous?: Versi
   return (
     <p class="note" data-testid="removed-note">
       {t("findings.removed", { tool: tDynamic(`tool.${version.tool}`), n: gone.length })}
-      {reencoded ? t("findings.reencoded") : null}
+      {reencoded ? t(version.report?.kept.some((r) => r.code === "exif-kept") ? "findings.exifKept" : "findings.reencoded") : null}
     </p>
   );
 }

@@ -5,6 +5,8 @@ import { t } from "../i18n/index.ts";
 import { type Box, boxFromPoints, isDark, isUsable, samplePoints } from "../tools/redact/index.ts";
 import { decodeImage } from "./image-decode.ts";
 import { overlaps } from "../tools/redact/pii.ts";
+import { extractExif, insertExifJpeg, insertExifPng, rebuildExif } from "../tools/redact/keep-exif.ts";
+import { exifFindings, parseExif } from "../tools/strip-metadata/exif.ts";
 import type { FileEditorProps } from "./types.ts";
 
 // 編輯時畫面上的圖最多 1600 像素寬，框的座標一律存成原圖的像素
@@ -15,8 +17,9 @@ function drawBoxes(ctx: CanvasRenderingContext2D, boxes: Box[], scale: number) {
   for (const b of boxes) ctx.fillRect(b.x * scale, b.y * scale, b.w * scale, b.h * scale);
 }
 
-// 原尺寸塗黑、重新編碼，再把輸出解碼回來抽查每個框，確認真的是黑的
-async function render(bitmap: ImageBitmap, boxes: Box[], format: Format): Promise<Blob> {
+// 原尺寸塗黑、重新編碼，再把輸出解碼回來抽查每個框，確認真的是黑的。
+// exif 是讀者選擇保留的拍攝資訊（已經拿掉縮圖），抽查通過之後才寫回去
+async function render(bitmap: ImageBitmap, boxes: Box[], format: Format, exif: Uint8Array | null): Promise<Blob> {
   const canvas = document.createElement("canvas");
   canvas.width = bitmap.width;
   canvas.height = bitmap.height;
@@ -46,7 +49,9 @@ async function render(bitmap: ImageBitmap, boxes: Box[], format: Format): Promis
       if (!isDark(r!, g!, b!)) throw new Error("not dark");
     }
   }
-  return blob;
+  if (!exif) return blob;
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  return new Blob([(jpeg ? insertExifJpeg(bytes, exif) : insertExifPng(bytes, exif)) as Uint8Array<ArrayBuffer>], { type });
 }
 
 export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps) {
@@ -62,6 +67,22 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
   // 自動尋找：哪一種正在跑、找到幾個，文字辨識另外留下每一行的範圍
   const [auto, setAuto] = useState<{ kind: "faces" | "text" | "lines"; state: "running" | "done" | "failed" | "noWebgl"; n: number } | null>(null);
   const [textLines, setTextLines] = useState<Box[]>([]);
+  // 原檔的拍攝資訊（已經重組、拿掉縮圖），沒有時間、地點或型號就不提供保留的選項
+  const [exif, setExif] = useState<Uint8Array | null>(null);
+  const [keepExif, setKeepExif] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    void blob.arrayBuffer().then((buffer) => {
+      const source = extractExif(new Uint8Array(buffer), format);
+      const rebuilt = source && rebuildExif(source);
+      const useful = rebuilt && exifFindings(parseExif(rebuilt)).some((f) => ["location", "datetime", "device"].includes(f.code));
+      if (alive) setExif(useful ? rebuilt : null);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [blob, format]);
 
   useEffect(() => {
     let alive = true;
@@ -166,8 +187,12 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
     if (!bitmap || !boxes.length) return;
     setStatus("working");
     try {
-      const out = await render(bitmap, boxes, format);
-      const report: Report = { removed: [{ code: "redaction", count: boxes.length }, { code: "reencode" }], kept: [] };
+      const kept = keepExif ? exif : null;
+      const out = await render(bitmap, boxes, format, kept);
+      const report: Report = {
+        removed: [{ code: "redaction", count: boxes.length }, { code: "reencode" }],
+        kept: kept ? [{ code: "exif-kept" }] : [],
+      };
       onDone(out, report);
     } catch {
       setStatus("failed");
@@ -228,6 +253,15 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
       <p class="hint" aria-live="polite">
         {t("redact.count", { n: boxes.length })}
       </p>
+      {exif ? (
+        <label class="check">
+          <input type="checkbox" checked={keepExif} onChange={(e) => setKeepExif((e.currentTarget as HTMLInputElement).checked)} />
+          <span>
+            {t("redact.keepExif")}
+            <small>{t("redact.keepExifNote")}</small>
+          </span>
+        </label>
+      ) : null}
       <div class="buttons">
         <button type="button" class="primary" disabled={!boxes.length || status === "working"} onClick={apply}>
           {status === "working" ? t("redact.working") : t("redact.apply")}

@@ -1,5 +1,8 @@
 import type { Page } from "@playwright/test";
-import { expect, test } from "./guard.ts";
+import { downloadFrom, expect, test } from "./guard.ts";
+import { extractExif } from "../../src/tools/redact/keep-exif.ts";
+import { parseExif } from "../../src/tools/strip-metadata/exif.ts";
+import { exifSegment, insertIntoJpeg, sampleTiff } from "../helpers/fixtures.ts";
 
 // 紅底、左上角一塊綠色的圖，遮住綠色那塊之後檢查像素
 async function image(page: Page, mime: "image/png" | "image/jpeg") {
@@ -102,4 +105,27 @@ test("JPEG 遮蔽後重新編碼，原本的中繼資料一起拿掉", async ({ 
   await page.getByRole("button", { name: "套用遮蔽" }).click();
   await expect(page.getByText("重新編碼，原檔的中繼資料一併拿掉")).toBeVisible();
   expect(Math.max(...(await pixel(page, 0.25, 0.35)))).toBeLessThanOrEqual(24);
+});
+
+test("遮蔽時保留拍攝資訊：時間、地點與型號留著，縮圖拿掉，旋轉方向是正向", async ({ page }) => {
+  await page.goto("./redact/");
+  const photo = insertIntoJpeg(new Uint8Array(await image(page, "image/jpeg")), exifSegment(sampleTiff(1)));
+  await page.getByTestId("file-input").setInputFiles({ name: "evidence.jpg", mimeType: "image/jpeg", buffer: Buffer.from(photo) });
+  const keep = page.getByRole("checkbox", { name: /保留拍攝的時間、地點與相機型號/ });
+  await expect(keep).not.toBeChecked();
+  await keep.check();
+  await drag(page, [0.1, 0.2], [0.4, 0.5]);
+  await page.getByRole("button", { name: "套用遮蔽" }).click();
+  await expect(page.getByText("拍攝的時間、地點與相機型號（縮圖與相機廠商的私有資料拿掉，旋轉方向重設）")).toBeVisible();
+  await expect(page.getByTestId("removed-note")).toContainText("依你的選擇保留了拍攝的時間、地點與相機型號");
+  const file = await downloadFrom(page, () => page.getByRole("link", { name: "下載" }).click());
+  const info = parseExif(extractExif(file.data, "jpeg")!);
+  expect(info).toMatchObject({ model: "SECRET-MODEL", gps: true, thumbnail: false, orientation: 1, dateTime: "2026:10:14 09:30:00" });
+});
+
+test("沒有拍攝資訊的圖片不顯示保留的選項", async ({ page }) => {
+  await page.goto("./redact/");
+  await page.getByTestId("file-input").setInputFiles({ name: "plain.png", mimeType: "image/png", buffer: await image(page, "image/png") });
+  await expect(page.getByTestId("redact-canvas")).toBeVisible();
+  await expect(page.getByRole("checkbox")).toHaveCount(0);
 });
