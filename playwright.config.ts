@@ -7,6 +7,7 @@ const BASE = `http://localhost:${PORT}/gears/`;
 // CSP 也一起生效。iPhone 那組用 WebKit 加上手機的畫面大小與觸控。
 export default defineConfig({
   fullyParallel: true,
+  globalSetup: "./tests/global-setup.ts",
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? [["github"], ["list"]] : "list",

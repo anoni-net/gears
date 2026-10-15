@@ -33,6 +33,7 @@ const editors: Record<string, () => Promise<ComponentType<FileEditorProps>>> = {
   redact: () => import("./RedactEditor.tsx").then((m) => m.RedactEditor),
   encrypt: () => import("./AgeEditors.tsx").then((m) => m.EncryptEditor),
   decrypt: () => import("./AgeEditors.tsx").then((m) => m.DecryptEditor),
+  "heic-to-jpeg": () => import("./HeicConvert.tsx").then((m) => m.HeicConvert),
 };
 
 export function FileEditorView({ id, ...props }: FileEditorProps & { id: string }) {

@@ -9,6 +9,7 @@ export const TOOL_META: Record<string, { icon: IconName; cat: Category }> = {
   "qr-read": { icon: "qrcode-scan", cat: "privacy" },
   qrcode: { icon: "qrcode", cat: "privacy" },
   redact: { icon: "selection-remove", cat: "secure" },
+  "heic-to-jpeg": { icon: "file-jpg-box", cat: "privacy" },
   encrypt: { icon: "lock-outline", cat: "secure" },
   decrypt: { icon: "lock-open-variant-outline", cat: "secure" },
   passphrase: { icon: "dice-multiple-outline", cat: "secure" },

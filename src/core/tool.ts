@@ -52,6 +52,7 @@ export const SEGMENT_CODES = [
   "age-armor",
   "age-decrypted",
   "heif-image",
+  "heic-converted",
 ] as const;
 
 export type SegmentCode = (typeof SEGMENT_CODES)[number];

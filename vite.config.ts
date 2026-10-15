@@ -7,7 +7,9 @@ import { toolIds } from "./src/tools/index.ts";
 // 統計都要在這裡明列。只在正式建置加上，開發伺服器需要的內嵌腳本會被它擋掉。
 const CSP = [
   "default-src 'none'",
-  "script-src 'self'",
+  // WebAssembly（HEIC 的解碼器 libheif）需要 wasm-unsafe-eval，它只允許編譯 WebAssembly，
+  // 不會開放 JavaScript 的 eval
+  "script-src 'self' 'wasm-unsafe-eval'",
   "style-src 'self'",
   "img-src 'self' blob: data:",
   "connect-src 'self'",
