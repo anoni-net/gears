@@ -11,9 +11,11 @@ const GRIDS = [1, 2, 4, 8, 12];
 const MIN_TILE = 120;
 const OVERLAP = 0.25;
 
-// 切塊之後容易把衣服上的圖案、按鈕當成臉，這類誤判多半只在某一種切法出現。
-// 區塊裡分數低於這個值的，要在另一種切法的同一個位置也找到才算。實測的六張照片
-// （大合照、三人合照、特寫、翻拍），這樣找到的臉跟所有切法加起來一樣多，誤判是零
+// 衣服上的圖案、按鈕與婚紗的皺褶容易被當成臉，這類誤判多半只在某一種切法出現。
+// 分數低於這個值的，要在另一種切法的同一個位置也找到才算，整張圖偵測的那一次也一樣
+// （婚紗照的整張圖偵測曾把裙襬認成 0.55 分的大臉）。實測九張照片（大合照、三人合照、
+// 特寫、翻拍、婚紗照、臉佔滿畫面的自拍），找到的臉跟所有切法加起來一樣多，誤判是零。
+// 自拍的臉在整張圖偵測時都有 0.9 分以上，不需要其他切法確認
 export const CONFIRMED_SCORE = 0.85;
 
 export interface Detection {
@@ -58,11 +60,11 @@ const contains = (outer: Box, inner: Box) => {
   return cx > outer.x && cx < outer.x + outer.w && cy > outer.y && cy < outer.y + outer.h && area(outer) > area(inner) * 2;
 };
 
-// 篩選與合併：區塊裡分數不夠高的要有另一種切法確認。不同區塊找到的同一張臉只留
+// 篩選與合併：分數不夠高的要有另一種切法確認。不同區塊找到的同一張臉只留
 // 分數最高的（IoU 超過 0.3 算同一張）。同時包住兩張以上臉的大框是誤判，拿掉
 export function mergeFaces(found: Detection[]): Box[] {
   const confirmed = found.filter(
-    (d) => d.grid === 1 || d.score >= CONFIRMED_SCORE || found.some((o) => o.grid !== d.grid && iou(o.box, d.box) > 0.3),
+    (d) => d.score >= CONFIRMED_SCORE || found.some((o) => o.grid !== d.grid && iou(o.box, d.box) > 0.3),
   );
   const kept: Box[] = [];
   for (const { box } of confirmed.sort((a, b) => b.score - a.score)) {
