@@ -1209,6 +1209,15 @@ footer a {
   margin-bottom: 0.75rem;
 }
 
+/* 從 Hugging Face 下載的模型，開始前說明會連到哪裡 */
+.transcribe .notice {
+  border-left: 4px solid var(--brand-cyan-500);
+  background: var(--surface);
+  padding: 0.6rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
 .transcript {
   list-style: none;
   max-height: 60vh;

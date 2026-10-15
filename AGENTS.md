@@ -6,7 +6,7 @@
 
 - 預設在瀏覽器裡處理。之後若提供上傳到社群伺服器的選項，上傳前要在畫面上寫清楚檔案送到哪裡、誰看得到、保留多久、伺服器會不會留下紀錄，由讀者決定
 - 上傳端點不經過 Cloudflare。Cloudflare 在邊緣解開 TLS，經過的檔案對它是明文
-- 頁面能連線的對象寫死在 CSP 裡（`vite.config.ts`），新增任何對外連線都要改那裡，並在畫面上標示
+- 頁面能連線的對象寫死在 CSP 裡（`vite.config.ts`），新增任何對外連線都要改那裡，並在畫面上標示。目前唯一的例外是逐字稿的大模型從 Hugging Face 下載（見下方「逐字稿」），只開在伺服器送的 CSP 標頭，頁面的 meta 標籤仍然只有自己的網域
 - 執行期的相依套件只有 `preact`、`qrcode-generator`（QR code 產生）、`jsqr`（QR code 讀取）、`age-encryption`（加密，連同它相依的 noble 系列）、`libheif-js`（HEIC 解碼，LGPL-3.0，見下方「HEIC」）、`pdf-lib`（PDF 的解析與寫出，見下方「文件」），以及遮蔽的自動尋找用的 `onnxruntime-web` 與 `tesseract.js`（見下方「遮蔽的自動尋找」）、逐字稿用的 `@huggingface/transformers` 與 `opencc-js`（見下方「逐字稿」）。新增套件前先想能不能自己寫，必要時鎖定確切的版本。工具用到的套件在打開工具時才載入
 - 結構有問題的檔案就停下來，不交出一份沒處理乾淨的檔案
 
@@ -100,8 +100,11 @@ Tesseract 的 WebAssembly 會把執行紀錄寫到標準錯誤輸出，瀏覽器
 
 把錄音或影片的聲音轉成帶時間的段落，以華語為主（`src/ui/TranscribeEditor.tsx`）。結果不是錄音的新版本，TXT 與 SRT 另外放進暫存區，也可以直接下載或複製。逐字稿是草稿，畫面上寫明要對照錄音校對。
 
-- 模型：Whisper small（252 MB，預設）與 base（80 MB），onnx-community 的 8 位元量化版，讀者自己選。tiny 對華語幾乎不能用（實測字錯率 98%，會掉進英文的重複迴圈），不提供。用魯迅〈阿Q正傳〉的 LibriVox 朗讀實測字錯率：small 約 24%、base 約 56%
+- 模型：Whisper small（252 MB，預設）與 base（80 MB），onnx-community 的 8 位元量化版，另外可以選從 Hugging Face 下載的 large-v3-turbo（見下方），讀者自己選。tiny 對華語幾乎不能用（實測字錯率 98%，會掉進英文的重複迴圈），不提供。用魯迅〈阿Q正傳〉的 LibriVox 朗讀實測字錯率：small 約 24%、base 約 56%
 - 模型不進版控，`node scripts/fetch-whisper.mjs` 從 Hugging Face 下載到 `public/models/whisper/`，版本與每個檔案的 SHA-256 寫在 `src/tools/transcribe/models.json`。部署前先執行一次，網頁只從自己的網域載入
+- large-v3-turbo（4 位元量化版，約 760 MB）從 m6 送出的流量太重，`models.json` 標成 `remote`，讀者選擇之後由網頁直接從 Hugging Face 下載（`src/tools/transcribe/remote.ts`）。選了還沒下載的大模型時，畫面先說明 Hugging Face 看得到 IP 位址、瀏覽器與下載了哪個模型，按鈕寫成「從 Hugging Face 下載並開始」。網址鎖定 commit，每個檔案讀完比對 SHA-256，對不上就不存。請求不帶 cookie 與 Referer。下載好的檔案存進同一個 `gears-models` 快取，網址用自己網域的路徑，「已下載」與刪除跟 small、base 一樣處理。Transformers.js 會把 `env.fetch` 的錯誤換成「找不到檔案」，Worker 另外記下下載失敗的原因
+- 用同一段朗讀實測（Node），large-v3-turbo 的字錯率約 22%，small 約 28%，辨識時間約 small 的 1.7 倍。q8 版的字錯率相近、檔案大 300 多 MB，所以用 q4
+- CSP：伺服器送的標頭多開 `https://huggingface.co/<repo>/resolve/<commit>/`（只有下載的路徑，不含上傳用的 API）與 `https://*.hf.co`（下載會轉址到 CDN，轉址之後 CSP 只比對主機）。頁面同時有標頭與 meta 標籤時兩者都要符合，所以頁面本身仍然只能連自己的網域，只有 Worker 連得到 Hugging Face。瀏覽器測試攔下 Hugging Face 的請求，回一份內容不對的檔案，確認會停下來、不存進快取
 - 推論在 Web Worker（`src/ui/transcribe.worker.ts`）用 Transformers.js 執行。關掉 Hugging Face 的下載（`allowRemoteModels`）與 Transformers.js 自己的快取（`useBrowserCache`、`useWasmCache`），請求不寫 HTTP 快取（`cache: "no-store"`，模型檔最大 157 MB，無痕視窗的記憶體快取寫不下時整個請求會失敗）
 - Transformers.js 帶著自己的 onnxruntime-web（1.31.0 的開發版，跟找人臉的 1.30.0 分開），不指定的話會從 jsDelivr 的 CDN 載入 WebAssembly。Worker 不受頁面 meta 標籤的 CSP 約束，請求真的會送出去，所以用 `?url` 匯入它那一份 WebAssembly，從自己的網域載入。預覽伺服器也用標頭送 CSP，部署時 nginx 一樣要送（見下方「部署」）
 - 語音偵測：Whisper 在靜音上會產生重複的幻覺文字（實測 base 對 5 秒的靜音輸出「你懂你懂……」直到長度上限）。先用音量找出說話的段落，裝成不超過 30 秒的片段（裝得下就連同停頓放在一起，Whisper 不管片段多短都補到 30 秒再算），只把這些片段送進模型。每個片段依長度限制最多產生的詞元數。整理結果時拿掉靜音段落、短短一段的字幕標語（「字幕製作」、「請不吝點讚」這類），收掉重複的迴圈（`src/tools/transcribe/segments.ts`，有單元測試）
@@ -129,7 +132,7 @@ Tesseract 的 WebAssembly 會把執行紀錄寫到標準錯誤輸出，瀏覽器
 ## 部署
 
 - 部署前執行 `node scripts/fetch-165.mjs` 與 `node scripts/fetch-whisper.mjs`，再建置
-- 伺服器要送 `Cross-Origin-Opener-Policy: same-origin` 與 `Cross-Origin-Embedder-Policy: require-corp`（逐字稿的多執行緒），以及跟 `vite.config.ts` 一樣的 `Content-Security-Policy` 標頭（Web Worker 吃標頭的 CSP，不吃頁面的 meta 標籤）
+- 伺服器要送 `Cross-Origin-Opener-Policy: same-origin` 與 `Cross-Origin-Embedder-Policy: require-corp`（逐字稿的多執行緒），以及 `vite.config.ts` 的 `HEADER_CSP`（`npx vite preview` 送出的就是它，Web Worker 吃標頭的 CSP，不吃頁面的 meta 標籤）。換大模型的版本時 CSP 裡的 commit 跟著變，nginx 的設定要一起改。service worker 預先存的檔案連當時的標頭一起存，所以先改 nginx 再部署新版本，順序反過來的話，讀者的 Worker 會一直帶著舊的 CSP，直到下一次換版本
 - `.wasm` 要用 `application/wasm` 送出並開壓縮，onnxruntime 的 WebAssembly 壓縮後約小四分之三
 - `sw.js` 不快取（見上方「離線使用」）
 
@@ -298,5 +301,5 @@ iPhone 預設拍出來的是 HEIC，在網頁上選照片時交出來的也是�
 - HEIC 解碼器來自 [libheif-js](https://github.com/catdad-experiments/libheif-js) 1.23.5（libheif 與 libde265，LGPL-3.0），見 `licenses/libheif.txt`
 - PDF 的解析與寫出用 [pdf-lib](https://github.com/Hopding/pdf-lib) 1.17.1（MIT），見 `licenses/pdf-lib.txt`
 - 遮蔽的自動尋找用 [YuNet](https://github.com/opencv/opencv_zoo/tree/main/models/face_detection_yunet) 模型（MIT）與 [onnxruntime-web](https://github.com/microsoft/onnxruntime) 1.30.0（MIT）、[Tesseract.js](https://github.com/naptha/tesseract.js) 7.0.0 與 tessdata_best 的語言資料（Apache-2.0），見 `licenses/redact-detect.txt`
-- 逐字稿用 [Transformers.js](https://github.com/huggingface/transformers.js) 4.3.1（Apache-2.0）、Whisper small 與 base 的 ONNX 檔（onnx-community，原始模型的模型卡標示 Apache-2.0）、[opencc-js](https://github.com/nk2028/opencc-js) 1.4.2（MIT，字典 Apache-2.0），見 `licenses/transcribe.txt`
+- 逐字稿用 [Transformers.js](https://github.com/huggingface/transformers.js) 4.3.1（Apache-2.0）、Whisper small 與 base 的 ONNX 檔（onnx-community，原始模型的模型卡標示 Apache-2.0）、讀者選擇之後從 Hugging Face 下載的 large-v3-turbo（模型卡標示 MIT）、[opencc-js](https://github.com/nk2028/opencc-js) 1.4.2（MIT，字典 Apache-2.0），見 `licenses/transcribe.txt`
 - 165 反詐騙清單見上方，部署時下載，不進版控

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import { t } from "../i18n/index.ts";
 import { tray } from "../state.ts";
 import { MODELS, MODEL_IDS, type ModelId, SAMPLE_RATE, type Segment, clock, mergeSegments, toSrt, toTxt } from "../tools/transcribe/segments.ts";
+import { REMOTE_ERROR } from "../tools/transcribe/remote.ts";
 import { THREAD_OPTIONS, defaultThreads } from "../tools/transcribe/threads.ts";
 import { type AudioStream, TooLargeError, openAudio } from "./audio-stream.ts";
 import type { Reply, Request } from "./transcribe.worker.ts";
@@ -31,11 +32,12 @@ const DEFAULT_THREADS = ISOLATED
     })
   : 1;
 
-// 模型有沒有存在這台裝置的瀏覽器裡（service worker 的快取）
+// 模型有沒有存在這台裝置的瀏覽器裡（service worker 的快取，大模型由 Worker 存進同一個快取）。
+// 看最後一個檔案，解碼器最後才下載
 async function isDownloaded(id: ModelId): Promise<boolean> {
   if (!("caches" in self)) return false;
-  const cache = await caches.open(MODEL_CACHE);
-  return !!(await cache.match(`${modelUrl(id)}onnx/decoder_model_merged_quantized.onnx`));
+  const cache = await caches.open(MODEL_CACHE).catch(() => null);
+  return !!(await cache?.match(`${modelUrl(id)}${Object.keys(MODELS[id].files).at(-1)}`));
 }
 
 async function removeModel(id: ModelId) {
@@ -49,7 +51,7 @@ type Phase =
   | { kind: "download"; loaded: number; total: number }
   | { kind: "recognize"; at: number; duration: number; since: number }
   | { kind: "done" }
-  | { kind: "failed" | "decodeFailed" | "tooLong" };
+  | { kind: "failed" | "remoteFailed" | "decodeFailed" | "tooLong" };
 
 function download(text: string, name: string) {
   const url = URL.createObjectURL(new Blob([text], { type: "text/plain;charset=utf-8" }));
@@ -150,8 +152,8 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
       if (run.current !== id) return;
       setPhase({ kind: "done" });
       refresh();
-    } catch {
-      if (run.current === id) setPhase({ kind: "failed" });
+    } catch (error) {
+      if (run.current === id) setPhase({ kind: String(error).includes(REMOTE_ERROR) ? "remoteFailed" : "failed" });
     }
   };
 
@@ -172,6 +174,8 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
         return segments.length ? t("transcribe.done", { n: segments.length }) : t("transcribe.empty");
       case "failed":
         return t("transcribe.failed");
+      case "remoteFailed":
+        return t("transcribe.remoteFailed");
       case "decodeFailed":
         return t("transcribe.decodeFailed");
       case "tooLong":
@@ -181,7 +185,9 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
     }
   })();
   const progress = phase.kind === "download" ? phase.loaded / phase.total : phase.kind === "recognize" ? Math.min(1, phase.at / phase.duration) : null;
-  const error = phase.kind === "failed" || phase.kind === "decodeFailed" || phase.kind === "tooLong";
+  const error = phase.kind === "failed" || phase.kind === "remoteFailed" || phase.kind === "decodeFailed" || phase.kind === "tooLong";
+  // 從 Hugging Face 下載的模型，還沒下載時先說明會連到哪裡、送出什麼，按鈕上也寫明
+  const remote = MODELS[model].remote && !downloaded[model];
 
   return (
     <div class="transcribe">
@@ -199,7 +205,13 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
           </label>
         ))}
       </fieldset>
-      {!downloaded[model] ? <p class="hint">{t("transcribe.firstTime")}</p> : null}
+      {remote ? (
+        <p class="notice" data-testid="transcribe-remote">
+          {t("transcribe.remote.note")}
+        </p>
+      ) : !downloaded[model] ? (
+        <p class="hint">{t("transcribe.firstTime")}</p>
+      ) : null}
       <fieldset class="segmented" disabled={busy}>
         <legend>{t("transcribe.language")}</legend>
         {(["zh", "auto"] as const).map((id) => (
@@ -228,7 +240,7 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
           </button>
         ) : (
           <button type="button" class="primary" onClick={start}>
-            {phase.kind === "done" ? t("tool.transcribe.again") : t("transcribe.start")}
+            {remote ? t("transcribe.remote.start") : phase.kind === "done" ? t("tool.transcribe.again") : t("transcribe.start")}
           </button>
         )}
         <button type="button" onClick={onCancel} disabled={busy}>

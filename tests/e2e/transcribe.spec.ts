@@ -17,7 +17,7 @@ async function open(page: Page, name: string, data: Uint8Array) {
   await expect(page.getByRole("button", { name: "開始轉逐字稿" })).toBeVisible();
 }
 
-test("選了錄音之後列出兩個模型與下載大小，可以選核心數", async ({ page }) => {
+test("選了錄音之後列出模型與下載大小，可以選核心數", async ({ page }) => {
   await open(page, "talk.wav", wav(2));
   await expect(page.getByLabel(/^small：準確度較好/)).toBeChecked();
   await expect(page.getByText(`下載約 ${Math.round(models.small.bytes / 1e6)} MB`)).toBeVisible();
@@ -29,6 +29,31 @@ test("選了錄音之後列出兩個模型與下載大小，可以選核心數",
   await expect(page.locator('input[name="transcribe-threads"]:checked')).toHaveCount(1);
   await page.getByLabel("2", { exact: true }).check();
   await expect(page.getByLabel("2", { exact: true })).toBeChecked();
+});
+
+test("large-v3-turbo 從 Hugging Face 下載：先說明，SHA-256 對不上就不存", async ({ page, guard }) => {
+  // 攔下送到 Hugging Face 的請求，回一份內容不對的檔案。也驗證了標頭的 CSP 放行下載的路徑
+  const served: string[] = [];
+  await page.context().route("https://huggingface.co/**", (route) => {
+    served.push(route.request().url());
+    return route.fulfill({ status: 200, body: "{}", headers: { "access-control-allow-origin": "*", "cross-origin-resource-policy": "cross-origin" } });
+  });
+  await open(page, "talk.wav", wav(2));
+  await page.getByLabel(/^large-v3-turbo：最準確/).check();
+  await expect(page.getByText(`從 Hugging Face 下載約 ${Math.round(models.turbo.bytes / 1e6)} MB`)).toBeVisible();
+  await expect(page.getByTestId("transcribe-remote")).toContainText("Hugging Face 會看到你的 IP 位址");
+  // 選了模型還不會連線，按下按鈕才下載
+  expect(served).toEqual([]);
+  await page.getByRole("button", { name: "從 Hugging Face 下載並開始" }).click();
+  await expect(page.getByTestId("transcribe-status")).toHaveText(/^從 Hugging Face 下載失敗/, { timeout: 60_000 });
+  expect(served[0]).toBe(`https://huggingface.co/${models.turbo.repo}/resolve/${models.turbo.revision}/config.json`);
+  const stored = await page.evaluate(async (dir) => {
+    const cache = await caches.open("gears-models");
+    return (await cache.keys()).filter((r) => r.url.includes(dir)).length;
+  }, models.turbo.dir);
+  expect(stored).toBe(0);
+  // Worker 的請求有時也出現在頁面的請求清單，這些是刻意送出的，從守門程式的清單拿掉
+  guard.requests = guard.requests.filter((url) => !url.startsWith("https://huggingface.co/"));
 });
 
 test("瀏覽器讀不了聲音的檔案，說明原因，不下載模型", async ({ page }) => {

@@ -10,7 +10,7 @@ import whisper from "./src/tools/transcribe/models.json" with { type: "json" };
 // 頁面能連線的對象寫死在 CSP 裡。就算某個相依套件被植入程式，檔案也送不出去，
 // 讀者也能從頁面原始碼自行確認。connect-src 只有自己的網域，之後的伺服器處理與
 // 統計都要在這裡明列。只在正式建置加上，開發伺服器需要的內嵌腳本會被它擋掉。
-const CSP = [
+const policy = (connect: string) => [
   "default-src 'none'",
   // WebAssembly（HEIC 的解碼器 libheif）需要 wasm-unsafe-eval，它只允許編譯 WebAssembly，
   // 不會開放 JavaScript 的 eval
@@ -19,13 +19,24 @@ const CSP = [
   "img-src 'self' blob: data:",
   // 音訊與影片的預覽：只播放暫存區裡的檔案（blob:），不從任何網址載入
   "media-src blob:",
-  "connect-src 'self'",
+  `connect-src ${connect}`,
   "worker-src 'self' blob:",
   "font-src 'self'",
   "manifest-src 'self'",
   "base-uri 'none'",
   "form-action 'none'",
 ].join("; ");
+
+// 頁面的 meta 標籤只允許自己的網域
+const CSP = policy("'self'");
+
+// 伺服器用標頭送的 CSP 多開 Hugging Face，給逐字稿的 Worker 下載大模型（讀者選擇之後才連，
+// 見 src/tools/transcribe/remote.ts）。Worker 只吃標頭的 CSP。頁面同時有標頭與 meta 標籤時兩者
+// 都要符合，頁面本身仍然只能連自己的網域。huggingface.co 限定在每個模型的下載路徑，不開放
+// 上傳用的 API，下載會轉址到 *.hf.co 的 CDN（轉址之後 CSP 不比對路徑，只能寫主機）
+const HEADER_CSP = policy(
+  ["'self'", ...Object.values(whisper).filter((m) => m.remote).map((m) => `https://huggingface.co/${m.repo}/resolve/${m.revision}/`), "https://*.hf.co"].join(" "),
+);
 
 function csp(): Plugin {
   return {
@@ -132,7 +143,7 @@ export default defineConfig({
   server: { headers: isolation },
   // 預覽伺服器另外用標頭送 CSP：Web Worker 不受頁面 meta 標籤的 CSP 約束，要靠標頭。
   // 部署時 nginx 也要送一樣的 CSP 標頭（開發伺服器需要內嵌腳本，不加）
-  preview: { headers: { ...isolation, "Content-Security-Policy": CSP } },
+  preview: { headers: { ...isolation, "Content-Security-Policy": HEADER_CSP } },
   // Worker 裡用 import() 延後載入 Transformers.js 與 OpenCC，要輸出成 ES 模組
   worker: { format: "es" },
   define: { __GEARS_COMMIT__: JSON.stringify(commit()) },
