@@ -18,10 +18,20 @@ const OVERLAP = 0.25;
 // 自拍的臉在整張圖偵測時都有 0.9 分以上，不需要其他切法確認
 export const CONFIRMED_SCORE = 0.85;
 
+// 分數不夠高的再看 BlazeFace 給的特徵點（兩眼、鼻子、嘴巴，座標是整張圖的像素）。
+// 實測 230 個真臉的偵測，兩眼連線的傾斜在 35° 以內，嘴巴在兩眼下方至少框高的 0.3。
+// 招牌的字與紋路被認成臉時，特徵點常常歪斜，或擠在框的上半部。
+// 兩種切法互相確認時，同一張真臉的特徵點會落在差不多的位置（四個點的平均距離在框寬的
+// 四分之一以內），紋路在不同切法下給的特徵點常常對不上
+const MAX_EYE_TILT = 35;
+const MIN_MOUTH_DROP = 0.28;
+const MAX_KEYPOINT_DRIFT = 0.25;
+
 export interface Detection {
   box: Box;
   score: number;
   grid: number; // 在哪一種切法找到的
+  keypoints?: [number, number][]; // 右眼、左眼、鼻子、嘴巴、右耳、左耳
 }
 
 export interface Tile extends Box {
@@ -60,11 +70,34 @@ const contains = (outer: Box, inner: Box) => {
   return cx > outer.x && cx < outer.x + outer.w && cy > outer.y && cy < outer.y + outer.h && area(outer) > area(inner) * 2;
 };
 
-// 篩選與合併：分數不夠高的要有另一種切法確認。不同區塊找到的同一張臉只留
-// 分數最高的（IoU 超過 0.3 算同一張）。同時包住兩張以上臉的大框是誤判，拿掉
+// 特徵點的排列像不像一張臉。沒有特徵點時不判斷
+function faceLike(d: Detection): boolean {
+  const k = d.keypoints;
+  if (!k || k.length < 4) return true;
+  const [[rx, ry], [lx, ly], , [, my]] = k as [number, number][];
+  let tilt = Math.abs((Math.atan2(ly - ry, lx - rx) * 180) / Math.PI);
+  if (tilt > 90) tilt = 180 - tilt;
+  return tilt <= MAX_EYE_TILT && (my - (ry + ly) / 2) / d.box.h >= MIN_MOUTH_DROP;
+}
+
+// 兩次偵測的眼睛、鼻子、嘴巴是否落在差不多的位置
+function sameFace(a: Detection, b: Detection): boolean {
+  if (iou(a.box, b.box) <= 0.3) return false;
+  const ka = a.keypoints;
+  const kb = b.keypoints;
+  if (!ka || !kb || ka.length < 4 || kb.length < 4) return true;
+  let drift = 0;
+  for (let i = 0; i < 4; i++) drift += Math.hypot(ka[i]![0] - kb[i]![0], ka[i]![1] - kb[i]![1]);
+  return drift / 4 / ((a.box.w + b.box.w) / 2) <= MAX_KEYPOINT_DRIFT;
+}
+
+// 篩選與合併：分數不夠高的，特徵點要像一張臉，而且要有另一種切法在同一個位置找到、
+// 特徵點也對得上。不同區塊找到的同一張臉只留分數最高的（IoU 超過 0.3 算同一張）。
+// 同時包住兩張以上臉的大框是誤判，拿掉
 export function mergeFaces(found: Detection[]): Box[] {
-  const confirmed = found.filter(
-    (d) => d.score >= CONFIRMED_SCORE || found.some((o) => o.grid !== d.grid && iou(o.box, d.box) > 0.3),
+  const candidates = found.filter((d) => d.score >= CONFIRMED_SCORE || faceLike(d));
+  const confirmed = candidates.filter(
+    (d) => d.score >= CONFIRMED_SCORE || candidates.some((o) => o.grid !== d.grid && sameFace(o, d)),
   );
   const kept: Box[] = [];
   for (const { box } of confirmed.sort((a, b) => b.score - a.score)) {

@@ -82,3 +82,56 @@ test("整張圖偵測找到的低分大框，沒有其他切法確認也不算",
   const selfie = { x: 100, y: 100, w: 800, h: 800 };
   expect(mergeFaces([{ box: selfie, score: 0.92, grid: 1 }])).toEqual([selfie]);
 });
+
+// 依框的大小擺出特徵點：兩眼在框高 0.35、鼻子 0.55、嘴巴 0.75，tilt 是兩眼連線的傾斜角度
+function keypoints(box: { x: number; y: number; w: number; h: number }, tilt = 0): [number, number][] {
+  const cx = box.x + box.w / 2;
+  const ey = box.y + box.h * 0.35;
+  const dx = box.w * 0.2 * Math.cos((tilt * Math.PI) / 180);
+  const dy = box.w * 0.2 * Math.sin((tilt * Math.PI) / 180);
+  return [
+    [cx - dx, ey - dy],
+    [cx + dx, ey + dy],
+    [cx, box.y + box.h * 0.55],
+    [cx, box.y + box.h * 0.75],
+  ];
+}
+
+test("特徵點不像臉的低分結果不算：兩眼歪斜，或嘴巴擠在眼睛旁邊", () => {
+  const sign = { x: 390, y: 533, w: 42, h: 42 };
+  const pattern = { x: 600, y: 100, w: 60, h: 60 };
+  const flat: [number, number][] = [
+    [600 + 15, 120],
+    [600 + 45, 120],
+    [630, 122],
+    [630, 125], // 嘴巴只在眼睛下方框高的 0.08
+  ];
+  const boxes = mergeFaces([
+    { box: sign, score: 0.57, grid: 8, keypoints: keypoints(sign, 42) },
+    { box: { ...sign, x: 395, w: 40, h: 40 }, score: 0.58, grid: 12, keypoints: keypoints({ ...sign, x: 395, w: 40, h: 40 }, 42) },
+    { box: pattern, score: 0.6, grid: 8, keypoints: flat },
+    { box: { ...pattern, x: 602 }, score: 0.6, grid: 12, keypoints: flat.map(([x, y]) => [x + 2, y]) },
+  ]);
+  expect(boxes).toEqual([]);
+});
+
+test("兩種切法的特徵點對不上，不算互相確認", () => {
+  const a = { x: 390, y: 533, w: 42, h: 42 };
+  const b = { x: 395, y: 535, w: 32, h: 32 };
+  // 兩次的特徵點都像臉，但位置差了半個框
+  const boxes = mergeFaces([
+    { box: a, score: 0.57, grid: 8, keypoints: keypoints(a) },
+    { box: b, score: 0.58, grid: 12, keypoints: keypoints(b).map(([x, y]) => [x + 20, y + 10]) },
+  ]);
+  expect(boxes).toEqual([]);
+});
+
+test("歪著頭的小臉：特徵點對得上就算，傾斜 30° 以內不受影響", () => {
+  const a = { x: 100, y: 100, w: 40, h: 40 };
+  const b = { x: 102, y: 101, w: 38, h: 38 };
+  const boxes = mergeFaces([
+    { box: a, score: 0.62, grid: 8, keypoints: keypoints(a, 30) },
+    { box: b, score: 0.6, grid: 12, keypoints: keypoints(b, 30) },
+  ]);
+  expect(boxes).toEqual([a]);
+});

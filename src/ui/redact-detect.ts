@@ -60,7 +60,13 @@ export async function findFaces(bitmap: ImageBitmap, onProgress?: OnProgress): P
       for (const d of result.detections) {
         const b = d.boundingBox;
         if (!b) continue;
-        found.push({ box: { x: tile.x + b.originX, y: tile.y + b.originY, w: b.width, h: b.height }, score: d.categories[0]?.score ?? 0, grid: tile.grid });
+        found.push({
+          box: { x: tile.x + b.originX, y: tile.y + b.originY, w: b.width, h: b.height },
+          score: d.categories[0]?.score ?? 0,
+          grid: tile.grid,
+          // 特徵點是區塊內 0 到 1 的相對位置，換成整張圖的像素
+          keypoints: d.keypoints.map((k): [number, number] => [tile.x + k.x * tile.w, tile.y + k.y * tile.h]),
+        });
       }
       if (performance.now() - last > YIELD_MS) {
         onProgress?.((i + 1) / tiles.length);
