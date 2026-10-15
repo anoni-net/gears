@@ -14,6 +14,13 @@ src/tools/transcribe/models.json）
   原始模型：openai/whisper-large-v3-turbo（Hugging Face 模型卡標示 MIT）
   來源：https://huggingface.co/onnx-community/whisper-large-v3-turbo
 
+分辨說話者的聲紋模型（勾選「分辨說話者」時才載入，scripts/fetch-whisper.mjs 下載，來源與
+SHA-256 寫在 src/tools/transcribe/speaker-model.json）
+- 3D-Speaker 的 CAM++（speech_campplus_sv_zh-cn_16k-common，Apache-2.0），ONNX 檔取自 sherpa-onnx 的 release
+  模型卡：https://modelscope.cn/models/iic/speech_campplus_sv_zh-cn_16k-common
+  3D-Speaker：https://github.com/modelscope/3D-Speaker（Apache-2.0）
+  ONNX 檔：https://github.com/k2-fsa/sherpa-onnx/releases/tag/speaker-recongition-models（sherpa-onnx 本身 Apache-2.0）
+
 執行
 - @huggingface/transformers 4.3.1（Apache-2.0，Copyright Hugging Face）
   原始碼：https://github.com/huggingface/transformers.js

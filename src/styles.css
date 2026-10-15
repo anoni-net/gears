@@ -1246,6 +1246,13 @@ footer a {
   font-variant-numeric: tabular-nums;
 }
 
+/* 換人的地方標出說話者，放在那一段文字的上方 */
+.transcript .speaker {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--accent);
+}
+
 /* 加密與解密 */
 
 .age .buttons {

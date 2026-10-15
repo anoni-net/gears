@@ -6,6 +6,7 @@ import { defineConfig, type Plugin } from "vite";
 import { LOCALES, messagesOf } from "./src/i18n/index.ts";
 import { toolIds } from "./src/tools/index.ts";
 import whisper from "./src/tools/transcribe/models.json" with { type: "json" };
+import speakerModel from "./src/tools/transcribe/speaker-model.json" with { type: "json" };
 
 // 頁面能連線的對象寫死在 CSP 裡。就算某個相依套件被植入程式，檔案也送不出去，
 // 讀者也能從頁面原始碼自行確認。connect-src 只有自己的網域，之後的伺服器處理與
@@ -118,7 +119,7 @@ function serviceWorker(base: string): Plugin {
         template
           .replace("__VERSION__", hash.digest("hex").slice(0, 16))
           .replace("__FILES__", JSON.stringify(precache))
-          .replace("__MODEL_DIRS__", JSON.stringify(Object.values(whisper).map((m) => `models/whisper/${m.dir}/`)))
+          .replace("__MODEL_DIRS__", JSON.stringify([...Object.values(whisper).map((m) => `models/whisper/${m.dir}/`), `models/speaker/${speakerModel.dir}/`]))
           .replace("__BASE__", base),
       );
     },

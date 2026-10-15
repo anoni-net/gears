@@ -3,6 +3,7 @@ import { t } from "../i18n/index.ts";
 import { tray } from "../state.ts";
 import { MODELS, MODEL_IDS, type ModelId, SAMPLE_RATE, type Segment, clock, mergeSegments, toSrt, toTxt } from "../tools/transcribe/segments.ts";
 import { REMOTE_ERROR } from "../tools/transcribe/remote.ts";
+import speakerModel from "../tools/transcribe/speaker-model.json" with { type: "json" };
 import { THREAD_OPTIONS, defaultThreads } from "../tools/transcribe/threads.ts";
 import { type AudioStream, TooLargeError, openAudio } from "./audio-stream.ts";
 import type { Reply, Request } from "./transcribe.worker.ts";
@@ -65,6 +66,7 @@ function download(text: string, name: string) {
 export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
   const [model, setModel] = useState<ModelId>("small");
   const [language, setLanguage] = useState<"zh" | "auto">("zh");
+  const [speakers, setSpeakers] = useState(false);
   const [threads, setThreads] = useState(DEFAULT_THREADS);
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
   const [segments, setSegments] = useState<Segment[]>([]);
@@ -126,6 +128,11 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
       else if (reply.type === "progress")
         setPhase((p) => ({ kind: "recognize", at: reply.at, duration: stream.duration, since: p.kind === "recognize" ? p.since : Date.now() }));
       else if (reply.type === "segments") setSegments((list) => mergeSegments([...list, ...reply.segments]));
+      else if (reply.type === "speakers") {
+        // 接縫上合併的段落留著第一段的開始時間，用它對回去
+        const byStart = new Map(reply.speakers.map((s) => [s.start, s.speaker]));
+        setSegments((list) => list.map((seg) => ({ ...seg, speaker: byStart.get(seg.start) })));
+      }
       else if (reply.type === "error") {
         // 只有錯誤訊息，不含錄音的內容，讀者回報問題時用得到
         console.warn("[gears] 逐字稿失敗：", reply.message);
@@ -137,7 +144,7 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
       waiting?.reject(new Error(event.message));
     };
     try {
-      await send({ type: "start", model, language: language === "zh" ? "zh" : null, base: BASE, threads }, "ready");
+      await send({ type: "start", model, language: language === "zh" ? "zh" : null, base: BASE, threads, speakers }, "ready");
       setPhase({ kind: "recognize", at: 0, duration: stream.duration, since: Date.now() });
       let offset = 0;
       while (chunk) {
@@ -170,8 +177,11 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
         const text = t("transcribe.recognizing", { at: clock(phase.at), total: clock(phase.duration) });
         return left ? `${text}${t("transcribe.eta", { time: clock(left / 1000) })}` : text;
       }
-      case "done":
-        return segments.length ? t("transcribe.done", { n: segments.length }) : t("transcribe.empty");
+      case "done": {
+        if (!segments.length) return t("transcribe.empty");
+        const people = new Set(segments.flatMap((seg) => (seg.speaker === undefined ? [] : [seg.speaker]))).size;
+        return people ? t("transcribe.doneSpeakers", { n: segments.length, speakers: people }) : t("transcribe.done", { n: segments.length });
+      }
       case "failed":
         return t("transcribe.failed");
       case "remoteFailed":
@@ -185,6 +195,7 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
     }
   })();
   const progress = phase.kind === "download" ? phase.loaded / phase.total : phase.kind === "recognize" ? Math.min(1, phase.at / phase.duration) : null;
+  const speakerName = (n: number) => t("transcribe.speakerPrefix", { n: n + 1 });
   const error = phase.kind === "failed" || phase.kind === "remoteFailed" || phase.kind === "decodeFailed" || phase.kind === "tooLong";
   // 從 Hugging Face 下載的模型，還沒下載時先說明會連到哪裡、送出什麼，按鈕上也寫明
   const remote = MODELS[model].remote && !downloaded[model];
@@ -221,6 +232,14 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
           </label>
         ))}
       </fieldset>
+
+      <label class="check">
+        <input type="checkbox" checked={speakers} disabled={busy} onChange={(e) => setSpeakers(e.currentTarget.checked)} />
+        <span>
+          {t("transcribe.speakers")}
+          <small>{t("transcribe.speakers.desc", { size: mb(speakerModel.bytes) })}</small>
+        </span>
+      </label>
 
       <fieldset class="segmented" disabled={busy || !ISOLATED}>
         <legend>{t("transcribe.threads")}</legend>
@@ -262,24 +281,28 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
       {segments.length ? (
         <>
           <ol class="transcript" data-testid="transcript">
-            {segments.map((seg) => (
+            {segments.map((seg, i) => (
               <li key={seg.start}>
                 <span class="time">{clock(seg.start)}</span>
-                <span>{seg.text}</span>
+                <span>
+                  {/* 換人的地方才標出說話者 */}
+                  {seg.speaker !== undefined && seg.speaker !== segments[i - 1]?.speaker ? <strong class="speaker">{t("transcribe.speaker", { n: seg.speaker + 1 })}</strong> : null}
+                  {seg.text}
+                </span>
               </li>
             ))}
           </ol>
           <div class="buttons">
-            <button type="button" class="primary" onClick={() => download(toTxt(segments), "transcript.txt")}>
+            <button type="button" class="primary" onClick={() => download(toTxt(segments, speakerName), "transcript.txt")}>
               {t("transcribe.downloadTxt")}
             </button>
-            <button type="button" onClick={() => download(toSrt(segments), "transcript.srt")}>
+            <button type="button" onClick={() => download(toSrt(segments, speakerName), "transcript.srt")}>
               {t("transcribe.downloadSrt")}
             </button>
             <button
               type="button"
               onClick={() => {
-                void navigator.clipboard.writeText(toTxt(segments)).then(() => setNote(t("transcribe.copied")));
+                void navigator.clipboard.writeText(toTxt(segments, speakerName)).then(() => setNote(t("transcribe.copied")));
               }}
             >
               {t("transcribe.copy")}
@@ -288,7 +311,7 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
               type="button"
               onClick={() =>
                 void tray.add(
-                  [new File([toTxt(segments)], "transcript.txt", { type: "text/plain" }), new File([toSrt(segments)], "transcript.srt", { type: "text/plain" })],
+                  [new File([toTxt(segments, speakerName)], "transcript.txt", { type: "text/plain" }), new File([toSrt(segments, speakerName)], "transcript.srt", { type: "text/plain" })],
                   "transcribe",
                 )
               }
