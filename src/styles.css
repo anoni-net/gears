@@ -321,6 +321,20 @@ h4 {
   flex: none;
 }
 
+/* 沒有預覽圖時的檔案類型圖示 */
+.item .thumb {
+  display: grid;
+  place-items: center;
+  background: var(--fill);
+  border: 1px solid var(--line);
+  color: var(--icon);
+}
+
+.item .thumb .icon {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
 .item .meta {
   display: flex;
   flex-direction: column;
