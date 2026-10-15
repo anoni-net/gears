@@ -1,6 +1,7 @@
 import type { Box } from "../tools/redact/index.ts";
 import { type Detection, faceTiles, mergeFaces } from "../tools/redact/faces.ts";
 import { type PiiMatch, type Word, findPii, pad } from "../tools/redact/pii.ts";
+import { type OcrWord, textSpans } from "../tools/redact/text-lines.ts";
 
 // 遮蔽的自動尋找：人臉用 MediaPipe 的 BlazeFace，文字用 Tesseract 辨識之後找出個資。
 // 兩者都在瀏覽器裡執行，圖片不離開裝置。WebAssembly 與模型從自己的網域載入
@@ -97,20 +98,19 @@ export async function findText(bitmap: ImageBitmap, onProgress?: OnProgress): Pr
   try {
     const { data } = await worker.recognize(canvasOf(bitmap), {}, { blocks: true });
     const lines: Word[][] = [];
-    const boxes: Box[] = [];
+    const ocr: OcrWord[][] = [];
     const toBox = (b: { x0: number; y0: number; x1: number; y1: number }): Box => ({ x: b.x0, y: b.y0, w: b.x1 - b.x0, h: b.y1 - b.y0 });
     for (const block of data.blocks ?? []) {
       for (const paragraph of block.paragraphs) {
         for (const line of paragraph.lines) {
+          ocr.push(line.words.filter((w) => w.text.trim()).map((w) => ({ text: w.text, confidence: w.confidence, box: toBox(w.bbox) })));
           const words = line.words.filter((w) => w.text.trim() && w.confidence > 30);
-          if (!words.length) continue;
-          lines.push(words.map((w) => ({ text: w.text, box: toBox(w.bbox) })));
-          boxes.push(pad(toBox(line.bbox), 0.1, bitmap.width, bitmap.height));
+          if (words.length) lines.push(words.map((w) => ({ text: w.text, box: toBox(w.bbox) })));
         }
       }
     }
     const pii = findPii(lines).map((m) => ({ ...m, box: pad(m.box, 0.15, bitmap.width, bitmap.height) }));
-    return { pii, lines: boxes };
+    return { pii, lines: textSpans(ocr).map((box) => pad(box, 0.1, bitmap.width, bitmap.height)) };
   } finally {
     await worker.terminate();
   }
