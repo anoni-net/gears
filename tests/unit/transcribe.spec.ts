@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
-import { MODELS, SAMPLE_RATE, cleanSegments, clock, collapseRepeats, maxTokens, speechPieces, toSrt, toTxt } from "../../src/tools/transcribe/segments.ts";
+import { defaultThreads } from "../../src/tools/transcribe/threads.ts";
+import { MODELS, SAMPLE_RATE, cleanSegments, clock, collapseRepeats, fullWidthPunctuation, maxTokens, speechPieces, toSrt, toTxt } from "../../src/tools/transcribe/segments.ts";
 
 // 指定秒數的錄音：有聲音的範圍填 0.1 的方波，其他是靜音
 function audio(seconds: number, loud: [number, number][]): Float32Array {
@@ -91,6 +92,13 @@ test("整理：短短一段的字幕標語拿掉，長的段落留著", () => {
   expect(segments.map((s) => s.text)).toEqual(["我們今天要討論的是影片平台上的字幕，以及創作者如何處理訂閱者的留言"]);
 });
 
+test("中文字旁邊的半形標點換成全形，英文與數字裡的不動", () => {
+  expect(fullWidthPunctuation("連阿Q都早忘卻,更不必說行狀了")).toBe("連阿Q都早忘卻，更不必說行狀了");
+  expect(fullWidthPunctuation("真的嗎? 好")).toBe("真的嗎？好");
+  expect(fullWidthPunctuation("Hello, world 3,000 人")).toBe("Hello, world 3,000 人");
+  expect(fullWidthPunctuation("注意:這裡")).toBe("注意：這裡");
+});
+
 test("重複的迴圈收成一次，正常的疊字不動", () => {
   expect(collapseRepeats("the level of the level of the level of the level of the level of")).toBe("the level of");
   expect(collapseRepeats("謝謝謝謝謝謝謝謝")).toBe("謝謝");
@@ -105,4 +113,18 @@ test("輸出 SRT 與 TXT", () => {
   expect(toSrt(segments)).toBe("1\n00:00:00,000 --> 00:00:02,500\n大家好\n\n2\n01:02:05,040 --> 01:02:07,000\n今天先到這裡\n");
   expect(toTxt(segments)).toBe("[00:00] 大家好\n[1:02:05] 今天先到這裡\n");
   expect(clock(65)).toBe("01:05");
+});
+
+test("預設的核心數：回報的數字只會比實際少，夠多就用 12，不可信時用 8", () => {
+  const hints = { reported: 16, brave: false, safari: false, mobileApple: false };
+  expect(defaultThreads(hints)).toBe(12);
+  // Chrome 回報真實數字：不超過它的最大選項
+  expect(defaultThreads({ ...hints, reported: 10 })).toBe(8);
+  expect(defaultThreads({ ...hints, reported: 4 })).toBe(4);
+  // Brave 抽到小的隨機數、Safari 回報 8、Firefox 防指紋回報 2：數字不可信，用 8
+  expect(defaultThreads({ ...hints, reported: 5, brave: true })).toBe(8);
+  expect(defaultThreads({ ...hints, reported: 13, brave: true })).toBe(12);
+  expect(defaultThreads({ ...hints, reported: 8, safari: true })).toBe(8);
+  expect(defaultThreads({ ...hints, reported: 2 })).toBe(8);
+  expect(defaultThreads({ ...hints, reported: 2, safari: true, mobileApple: true })).toBe(4);
 });

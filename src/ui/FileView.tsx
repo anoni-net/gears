@@ -256,7 +256,8 @@ export function FileView({ file, index, busy, preferred, onOpenTool }: Props) {
   const current = file.versions.at(-1)!;
   const isImage = isPhoto(current.format);
   const media = isMedia(current.format);
-  // 大檔案只交給支援大檔案的工具，需要編輯畫面的工具（遮蔽、加密）會把整個檔案讀進記憶體
+  // 大檔案只交給支援大檔案的工具。遮蔽、加密這類編輯工具會把整個檔案讀進記憶體，
+  // 逐字稿可以分段解碼（acceptsLarge）
   const usable = (tool: { accepts(f: Version["format"]): boolean; acceptsLarge?(f: Version["format"]): boolean }) =>
     current.large ? !!tool.acceptsLarge?.(current.format) : tool.accepts(current.format);
   const canInspect = fileTools.some(usable);

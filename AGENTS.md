@@ -106,8 +106,10 @@ Tesseract 的 WebAssembly 會把執行紀錄寫到標準錯誤輸出，瀏覽器
 - Transformers.js 帶著自己的 onnxruntime-web（1.31.0 的開發版，跟找人臉的 1.30.0 分開），不指定的話會從 jsDelivr 的 CDN 載入 WebAssembly。Worker 不受頁面 meta 標籤的 CSP 約束，請求真的會送出去，所以用 `?url` 匯入它那一份 WebAssembly，從自己的網域載入。預覽伺服器也用標頭送 CSP，部署時 nginx 一樣要送（見下方「部署」）
 - 語音偵測：Whisper 在靜音上會產生重複的幻覺文字（實測 base 對 5 秒的靜音輸出「你懂你懂……」直到長度上限）。先用音量找出說話的段落，裝成不超過 30 秒的片段（裝得下就連同停頓放在一起，Whisper 不管片段多短都補到 30 秒再算），只把這些片段送進模型。每個片段依長度限制最多產生的詞元數。整理結果時拿掉靜音段落、短短一段的字幕標語（「字幕製作」、「請不吝點讚」這類），收掉重複的迴圈（`src/tools/transcribe/segments.ts`，有單元測試）
 - 簡體轉台灣正體與台灣慣用詞：`opencc-js` 的 `cn2t`（cn → twp），在 Worker 裡用到時才載入
-- 同時使用的 CPU 核心讀者自己選（1、2、4、8，預設 4）。多執行緒要頁面在 cross-origin isolation 底下（COOP 與 COEP 標頭），換核心數時換一個新的 Worker（onnxruntime 第一次載入時就決定了執行緒數）。實測 small 轉 2 分鐘的錄音：1 個核心約 140 秒、2 個約 116 秒、4 個約 96 秒、8 個約 90 秒。Brave 的防指紋保護會讓 `navigator.hardwareConcurrency` 比實際少，選項不依它限制
-- 解碼用 16 kHz 的 `OfflineAudioContext`，一小時單聲道約 230 MB，超過 2 小時先不處理。瀏覽器解不出聲音的檔案（例如沒有音軌的影片）畫面上說明
+- 同時使用的 CPU 核心讀者自己選（1、2、4、8、12、16），預設值依瀏覽器回報的核心數決定（`src/tools/transcribe/threads.ts`，有單元測試）。多執行緒要頁面在 cross-origin isolation 底下（COOP 與 COEP 標頭），換核心數時換一個新的 Worker（onnxruntime 第一次載入時就決定了執行緒數）。實測差距很大：15 核心的 MacBook Pro 上，同一段錄音 4 個核心要 40 分鐘、8 個 8 分鐘、12 個 4 分鐘（這台開發機在其他程式同時執行、負載很高時量到的差距小很多，不準）。`navigator.hardwareConcurrency` 只會比實際少：Brave 回報 2 到真實數字之間的隨機數，Safari 桌機最多回報 8、iPhone 一律回報 2，Firefox 防指紋時固定回報 2。所以回報 12 以上就用 12，Chrome 這類回報真實數字的用不超過它的最大選項，數字不可信的用 8，iPhone、iPad 用 4
+- 長錄音分段處理（`src/ui/audio-stream.ts`）：每次解碼約 10 分鐘，換成 16 kHz 單聲道交給 Worker，處理完才解碼下一段，記憶體用量跟錄音長短無關，轉好的段落邊轉邊顯示。WAV 直接讀 PCM。MP3 在音訊框的邊界切開，多帶前兩框一起解碼（音訊框會借用前一框的資料）。MP4、M4A、MOV 從 moov 的索引取出 AAC 樣本，交給 WebCodecs 的 `AudioDecoder`。檔案結構的解析在 `src/tools/transcribe/sources.ts`，有單元測試
+- 這幾種格式超過 256 MB 也能處理（工具的 `acceptsLarge`），不限長度。其他格式，以及瀏覽器不支援 `AudioDecoder` 時的 AAC，整個檔案一次解碼，限制在 256 MB 與 2 小時。瀏覽器解不出聲音的檔案（例如沒有音軌的影片）畫面上說明
+- 一段話碰到分段的結尾時先留著，接到下一段一起辨識，一句話不會被切成兩半。接縫上重複的那一句合併
 - 失敗時在主控台印出錯誤訊息（不含錄音的內容），讀者回報問題時用
 
 ## 離線使用

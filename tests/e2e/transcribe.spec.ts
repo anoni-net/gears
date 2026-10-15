@@ -1,4 +1,5 @@
-import { existsSync } from "node:fs";
+import { appendFileSync, existsSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Page } from "@playwright/test";
 import models from "../../src/tools/transcribe/models.json" with { type: "json" };
@@ -24,6 +25,8 @@ test("選了錄音之後列出兩個模型與下載大小，可以選核心數",
   await expect(page.getByText(/第一次使用要下載模型/)).toBeVisible();
   // 預覽伺服器送了 COOP 與 COEP，可以用多個核心
   expect(await page.evaluate(() => crossOriginIsolated)).toBe(true);
+  // 預設值依瀏覽器回報的核心數決定（src/tools/transcribe/threads.ts），測試的機器上至少勾了一個
+  await expect(page.locator('input[name="transcribe-threads"]:checked')).toHaveCount(1);
   await page.getByLabel("2", { exact: true }).check();
   await expect(page.getByLabel("2", { exact: true })).toBeChecked();
 });
@@ -50,20 +53,48 @@ test("靜音的錄音不送進模型，說明沒有辨識到說話的內容", as
   await expect(page.getByTestId("transcribe-status")).toHaveText("沒有辨識到說話的內容。", { timeout: 200_000 });
 });
 
+test("超過 256 MB、2.5 小時的 WAV 分段處理，記憶體裡只有一段", async ({ page, browserName }) => {
+  test.skip(browserName !== "chromium", "大檔案只在 Chromium 測");
+  test.skip(!hasModel, "沒有下載 base 模型");
+  test.setTimeout(300_000);
+  // 16 kHz、16 位元單聲道的靜音，2.5 小時約 288 MB。寫成檔案再交給瀏覽器，不經過記憶體
+  const path = join(tmpdir(), `gears-long-${process.pid}.wav`);
+  const seconds = 2.5 * 3600;
+  const header = wav(0);
+  const view = new DataView(header.buffer);
+  view.setUint32(4, 36 + seconds * 32000, true);
+  view.setUint32(40, seconds * 32000, true);
+  writeFileSync(path, header);
+  const silence = Buffer.alloc(32000 * 600);
+  for (let i = 0; i < seconds / 600; i++) appendFileSync(path, silence);
+  try {
+    await page.goto("./transcribe/");
+    await page.getByTestId("file-input").setInputFiles(path);
+    await page.getByLabel(/^base：比較快/).check();
+    await page.getByLabel("1", { exact: true }).check();
+    await page.getByRole("button", { name: "開始轉逐字稿" }).click();
+    await expect(page.getByTestId("transcribe-status")).toContainText("共 2:30:00", { timeout: 120_000 });
+    await expect(page.getByTestId("transcribe-status")).toHaveText("沒有辨識到說話的內容。", { timeout: 240_000 });
+  } finally {
+    rmSync(path, { force: true });
+  }
+});
+
 test.describe("離線快取", () => {
   test.use({ serviceWorkers: "allow" });
 
   test("模型存進不隨版本清掉的快取，可以刪除", async ({ page, browserName }) => {
     test.skip(browserName !== "chromium", "service worker 的測試只在 Chromium 執行");
     test.skip(!hasModel, "沒有下載 base 模型");
-    test.setTimeout(120_000);
+    // 經過 service worker 下載模型，跟其他測試平行執行時比較慢
+    test.setTimeout(300_000);
     await page.goto("./transcribe/");
     await expect(page.getByTestId("offline-ready")).toBeVisible({ timeout: 30_000 });
     await page.reload();
     await page.getByTestId("file-input").setInputFiles({ name: "silence.wav", mimeType: "audio/wav", buffer: Buffer.from(wav(5)) });
     await page.getByLabel(/^base：比較快/).check();
     await page.getByRole("button", { name: "開始轉逐字稿" }).click();
-    await expect(page.getByTestId("transcribe-status")).toHaveText("沒有辨識到說話的內容。", { timeout: 90_000 });
+    await expect(page.getByTestId("transcribe-status")).toHaveText("沒有辨識到說話的內容。", { timeout: 240_000 });
     const cached = () => page.evaluate(async () => (await (await caches.open("gears-models")).keys()).map((r) => new URL(r.url).pathname));
     await expect.poll(async () => (await cached()).length).toBe(Object.keys(models.base.files).length);
     expect((await cached()).every((p) => p.startsWith(`/gears/models/whisper/${models.base.dir}/`))).toBe(true);

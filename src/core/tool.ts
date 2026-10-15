@@ -149,6 +149,8 @@ export interface EditorTool {
   id: string;
   resolves: readonly FindingCode[];
   accepts(format: Format): boolean;
+  // 超過 LARGE_FILE 的檔案也能處理（逐字稿分段解碼），沒有的話大檔案不提供
+  acceptsLarge?(format: Format): boolean;
 }
 
 // 從空白開始的工具：讀者在工具裡填寫，產出檔案或文字。產出的檔案放進暫存區，
