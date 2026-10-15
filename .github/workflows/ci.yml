@@ -20,7 +20,7 @@ jobs:
           cache: npm
       - run: npm ci
       # 瀏覽器測試用 pillow-heif 產生真的 HEIC（tests/global-setup.ts）
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@v10.3.0
       - run: npm run typecheck
       - run: npx playwright install --with-deps chromium webkit firefox
       - run: npm test
