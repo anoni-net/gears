@@ -20,6 +20,11 @@ const OVERLAP = 0.25;
 //    之後再偵測，四次都在 0.6 分以上才算。真臉擺在畫面中間、轉正之後幾乎都認得出來，
 //    實測 95 個真臉的候選有 93 個四次都過，65 個誤判沒有一個四次都過
 //
+// 重新偵測沒過、但有另一種切法在同一個位置也找到的（框的 IoU 超過 0.15），列為「可能是臉」，
+// 畫面上用虛線標出、由讀者決定。歪著頭又被手遮住的臉常落在這裡：原始解析度的照片裡
+// 分數掉到 0.55，重新偵測過不了，但 4×4 與 12×12 都找到它。花叢與紋路的誤判多半只有一種
+// 切法找到，14 張測試照片只多出一個（招牌上的字）
+//
 // 實測 12 張照片（大合照、婚紗照、店內照片、臉佔滿畫面的自拍、歪著頭又被花瓣遮住嘴的臉），
 // 找到的臉跟所有切法加起來一樣多，誤判是零
 export const CONFIRMED_SCORE = 0.85;
@@ -27,6 +32,7 @@ export const VERIFY_SCORE = 0.6;
 export const VERIFY_SCALES = [2, 3]; // 重新偵測時裁切的範圍，框的幾倍
 const MAX_EYE_TILT = 35;
 const MIN_MOUTH_DROP = 0.28;
+const MAYBE_OVERLAP = 0.15;
 
 export interface Detection {
   box: Box;
@@ -93,18 +99,36 @@ export function eyeTilt(d: Detection): number | null {
 // 以候選為中心重新偵測，回傳每一次的分數（沒找到是 0）。由 src/ui/redact-detect.ts 提供
 export type Verify = (d: Detection) => Promise<number[]>;
 
+export interface FaceSelection {
+  faces: Box[]; // 確定的臉，直接加成遮蔽框
+  maybe: Box[]; // 可能是臉，讀者決定要不要
+}
+
+const centerIn = (inner: Box, outer: Box) => {
+  const cx = inner.x + inner.w / 2;
+  const cy = inner.y + inner.h / 2;
+  return cx > outer.x && cx < outer.x + outer.w && cy > outer.y && cy < outer.y + outer.h;
+};
+const sameSpot = (a: Box, b: Box) => iou(a, b) > 0.3 || centerIn(a, b) || centerIn(b, a);
+
 // 從分數高的開始看，同一張臉（IoU 超過 0.3）已經有框就跳過，不必再重新偵測。
 // 同時包住兩張以上臉的大框是誤判，拿掉
-export async function selectFaces(found: Detection[], verify: Verify): Promise<Box[]> {
+export async function selectFaces(found: Detection[], verify: Verify): Promise<FaceSelection> {
   const kept: Box[] = [];
+  const maybe: Box[] = [];
   for (const d of [...found].sort((a, b) => b.score - a.score)) {
     if (kept.some((k) => iou(k, d.box) > 0.3)) continue;
     if (d.score < CONFIRMED_SCORE) {
       if (!faceLike(d)) continue;
       const scores = await verify(d);
-      if (!scores.length || scores.some((score) => score < VERIFY_SCORE)) continue;
+      if (!scores.length || scores.some((score) => score < VERIFY_SCORE)) {
+        const supported = found.some((o) => o.grid !== d.grid && iou(o.box, d.box) > MAYBE_OVERLAP);
+        if (supported && !maybe.some((m) => sameSpot(m, d.box))) maybe.push(d.box);
+        continue;
+      }
     }
     kept.push(d.box);
   }
-  return kept.filter((b) => kept.filter((k) => k !== b && contains(b, k)).length < 2);
+  const faces = kept.filter((b) => kept.filter((k) => k !== b && contains(b, k)).length < 2);
+  return { faces, maybe: maybe.filter((m) => !faces.some((f) => sameSpot(f, m))) };
 }

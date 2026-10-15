@@ -17,6 +17,21 @@ function drawBoxes(ctx: CanvasRenderingContext2D, boxes: Box[], scale: number) {
   for (const b of boxes) ctx.fillRect(b.x * scale, b.y * scale, b.w * scale, b.h * scale);
 }
 
+// 可能是臉的範圍：黃色虛線，外圈再描一圈黑線，亮暗的背景上都看得到。只在編輯畫面上畫，不會輸出
+function drawMaybe(ctx: CanvasRenderingContext2D, boxes: Box[], scale: number) {
+  ctx.save();
+  ctx.lineWidth = 3;
+  for (const [color, dash] of [["#000", 0], ["#ffca28", 6]] as const) {
+    ctx.strokeStyle = color;
+    ctx.lineDashOffset = 0;
+    ctx.setLineDash(dash ? [dash, dash] : []);
+    for (const b of boxes) ctx.strokeRect(b.x * scale, b.y * scale, b.w * scale, b.h * scale);
+  }
+  ctx.fillStyle = "rgba(255, 202, 40, 0.18)";
+  for (const b of boxes) ctx.fillRect(b.x * scale, b.y * scale, b.w * scale, b.h * scale);
+  ctx.restore();
+}
+
 // 原尺寸塗黑、重新編碼，再把輸出解碼回來抽查每個框，確認真的是黑的。
 // exif 是讀者選擇保留的拍攝資訊（已經拿掉縮圖），抽查通過之後才寫回去
 async function render(bitmap: ImageBitmap, boxes: Box[], format: Format, exif: Uint8Array | null): Promise<Blob> {
@@ -80,6 +95,8 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
     progress?: number | null;
   } | null>(null);
   const [textLines, setTextLines] = useState<Box[]>([]);
+  // 找人臉時「可能是臉」的範圍，畫成虛線，讀者點一下才變成遮蔽框
+  const [maybe, setMaybe] = useState<Box[]>([]);
   // 原檔的拍攝資訊（已經重組、拿掉縮圖），沒有時間、地點或型號就不提供保留的選項
   const [exif, setExif] = useState<Uint8Array | null>(null);
   const [keepExif, setKeepExif] = useState(false);
@@ -125,6 +142,7 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
     const ctx = el.getContext("2d")!;
     ctx.drawImage(bitmap, 0, 0, el.width, el.height);
     drawBoxes(ctx, boxes, scale);
+    drawMaybe(ctx, maybe, scale);
     if (draft) {
       ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
       ctx.fillRect(draft.x * scale, draft.y * scale, draft.w * scale, draft.h * scale);
@@ -146,7 +164,7 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
       ctx.lineTo(cx, cy + 12);
       ctx.stroke();
     }
-  }, [bitmap, boxes, draft, scale, cursor, corner]);
+  }, [bitmap, boxes, maybe, draft, scale, cursor, corner]);
 
   const keyDown = (e: KeyboardEvent) => {
     if (!bitmap || status !== "ready") return;
@@ -225,14 +243,14 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
     if (isUsable(box, 4 / scale)) {
       setBoxes((list) => [...list, box]);
     } else {
-      // 點一下已經框好的範圍就刪掉它
-      setBoxes((list) => {
-        let hit = -1;
-        list.forEach((b, i) => {
-          if (x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h) hit = i;
-        });
-        return hit < 0 ? list : list.filter((_, i) => i !== hit);
-      });
+      // 點一下已經框好的範圍就刪掉它，點到虛線的「可能是臉」就加成遮蔽框
+      const inside = (b: Box) => x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h;
+      const hit = boxes.filter(inside).at(-1);
+      if (hit) setBoxes(boxes.filter((b) => b !== hit));
+      else {
+        const pick = maybe.filter(inside).at(-1);
+        if (pick) acceptMaybe([pick]);
+      }
     }
   };
 
@@ -242,6 +260,13 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
     for (const box of found) if (!next.some((b) => overlaps(b, box))) next.push(box);
     setBoxes(next);
     return next.length - latest.current.length;
+  };
+
+  const acceptMaybe = (picked: Box[]) => {
+    const added = addFound(picked);
+    setMaybe((list) => list.filter((m) => !picked.includes(m)));
+    // 訊息裡的框數跟著加上
+    setAuto((a) => (a?.kind === "faces" && a.state === "done" ? { ...a, n: a.n + added } : a));
   };
 
   const runAuto = async (kind: "faces" | "text" | "lines") => {
@@ -259,8 +284,9 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
       const { findFaces, findText, NoWebGLError } = await import("./redact-detect.ts");
       detectError = NoWebGLError;
       if (kind === "faces") {
-        const faces = await findFaces(bitmap, onProgress);
+        const { faces, maybe: possible } = await findFaces(bitmap, onProgress);
         setAuto({ kind, state: "done", n: addFound(faces) || faces.length });
+        setMaybe(possible.filter((m) => !latest.current.some((b) => overlaps(b, m))));
       } else {
         const { pii, lines } = await findText(bitmap, onProgress);
         setTextLines(lines);
@@ -281,6 +307,9 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
     if (a.state === "running") {
       if (a.kind === "faces") return t(a.progress == null ? "redact.loadingFaces" : "redact.findingFaces");
       return t(a.progress == null ? "redact.loadingText" : "redact.findingText");
+    }
+    if (a.kind === "faces" && maybe.length) {
+      return a.n ? t("redact.foundMaybe", { n: a.n, m: maybe.length }) : t("redact.onlyMaybe", { m: maybe.length });
     }
     return a.n ? t("redact.found", { n: a.n }) : t("redact.foundNone");
   };
@@ -324,12 +353,26 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
       {/* 訊息區的高度固定：所有可能出現的訊息疊在同一格，用最長的那一則撐開，
           換訊息時下面的圖片不會跳動。看得到、唸得出來的只有目前那一則 */}
       <div class="redact-auto-message">
-        <p class={auto?.state === "failed" || auto?.state === "noWebgl" ? "error" : "hint"} role="status" data-testid="redact-auto-status">
-          {autoMessage(auto)}
-        </p>
+        <div>
+          <p class={auto?.state === "failed" || auto?.state === "noWebgl" ? "error" : "hint"} role="status" data-testid="redact-auto-status">
+            {autoMessage(auto)}
+          </p>
+          {maybe.length && auto?.state !== "running" ? (
+            <button type="button" class="link" onClick={() => acceptMaybe(maybe)}>
+              {t("redact.addMaybe", { m: maybe.length })}
+            </button>
+          ) : null}
+        </div>
         <div class="sizer" aria-hidden="true">
           {AUTO_MESSAGES.map((key) => (
-            <p key={key}>{t(key, { n: 999 })}</p>
+            <p key={key}>{t(key, { n: 999, m: 99 })}</p>
+          ))}
+          {/* 有「全部加上」按鈕的那兩則，連同按鈕一起佔位 */}
+          {(["redact.foundMaybe", "redact.onlyMaybe"] as const).map((key) => (
+            <div key={key}>
+              <p>{t(key, { n: 999, m: 99 })}</p>
+              <span class="link">{t("redact.addMaybe", { m: 99 })}</span>
+            </div>
           ))}
         </div>
       </div>

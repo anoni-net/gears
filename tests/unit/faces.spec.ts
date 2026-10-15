@@ -72,7 +72,7 @@ function verifier(scores: Map<number, number[]>) {
 
 test("分數夠高的直接採用，不重新偵測；同一張臉只留分數最高的", async () => {
   const v = verifier(new Map());
-  const boxes = await selectFaces([face(100, 100, 30, 0.9), face(102, 101, 30, 0.7, 8), face(200, 100, 30, 0.88)], v.verify);
+  const boxes = (await selectFaces([face(100, 100, 30, 0.9), face(102, 101, 30, 0.7, 8), face(200, 100, 30, 0.88)], v.verify)).faces;
   expect(boxes).toEqual([
     { x: 100, y: 100, w: 30, h: 30 },
     { x: 200, y: 100, w: 30, h: 30 },
@@ -91,7 +91,7 @@ test("分數不夠高的，重新偵測四次都過 0.6 才算", async () => {
       [390, [0.62, 0, 0.67, 0]],
     ]),
   );
-  const boxes = await selectFaces([face(508, 929, 91, 0.7, 4, 31), face(177, 837, 45, 0.65, 12), face(390, 533, 42, 0.57, 8)], v.verify);
+  const boxes = (await selectFaces([face(508, 929, 91, 0.7, 4, 31), face(177, 837, 45, 0.65, 12), face(390, 533, 42, 0.57, 8)], v.verify)).faces;
   expect(boxes).toEqual([{ x: 508, y: 929, w: 91, h: 91 }]);
   expect(v.calls.sort()).toEqual([177, 390, 508]);
 });
@@ -109,7 +109,7 @@ test("特徵點不像臉的低分結果不重新偵測：兩眼歪斜，或嘴�
       [630, 125], // 嘴巴只在眼睛下方框高的 0.08
     ],
   };
-  expect(await selectFaces([face(390, 533, 42, 0.57, 8, 42), flat], v.verify)).toEqual([]);
+  expect((await selectFaces([face(390, 533, 42, 0.57, 8, 42), flat], v.verify)).faces).toEqual([]);
   expect(v.calls).toEqual([]);
 });
 
@@ -122,11 +122,31 @@ test("同一張臉已經有框，分數較低的其他偵測不必重新偵測",
 test("整張圖偵測的低分大框，重新偵測不過就不算", async () => {
   // 婚紗照：整張圖偵測把裙襬認成 0.55 分、814 像素的大臉
   const v = verifier(new Map([[784, [0.9, 0.9, 0.9, 0.9]]]));
-  const boxes = await selectFaces([face(378, 1195, 814, 0.55, 1), face(784, 957, 127, 0.8)], v.verify);
+  const boxes = (await selectFaces([face(378, 1195, 814, 0.55, 1), face(784, 957, 127, 0.8)], v.verify)).faces;
   expect(boxes).toEqual([{ x: 784, y: 957, w: 127, h: 127 }]);
 });
 
 test("同時包住兩張臉的大框拿掉", async () => {
-  const boxes = await selectFaces([face(100, 100, 30, 0.95), face(200, 100, 30, 0.95), { box: { x: 80, y: 60, w: 200, h: 120 }, score: 0.9, grid: 1 }], verifier(new Map()).verify);
+  const boxes = (await selectFaces([face(100, 100, 30, 0.95), face(200, 100, 30, 0.95), { box: { x: 80, y: 60, w: 200, h: 120 }, score: 0.9, grid: 1 }], verifier(new Map()).verify)).faces;
   expect(boxes).toHaveLength(2);
+});
+
+test("重新偵測沒過、但另一種切法在同一個位置也找到的，列為可能是臉", async () => {
+  // 原始解析度的吹花瓣照片：歪著頭又被手遮住的臉，4×4 與 12×12 都找到，分數 0.55
+  const g4 = face(1398, 2566, 271, 0.55, 4, 29);
+  const g12 = face(1393, 2529, 149, 0.55, 12, 19);
+  // 花叢：只有 12×12 找到
+  const petal = face(2671, 880, 87, 0.56, 12, 17);
+  const v = verifier(new Map([[1398, [0.5, 0, 0.7, 0]], [1393, [0, 0, 0, 0.58]], [2671, [0.66, 0.58, 0, 0.53]]]));
+  const { faces, maybe } = await selectFaces([g4, g12, petal], v.verify);
+  expect(faces).toEqual([]);
+  expect(maybe).toEqual([g4.box]);
+});
+
+test("可能是臉的範圍跟確定的臉同一個位置時不列", async () => {
+  const sure = face(100, 100, 60, 0.9);
+  const v = verifier(new Map());
+  const { faces, maybe } = await selectFaces([sure, face(110, 110, 50, 0.6, 8), face(108, 105, 52, 0.55, 12)], v.verify);
+  expect(faces).toEqual([sure.box]);
+  expect(maybe).toEqual([]);
 });
