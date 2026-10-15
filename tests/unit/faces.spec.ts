@@ -43,8 +43,9 @@ test("合併：同一張臉留分數最高的，包住兩張臉的大框拿掉",
   const boxes = mergeFaces([
     { box: { x: 100, y: 100, w: 30, h: 30 }, score: 0.7, grid: 1 },
     { box: { x: 102, y: 101, w: 30, h: 30 }, score: 0.9, grid: 4 },
-    { box: { x: 200, y: 100, w: 30, h: 30 }, score: 0.8, grid: 1 },
-    { box: { x: 80, y: 80, w: 200, h: 80 }, score: 0.6, grid: 1 },
+    { box: { x: 200, y: 100, w: 30, h: 30 }, score: 0.88, grid: 1 },
+    // 分數夠高、但同時包住兩張臉
+    { box: { x: 80, y: 80, w: 200, h: 80 }, score: 0.86, grid: 1 },
   ]);
   expect(boxes).toEqual([
     { x: 102, y: 101, w: 30, h: 30 },
@@ -66,4 +67,18 @@ test("區塊裡分數不夠高的，要另一種切法在同一個位置也找�
     { box: sharp, score: 0.9, grid: 12 },
   ]);
   expect(boxes).toEqual([sharp, face]);
+});
+
+test("整張圖偵測找到的低分大框，沒有其他切法確認也不算", () => {
+  const face = { x: 784, y: 957, w: 127, h: 127 };
+  // 婚紗照：整張圖偵測把裙襬認成 0.55 分、814 像素的大臉
+  const skirt = { x: 378, y: 1195, w: 814, h: 814 };
+  const boxes = mergeFaces([
+    { box: skirt, score: 0.55, grid: 1 },
+    { box: face, score: 0.91, grid: 4 },
+  ]);
+  expect(boxes).toEqual([face]);
+  // 分數夠高的整張圖偵測照樣採用，例如臉佔滿畫面的自拍
+  const selfie = { x: 100, y: 100, w: 800, h: 800 };
+  expect(mergeFaces([{ box: selfie, score: 0.92, grid: 1 }])).toEqual([selfie]);
 });
