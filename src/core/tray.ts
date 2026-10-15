@@ -153,6 +153,30 @@ export function createTray(tools: Tool[], verify?: Verifier) {
       }
     },
 
+    // 這個工具能處理目前這個版本，而且檔案裡有它能處理的資訊
+    needs(tool: Tool, version: Version): boolean {
+      const usable = version.large ? !!tool.acceptsLarge?.(version.format) : tool.accepts(version.format);
+      return usable && version.findings.some((f) => tool.resolves.includes(f.code));
+    },
+
+    // 一次處理暫存區裡所有需要處理的檔案。逐一處理，一個失敗不影響其他的
+    async applyAll(tool: Tool, onProgress?: (done: number, total: number) => void): Promise<{ done: number; failed: string[] }> {
+      const targets = state.files.filter((f) => this.needs(tool, f.versions.at(-1)!));
+      const failed: string[] = [];
+      let done = 0;
+      for (const [i, file] of targets.entries()) {
+        onProgress?.(i, targets.length);
+        try {
+          await this.apply(file.id, tool);
+          done++;
+        } catch {
+          failed.push(file.name);
+        }
+      }
+      onProgress?.(targets.length, targets.length);
+      return { done, failed };
+    },
+
     // 編輯畫面產生的結果也走這裡：先實際解碼一次，再當成新版本加在檔案底下
     addVersion: (fileId: number, blob: Blob, toolId: string, report?: Report) => addVersion(fileId, blob, toolId, report),
 
