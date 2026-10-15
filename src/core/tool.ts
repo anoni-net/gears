@@ -21,6 +21,7 @@ export const FINDING_CODES = [
   "path",
   "printer",
   "signature",
+  "system-files",
   "other",
   // 以下是文件的內容，清除中繼資料不會改動，列出來提醒讀者
   "doc-comments",
@@ -86,6 +87,14 @@ export const SEGMENT_CODES = [
   "media-timed",
   "media-app",
   "media-stream",
+  "archive-info",
+  "archive-system",
+  "archive-files",
+  "archive-content",
+  "torrent-info",
+  "torrent-files",
+  "html-meta",
+  "html-content",
 ] as const;
 
 export type SegmentCode = (typeof SEGMENT_CODES)[number];

@@ -120,6 +120,7 @@ QR code 的測試把產生的 PNG 解碼回像素，用 `jsQR` 讀出文字，�
 | LibreOffice（odt、ods、odp、odg） | 見下方「文件」 |
 | PDF | 見下方「文件」 |
 | MP3、M4A、MP4、MOV、WAV、AVI、FLAC、Ogg、Opus、MKV、WebM | 見下方「音訊與影片」 |
+| ZIP、TAR、gzip、EPUB、種子檔、HTML | 見下方「壓縮檔與其他格式」 |
 
 驗證時在本機用 Pillow 產生帶中繼資料的真實檔案，清除之後再用 Pillow 解碼，確認像素與原檔相同。
 
@@ -162,6 +163,21 @@ MP4、MOV、AVI、MKV 的影音資料位置記在索引裡，所以原地處理�
 
 單元測試用 `tests/helpers/media.ts` 組出各格式的測試檔。真實的檔案在本機用 ffmpeg 產生（帶標題、演出者、位置、封面），清除之後用 ffprobe 確認標籤不見，用 `ffmpeg -f md5` 比對解碼後的聲音與影像跟原檔相同。
 
+## 壓縮檔與其他格式
+
+| 格式 | 做法 |
+|---|---|
+| ZIP（`archive.ts`） | 重新打包：時間統一、不寫附加欄位（Unix 的使用者 ID、精確的時間）與註解。`__MACOSX`、`._` 開頭的檔案、`.DS_Store`、`Thumbs.db` 拿掉（macOS 的延伸屬性常帶著下載來源的網址，`Thumbs.db` 存著圖片的縮圖），裡面的照片、文件與影音一起清除 |
+| TAR（`tar.ts`） | 擁有者改成 0 與空白、時間清成零，pax 延伸標頭只留檔名、連結、大小與稀疏檔的欄位，權限保留，系統檔拿掉，裡面的檔案一起清除 |
+| gzip（`gzip.ts`） | 標頭的原始檔名、時間與註解拿掉，解壓縮之後交給裡面的格式（通常是 TAR）再壓縮回去 |
+| EPUB（`epub.ts`） | OPF 的 metadata 只留書名、語言與識別碼，識別碼換成隨機的 UUID（有字型混淆時不換），目錄的作者、內文的 meta 與註解、`iTunesMetadata.plist` 拿掉，有 DRM 的不處理 |
+| 種子檔（`torrent.ts`） | 只留 `info`、tracker 與 web seed，建立的程式、時間、註解與發布者拿掉。`info` 一個位元組都不動，種子的識別碼不變 |
+| HTML（`html.ts`） | 註解（另存網頁時的 `saved from url=`）與不影響顯示的 meta 拿掉，script、style 裡的內容不動。用 latin1 讀寫，Big5 的網頁不會改壞 |
+
+ZIP 類的格式依序判斷：Office、ODF、EPUB，都不是才當成一般的壓縮檔。有巨集的 Office 文件與 ODF 範本不當成壓縮檔，免得只清了外殼、裡面的作者沒動。下載時壓縮檔沿用原本的副檔名（cbz、jar、tar.gz）。
+
+CSS 沒有可靠的檔頭可以判斷格式，暫時不處理。
+
 ## HEIC
 
 iPhone 預設拍出來的是 HEIC，在網頁上選照片時交出來的也是原本的 HEIC，不會自動轉成 JPEG。
@@ -190,7 +206,7 @@ iPhone 預設拍出來的是 HEIC，在網頁上選照片時交出來的也是�
 
 ## 規劃
 
-產品規劃記錄在社群的工作區，還沒有公開。目前完成第一階段：桌面、檔案暫存區，以及清除中繼資料（JPEG、PNG、HEIC、AVIF、WebP、GIF、TIFF、SVG、BMP、PNM、JPEG XL，Word、Excel、PowerPoint、LibreOffice 文件與 PDF，MP3、M4A、MP4、MOV、WAV、AVI、FLAC、Ogg、Opus、MKV、WebM）、遮蔽、加密與解密、age 金鑰產生器、QR code 產生器與讀取、網址檢查、密語與密碼產生器，可以下載與系統分享。部署到 `anoni.net/gears/` 是下一步。
+產品規劃記錄在社群的工作區，還沒有公開。目前完成第一階段：桌面、檔案暫存區，以及清除中繼資料（JPEG、PNG、HEIC、AVIF、WebP、GIF、TIFF、SVG、BMP、PNM、JPEG XL，Word、Excel、PowerPoint、LibreOffice 文件與 PDF，MP3、M4A、MP4、MOV、WAV、AVI、FLAC、Ogg、Opus、MKV、WebM，ZIP、TAR、gzip、EPUB、種子檔、HTML）、遮蔽、加密與解密、age 金鑰產生器、QR code 產生器與讀取、網址檢查、密語與密碼產生器，可以下載與系統分享。部署到 `anoni.net/gears/` 是下一步。
 
 ## 第三方資料
 

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "preact/hooks";
-import { EXTENSION, VIDEO_FORMATS, isDocument, isMedia, isPhoto } from "../core/bytes.ts";
+import { EXTENSION, VIDEO_FORMATS, isMedia, isPhoto } from "../core/bytes.ts";
 import { CONTENT_FINDINGS, type Report, ToolError } from "../core/tool.ts";
 import type { TrayFile, Version } from "../core/tray.ts";
 import { t, tDynamic } from "../i18n/index.ts";
@@ -18,6 +18,9 @@ import { decodeQrFromBlob } from "./qr-scan.ts";
 function extension(name: string, format: Version["format"]): string {
   // PNM 有 pbm、pgm、ppm、pam 幾種副檔名，沿用原本的
   if (format === "pnm") return /\.(pbm|pgm|ppm|pnm|pam)$/i.exec(name)?.[1]?.toLowerCase() ?? EXTENSION.pnm;
+  // 壓縮檔沿用原本的副檔名：jar、cbz 這類也是 ZIP，.tar.gz 是兩層
+  if (format === "gz") return /\.(tar\.gz|tgz|svgz|gz)$/i.exec(name)?.[1]?.toLowerCase() ?? EXTENSION.gz;
+  if (format === "zip") return /\.([a-z0-9]{2,5})$/i.exec(name)?.[1]?.toLowerCase() ?? EXTENSION.zip;
   if (format !== "unknown") return EXTENSION[format];
   const ext = /\.([a-z0-9]{1,5})$/i.exec(name.replace(/\.age$/i, ""))?.[1];
   return ext ? ext.toLowerCase() : EXTENSION.unknown;
@@ -226,7 +229,7 @@ export function FileView({ file, index, busy, preferred, onOpenTool }: Props) {
   const current = file.versions.at(-1)!;
   const isImage = isPhoto(current.format);
   const media = isMedia(current.format);
-  const canInspect = isImage || media || isDocument(current.format);
+  const canInspect = fileTools.some((tool) => tool.accepts(current.format));
   const preview = useObjectUrl(isImage ? current.blob : undefined);
   const [error, setError] = useState<string>();
   // 從編輯類工具的網址進來（例如遮蔽的任務），選好檔案就直接打開編輯畫面

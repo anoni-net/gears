@@ -1,4 +1,5 @@
-import { odfKind, ooxmlKind } from "./documents.ts";
+import { mimetypeKind, ooxmlKind } from "./documents.ts";
+import { type ArchiveFormat, archiveKind } from "./archive.ts";
 import { type MediaFormat, mediaKind } from "./media.ts";
 import { zipNames } from "./zip.ts";
 
@@ -71,6 +72,9 @@ export type Format =
   | "odg"
   | "pdf"
   | MediaFormat
+  | "epub"
+  | "zip"
+  | ArchiveFormat
   | "age"
   | "unknown";
 
@@ -91,9 +95,17 @@ export function sniff(bytes: Uint8Array): Format {
   if (startsWith(bytes, 0, "%PDF-")) return "pdf";
   // Office 與 ODF 都是 zip，看裡面的檔案
   const names = zipNames(bytes);
-  if (names) return ooxmlKind(names) ?? odfKind(bytes) ?? "unknown";
+  if (names) {
+    const kind = ooxmlKind(names) ?? mimetypeKind(bytes);
+    if (kind) return kind;
+    // 其他 Office 與 ODF 的變體（有巨集的 docm、範本）不當成一般的壓縮檔，免得只清了外殼
+    if (names.includes("[Content_Types].xml") || names[0] === "mimetype") return "unknown";
+    return "zip";
+  }
   const media = mediaKind(bytes);
   if (media) return media;
+  const archive = archiveKind(bytes);
+  if (archive) return archive;
   // age 的二進位格式與 ASCII armor 文字格式
   if (startsWith(bytes, 0, "age-encryption.org/v1\n") || startsWith(bytes, 0, "-----BEGIN AGE ENCRYPTED FILE-----")) return "age";
   return "unknown";
@@ -136,9 +148,6 @@ function looksLikeSvg(bytes: Uint8Array): boolean {
 export const isPhoto = (format: Format) =>
   ["jpeg", "png", "heic", "avif", "gif", "webp", "tiff", "bmp", "pnm", "svg", "jxl"].includes(format);
 
-// 文件類的格式：沒有預覽，中繼資料照樣能檢查與清除
-export const isDocument = (format: Format) => ["docx", "xlsx", "pptx", "odt", "ods", "odp", "odg", "pdf"].includes(format);
-
 // 音訊與影片：瀏覽器播得了就給播放器，播不了照樣能檢查與清除
 export const AUDIO_FORMATS: readonly Format[] = ["mp3", "m4a", "wav", "flac", "ogg", "opus"];
 export const VIDEO_FORMATS: readonly Format[] = ["mp4", "mov", "avi", "mkv", "webm"];
@@ -175,6 +184,12 @@ export const MIME: Record<Format, string> = {
   opus: "audio/ogg",
   mkv: "video/x-matroska",
   webm: "video/webm",
+  epub: "application/epub+zip",
+  zip: "application/zip",
+  tar: "application/x-tar",
+  gz: "application/gzip",
+  torrent: "application/x-bittorrent",
+  html: "text/html",
   age: "application/octet-stream",
   unknown: "application/octet-stream",
 };
@@ -210,6 +225,12 @@ export const EXTENSION: Record<Format, string> = {
   opus: "opus",
   mkv: "mkv",
   webm: "webm",
+  epub: "epub",
+  zip: "zip",
+  tar: "tar",
+  gz: "gz",
+  torrent: "torrent",
+  html: "html",
   age: "age",
   unknown: "bin",
 };

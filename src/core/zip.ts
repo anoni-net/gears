@@ -20,6 +20,9 @@ export interface ZipEntry {
   localOffset: number;
   extraLength: number; // 中央目錄裡的附加欄位長度
   commentLength: number;
+  madeBy: number; // 建立的系統：0 是 MS-DOS、3 是 Unix、19 是 macOS
+  time: number; // MS-DOS 格式的修改時間與日期
+  date: number;
 }
 
 export interface ZipArchive {
@@ -72,6 +75,9 @@ export function readZip(bytes: Uint8Array): ZipArchive {
       localOffset: v.getUint32(i + 42, true),
       extraLength,
       commentLength,
+      madeBy: bytes[i + 5]!,
+      time: v.getUint16(i + 12, true),
+      date: v.getUint16(i + 14, true),
     };
     if (entry.compressedSize === 0xffffffff || entry.size === 0xffffffff || entry.localOffset === 0xffffffff) {
       throw new ToolError("unsupported");
@@ -119,6 +125,14 @@ export async function entryData(bytes: Uint8Array, entry: ZipEntry): Promise<Uin
   else throw new ToolError("unsupported");
   if (data.length !== entry.size || crc32(data) !== entry.crc) throw new ToolError("broken");
   return data;
+}
+
+// MS-DOS 格式的日期時間，以兩秒為單位
+export function dosDate(entry: ZipEntry): string | undefined {
+  const { date, time } = entry;
+  if (date === 0x21 && time === 0) return undefined; // 1980-01-01 00:00，清除過或沒有記錄
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${1980 + (date >> 9)}-${pad((date >> 5) & 15)}-${pad(date & 31)} ${pad(time >> 11)}:${pad((time >> 5) & 63)}:${pad((time & 31) * 2)}`;
 }
 
 export interface NewEntry {

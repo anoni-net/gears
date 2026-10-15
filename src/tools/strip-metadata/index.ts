@@ -15,6 +15,12 @@ import { inspectMp3, stripMp3 } from "./mp3.ts";
 import { inspectMp4, stripMp4 } from "./mp4.ts";
 import { inspectOgg, stripOgg } from "./ogg.ts";
 import { inspectRiff, stripRiff } from "./riff.ts";
+import { inspectZipArchive, stripZipArchive } from "./archive.ts";
+import { inspectEpub, stripEpub } from "./epub.ts";
+import { inspectGzip, stripGzip } from "./gzip.ts";
+import { inspectHtml, stripHtml } from "./html.ts";
+import { inspectTar, stripTar } from "./tar.ts";
+import { inspectTorrent, stripTorrent } from "./torrent.ts";
 import { inspectPng, stripPng } from "./png.ts";
 import { inspectPnm, stripPnm } from "./pnm.ts";
 import { inspectSvg, stripSvg } from "./svg.ts";
@@ -65,6 +71,12 @@ const HANDLERS: Partial<Record<Format, Handler>> = {
   opus: OGG,
   mkv: EBML,
   webm: EBML,
+  epub: { inspect: inspectEpub, strip: stripEpub },
+  zip: { inspect: inspectZipArchive, strip: stripZipArchive },
+  tar: { inspect: inspectTar, strip: stripTar },
+  gz: { inspect: inspectGzip, strip: stripGzip },
+  torrent: { inspect: inspectTorrent, strip: stripTorrent },
+  html: { inspect: inspectHtml, strip: stripHtml },
 };
 
 // 文件裡的圖片與內嵌的文件交回這裡處理。內嵌的層數有上限，避免刻意做成的檔案無限遞迴

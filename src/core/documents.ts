@@ -15,14 +15,16 @@ export function ooxmlKind(names: string[]): OoxmlKind | null {
 
 export type OdfKind = "odt" | "ods" | "odp" | "odg";
 
-const MIMETYPES: Record<string, OdfKind> = {
+// ODF 與 EPUB 的第一個檔案是不壓縮的 mimetype
+const MIMETYPES: Record<string, OdfKind | "epub"> = {
   "application/vnd.oasis.opendocument.text": "odt",
   "application/vnd.oasis.opendocument.spreadsheet": "ods",
   "application/vnd.oasis.opendocument.presentation": "odp",
   "application/vnd.oasis.opendocument.graphics": "odg",
+  "application/epub+zip": "epub",
 };
 
-export function odfKind(bytes: Uint8Array): OdfKind | null {
+export function mimetypeKind(bytes: Uint8Array): OdfKind | "epub" | null {
   try {
     const first = readZip(bytes).entries[0];
     if (first?.name !== "mimetype") return null;

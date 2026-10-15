@@ -1,8 +1,9 @@
-import { isDocument, isMedia, isPhoto } from "../core/bytes.ts";
+import { isPhoto } from "../core/bytes.ts";
 import { CONTENT_FINDINGS } from "../core/tool.ts";
 import type { TrayFile } from "../core/tray.ts";
 import { t } from "../i18n/index.ts";
 import { tray } from "../state.ts";
+import { fileTools } from "../tools/index.ts";
 import { useState } from "preact/hooks";
 import { useObjectUrl } from "./hooks.ts";
 
@@ -15,7 +16,7 @@ interface ItemProps {
 function Item({ file, selected, onSelect }: ItemProps) {
   const current = file.versions.at(-1)!;
   const isImage = isPhoto(current.format);
-  const canInspect = isImage || isMedia(current.format) || isDocument(current.format);
+  const canInspect = fileTools.some((tool) => tool.accepts(current.format));
   // 文件的註解與追蹤修訂是內容，清除之後仍然在，不算在找到的項目裡
   const found = current.findings.filter((f) => !CONTENT_FINDINGS.includes(f.code)).length;
   const url = useObjectUrl(isImage ? current.blob : undefined);
