@@ -129,3 +129,22 @@ test("沒有拍攝資訊的圖片不顯示保留的選項", async ({ page }) => 
   await expect(page.getByTestId("redact-canvas")).toBeVisible();
   await expect(page.getByRole("checkbox")).toHaveCount(0);
 });
+
+test("用鍵盤框選：方向鍵移動、Enter 標兩個角，Delete 刪掉", async ({ page }) => {
+  await page.goto("./redact/");
+  await page.getByTestId("file-input").setInputFiles({ name: "plain.png", mimeType: "image/png", buffer: await image(page, "image/png") });
+  const canvas = page.getByRole("application", { name: "要遮蔽的圖片" });
+  await canvas.focus();
+  await page.keyboard.press("Enter"); // 出現游標
+  await page.keyboard.press("Shift+ArrowLeft");
+  await page.keyboard.press("Shift+ArrowUp");
+  await page.keyboard.press("Enter"); // 第一個角
+  await expect(page.getByText("標好第一個角了，移到對角再按 Enter。")).toBeVisible();
+  await page.keyboard.press("Shift+ArrowRight");
+  await page.keyboard.press("Shift+ArrowRight");
+  await page.keyboard.press("Shift+ArrowDown");
+  await page.keyboard.press("Enter");
+  await expect(page.getByText("已經框了 1 個範圍")).toBeVisible();
+  await page.keyboard.press("Delete");
+  await expect(page.getByText("已經框了 0 個範圍")).toBeVisible();
+});
