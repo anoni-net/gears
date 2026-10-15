@@ -15,6 +15,9 @@ export const zhTW = {
   "app.offlineReady": "工作台已經存在這台裝置的瀏覽器裡，沒有網路也能開啟。",
   "app.update": "隱私工作台有新版本。重新載入之後，暫存區裡的檔案會清空。",
   "app.updateReload": "重新載入",
+  "app.updating": "更新中…",
+  "app.updated": "已換上新版本。",
+  "app.updatedClose": "關閉",
   "app.footer.community": "匿名網路社群 anoni.net",
 
   // 每個網址的標題與描述，建置時寫進各自的 HTML（vite.config.ts）
