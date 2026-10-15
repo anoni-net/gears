@@ -1,4 +1,5 @@
 import type { Box } from "../tools/redact/index.ts";
+import { TILE_MIN_SCORE, faceTiles, mergeFaces } from "../tools/redact/faces.ts";
 import { type PiiMatch, type Word, findPii, pad } from "../tools/redact/pii.ts";
 
 // 遮蔽的自動尋找：人臉用 MediaPipe 的 BlazeFace，文字用 Tesseract 辨識之後找出個資。
@@ -18,12 +19,6 @@ function canvasOf(bitmap: ImageBitmap, x = 0, y = 0, w = bitmap.width, h = bitma
 }
 
 // --- 人臉 ---
-
-// BlazeFace 的短距離模型以 128 像素的縮圖偵測，大圖裡的小臉會漏掉。
-// 所以整張圖跑一次，再切成 2×2、3×3…的區塊（彼此重疊）各跑一次，一直切到區塊約 640 像素，
-// 合併重疊的結果
-const TILE = 640;
-const OVERLAP = 0.25;
 
 // MediaPipe 處理影像一定要用 WebGL，就算偵測本身在 CPU 上跑。關閉 WebGL 的瀏覽器
 // （部分隱私強化的設定）沒有辦法自動找人臉
@@ -49,52 +44,19 @@ export async function findFaces(bitmap: ImageBitmap): Promise<Box[]> {
   });
   const found: { box: Box; score: number }[] = [];
   try {
-    const finest = Math.max(1, Math.ceil(Math.max(bitmap.width, bitmap.height) / TILE));
-    for (let n = 1; n <= finest; n++) {
-      const tileW = Math.min(bitmap.width, Math.ceil((bitmap.width / n) * (n > 1 ? 1 + OVERLAP : 1)));
-      const tileH = Math.min(bitmap.height, Math.ceil((bitmap.height / n) * (n > 1 ? 1 + OVERLAP : 1)));
-      for (let row = 0; row < n; row++) {
-        for (let col = 0; col < n; col++) {
-          const x = Math.max(0, Math.min(bitmap.width - tileW, Math.floor((bitmap.width / n) * col)));
-          const y = Math.max(0, Math.min(bitmap.height - tileH, Math.floor((bitmap.height / n) * row)));
-          const result = detector.detect(canvasOf(bitmap, x, y, tileW, tileH));
-          for (const d of result.detections) {
-            const b = d.boundingBox;
-            if (!b) continue;
-            found.push({ box: { x: x + b.originX, y: y + b.originY, w: b.width, h: b.height }, score: d.categories[0]?.score ?? 0 });
-          }
-        }
+    for (const tile of faceTiles(bitmap.width, bitmap.height)) {
+      const result = detector.detect(canvasOf(bitmap, tile.x, tile.y, tile.w, tile.h));
+      for (const d of result.detections) {
+        const b = d.boundingBox;
+        const score = d.categories[0]?.score ?? 0;
+        if (!b || (tile.grid > 1 && score < TILE_MIN_SCORE)) continue;
+        found.push({ box: { x: tile.x + b.originX, y: tile.y + b.originY, w: b.width, h: b.height }, score });
       }
     }
   } finally {
     detector.close();
   }
-  return merge(found).map((box) => pad(box, 0.2, bitmap.width, bitmap.height));
-}
-
-const area = (b: Box) => b.w * b.h;
-
-function iou(a: Box, b: Box): number {
-  const w = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x);
-  const h = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
-  if (w <= 0 || h <= 0) return 0;
-  return (w * h) / (area(a) + area(b) - w * h);
-}
-
-const contains = (outer: Box, inner: Box) => {
-  const cx = inner.x + inner.w / 2;
-  const cy = inner.y + inner.h / 2;
-  return cx > outer.x && cx < outer.x + outer.w && cy > outer.y && cy < outer.y + outer.h && area(outer) > area(inner) * 2;
-};
-
-// 不同區塊找到的同一張臉只留分數最高的（IoU 超過 0.3 算同一張）。
-// 同時包住兩張以上臉的大框是誤判，拿掉
-function merge(found: { box: Box; score: number }[]): Box[] {
-  const kept: Box[] = [];
-  for (const { box } of [...found].sort((a, b) => b.score - a.score)) {
-    if (!kept.some((k) => iou(k, box) > 0.3)) kept.push(box);
-  }
-  return kept.filter((b) => kept.filter((k) => k !== b && contains(b, k)).length < 2);
+  return mergeFaces(found).map((box) => pad(box, 0.2, bitmap.width, bitmap.height));
 }
 
 // --- 文字 ---
