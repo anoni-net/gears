@@ -1,48 +1,35 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import { t } from "../i18n/index.ts";
 import { tray } from "../state.ts";
-import {
-  MAX_SECONDS,
-  MODELS,
-  MODEL_IDS,
-  type ModelId,
-  SAMPLE_RATE,
-  type Segment,
-  cleanSegments,
-  clock,
-  toSrt,
-  toTxt,
-} from "../tools/transcribe/segments.ts";
+import { MODELS, MODEL_IDS, type ModelId, SAMPLE_RATE, type Segment, clock, mergeSegments, toSrt, toTxt } from "../tools/transcribe/segments.ts";
+import { THREAD_OPTIONS, defaultThreads } from "../tools/transcribe/threads.ts";
+import { type AudioStream, TooLargeError, openAudio } from "./audio-stream.ts";
 import type { Reply, Request } from "./transcribe.worker.ts";
 import type { FileEditorProps } from "./types.ts";
 
 // 逐字稿：把錄音或影片的聲音轉成帶時間的段落。解碼在這裡（Web Audio 只能在主執行緒用），
-// 辨識在 Web Worker（src/ui/transcribe.worker.ts）。結果不是錄音的新版本，TXT 與 SRT
-// 另外放進暫存區或直接下載。
+// 每次約 10 分鐘（src/ui/audio-stream.ts），辨識在 Web Worker（src/ui/transcribe.worker.ts），
+// 處理完一段才解碼下一段，轉好的段落邊轉邊顯示。結果不是錄音的新版本，TXT 與 SRT 另外
+// 放進暫存區或直接下載。
 
 const BASE = new URL(import.meta.env.BASE_URL, location.href).href;
 const MODEL_CACHE = "gears-models";
 const mb = (bytes: number) => `${Math.round(bytes / 1e6)} MB`;
 const modelUrl = (id: ModelId) => `${BASE}models/whisper/${MODELS[id].dir}/`;
 
-// 同時使用的 CPU 核心數，讀者自己選。預設 4 個，但不超過瀏覽器回報的核心數。Brave 的防指紋
-// 保護會讓回報的數字比實際少，所以選項不依它限制。多執行緒要頁面在 cross-origin isolation
-// 底下，沒有時只能用 1 個
-const THREADS = [1, 2, 4, 8];
+// 同時使用的 CPU 核心數，讀者自己選，預設值的判斷見 src/tools/transcribe/threads.ts。
+// 多執行緒要頁面在 cross-origin isolation 底下，沒有時只能用 1 個
+const THREADS = THREAD_OPTIONS;
 const ISOLATED = typeof crossOriginIsolated !== "undefined" && crossOriginIsolated;
-const DEFAULT_THREADS = ISOLATED ? Math.min(4, navigator.hardwareConcurrency || 4) : 1;
-
-// 解碼並轉成 16 kHz 單聲道。OfflineAudioContext 解碼時會順便換成它的取樣率，不需要音訊裝置
-async function decode(blob: Blob): Promise<Float32Array> {
-  const ctx = new OfflineAudioContext(1, 1, SAMPLE_RATE);
-  const buffer = await ctx.decodeAudioData(await blob.arrayBuffer());
-  const out = new Float32Array(buffer.length);
-  for (let c = 0; c < buffer.numberOfChannels; c++) {
-    const data = buffer.getChannelData(c);
-    for (let i = 0; i < data.length; i++) out[i]! += data[i]! / buffer.numberOfChannels;
-  }
-  return out;
-}
+const DEFAULT_THREADS = ISOLATED
+  ? defaultThreads({
+      reported: navigator.hardwareConcurrency || 0,
+      brave: "brave" in navigator,
+      // Safari 的 UA 有 Safari 沒有 Chrome；iPad 的 Safari 偽裝成 Mac，用觸控點數分辨
+      safari: /Safari/.test(navigator.userAgent) && !/Chrome|Chromium|Edg/.test(navigator.userAgent),
+      mobileApple: /iPhone|iPad/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1),
+    })
+  : 1;
 
 // 模型有沒有存在這台裝置的瀏覽器裡（service worker 的快取）
 async function isDownloaded(id: ModelId): Promise<boolean> {
@@ -60,7 +47,7 @@ type Phase =
   | { kind: "idle" }
   | { kind: "decoding" }
   | { kind: "download"; loaded: number; total: number }
-  | { kind: "recognize"; done: number; total: number; since: number }
+  | { kind: "recognize"; at: number; duration: number; since: number }
   | { kind: "done" }
   | { kind: "failed" | "decodeFailed" | "tooLong" };
 
@@ -73,15 +60,17 @@ function download(text: string, name: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-export function TranscribeEditor({ blob, onCancel }: FileEditorProps) {
+export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
   const [model, setModel] = useState<ModelId>("small");
   const [language, setLanguage] = useState<"zh" | "auto">("zh");
-  const [threads, setThreads] = useState(THREADS.includes(DEFAULT_THREADS) ? DEFAULT_THREADS : 2);
+  const [threads, setThreads] = useState(DEFAULT_THREADS);
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
   const [segments, setSegments] = useState<Segment[]>([]);
   const [downloaded, setDownloaded] = useState<Partial<Record<ModelId, boolean>>>({});
   const [note, setNote] = useState<string>("");
   const worker = useRef<{ instance: Worker; threads: number } | null>(null);
+  // 每次開始轉換加一，按下停止之後，舊的那一次收到的回覆不再處理
+  const run = useRef(0);
 
   const refresh = () => {
     for (const id of MODEL_IDS) void isDownloaded(id).then((yes) => setDownloaded((d) => ({ ...d, [id]: yes })));
@@ -94,24 +83,24 @@ export function TranscribeEditor({ blob, onCancel }: FileEditorProps) {
   const busy = phase.kind === "decoding" || phase.kind === "download" || phase.kind === "recognize";
 
   const stop = () => {
+    run.current++;
     worker.current?.instance.terminate();
     worker.current = null;
     setPhase({ kind: "idle" });
   };
 
   const start = async () => {
+    const id = ++run.current;
     setSegments([]);
     setNote("");
     setPhase({ kind: "decoding" });
-    let audio: Float32Array;
+    let stream: AudioStream;
+    let chunk: Float32Array | null;
     try {
-      audio = await decode(blob);
-    } catch {
-      setPhase({ kind: "decodeFailed" });
-      return;
-    }
-    if (audio.length / SAMPLE_RATE > MAX_SECONDS) {
-      setPhase({ kind: "tooLong" });
+      stream = await openAudio(blob, format);
+      chunk = await stream.next();
+    } catch (error) {
+      setPhase({ kind: error instanceof TooLargeError ? "tooLong" : "decodeFailed" });
       return;
     }
     // 同一個 Worker 留著用，換模型時由 Worker 放掉舊的。換核心數要換新的 Worker
@@ -121,28 +110,49 @@ export function TranscribeEditor({ blob, onCancel }: FileEditorProps) {
     }
     worker.current ??= { instance: new Worker(new URL("./transcribe.worker.ts", import.meta.url), { type: "module" }), threads };
     const instance = worker.current.instance;
-    const reference = audio.slice();
+    // 送出一個要求，等到指定的回覆
+    let waiting: { type: Reply["type"]; resolve(): void; reject(error: Error): void } | null = null;
+    const send = (request: Request, until: Reply["type"], transfer: Transferable[] = []) =>
+      new Promise<void>((resolve, reject) => {
+        waiting = { type: until, resolve, reject };
+        instance.postMessage(request, transfer);
+      });
     instance.onmessage = (event: MessageEvent<Reply>) => {
       const reply = event.data;
+      if (run.current !== id) return;
       if (reply.type === "download") setPhase({ kind: "download", loaded: reply.loaded, total: reply.total });
-      else if (reply.type === "recognize")
-        setPhase((p) => ({ kind: "recognize", done: reply.done, total: reply.total, since: p.kind === "recognize" ? p.since : Date.now() }));
-      else if (reply.type === "result") {
-        setSegments(cleanSegments(reply.chunks, reference));
-        setPhase({ kind: "done" });
-        refresh();
-      } else {
+      else if (reply.type === "progress")
+        setPhase((p) => ({ kind: "recognize", at: reply.at, duration: stream.duration, since: p.kind === "recognize" ? p.since : Date.now() }));
+      else if (reply.type === "segments") setSegments((list) => mergeSegments([...list, ...reply.segments]));
+      else if (reply.type === "error") {
         // 只有錯誤訊息，不含錄音的內容，讀者回報問題時用得到
         console.warn("[gears] 逐字稿失敗：", reply.message);
-        setPhase({ kind: "failed" });
-      }
+        waiting?.reject(new Error(reply.message));
+      } else if (waiting?.type === reply.type) waiting.resolve();
     };
     instance.onerror = (event) => {
       console.warn("[gears] 逐字稿失敗：", event.message);
-      setPhase({ kind: "failed" });
+      waiting?.reject(new Error(event.message));
     };
-    const request: Request = { type: "run", model, audio, language: language === "zh" ? "zh" : null, base: BASE, threads };
-    instance.postMessage(request, [audio.buffer]);
+    try {
+      await send({ type: "start", model, language: language === "zh" ? "zh" : null, base: BASE, threads }, "ready");
+      setPhase({ kind: "recognize", at: 0, duration: stream.duration, since: Date.now() });
+      let offset = 0;
+      while (chunk) {
+        const seconds = chunk.length / SAMPLE_RATE;
+        await send({ type: "chunk", audio: chunk, offset, last: false }, "done", [chunk.buffer]);
+        if (run.current !== id) return;
+        offset += seconds;
+        chunk = await stream.next();
+      }
+      // 最後送一段空的，把留著接下一段的那句話辨識完
+      await send({ type: "chunk", audio: new Float32Array(0), offset, last: true }, "done");
+      if (run.current !== id) return;
+      setPhase({ kind: "done" });
+      refresh();
+    } catch {
+      if (run.current === id) setPhase({ kind: "failed" });
+    }
   };
 
   const status = (() => {
@@ -154,8 +164,8 @@ export function TranscribeEditor({ blob, onCancel }: FileEditorProps) {
       case "download":
         return t("transcribe.downloading", { loaded: mb(phase.loaded), total: mb(phase.total) });
       case "recognize": {
-        const left = phase.done ? ((Date.now() - phase.since) / phase.done) * (phase.total - phase.done) : 0;
-        const text = t("transcribe.recognizing", { done: phase.done, total: phase.total });
+        const left = phase.at ? ((Date.now() - phase.since) / phase.at) * (phase.duration - phase.at) : 0;
+        const text = t("transcribe.recognizing", { at: clock(phase.at), total: clock(phase.duration) });
         return left ? `${text}${t("transcribe.eta", { time: clock(left / 1000) })}` : text;
       }
       case "done":
@@ -170,7 +180,7 @@ export function TranscribeEditor({ blob, onCancel }: FileEditorProps) {
         return "";
     }
   })();
-  const progress = phase.kind === "download" ? phase.loaded / phase.total : phase.kind === "recognize" ? phase.done / phase.total : null;
+  const progress = phase.kind === "download" ? phase.loaded / phase.total : phase.kind === "recognize" ? Math.min(1, phase.at / phase.duration) : null;
   const error = phase.kind === "failed" || phase.kind === "decodeFailed" || phase.kind === "tooLong";
 
   return (

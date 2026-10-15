@@ -123,17 +123,24 @@ export function collapseRepeats(text: string): string {
 
 const normalize = (text: string) => text.replace(/[\s\p{P}]/gu, "");
 
+// Whisper 在中文句子裡常用半形的逗號與問號，中文字旁邊的半形標點換成全形，英文與數字裡的不動
+const FULL_WIDTH: Record<string, string> = { ",": "，", "?": "？", "!": "！", ":": "：", ";": "；" };
+const HAN = "\\p{Script=Han}";
+export const fullWidthPunctuation = (text: string) =>
+  text.replace(new RegExp(`(?<=${HAN})\\s*([,?!:;])\\s*|\\s*([,?!:;])\\s*(?=${HAN})`, "gu"), (_, a: string, b: string) => FULL_WIDTH[a ?? b]!);
+
 // 整理模型的輸出：去掉空白段落、靜音段落與字幕標語，收掉重複的迴圈，前後一樣的段落合併。
 // 最後一段沒有結束時間時，用錄音的長度
-export function cleanSegments(chunks: RawChunk[], audio: Float32Array): Segment[] {
-  const duration = audio.length / SAMPLE_RATE;
+// audio 是這一段的聲音，從 offset 秒開始（長錄音分段處理，時間是整份錄音的時間）
+export function cleanSegments(chunks: RawChunk[], audio: Float32Array, offset = 0): Segment[] {
+  const duration = offset + audio.length / SAMPLE_RATE;
   const out: Segment[] = [];
   chunks.forEach((chunk, i) => {
-    const text = collapseRepeats(chunk.text.trim());
+    const text = fullWidthPunctuation(collapseRepeats(chunk.text.trim()));
     if (!normalize(text) || isCaptionCredit(text)) return;
     const start = chunk.timestamp[0];
     const end = chunk.timestamp[1] ?? chunks[i + 1]?.timestamp[0] ?? duration;
-    if (rms(audio, start, end) < SILENCE_RMS) return;
+    if (rms(audio, start - offset, end - offset) < SILENCE_RMS) return;
     const prev = out.at(-1);
     if (prev && normalize(prev.text) === normalize(text)) {
       prev.end = Math.max(prev.end, end);
@@ -141,6 +148,17 @@ export function cleanSegments(chunks: RawChunk[], audio: Float32Array): Segment[
     }
     out.push({ start, end: Math.max(end, start), text });
   });
+  return out;
+}
+
+// 分段處理時，前一段的最後一句與下一段的第一句可能一樣，合併
+export function mergeSegments(segments: Segment[]): Segment[] {
+  const out: Segment[] = [];
+  for (const seg of segments) {
+    const prev = out.at(-1);
+    if (prev && normalize(prev.text) === normalize(seg.text) && seg.start - prev.end < 2) prev.end = Math.max(prev.end, seg.end);
+    else out.push({ ...seg });
+  }
   return out;
 }
 

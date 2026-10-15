@@ -81,7 +81,7 @@ function trackInfo(bytes: Uint8Array, trak: Box): Track {
 }
 
 // 每一格資料在檔案裡的位置：stsc 說每個 chunk 有幾格，stco 是 chunk 的位置，stsz 是每格的長度
-function sampleRanges(bytes: Uint8Array, stbl: Box): [number, number][] {
+export function sampleRanges(bytes: Uint8Array, stbl: Box): [number, number][] {
   const boxes = readBoxes(bytes, payload(stbl), stbl.end);
   const find = (type: string) => boxes.find((b) => b.type === type);
   const stsc = find("stsc");
@@ -309,7 +309,7 @@ const MAX_TIMED_READ = 4 * 1024 * 1024;
 const read = async (blob: Blob, start: number, end: number) => new Uint8Array(await blob.slice(start, end).arrayBuffer());
 
 // 第一層的 box：只讀每個 box 的標頭
-async function topBoxes(blob: Blob): Promise<Box[]> {
+export async function topBoxes(blob: Blob): Promise<Box[]> {
   const boxes: Box[] = [];
   let at = 0;
   while (at + 8 <= blob.size) {

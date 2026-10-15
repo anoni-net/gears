@@ -6,21 +6,28 @@ import asyncifyMjs from "../../node_modules/@huggingface/transformers/node_modul
 import asyncifyWasm from "../../node_modules/@huggingface/transformers/node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.asyncify.wasm?url";
 import plainMjs from "../../node_modules/@huggingface/transformers/node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.mjs?url";
 import plainWasm from "../../node_modules/@huggingface/transformers/node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.wasm?url";
-import { MODELS, type ModelId, type RawChunk, SAMPLE_RATE, maxTokens, speechPieces } from "../tools/transcribe/segments.ts";
+import { MODELS, type ModelId, type RawChunk, SAMPLE_RATE, type Segment, cleanSegments, maxTokens, speechPieces } from "../tools/transcribe/segments.ts";
 
 // 逐字稿的辨識在這個 Web Worker 裡執行，畫面不會卡住。用 Transformers.js 跑 Whisper，
 // 模型與 WebAssembly 都從自己的網域載入：關掉 Hugging Face 的下載，也不另外寫進
 // Transformers.js 自己的快取（離線快取由 service worker 處理，見 src/sw/sw-template.js）。
 // 錄音只在這個分頁的記憶體裡，不會送出去。
 
+// 長錄音分段送進來（src/ui/audio-stream.ts 每次解碼約 10 分鐘），一段處理完回覆 done，
+// 畫面才送下一段，記憶體裡同時只有一段。
+//
 // threads 是同時使用的 CPU 核心數。onnxruntime 在第一次載入時就決定了執行緒數，
 // 換核心數要換一個新的 Worker（src/ui/TranscribeEditor.tsx）
-export type Request = { type: "run"; model: ModelId; audio: Float32Array; language: "zh" | null; base: string; threads: number };
+export type Request =
+  | { type: "start"; model: ModelId; language: "zh" | null; base: string; threads: number }
+  | { type: "chunk"; audio: Float32Array; offset: number; last: boolean };
 
 export type Reply =
   | { type: "download"; loaded: number; total: number }
-  | { type: "recognize"; done: number; total: number }
-  | { type: "result"; chunks: RawChunk[] }
+  | { type: "ready" }
+  | { type: "progress"; at: number } // 處理到第幾秒
+  | { type: "segments"; segments: Segment[] }
+  | { type: "done" }
   | { type: "error"; message: string };
 
 const post = (reply: Reply) => (self as unknown as DedicatedWorkerGlobalScope).postMessage(reply);
@@ -74,31 +81,59 @@ async function toTaiwan(text: string): Promise<string> {
   return convert(text);
 }
 
-self.onmessage = async (event: MessageEvent<Request>) => {
-  const { model, audio, language, base, threads } = event.data;
-  try {
-    const asr = await load(model, base, threads);
-    // 只辨識有人說話的片段（語音偵測見 src/tools/transcribe/segments.ts），每段不超過 30 秒
-    const pieces = speechPieces(audio);
-    post({ type: "recognize", done: 0, total: pieces.length });
-    const raw: RawChunk[] = [];
-    for (const [i, piece] of pieces.entries()) {
-      const offset = piece.start / SAMPLE_RATE;
-      const out = await asr(audio.subarray(piece.start, piece.end), {
-        language: language ?? undefined,
-        task: "transcribe",
-        return_timestamps: true,
-        max_new_tokens: maxTokens(piece.end - piece.start),
-      });
-      for (const chunk of out.chunks ?? []) {
-        const [start, end] = chunk.timestamp;
-        raw.push({ text: chunk.text, timestamp: [start + offset, end === null ? piece.end / SAMPLE_RATE : end + offset] });
-      }
-      post({ type: "recognize", done: i + 1, total: pieces.length });
+let job: { asr: Pipeline; language: "zh" | null } | null = null;
+// 碰到這一段結尾的最後一句話先留著，接到下一段一起辨識，一句話才不會被切成兩半
+let carry: { audio: Float32Array; offset: number } | null = null;
+
+async function recognize(chunk: Float32Array, at: number, last: boolean) {
+  const { asr, language } = job!;
+  const audio = carry ? concat(carry.audio, chunk) : chunk;
+  const offset = carry ? carry.offset : at;
+  carry = null;
+  // 只辨識有人說話的片段（語音偵測見 src/tools/transcribe/segments.ts），每段不超過 30 秒
+  let pieces = speechPieces(audio);
+  const tail = pieces.at(-1);
+  if (!last && tail && tail.end >= audio.length - 0.3 * SAMPLE_RATE) {
+    carry = { audio: audio.slice(tail.start), offset: offset + tail.start / SAMPLE_RATE };
+    pieces = pieces.slice(0, -1);
+  }
+  const raw: RawChunk[] = [];
+  for (const piece of pieces) {
+    const start = offset + piece.start / SAMPLE_RATE;
+    const out = await asr(audio.subarray(piece.start, piece.end), {
+      language: language ?? undefined,
+      task: "transcribe",
+      return_timestamps: true,
+      max_new_tokens: maxTokens(piece.end - piece.start),
+    });
+    for (const c of out.chunks ?? []) {
+      const [s, e] = c.timestamp;
+      raw.push({ text: await toTaiwan(c.text), timestamp: [s + start, e === null ? offset + piece.end / SAMPLE_RATE : e + start] });
     }
-    const chunks: RawChunk[] = [];
-    for (const chunk of raw) chunks.push({ ...chunk, text: await toTaiwan(chunk.text) });
-    post({ type: "result", chunks });
+    post({ type: "progress", at: offset + piece.end / SAMPLE_RATE });
+  }
+  post({ type: "segments", segments: cleanSegments(raw, audio, offset) });
+  post({ type: "progress", at: carry ? carry.offset : offset + audio.length / SAMPLE_RATE });
+}
+
+function concat(a: Float32Array, b: Float32Array): Float32Array {
+  const out = new Float32Array(a.length + b.length);
+  out.set(a);
+  out.set(b, a.length);
+  return out;
+}
+
+self.onmessage = async (event: MessageEvent<Request>) => {
+  const request = event.data;
+  try {
+    if (request.type === "start") {
+      carry = null;
+      job = { asr: await load(request.model, request.base, request.threads), language: request.language };
+      post({ type: "ready" });
+    } else {
+      await recognize(request.audio, request.offset, request.last);
+      post({ type: "done" });
+    }
   } catch (error) {
     post({ type: "error", message: error instanceof Error ? error.message : String(error) });
   }
