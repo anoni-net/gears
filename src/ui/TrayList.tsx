@@ -6,6 +6,8 @@ import { tray } from "../state.ts";
 import { fileTools } from "../tools/index.ts";
 import { useState } from "preact/hooks";
 import { BatchActions } from "./BatchActions.tsx";
+import { Icon } from "./Icon.tsx";
+import { fileIcon } from "./file-icon.ts";
 import { useObjectUrl } from "./hooks.ts";
 
 interface ItemProps {
@@ -21,7 +23,7 @@ function Item({ file, selected, onSelect }: ItemProps) {
   // 文件的註解與追蹤修訂是內容，清除之後仍然在，不算在找到的項目裡
   const found = current.findings.filter((f) => !CONTENT_FINDINGS.includes(f.code)).length;
   const url = useObjectUrl(isImage ? current.blob : undefined);
-  // Chrome、Firefox 不能顯示 HEIC，縮圖載入失敗時改成灰色方塊，不顯示破圖
+  // Chrome、Firefox 不能顯示 HEIC，縮圖載入失敗時改成圖片的圖示，不顯示破圖
   const [broken, setBroken] = useState(false);
   const status =
     current.format === "age"
@@ -37,7 +39,9 @@ function Item({ file, selected, onSelect }: ItemProps) {
         {url && !broken ? (
           <img src={url} alt="" onError={() => setBroken(true)} />
         ) : (
-          <span class="thumb" aria-hidden="true" />
+          <span class="thumb" aria-hidden="true">
+            <Icon name={fileIcon(current.format, isImage)} />
+          </span>
         )}
         <span class="meta">
           <span class="name">{file.name}</span>
