@@ -423,6 +423,19 @@ h4 {
   object-fit: contain;
 }
 
+.preview video {
+  max-width: 100%;
+  max-height: 60vh;
+}
+
+.preview audio {
+  width: 100%;
+}
+
+.preview.media {
+  align-items: center;
+}
+
 .panel h3:first-child {
   margin-top: 0;
 }
@@ -448,6 +461,17 @@ h4 {
   color: var(--text);
   font-size: 0.85rem;
   overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+
+/* 文件內容裡要留意的：不是中繼資料，清除之後仍然在，用中性的底色跟上面分開 */
+.content-findings h4 {
+  margin: 1rem 0 0.4rem;
+}
+
+.content-findings .findings li {
+  background: var(--fill);
+  color: var(--text);
 }
 
 .ok,

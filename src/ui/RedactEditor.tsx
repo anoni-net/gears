@@ -20,8 +20,8 @@ async function render(bitmap: ImageBitmap, boxes: Box[], format: Format): Promis
   canvas.width = bitmap.width;
   canvas.height = bitmap.height;
   const ctx = canvas.getContext("2d")!;
-  // HEIC 沒有辦法在瀏覽器裡編碼，遮蔽之後輸出成 JPEG
-  const jpeg = format !== "png";
+  // 瀏覽器只編碼得了 JPEG 與 PNG。PNG、GIF、BMP 這類常是截圖或圖示，輸出 PNG，其他輸出 JPEG
+  const jpeg = !["png", "gif", "bmp"].includes(format);
   if (jpeg) {
     ctx.fillStyle = "#fff";
     ctx.fillRect(0, 0, canvas.width, canvas.height);

@@ -133,6 +133,20 @@ function dms(values?: number[]): number | undefined {
   return values[0]! + values[1]! / 60 + values[2]! / 3600;
 }
 
+// HEIF 與 JPEG XL 的 Exif 區塊，規格上是 4 個位元組的位移再接 TIFF，但有些程式省略位移，
+// 或在前面加上 Exif\0\0。依開頭判斷，找出 TIFF 開始的位置（相對於區塊開頭）
+export function tiffStart(bytes: Uint8Array, at: number, end: number): number {
+  const isTiff = (i: number) =>
+    i + 4 <= end && ((bytes[i] === 0x4d && bytes[i + 1] === 0x4d && bytes[i + 3] === 0x2a) || (bytes[i] === 0x49 && bytes[i + 1] === 0x49 && bytes[i + 2] === 0x2a));
+  if (isTiff(at)) return 0;
+  const exifPrefix = (i: number) => i + 6 <= end && bytes[i] === 0x45 && bytes[i + 1] === 0x78 && bytes[i + 2] === 0x69 && bytes[i + 3] === 0x66;
+  if (exifPrefix(at)) return 6;
+  if (at + 4 > end) return end - at;
+  const offset = ((bytes[at]! << 24) >>> 0) + ((bytes[at + 1]! << 16) | (bytes[at + 2]! << 8) | bytes[at + 3]!);
+  const start = 4 + offset;
+  return at + start <= end ? start : end - at;
+}
+
 export function exifFindings(info: ExifInfo): Finding[] {
   const findings: Finding[] = [];
   if (info.gps) {

@@ -7,7 +7,7 @@
 - 預設在瀏覽器裡處理。之後若提供上傳到社群伺服器的選項，上傳前要在畫面上寫清楚檔案送到哪裡、誰看得到、保留多久、伺服器會不會留下紀錄，由讀者決定
 - 上傳端點不經過 Cloudflare。Cloudflare 在邊緣解開 TLS，經過的檔案對它是明文
 - 頁面能連線的對象寫死在 CSP 裡（`vite.config.ts`），新增任何對外連線都要改那裡，並在畫面上標示
-- 執行期的相依套件只有 `preact`、`qrcode-generator`（QR code 產生）、`jsqr`（QR code 讀取）、`age-encryption`（加密，連同它相依的 noble 系列）與 `libheif-js`（HEIC 解碼，LGPL-3.0，見下方「HEIC」）。新增套件前先想能不能自己寫，必要時鎖定確切的版本。工具用到的套件在打開工具時才載入
+- 執行期的相依套件只有 `preact`、`qrcode-generator`（QR code 產生）、`jsqr`（QR code 讀取）、`age-encryption`（加密，連同它相依的 noble 系列）、`libheif-js`（HEIC 解碼，LGPL-3.0，見下方「HEIC」）與 `pdf-lib`（PDF 的解析與寫出，見下方「文件」）。新增套件前先想能不能自己寫，必要時鎖定確切的版本。工具用到的套件在打開工具時才載入
 - 結構有問題的檔案就停下來，不交出一份沒處理乾淨的檔案
 
 ## 支援的瀏覽器
@@ -35,7 +35,7 @@ npm run test:unit    # 只執行單元測試，不需要瀏覽器
 
 | 位置 | 內容 |
 |---|---|
-| `src/core/` | 位元組工具、工具模組的介面（`tool.ts`）、檔案暫存區（`tray.ts`）、不經過 canvas 的 PNG 編碼（`png-encode.ts`） |
+| `src/core/` | 位元組工具、工具模組的介面（`tool.ts`）、檔案暫存區（`tray.ts`）、不經過 canvas 的 PNG 編碼（`png-encode.ts`）、zip 的讀寫（`zip.ts`）、XML 的掃描與改寫（`xml.ts`） |
 | `src/tools/` | 各個工具的純邏輯，一個工具一個目錄，在 `src/tools/index.ts` 登記 |
 | `src/ui/`、`src/app.tsx` | 介面元件。`src/ui/registry.tsx` 登記從空白開始的工具用的元件，`src/ui/tool-meta.ts` 是每個工具的圖示與類別 |
 | `src/router.ts` | 每個工具的網址 |
@@ -44,7 +44,7 @@ npm run test:unit    # 只執行單元測試，不需要瀏覽器
 | `tests/e2e/` | 在 Chromium、WebKit、Firefox 與 iPhone 尺寸上測整個流程 |
 | `tests/helpers/` | 產生測試檔案的程式 |
 | `public/` | 網站圖示、主畫面圖示與 manifest |
-| `licenses/` | 第三方圖示與 HEIC 解碼器的授權全文 |
+| `licenses/` | 第三方圖示、HEIC 解碼器與 pdf-lib 的授權全文 |
 
 ## 工具模組
 
@@ -85,6 +85,10 @@ node scripts/fetch-165.mjs   # 下載並整理成 public/data/165.txt
 
 每個工具有自己的網址，例如 `/gears/qrcode/`。建置時 `vite.config.ts` 替每個工具產生一份 HTML，標題與描述取自語系檔的 `meta.<id>.*`，內容跟首頁相同，打開之後由 `src/router.ts` 判斷要顯示哪個工具。主機不需要轉址設定。
 
+## 其他欄位的內容
+
+檢查時找到的「其他程式自訂的欄位或識別碼」也列出名稱與內容（`src/tools/strip-metadata/preview.ts`），廠商的私有區段常藏著序號、帳號或裝置的識別碼。文字直接顯示，二進位資料抽出連續 4 個字元以上的可讀字串，抽不到就顯示開頭的 16 個位元組。同一種資訊的不同值逐行列出（`mergeFindings`），超過 8 個只列前 8 個。
+
 ## 介面上的限制
 
 - 能不用 canvas 輸出圖檔就不用。Brave 預設會擾動 canvas 讀出來的像素，QR code 的 PNG 由 `src/core/png-encode.ts` 直接寫位元組。遮蔽與 QR code 讀取必須解碼影像，只能用 canvas：遮蔽輸出後抽查每個框是否夠黑，門檻容許這點雜訊。QR code 讀取對雜訊不敏感
@@ -96,9 +100,89 @@ node scripts/fetch-165.mjs   # 下載並整理成 public/data/165.txt
 
 照片與圖檔不進 repo，品牌圖示（`public/icons/`）例外。單元測試用 `tests/helpers/fixtures.ts` 組出結構完整的檔案。瀏覽器測試先用 canvas 產生一張可以解碼的圖，再塞進中繼資料。
 
-HEIC 有兩種測試檔。單元測試在測試裡組出結構完整、不能解碼的檔案。能解碼的真 HEIC 由 `tests/global-setup.ts` 在瀏覽器測試開始前呼叫 `scripts/make-test-heic.py`，用 pillow-heif 產生到 `tests/.generated/`（不進版控）。有 `uv` 就用 `uv run --with pillow-heif==1.8.1`，CI 用 `astral-sh/setup-uv` 安裝。產生不了時，用到真 HEIC 的測試會略過。
+HEIC 有兩種測試檔。單元測試在測試裡組出結構完整、不能解碼的檔案。能解碼的真 HEIC 由 `tests/global-setup.ts` 在瀏覽器測試開始前呼叫 `scripts/make-test-images.py`，用 pillow-heif 產生到 `tests/.generated/`（不進版控）。有 `uv` 就用 `uv run --with pillow-heif==1.8.1`，CI 用 `astral-sh/setup-uv` 安裝。產生不了時，用到真 HEIC 的測試會略過。
 
 QR code 的測試把產生的 PNG 解碼回像素，用 `jsQR` 讀出文字，跟輸入比對，中文與 Wi-Fi 的特殊字元都要測。編碼寫錯的典型後果是掃得出來、內容卻錯。
+
+## 清除中繼資料支援的格式
+
+格式的範圍參考 mat2（Tails 的 Metadata Cleaner 背後的工具），每種格式一個檔案，在 `src/tools/strip-metadata/index.ts` 登記。原則跟 JPEG 一樣：用白名單保留影像需要的部分，其他一律拿掉，不重新編碼。
+
+| 格式 | 做法 |
+|---|---|
+| JPEG | 拿掉 APP 區段與註解，接在影像後面的資料一併拿掉，只把旋轉方向寫回去 |
+| PNG | 保留影像需要的 chunk，文字、時間與 eXIf 拿掉 |
+| HEIC、AVIF | 原地把 EXIF 與 XMP 換成空白的內容，長度與結構不變 |
+| WebP | 拿掉 EXIF 與 XMP chunk，清掉 VP8X 的旗標，重算 RIFF 長度 |
+| GIF | 拿掉註解與不認得的應用程式延伸，保留迴圈與色彩描述檔 |
+| TIFF | 用白名單保留解碼需要的標籤，原地改寫 IFD，拿掉的標籤與 EXIF、GPS 子 IFD 的資料清成零 |
+| SVG | 拿掉 metadata、註解與 inkscape、sodipodi 的元素與屬性（常帶著電腦上的路徑） |
+| BMP | 沒有描述用的欄位，只拿掉檔尾的附加資料 |
+| PNM | 拿掉 # 開頭的註解 |
+| JPEG XL | 拿掉 Exif、xml、jumb、brob box |
+| Word、Excel、PowerPoint（docx、xlsx、pptx） | 見下方「文件」 |
+| LibreOffice（odt、ods、odp、odg） | 見下方「文件」 |
+| PDF | 見下方「文件」 |
+| MP3、M4A、MP4、MOV、WAV、AVI、FLAC、Ogg、Opus、MKV、WebM | 見下方「音訊與影片」 |
+| ZIP、TAR、gzip、EPUB、種子檔、HTML | 見下方「壓縮檔與其他格式」 |
+
+驗證時在本機用 Pillow 產生帶中繼資料的真實檔案，清除之後再用 Pillow 解碼，確認像素與原檔相同。
+
+## 文件
+
+Office 與 LibreOffice 的文件都是 zip 包著一組 XML，`src/core/zip.ts` 用瀏覽器內建的 `DecompressionStream` 解壓縮，`src/core/xml.ts` 逐一讀出標籤，只改動規則指定的元素、屬性與文字，其餘照抄。重新打包時時間戳記統一成 1980-01-01，不寫附加欄位與註解，檔案的順序與壓縮方式維持原樣。
+
+| 格式 | 拿掉或改寫 |
+|---|---|
+| docx、xlsx、pptx（`ooxml.ts`） | 文件摘要（作者、公司、時間、編輯時數）、自訂屬性與 `customXml`、預覽圖、印表機設定、敏感度標籤、數位簽章、Word 的 rsid 與文件識別碼、範本與合併列印來源、Excel 記下的存檔路徑、外部連結的路徑只留檔名，指向拿掉部件的關聯、`[Content_Types].xml` 與 `r:id` 一併修正 |
+| odt、ods、odp、odg（`odf.ts`） | `meta.xml` 清空、`settings.xml` 的印表機與資料庫設定、預覽圖、數位簽章、rsid，manifest 跟著更新，第一個檔案仍是不壓縮的 `mimetype` |
+| PDF（`pdf.ts`） | 文件資訊、XMP、文件識別碼、PieceInfo、數位簽章，重新寫出時只保留從文件目錄走得到的物件，增量更新留下的舊版本不會帶過去 |
+
+三種格式都一樣的部分：
+
+- 註解與追蹤修訂是讀者寫進去的內容，保留下來，作者改成 `Author`，時間拿掉或改成固定的值。檢查時列在「文件內容裡要留意的」，提醒讀者刪除的文字仍在檔案裡（`CONTENT_FINDINGS`，清除中繼資料的 `resolves` 不包含它們）
+- 內嵌的圖片交給對應格式的處理程式，內嵌的 Office 文件也是，最多三層
+- 加密的文件、有巨集的 Office 文件（docm 等）不處理
+
+pdf-lib（MIT，相依的 pako、tslib 等也一起打包）壓縮後約 180 KB，打開 PDF 時才載入，授權全文在 `licenses/pdf-lib.txt`。透過 `src/tools/strip-metadata/pdf-lib.ts` 載入，建置出來的檔名才看得出用途。
+
+單元測試用 `tests/helpers/documents.ts` 組出在各處都塞了秘密字串的文件，清除後逐一確認不在檔案裡、內文還在、套件內部的關聯前後一致。真實的檔案在本機用 python-docx、openpyxl、python-pptx 產生，再用 LibreOffice 轉成 ODF 與 PDF，清除之後用 LibreOffice 開啟並轉成 PDF，比對文字與原檔相同。
+
+## 音訊與影片
+
+手機錄的影片在 MP4、MOV 裡記錄拍攝位置、手機型號與系統版本，音樂與錄音的標籤記錄演出者、封面與編碼軟體。
+
+| 格式 | 做法 |
+|---|---|
+| MP4、MOV、M4A（`mp4.ts`） | `udta`、`meta`、XMP 與廠商的 `uuid` 改成 `free`、內容清成零，`mvhd`、`tkhd`、`mdhd` 的時間清成零，計時的中繼資料軌（iPhone 的 `mebx`、GoPro 的 `gpmd`、Google 的 `camm`）每一格的資料清成零 |
+| MP3（`mp3.ts`） | 拿掉開頭的 ID3v2，檔尾的 ID3v1、APEv2 與 Lyrics3，只留音訊框 |
+| WAV、AVI（`riff.ts`） | 用白名單保留需要的 chunk，其他的代號改成 `JUNK`、內容清成零，`JUNK` 原本的內容也清掉，RIFF 之後附加的資料拿掉 |
+| FLAC（`flac.ts`） | 保留 STREAMINFO、SEEKTABLE、CUESHEET，標籤、封面、程式自訂的區塊拿掉 |
+| Ogg Vorbis、Opus（`ogg.ts`） | 註解封包換成空白的，標頭重新分頁，後面每一頁重編序號、重算 CRC |
+| MKV、WebM（`ebml.ts`） | `Tags`、標題、建立時間、軌道名稱換成同樣長度的 `Void`，`MuxingApp`、`WritingApp` 清成空字串，母元素的 CRC-32 重算 |
+
+MP4、MOV、AVI、MKV 的影音資料位置記在索引裡，所以原地處理，檔案長度不變，影音資料一個位元都不動。各格式的標籤名稱不同，`media-tags.ts` 把它們對應到同一組資訊。附加檔案（MKV 的字型與封面）是內容，保留下來，檢查時另外提醒。
+
+手機影片常有好幾 GB，超過瀏覽器一次能讀進記憶體的大小。超過 256 MB 的檔案（`LARGE_FILE`）不整個讀進來，暫存區只讀開頭判斷格式，交給有 `acceptsLarge` 的工具。目前只有 MP4、MOV、M4A 支援：中繼資料都在 mdat 以外的 box，`stripMp4Blob` 只讀那幾個 box 與計時中繼資料的那幾格，改好的部分跟原檔的其他片段組成新的 Blob，影音資料不經過記憶體。其他格式的大檔案，以及遮蔽、加密這類需要整個檔案的工具，畫面上說明目前沒有辦法處理。
+
+檔案畫面用瀏覽器內建的播放器預覽，CSP 加上 `media-src blob:`，只能播放暫存區裡的檔案。播放器自己建立與收回網址，換版本時先讓播放器放掉網址，iOS 的 Safari 才不會去讀已經收回的網址。
+
+單元測試用 `tests/helpers/media.ts` 組出各格式的測試檔。真實的檔案在本機用 ffmpeg 產生（帶標題、演出者、位置、封面），清除之後用 ffprobe 確認標籤不見，用 `ffmpeg -f md5` 比對解碼後的聲音與影像跟原檔相同。
+
+## 壓縮檔與其他格式
+
+| 格式 | 做法 |
+|---|---|
+| ZIP（`archive.ts`） | 重新打包：時間統一、不寫附加欄位（Unix 的使用者 ID、精確的時間）與註解。`__MACOSX`、`._` 開頭的檔案、`.DS_Store`、`Thumbs.db` 拿掉（macOS 的延伸屬性常帶著下載來源的網址，`Thumbs.db` 存著圖片的縮圖），裡面的照片、文件與影音一起清除 |
+| TAR（`tar.ts`） | 擁有者改成 0 與空白、時間清成零，pax 延伸標頭只留檔名、連結、大小與稀疏檔的欄位，權限保留，系統檔拿掉，裡面的檔案一起清除 |
+| gzip（`gzip.ts`） | 標頭的原始檔名、時間與註解拿掉，解壓縮之後交給裡面的格式（通常是 TAR）再壓縮回去 |
+| EPUB（`epub.ts`） | OPF 的 metadata 只留書名、語言與識別碼，識別碼換成隨機的 UUID（有字型混淆時不換），目錄的作者、內文的 meta 與註解、`iTunesMetadata.plist` 拿掉，有 DRM 的不處理 |
+| 種子檔（`torrent.ts`） | 只留 `info`、tracker 與 web seed，建立的程式、時間、註解與發布者拿掉。`info` 一個位元組都不動，種子的識別碼不變 |
+| HTML（`html.ts`） | 註解（另存網頁時的 `saved from url=`）與不影響顯示的 meta 拿掉，script、style 裡的內容不動。用 latin1 讀寫，Big5 的網頁不會改壞 |
+
+ZIP 類的格式依序判斷：Office、ODF、EPUB，都不是才當成一般的壓縮檔。有巨集的 Office 文件與 ODF 範本不當成壓縮檔，免得只清了外殼、裡面的作者沒動。下載時壓縮檔沿用原本的副檔名（cbz、jar、tar.gz）。
+
+CSS 沒有可靠的檔頭可以判斷格式，暫時不處理。
 
 ## HEIC
 
@@ -128,11 +212,12 @@ iPhone 預設拍出來的是 HEIC，在網頁上選照片時交出來的也是�
 
 ## 規劃
 
-產品規劃記錄在社群的工作區，還沒有公開。目前完成第一階段：桌面、檔案暫存區，以及清除中繼資料（JPEG、PNG、HEIC）、遮蔽、加密與解密、age 金鑰產生器、QR code 產生器與讀取、網址檢查、密語與密碼產生器，可以下載與系統分享。部署到 `anoni.net/gears/` 是下一步。
+產品規劃記錄在社群的工作區，還沒有公開。目前完成第一階段：桌面、檔案暫存區，以及清除中繼資料（JPEG、PNG、HEIC、AVIF、WebP、GIF、TIFF、SVG、BMP、PNM、JPEG XL，Word、Excel、PowerPoint、LibreOffice 文件與 PDF，MP3、M4A、MP4、MOV、WAV、AVI、FLAC、Ogg、Opus、MKV、WebM，ZIP、TAR、gzip、EPUB、種子檔、HTML）、遮蔽、加密與解密、age 金鑰產生器、QR code 產生器與讀取、網址檢查、密語與密碼產生器，可以下載與系統分享。部署到 `anoni.net/gears/` 是下一步。
 
 ## 第三方資料
 
 - 密語的字詞表來自 [asian-diceware](https://github.com/anoni-net/asian-diceware) `v0.4.0`，CC BY 4.0，畫面上標示出處
 - 工具的圖示來自 [Material Design Icons](https://pictogrammers.com/library/mdi/)，Pictogrammers Free License
 - HEIC 解碼器來自 [libheif-js](https://github.com/catdad-experiments/libheif-js) 1.23.5（libheif 與 libde265，LGPL-3.0），見 `licenses/libheif.txt`
+- PDF 的解析與寫出用 [pdf-lib](https://github.com/Hopding/pdf-lib) 1.17.1（MIT），見 `licenses/pdf-lib.txt`
 - 165 反詐騙清單見上方，部署時下載，不進版控

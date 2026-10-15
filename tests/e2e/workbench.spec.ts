@@ -46,7 +46,7 @@ async function previewLoaded(page: Page) {
 test("桌面有暫存區、任務捷徑與兩組工具，沒有檔案時不顯示清空按鈕", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "隱私工作台" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "暫存區" })).toBeVisible();
-  await expect(page.getByRole("button", { name: /分享照片前，拿掉拍攝位置/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /分享照片與影片前，拿掉拍攝位置/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /把 Wi-Fi 密碼傳給朋友/ })).toBeVisible();
   await expect(page.getByRole("heading", { name: "處理檔案" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "從空白開始" })).toBeVisible();
@@ -72,7 +72,7 @@ test("JPEG：找出位置、清除、下載，旋轉方向保留", async ({ page
 
   const out = await download(page);
   expect(sniff(out)).toBe("jpeg");
-  expect(stripMetadata.inspect(out, "jpeg")).toEqual([]);
+  expect((await stripMetadata.inspect(out, "jpeg"))).toEqual([]);
   expect(Buffer.from(out).includes("MOTION-PHOTO-SECRET")).toBe(false);
   const exifAt = indexOf(out, "Exif\0\0");
   expect(parseExif(out.subarray(exifAt + 6)).orientation).toBe(6);
@@ -89,7 +89,7 @@ test("退回上一步，再清空暫存區", async ({ page }) => {
   await expect(page.getByRole("button", { name: "退回上一步" })).toHaveCount(0);
 
   await page.getByRole("button", { name: "清空暫存區" }).click();
-  await expect(page.getByRole("button", { name: /分享照片前，拿掉拍攝位置/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /分享照片與影片前，拿掉拍攝位置/ })).toBeVisible();
   await expect(page.locator(".tray .item")).toHaveCount(0);
   await expect(page.getByText("把檔案拖進來，或")).toBeVisible();
 });
@@ -106,7 +106,7 @@ test("PNG：文字欄位與 eXIf 一起拿掉", async ({ page }) => {
 
   const out = await download(page);
   expect(sniff(out)).toBe("png");
-  expect(stripMetadata.inspect(out, "png")).toEqual([]);
+  expect((await stripMetadata.inspect(out, "png"))).toEqual([]);
   expect(Buffer.from(out).includes("Jane Doe")).toBe(false);
 });
 
@@ -137,7 +137,7 @@ test("很長的檔名不會把版面撐出橫向捲軸", async ({ page }) => {
 
 test("不能預覽的檔案說明清楚，只提供加密", async ({ page }) => {
   await addFile(page, "notes.txt", "text/plain", text("hello"));
-  await expect(page.getByText("這種檔案不能預覽")).toBeVisible();
+  await expect(page.getByText("這種檔案還沒有辦法檢查裡面的中繼資料")).toBeVisible();
   await expect(page.locator(".tray .item")).toContainText("不能預覽");
   await expect(page.getByRole("button", { name: "清除", exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "開始加密" })).toBeVisible();

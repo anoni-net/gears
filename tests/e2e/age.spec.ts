@@ -39,7 +39,7 @@ test("加密給公鑰，輸出成文字格式", async ({ page }) => {
   const recipient = await identityToRecipient(identity);
   await page.goto("./");
   await page.getByTestId("file-input").setInputFiles({ name: "notes.txt", mimeType: "text/plain", buffer: Buffer.from("hello") });
-  await expect(page.getByText("這種檔案不能預覽")).toBeVisible();
+  await expect(page.getByText("這種檔案還沒有辦法檢查裡面的中繼資料")).toBeVisible();
   await page.getByRole("button", { name: "開始加密" }).click();
   await page.getByLabel("對方的公鑰").check();
   await page.getByLabel("對方的 age 公鑰，一行一把").fill("ssh-rsa AAAA");

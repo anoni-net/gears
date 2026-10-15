@@ -1,6 +1,6 @@
-import { useEffect, useState } from "preact/hooks";
-import { EXTENSION, isPhoto } from "../core/bytes.ts";
-import { type Report, ToolError } from "../core/tool.ts";
+import { useEffect, useRef, useState } from "preact/hooks";
+import { EXTENSION, VIDEO_FORMATS, isMedia, isPhoto } from "../core/bytes.ts";
+import { CONTENT_FINDINGS, type Report, ToolError } from "../core/tool.ts";
 import type { TrayFile, Version } from "../core/tray.ts";
 import { t, tDynamic } from "../i18n/index.ts";
 import { tray } from "../state.ts";
@@ -16,6 +16,11 @@ import { decodeQrFromBlob } from "./qr-scan.ts";
 // 下載的檔名不沿用原檔名（常帶有拍攝日期），只決定副檔名。不能預覽的檔案沒有
 // 可靠的格式判斷，沿用原檔名的副檔名，解密時先拿掉 .age
 function extension(name: string, format: Version["format"]): string {
+  // PNM 有 pbm、pgm、ppm、pam 幾種副檔名，沿用原本的
+  if (format === "pnm") return /\.(pbm|pgm|ppm|pnm|pam)$/i.exec(name)?.[1]?.toLowerCase() ?? EXTENSION.pnm;
+  // 壓縮檔沿用原本的副檔名：jar、cbz 這類也是 ZIP，.tar.gz 是兩層
+  if (format === "gz") return /\.(tar\.gz|tgz|svgz|gz)$/i.exec(name)?.[1]?.toLowerCase() ?? EXTENSION.gz;
+  if (format === "zip") return /\.([a-z0-9]{2,5})$/i.exec(name)?.[1]?.toLowerCase() ?? EXTENSION.zip;
   if (format !== "unknown") return EXTENSION[format];
   const ext = /\.([a-z0-9]{1,5})$/i.exec(name.replace(/\.age$/i, ""))?.[1];
   return ext ? ext.toLowerCase() : EXTENSION.unknown;
@@ -59,6 +64,36 @@ function Preview({ url, blob, format }: { url?: string; blob: Blob; format: Vers
   );
 }
 
+// 音訊與影片用瀏覽器內建的播放器。MKV、AVI 這類多半播不了，改成說明。
+// 網址自己管：換版本時先讓播放器放掉網址再收回，iOS 的 Safari 才不會去讀已經收回的網址
+function MediaPreview({ blob, format }: { blob: Blob; format: Version["format"] }) {
+  const ref = useRef<HTMLVideoElement & HTMLAudioElement>(null);
+  const [url, setUrl] = useState<string>();
+  const [broken, setBroken] = useState(false);
+  useEffect(() => {
+    const next = URL.createObjectURL(blob);
+    setUrl(next);
+    setBroken(false);
+    return () => {
+      ref.current?.removeAttribute("src");
+      ref.current?.load();
+      URL.revokeObjectURL(next);
+    };
+  }, [blob]);
+  if (!url) return null;
+  return (
+    <figure class="preview media">
+      {broken ? (
+        <p class="hint">{t("file.noPlayback")}</p>
+      ) : VIDEO_FORMATS.includes(format) ? (
+        <video ref={ref} src={url} controls preload="metadata" playsInline onError={() => setBroken(true)} />
+      ) : (
+        <audio ref={ref} src={url} controls preload="metadata" onError={() => setBroken(true)} />
+      )}
+    </figure>
+  );
+}
+
 function versionLabel(v: Version) {
   return v.tool ? tDynamic(`file.version.${v.tool}`) : t("file.original");
 }
@@ -79,22 +114,34 @@ function RemovedNote({ version, previous }: { version: Version; previous?: Versi
   );
 }
 
+function FindingList({ findings }: { findings: Version["findings"] }) {
+  return (
+    <ul class="findings">
+      {findings.map((f) => (
+        <li key={f.code}>
+          <span>{tDynamic(`finding.${f.code}`)}</span>
+          {f.value ? <code>{f.value}</code> : null}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+// 文件的註解、追蹤修訂與附加檔案是內容，清除之後仍然在，跟中繼資料分開列
 function Findings({ version, previous }: { version: Version; previous?: Version }) {
+  const metadata = version.findings.filter((f) => !CONTENT_FINDINGS.includes(f.code));
+  const content = version.findings.filter((f) => CONTENT_FINDINGS.includes(f.code));
   return (
     <>
-      {version.findings.length ? (
-        <ul class="findings">
-          {version.findings.map((f) => (
-            <li key={f.code}>
-              <span>{tDynamic(`finding.${f.code}`)}</span>
-              {f.value ? <code>{f.value}</code> : null}
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p class="ok">{t("findings.none")}</p>
-      )}
+      {metadata.length ? <FindingList findings={metadata} /> : <p class="ok">{t("findings.none")}</p>}
       <RemovedNote version={version} previous={previous} />
+      {content.length ? (
+        <div class="content-findings" data-testid="content-findings">
+          <h4>{t("findings.content")}</h4>
+          <FindingList findings={content} />
+          <p class="hint">{t("findings.contentNote")}</p>
+        </div>
+      ) : null}
     </>
   );
 }
@@ -181,6 +228,11 @@ function QrInImage({ blob, onOpenTool }: { blob: Blob; onOpenTool: Props["onOpen
 export function FileView({ file, index, busy, preferred, onOpenTool }: Props) {
   const current = file.versions.at(-1)!;
   const isImage = isPhoto(current.format);
+  const media = isMedia(current.format);
+  // 大檔案只交給支援大檔案的工具，需要編輯畫面的工具（遮蔽、加密）會把整個檔案讀進記憶體
+  const usable = (tool: { accepts(f: Version["format"]): boolean; acceptsLarge?(f: Version["format"]): boolean }) =>
+    current.large ? !!tool.acceptsLarge?.(current.format) : tool.accepts(current.format);
+  const canInspect = fileTools.some(usable);
   const preview = useObjectUrl(isImage ? current.blob : undefined);
   const [error, setError] = useState<string>();
   // 從編輯類工具的網址進來（例如遮蔽的任務），選好檔案就直接打開編輯畫面
@@ -207,7 +259,7 @@ export function FileView({ file, index, busy, preferred, onOpenTool }: Props) {
   // 適用這個格式的工具。能處理目前找到的資訊的標成建議，排在前面
   const found = new Set(current.findings.map((f) => f.code));
   const shelf = [...fileTools.map((tool) => ({ tool, editor: false })), ...editorTools.map((tool) => ({ tool, editor: true }))]
-    .filter(({ tool }) => tool.accepts(current.format))
+    .filter(({ tool }) => usable(tool))
     .map(({ tool, editor }) => ({
       tool,
       editor,
@@ -255,17 +307,18 @@ export function FileView({ file, index, busy, preferred, onOpenTool }: Props) {
           ) : null}
         </section>
       ) : (
-      <div class={isImage ? "columns" : "columns single"}>
+      <div class={isImage || media ? "columns" : "columns single"}>
         {isImage ? <Preview url={preview} blob={current.blob} format={current.format} key={preview} /> : null}
+        {media ? <MediaPreview blob={current.blob} format={current.format} /> : null}
 
         <div class="panel">
-          {isImage ? (
+          {canInspect ? (
             <>
               <h3>{t("findings.title")}</h3>
               <Findings version={current} previous={file.versions.at(-2)} />
             </>
           ) : (
-            <p class="note">{t(current.format === "age" ? "file.encrypted" : "file.unsupported")}</p>
+            <p class="note">{t(current.large ? "file.tooLarge" : current.format === "age" ? "file.encrypted" : "file.unsupported")}</p>
           )}
 
           {isImage && file.versions[0]!.tool === null ? <QrInImage blob={current.blob} onOpenTool={onOpenTool} /> : null}

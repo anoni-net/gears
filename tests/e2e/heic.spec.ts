@@ -22,5 +22,5 @@ test("HEIC：列出拍攝位置，清除之後下載的檔案找不到任何資�
   const file = await downloadFrom(page, () => page.getByRole("link", { name: "下載" }).click());
   expect(file.name).toBe("gears-1.heic");
   expect(sniff(file.data)).toBe("heic");
-  expect(stripMetadata.inspect(file.data, "heic")).toEqual([]);
+  expect((await stripMetadata.inspect(file.data, "heic"))).toEqual([]);
 });

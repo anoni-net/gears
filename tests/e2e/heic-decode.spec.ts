@@ -55,7 +55,7 @@ test("從任務把 HEIC 轉成 JPEG，下載的 JPEG 沒有中繼資料", async 
   const file = await downloadFrom(page, () => page.getByRole("link", { name: "下載" }).click());
   expect(file.name).toBe("gears-1.jpg");
   expect(sniff(file.data)).toBe("jpeg");
-  expect(stripMetadata.inspect(file.data, "jpeg")).toEqual([]);
+  expect((await stripMetadata.inspect(file.data, "jpeg"))).toEqual([]);
 });
 
 test("遮蔽 HEIC：解碼之後框選塗黑，輸出 JPEG", async ({ page }) => {

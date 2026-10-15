@@ -10,7 +10,12 @@ export const fileTools: Tool[] = [stripMetadata];
 
 // 需要編輯畫面的檔案工具
 export const editorTools: EditorTool[] = [
-  { id: "redact", resolves: [], accepts: (format) => format === "jpeg" || format === "png" || format === "heic" },
+  {
+    id: "redact",
+    resolves: [],
+    // 瀏覽器解碼得了的格式，HEIC 由 libheif 解碼
+    accepts: (format) => ["jpeg", "png", "heic", "avif", "webp", "gif", "bmp"].includes(format),
+  },
   { id: "heic-to-jpeg", resolves: [], accepts: (format) => format === "heic" },
   { id: "encrypt", resolves: [], accepts: (format) => format !== "age" },
   { id: "decrypt", resolves: [], accepts: (format) => format === "age" },
