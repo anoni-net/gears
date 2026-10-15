@@ -1,19 +1,19 @@
 import { expect, test } from "@playwright/test";
 import { faceTiles, mergeFaces } from "../../src/tools/redact/faces.ts";
 
-test("大合照切到 8×8，最細的區塊夠小，30 像素的臉佔得到區塊的六分之一", () => {
+test("大合照切到 12×12，最細的區塊夠小，30 像素的臉佔得到區塊的五分之一", () => {
   const tiles = faceTiles(1440, 1080);
-  expect([...new Set(tiles.map((t) => t.grid))]).toEqual([1, 2, 4, 8]);
-  expect(tiles).toHaveLength(1 + 4 + 16 + 64);
-  const finest = tiles.filter((t) => t.grid === 8);
-  expect(Math.max(...finest.map((t) => t.w))).toBeLessThanOrEqual(240);
+  expect([...new Set(tiles.map((t) => t.grid))]).toEqual([1, 2, 4, 8, 12]);
+  expect(tiles).toHaveLength(1 + 4 + 16 + 64 + 144);
+  const finest = tiles.filter((t) => t.grid === 12);
+  expect(Math.max(...finest.map((t) => t.w))).toBeLessThanOrEqual(150);
 });
 
 test("每一層的區塊蓋住整張圖，彼此重疊，不超出邊界", () => {
   const width = 1440;
   const height = 1080;
   const tiles = faceTiles(width, height);
-  for (const n of [2, 4, 8]) {
+  for (const n of [2, 4, 8, 12]) {
     const level = tiles.filter((t) => t.grid === n);
     for (const t of level) {
       expect(t.x).toBeGreaterThanOrEqual(0);
@@ -41,13 +41,29 @@ test("小圖不切：區塊小於 120 像素就停在上一層", () => {
 
 test("合併：同一張臉留分數最高的，包住兩張臉的大框拿掉", () => {
   const boxes = mergeFaces([
-    { box: { x: 100, y: 100, w: 30, h: 30 }, score: 0.7 },
-    { box: { x: 102, y: 101, w: 30, h: 30 }, score: 0.9 },
-    { box: { x: 200, y: 100, w: 30, h: 30 }, score: 0.8 },
-    { box: { x: 80, y: 80, w: 200, h: 80 }, score: 0.6 },
+    { box: { x: 100, y: 100, w: 30, h: 30 }, score: 0.7, grid: 1 },
+    { box: { x: 102, y: 101, w: 30, h: 30 }, score: 0.9, grid: 4 },
+    { box: { x: 200, y: 100, w: 30, h: 30 }, score: 0.8, grid: 1 },
+    { box: { x: 80, y: 80, w: 200, h: 80 }, score: 0.6, grid: 1 },
   ]);
   expect(boxes).toEqual([
     { x: 102, y: 101, w: 30, h: 30 },
     { x: 200, y: 100, w: 30, h: 30 },
   ]);
+});
+
+test("區塊裡分數不夠高的，要另一種切法在同一個位置也找到才算", () => {
+  const button = { x: 500, y: 500, w: 20, h: 20 };
+  const face = { x: 100, y: 100, w: 30, h: 30 };
+  const sharp = { x: 300, y: 100, w: 30, h: 30 };
+  const boxes = mergeFaces([
+    // 只在 8×8 找到、分數 0.6：衣服上的按鈕
+    { box: button, score: 0.6, grid: 8 },
+    // 8×8 與 12×12 都找到：小臉
+    { box: face, score: 0.6, grid: 8 },
+    { box: { ...face, x: 101 }, score: 0.55, grid: 12 },
+    // 分數夠高，只有一種切法找到也算
+    { box: sharp, score: 0.9, grid: 12 },
+  ]);
+  expect(boxes).toEqual([sharp, face]);
 });

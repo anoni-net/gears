@@ -1025,6 +1025,71 @@ footer a {
   margin-bottom: 0.5rem;
 }
 
+/* 自動尋找的進度條 */
+.auto-progress {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.auto-progress span {
+  min-width: 3em;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.auto-progress-track {
+  position: relative;
+  flex: 1;
+  max-width: 24rem;
+  height: 0.5rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--hair);
+}
+
+.auto-progress-bar {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+  transition: width 0.2s ease-out;
+}
+
+.auto-progress-bar.indeterminate {
+  position: absolute;
+  width: 35%;
+  animation: auto-progress-slide 1.2s ease-in-out infinite;
+}
+
+@keyframes auto-progress-slide {
+  from {
+    left: -35%;
+  }
+  to {
+    left: 100%;
+  }
+}
+
+/* 減少動態效果時不來回移動，改成緩慢明暗變化 */
+@media (prefers-reduced-motion: reduce) {
+  .auto-progress-bar {
+    transition: none;
+  }
+
+  .auto-progress-bar.indeterminate {
+    left: 0;
+    width: 100%;
+    animation: auto-progress-pulse 2s ease-in-out infinite;
+  }
+}
+
+@keyframes auto-progress-pulse {
+  50% {
+    opacity: 0.4;
+  }
+}
+
 .redact .buttons {
   display: flex;
   flex-wrap: wrap;
