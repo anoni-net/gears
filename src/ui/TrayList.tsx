@@ -1,4 +1,5 @@
-import { isPhoto } from "../core/bytes.ts";
+import { isDocument, isPhoto } from "../core/bytes.ts";
+import { CONTENT_FINDINGS } from "../core/tool.ts";
 import type { TrayFile } from "../core/tray.ts";
 import { t } from "../i18n/index.ts";
 import { tray } from "../state.ts";
@@ -14,17 +15,20 @@ interface ItemProps {
 function Item({ file, selected, onSelect }: ItemProps) {
   const current = file.versions.at(-1)!;
   const isImage = isPhoto(current.format);
+  const canInspect = isImage || isDocument(current.format);
+  // 文件的註解與追蹤修訂是內容，清除之後仍然在，不算在找到的項目裡
+  const found = current.findings.filter((f) => !CONTENT_FINDINGS.includes(f.code)).length;
   const url = useObjectUrl(isImage ? current.blob : undefined);
   // Chrome、Firefox 不能顯示 HEIC，縮圖載入失敗時改成灰色方塊，不顯示破圖
   const [broken, setBroken] = useState(false);
   const status =
     current.format === "age"
       ? t("tray.encrypted")
-      : !isImage
+      : !canInspect
         ? t("tray.unsupported")
-        : current.findings.length
-        ? t("tray.found", { n: current.findings.length })
-        : t("tray.clean");
+        : found
+          ? t("tray.found", { n: found })
+          : t("tray.clean");
   return (
     <li class={selected ? "item selected" : "item"}>
       <button type="button" class="pick" aria-current={selected} onClick={() => onSelect(file.id)}>
@@ -35,7 +39,7 @@ function Item({ file, selected, onSelect }: ItemProps) {
         )}
         <span class="meta">
           <span class="name">{file.name}</span>
-          <span class={!isImage ? "status muted" : current.findings.length ? "status warn" : "status"}>
+          <span class={!canInspect ? "status muted" : found ? "status warn" : "status"}>
             {status}
             {file.versions.length > 1 ? ` · ${t("tray.versions", { n: file.versions.length })}` : ""}
           </span>

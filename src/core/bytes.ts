@@ -1,3 +1,6 @@
+import { odfKind, ooxmlKind } from "./documents.ts";
+import { zipNames } from "./zip.ts";
+
 // 處理位元組的小工具。工具模組只依賴這裡與 tool.ts，不碰 DOM，
 // 網頁版、Web Worker 與之後的瀏覽器擴充套件都能共用。
 
@@ -58,6 +61,14 @@ export type Format =
   | "pnm"
   | "svg"
   | "jxl"
+  | "docx"
+  | "xlsx"
+  | "pptx"
+  | "odt"
+  | "ods"
+  | "odp"
+  | "odg"
+  | "pdf"
   | "age"
   | "unknown";
 
@@ -75,6 +86,10 @@ export function sniff(bytes: Uint8Array): Format {
   if (bytes[0] === 0x50 && bytes[1]! >= 0x31 && bytes[1]! <= 0x37 && [0x20, 0x09, 0x0a, 0x0d].includes(bytes[2]!)) return "pnm";
   if ((bytes[0] === 0xff && bytes[1] === 0x0a) || startsWith(bytes, 0, "\0\0\0\x0cJXL \r\n\x87\n")) return "jxl";
   if (looksLikeSvg(bytes)) return "svg";
+  if (startsWith(bytes, 0, "%PDF-")) return "pdf";
+  // Office 與 ODF 都是 zip，看裡面的檔案
+  const names = zipNames(bytes);
+  if (names) return ooxmlKind(names) ?? odfKind(bytes) ?? "unknown";
   // age 的二進位格式與 ASCII armor 文字格式
   if (startsWith(bytes, 0, "age-encryption.org/v1\n") || startsWith(bytes, 0, "-----BEGIN AGE ENCRYPTED FILE-----")) return "age";
   return "unknown";
@@ -117,6 +132,9 @@ function looksLikeSvg(bytes: Uint8Array): boolean {
 export const isPhoto = (format: Format) =>
   ["jpeg", "png", "heic", "avif", "gif", "webp", "tiff", "bmp", "pnm", "svg", "jxl"].includes(format);
 
+// 文件類的格式：沒有預覽，中繼資料照樣能檢查與清除
+export const isDocument = (format: Format) => ["docx", "xlsx", "pptx", "odt", "ods", "odp", "odg", "pdf"].includes(format);
+
 export const MIME: Record<Format, string> = {
   jpeg: "image/jpeg",
   png: "image/png",
@@ -129,6 +147,14 @@ export const MIME: Record<Format, string> = {
   pnm: "image/x-portable-anymap",
   svg: "image/svg+xml",
   jxl: "image/jxl",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  odt: "application/vnd.oasis.opendocument.text",
+  ods: "application/vnd.oasis.opendocument.spreadsheet",
+  odp: "application/vnd.oasis.opendocument.presentation",
+  odg: "application/vnd.oasis.opendocument.graphics",
+  pdf: "application/pdf",
   age: "application/octet-stream",
   unknown: "application/octet-stream",
 };
@@ -145,6 +171,14 @@ export const EXTENSION: Record<Format, string> = {
   pnm: "ppm",
   svg: "svg",
   jxl: "jxl",
+  docx: "docx",
+  xlsx: "xlsx",
+  pptx: "pptx",
+  odt: "odt",
+  ods: "ods",
+  odp: "odp",
+  odg: "odg",
+  pdf: "pdf",
   age: "age",
   unknown: "bin",
 };

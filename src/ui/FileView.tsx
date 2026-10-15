@@ -1,6 +1,6 @@
 import { useEffect, useState } from "preact/hooks";
-import { EXTENSION, isPhoto } from "../core/bytes.ts";
-import { type Report, ToolError } from "../core/tool.ts";
+import { EXTENSION, isDocument, isPhoto } from "../core/bytes.ts";
+import { CONTENT_FINDINGS, type Report, ToolError } from "../core/tool.ts";
 import type { TrayFile, Version } from "../core/tray.ts";
 import { t, tDynamic } from "../i18n/index.ts";
 import { tray } from "../state.ts";
@@ -81,22 +81,34 @@ function RemovedNote({ version, previous }: { version: Version; previous?: Versi
   );
 }
 
+function FindingList({ findings }: { findings: Version["findings"] }) {
+  return (
+    <ul class="findings">
+      {findings.map((f) => (
+        <li key={f.code}>
+          <span>{tDynamic(`finding.${f.code}`)}</span>
+          {f.value ? <code>{f.value}</code> : null}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+// 文件的註解、追蹤修訂與附加檔案是內容，清除之後仍然在，跟中繼資料分開列
 function Findings({ version, previous }: { version: Version; previous?: Version }) {
+  const metadata = version.findings.filter((f) => !CONTENT_FINDINGS.includes(f.code));
+  const content = version.findings.filter((f) => CONTENT_FINDINGS.includes(f.code));
   return (
     <>
-      {version.findings.length ? (
-        <ul class="findings">
-          {version.findings.map((f) => (
-            <li key={f.code}>
-              <span>{tDynamic(`finding.${f.code}`)}</span>
-              {f.value ? <code>{f.value}</code> : null}
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p class="ok">{t("findings.none")}</p>
-      )}
+      {metadata.length ? <FindingList findings={metadata} /> : <p class="ok">{t("findings.none")}</p>}
       <RemovedNote version={version} previous={previous} />
+      {content.length ? (
+        <div class="content-findings" data-testid="content-findings">
+          <h4>{t("findings.content")}</h4>
+          <FindingList findings={content} />
+          <p class="hint">{t("findings.contentNote")}</p>
+        </div>
+      ) : null}
     </>
   );
 }
@@ -183,6 +195,7 @@ function QrInImage({ blob, onOpenTool }: { blob: Blob; onOpenTool: Props["onOpen
 export function FileView({ file, index, busy, preferred, onOpenTool }: Props) {
   const current = file.versions.at(-1)!;
   const isImage = isPhoto(current.format);
+  const canInspect = isImage || isDocument(current.format);
   const preview = useObjectUrl(isImage ? current.blob : undefined);
   const [error, setError] = useState<string>();
   // 從編輯類工具的網址進來（例如遮蔽的任務），選好檔案就直接打開編輯畫面
@@ -261,7 +274,7 @@ export function FileView({ file, index, busy, preferred, onOpenTool }: Props) {
         {isImage ? <Preview url={preview} blob={current.blob} format={current.format} key={preview} /> : null}
 
         <div class="panel">
-          {isImage ? (
+          {canInspect ? (
             <>
               <h3>{t("findings.title")}</h3>
               <Findings version={current} previous={file.versions.at(-2)} />

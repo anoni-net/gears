@@ -32,7 +32,7 @@ const cases: { name: string; file: () => Uint8Array; format: Format; expect: str
   { name: "AVIF", file: () => syntheticHeif(1, "avif"), format: "avif", expect: ["datetime", "device", "location", "owner", "serial", "software", "thumbnail", "xmp"] },
   { name: "BMP", file: syntheticBmp, format: "bmp", expect: ["trailer"] },
   { name: "PPM", file: syntheticPpm, format: "pnm", expect: ["comment"], image: PNM_PIXELS },
-  { name: "SVG", file: () => bytes(SVG_SOURCE), format: "svg", expect: ["comment", "owner", "software", "text", "xmp"] },
+  { name: "SVG", file: () => bytes(SVG_SOURCE), format: "svg", expect: ["comment", "owner", "path", "software", "xmp"] },
   { name: "JPEG XL", file: syntheticJxl, format: "jxl", expect: ["datetime", "device", "location", "other", "owner", "serial", "software", "thumbnail", "xmp"], image: JXL_CODESTREAM },
 ];
 

@@ -5,7 +5,7 @@ import { IconCircle } from "./Icon.tsx";
 import { TOOL_META } from "./tool-meta.ts";
 
 export interface Task {
-  id: "photo" | "heic" | "redact" | "encrypt" | "wifi";
+  id: "photo" | "document" | "heic" | "redact" | "encrypt" | "wifi";
   tool: string;
   preset?: string;
   pick?: boolean; // 處理檔案的任務，點了直接請讀者選檔案
@@ -15,6 +15,7 @@ export interface Task {
 // 也放在這裡。
 export const TASKS: Task[] = [
   { id: "photo", tool: "strip-metadata", pick: true },
+  { id: "document", tool: "strip-metadata", pick: true },
   { id: "heic", tool: "heic-to-jpeg", pick: true },
   { id: "redact", tool: "redact", pick: true },
   { id: "encrypt", tool: "encrypt", pick: true },

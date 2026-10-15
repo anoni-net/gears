@@ -18,10 +18,20 @@ export const FINDING_CODES = [
   "comment",
   "text",
   "trailer",
+  "path",
+  "printer",
+  "signature",
   "other",
+  // 以下是文件的內容，清除中繼資料不會改動，列出來提醒讀者
+  "doc-comments",
+  "revisions",
+  "attachments",
 ] as const;
 
 export type FindingCode = (typeof FINDING_CODES)[number];
+
+// 註解、追蹤修訂與附加檔案是讀者自己寫進去或放進去的內容，工具不替讀者決定要不要刪
+export const CONTENT_FINDINGS: readonly FindingCode[] = ["doc-comments", "revisions", "attachments"];
 
 export interface Finding {
   code: FindingCode;
@@ -59,6 +69,18 @@ export const SEGMENT_CODES = [
   "svg-editor",
   "bmp-image",
   "jxl-image",
+  "doc-properties",
+  "doc-custom",
+  "doc-thumbnail",
+  "doc-authors",
+  "doc-ids",
+  "doc-template",
+  "doc-paths",
+  "doc-printer",
+  "doc-signature",
+  "doc-images",
+  "doc-unused",
+  "doc-content",
 ] as const;
 
 export type SegmentCode = (typeof SEGMENT_CODES)[number];

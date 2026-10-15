@@ -450,6 +450,16 @@ h4 {
   overflow-wrap: anywhere;
 }
 
+/* 文件內容裡要留意的：不是中繼資料，清除之後仍然在，用中性的底色跟上面分開 */
+.content-findings h4 {
+  margin: 1rem 0 0.4rem;
+}
+
+.content-findings .findings li {
+  background: var(--fill);
+  color: var(--text);
+}
+
 .ok,
 .done {
   color: var(--ok);
