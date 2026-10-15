@@ -52,7 +52,7 @@ npm run test:unit    # 只執行單元測試，不需要瀏覽器
 
 | | 處理檔案的工具（`fileTools`） | 需要編輯畫面的工具（`editorTools`） | 從空白開始的工具（`createTools`） |
 |---|---|---|---|
-| 例子 | 清除中繼資料 | 遮蔽、加密、解密 | QR code 產生器與讀取、網址檢查、密語與密碼產生器 |
+| 例子 | 清除中繼資料 | 遮蔽、加密、解密 | QR code 產生器與讀取、網址檢查、密語與密碼產生器、age 金鑰產生器 |
 | 介面 | `src/core/tool.ts` 的 `Tool` | `EditorTool`，編輯畫面登記在 `src/ui/registry.tsx` | `CreateTool`，元件登記在 `src/ui/registry.tsx` |
 | 結果 | 暫存區裡那個檔案的新版本 | 同左，由 `tray.addVersion` 加入 | 產出檔案的放進暫存區，產出文字的只顯示在畫面上 |
 
@@ -88,6 +88,7 @@ node scripts/fetch-165.mjs   # 下載並整理成 public/data/165.txt
 ## 介面上的限制
 
 - 能不用 canvas 輸出圖檔就不用。Brave 預設會擾動 canvas 讀出來的像素，QR code 的 PNG 由 `src/core/png-encode.ts` 直接寫位元組。遮蔽與 QR code 讀取必須解碼影像，只能用 canvas：遮蔽輸出後抽查每個框是否夠黑，門檻容許這點雜訊。QR code 讀取對雜訊不敏感
+- 站內導覽不用一般的 `<a href>`。一般的連結會重新載入頁面，暫存區只在記憶體裡，會整個清空。改用 `src/router.ts` 的 `navigate()`，外觀要像連結時用 `button.link`
 - HEIC 只有 Safari 能顯示。預覽與暫存區的縮圖載入失敗時改成說明或灰色方塊，中繼資料仍然能讀取與清除。遮蔽與讀取 QR code 要解碼影像，目前不提供給 HEIC
 - 不用 `<select>`。Linux 版 WebKit 建立下拉選單時，內部的樣式表會被 CSP 擋下，主控台留下錯誤。選項不多時改用攤開的選項按鈕，手機上也少點一下
 
@@ -117,7 +118,7 @@ QR code 的測試把產生的 PNG 解碼回像素，用 `jsQR` 讀出文字，�
 
 ## 規劃
 
-產品規劃記錄在社群的工作區，還沒有公開。目前完成第一階段：桌面、檔案暫存區，以及清除中繼資料（JPEG、PNG、HEIC）、遮蔽、加密與解密、QR code 產生器與讀取、網址檢查、密語與密碼產生器，可以下載與系統分享。部署到 `anoni.net/gears/` 是下一步。
+產品規劃記錄在社群的工作區，還沒有公開。目前完成第一階段：桌面、檔案暫存區，以及清除中繼資料（JPEG、PNG、HEIC）、遮蔽、加密與解密、age 金鑰產生器、QR code 產生器與讀取、網址檢查、密語與密碼產生器，可以下載與系統分享。部署到 `anoni.net/gears/` 是下一步。
 
 ## 第三方資料
 
