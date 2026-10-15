@@ -36,3 +36,14 @@ test("service worker 只存工作台自己的檔案", async ({ page, browserName
   expect(cached.every((u) => new URL(u).pathname.startsWith("/gears/"))).toBe(true);
   expect(cached.some((u) => u.startsWith("blob:") || u.includes("secret"))).toBe(false);
 });
+
+test("第一次開啟時 service worker 接手頁面，不會重新載入、清掉暫存區", async ({ page, browserName }) => {
+  test.skip(browserName !== "chromium", "離線測試只在 Chromium 執行");
+  await page.goto("./");
+  // service worker 還在安裝時就放進檔案
+  await page.getByTestId("file-input").setInputFiles({ name: "early.txt", mimeType: "text/plain", buffer: Buffer.from("hello") });
+  await expect(page.getByTestId("offline-ready")).toBeVisible({ timeout: 30_000 });
+  await expect.poll(() => page.evaluate(() => !!navigator.serviceWorker.controller)).toBe(true);
+  await page.waitForTimeout(500);
+  await expect(page.getByText("early.txt").first()).toBeVisible();
+});

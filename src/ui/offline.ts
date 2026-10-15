@@ -8,6 +8,10 @@ export interface OfflineState {
   update: (() => void) | null; // 有新版本時，換上並重新載入
 }
 
+// 讀者按了「重新載入」才換版本。第一次開啟時 service worker 接手頁面也會觸發
+// controllerchange，那時候重新載入會把剛放進暫存區的檔案清掉
+let requested = false;
+
 export function useOffline(): OfflineState {
   const [ready, setReady] = useState(false);
   const [waiting, setWaiting] = useState<ServiceWorker | null>(null);
@@ -33,7 +37,9 @@ export function useOffline(): OfflineState {
       })
       .then(() => alive && setReady(true))
       .catch(() => {});
-    const onChange = () => location.reload();
+    const onChange = () => {
+      if (requested) location.reload();
+    };
     sw.addEventListener("controllerchange", onChange);
     return () => {
       alive = false;
@@ -41,5 +47,13 @@ export function useOffline(): OfflineState {
     };
   }, []);
 
-  return { ready, update: waiting ? () => waiting.postMessage("skipWaiting") : null };
+  return {
+    ready,
+    update: waiting
+      ? () => {
+          requested = true;
+          waiting.postMessage("skipWaiting");
+        }
+      : null,
+  };
 }
