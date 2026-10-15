@@ -91,6 +91,7 @@ export interface Segment {
   start: number; // 秒
   end: number;
   text: string;
+  speaker?: number; // 分辨說話者時才有，0 是最先開口的人（src/tools/transcribe/speakers.ts）
 }
 
 export interface RawChunk {
@@ -180,11 +181,15 @@ function srtTime(seconds: number): string {
   return `${h}:${m}:${s},${String(ms % 1000).padStart(3, "0")}`;
 }
 
-export function toSrt(segments: Segment[]): string {
-  return segments.map((seg, i) => `${i + 1}\n${srtTime(seg.start)} --> ${srtTime(seg.end)}\n${seg.text}\n`).join("\n");
+// name 把說話者編號換成「說話者 1：」這類前綴（標點依語系），有分辨說話者時加在每段前面
+type SpeakerName = (speaker: number) => string;
+const withSpeaker = (seg: Segment, name?: SpeakerName) => (name && seg.speaker !== undefined ? `${name(seg.speaker)}${seg.text}` : seg.text);
+
+export function toSrt(segments: Segment[], name?: SpeakerName): string {
+  return segments.map((seg, i) => `${i + 1}\n${srtTime(seg.start)} --> ${srtTime(seg.end)}\n${withSpeaker(seg, name)}\n`).join("\n");
 }
 
 // 純文字：每段一行，前面加上時間，方便對照錄音校對
-export function toTxt(segments: Segment[]): string {
-  return segments.map((seg) => `[${clock(seg.start)}] ${seg.text}`).join("\n") + "\n";
+export function toTxt(segments: Segment[], name?: SpeakerName): string {
+  return segments.map((seg) => `[${clock(seg.start)}] ${withSpeaker(seg, name)}`).join("\n") + "\n";
 }

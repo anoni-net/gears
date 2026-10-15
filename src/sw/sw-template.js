@@ -9,7 +9,7 @@ const FILES = __FILES__;
 const BASE = "__BASE__";
 const CACHE = `gears-${VERSION}`;
 const RUNTIME = `gears-${VERSION}-runtime`;
-// 逐字稿的 Whisper 模型（80 到 250 MB）另外存一個不隨版本清掉的快取，換新版本時不必重新下載。
+// 逐字稿的 Whisper 模型（80 到 250 MB）與分辨說話者的 CAM++（28 MB）另外存一個不隨版本清掉的快取，換新版本時不必重新下載。
 // 網址帶著模型的版本，清單以外的（舊版本的模型）在新版本接手時刪掉
 const MODELS = "gears-models";
 const MODEL_DIRS = __MODEL_DIRS__.map((dir) => `${BASE}${dir}`);

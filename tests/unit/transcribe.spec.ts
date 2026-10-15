@@ -115,6 +115,18 @@ test("輸出 SRT 與 TXT", () => {
   expect(clock(65)).toBe("01:05");
 });
 
+test("分辨說話者時，SRT 與 TXT 的每段前面加上說話者", () => {
+  const segments = [
+    { start: 0, end: 2.5, text: "大家好", speaker: 0 },
+    { start: 3, end: 4, text: "你好", speaker: 1 },
+  ];
+  const name = (n: number) => `說話者 ${n + 1}：`;
+  expect(toTxt(segments, name)).toBe("[00:00] 說話者 1：大家好\n[00:03] 說話者 2：你好\n");
+  expect(toSrt(segments, name)).toBe("1\n00:00:00,000 --> 00:00:02,500\n說話者 1：大家好\n\n2\n00:00:03,000 --> 00:00:04,000\n說話者 2：你好\n");
+  // 沒有分辨說話者時維持原樣
+  expect(toTxt(segments)).toBe("[00:00] 大家好\n[00:03] 你好\n");
+});
+
 test("預設的核心數：回報的數字只會比實際少，夠多就用 12，不可信時用 8", () => {
   const hints = { reported: 16, brave: false, safari: false, mobileApple: false };
   expect(defaultThreads(hints)).toBe(12);

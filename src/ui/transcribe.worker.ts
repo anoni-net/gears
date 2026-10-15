@@ -8,6 +8,9 @@ import plainMjs from "../../node_modules/@huggingface/transformers/node_modules/
 import plainWasm from "../../node_modules/@huggingface/transformers/node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.wasm?url";
 import { REMOTE_ERROR, hfUrl, readVerified } from "../tools/transcribe/remote.ts";
 import { MODELS, type ModelId, type RawChunk, SAMPLE_RATE, type Segment, cleanSegments, maxTokens, speechPieces } from "../tools/transcribe/segments.ts";
+import { MIN_EMBED_SECONDS, assignSpeakers, normalize } from "../tools/transcribe/speakers.ts";
+import speakerModel from "../tools/transcribe/speaker-model.json" with { type: "json" };
+import type { Embedder } from "./speaker-embed.ts";
 
 // 逐字稿的辨識在這個 Web Worker 裡執行，畫面不會卡住。用 Transformers.js 跑 Whisper，
 // 模型與 WebAssembly 都從自己的網域載入：關掉 Transformers.js 內建的 Hugging Face 下載，
@@ -21,7 +24,7 @@ import { MODELS, type ModelId, type RawChunk, SAMPLE_RATE, type Segment, cleanSe
 // threads 是同時使用的 CPU 核心數。onnxruntime 在第一次載入時就決定了執行緒數，
 // 換核心數要換一個新的 Worker（src/ui/TranscribeEditor.tsx）
 export type Request =
-  | { type: "start"; model: ModelId; language: "zh" | null; base: string; threads: number }
+  | { type: "start"; model: ModelId; language: "zh" | null; base: string; threads: number; speakers: boolean }
   | { type: "chunk"; audio: Float32Array; offset: number; last: boolean };
 
 export type Reply =
@@ -29,6 +32,7 @@ export type Reply =
   | { type: "ready" }
   | { type: "progress"; at: number } // 處理到第幾秒
   | { type: "segments"; segments: Segment[] }
+  | { type: "speakers"; speakers: { start: number; speaker: number }[] } // 每段的說話者，最後一段處理完才送
   | { type: "done" }
   | { type: "error"; message: string };
 
@@ -39,7 +43,8 @@ let loaded: { model: ModelId; asr: Pipeline } | null = null;
 let convert: ((text: string) => string) | null = null;
 // 每個檔案下載了多少位元組，加總之後回報給畫面
 let files: Record<string, number> = {};
-const reportDownload = (model: ModelId) => post({ type: "download", loaded: Object.values(files).reduce((a, b) => a + b, 0), total: MODELS[model].bytes });
+let downloadTotal = 0;
+const reportDownload = () => post({ type: "download", loaded: Object.values(files).reduce((a, b) => a + b, 0), total: downloadTotal });
 
 const MODEL_CACHE = "gears-models";
 // Transformers.js 會把 env.fetch 的錯誤換成「找不到檔案」，下載失敗的原因另外記下來回報
@@ -80,7 +85,7 @@ async function download(model: ModelId, file: string, sha256: string, url: strin
   if (!response.ok) throw new Error(`${REMOTE_ERROR}: HTTP ${response.status} (${file})`);
   const data = await readVerified(response, sha256, (n) => {
     files[file] = n;
-    reportDownload(model);
+    reportDownload();
   });
   if (!cache) return data;
   const headers = { "content-type": "application/octet-stream", "content-length": String(data.length) };
@@ -124,7 +129,6 @@ async function load(model: ModelId, base: string, threads: number): Promise<Pipe
   wasmEnv.wasmPaths = asyncify ? { mjs: asyncifyMjs, wasm: asyncifyWasm } : { mjs: plainMjs, wasm: plainWasm };
   // 多執行緒要頁面在 cross-origin isolation 底下（伺服器送 COOP 與 COEP 標頭），沒有時用單執行緒
   wasmEnv.numThreads = self.crossOriginIsolated ? threads : 1;
-  files = {};
   const asr = (await pipeline("automatic-speech-recognition", MODELS[model].dir, {
     dtype: MODELS[model].dtype as "q8" | "q4",
     device: "wasm",
@@ -135,7 +139,7 @@ async function load(model: ModelId, base: string, threads: number): Promise<Pipe
       : (info: { status: string; file?: string; loaded?: number }) => {
           if (info.status !== "progress" || !info.file) return;
           files[info.file] = info.loaded ?? 0;
-          reportDownload(model);
+          reportDownload();
         },
   }).finally(() => downloads.clear())) as unknown as Pipeline;
   loaded = { model, asr };
@@ -151,7 +155,12 @@ async function toTaiwan(text: string): Promise<string> {
   return convert(text);
 }
 
-let job: { asr: Pipeline; language: "zh" | null } | null = null;
+// 分辨說話者的聲紋模型（src/ui/speaker-embed.ts），勾選時才載入，載入一次就留著
+let embedder: Embedder | null = null;
+// 每段的聲紋，最後一段處理完一起分群。太短的段落是 null
+let voices: { start: number; seconds: number; embedding: Float32Array | null }[] = [];
+
+let job: { asr: Pipeline; language: "zh" | null; speakers: boolean } | null = null;
 // 碰到這一段結尾的最後一句話先留著，接到下一段一起辨識，一句話才不會被切成兩半
 let carry: { audio: Float32Array; offset: number } | null = null;
 
@@ -182,7 +191,24 @@ async function recognize(chunk: Float32Array, at: number, last: boolean) {
     }
     post({ type: "progress", at: offset + piece.end / SAMPLE_RATE });
   }
-  post({ type: "segments", segments: cleanSegments(raw, audio, offset) });
+  const segments = cleanSegments(raw, audio, offset);
+  post({ type: "segments", segments });
+  if (job!.speakers) {
+    for (const seg of segments) {
+      const seconds = seg.end - seg.start;
+      const from = Math.max(0, Math.round((seg.start - offset) * SAMPLE_RATE));
+      const to = Math.min(audio.length, Math.round((seg.end - offset) * SAMPLE_RATE));
+      const embedding = seconds >= MIN_EMBED_SECONDS && to > from ? normalize(await embedder!(audio.subarray(from, to))) : null;
+      voices.push({ start: seg.start, seconds, embedding });
+    }
+    if (last) {
+      const labels = assignSpeakers(
+        voices.map((v) => v.embedding),
+        voices.map((v) => v.seconds),
+      );
+      post({ type: "speakers", speakers: voices.map((v, i) => ({ start: v.start, speaker: labels[i]! })) });
+    }
+  }
   post({ type: "progress", at: carry ? carry.offset : offset + audio.length / SAMPLE_RATE });
 }
 
@@ -199,7 +225,19 @@ self.onmessage = async (event: MessageEvent<Request>) => {
     if (request.type === "start") {
       carry = null;
       remoteError = null;
-      job = { asr: await load(request.model, request.base, request.threads), language: request.language };
+      voices = [];
+      files = {};
+      downloadTotal = MODELS[request.model].bytes + (request.speakers && !embedder ? speakerModel.bytes : 0);
+      const asr = await load(request.model, request.base, request.threads);
+      // 聲紋模型在 Whisper 之後載入，onnxruntime 的設定（WebAssembly 的位置、執行緒數）已經就緒
+      if (request.speakers && !embedder) {
+        const { speakerEmbedder } = await import("./speaker-embed.ts");
+        embedder = await speakerEmbedder(`${request.base}models/speaker/${speakerModel.dir}/${speakerModel.file}`, speakerModel.bytes, (n) => {
+          files.speaker = n;
+          reportDownload();
+        });
+      }
+      job = { asr, language: request.language, speakers: request.speakers };
       post({ type: "ready" });
     } else {
       await recognize(request.audio, request.offset, request.last);

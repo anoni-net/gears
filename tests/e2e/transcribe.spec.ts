@@ -1,8 +1,9 @@
-import { appendFileSync, existsSync, rmSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Page } from "@playwright/test";
 import models from "../../src/tools/transcribe/models.json" with { type: "json" };
+import speakerModel from "../../src/tools/transcribe/speaker-model.json" with { type: "json" };
 import { wav } from "../helpers/audio.ts";
 import { syntheticMp4 } from "../helpers/media.ts";
 import { expect, test } from "./guard.ts";
@@ -10,6 +11,7 @@ import { expect, test } from "./guard.ts";
 // 模型很大，不進 repo，要先執行 node scripts/fetch-whisper.mjs base（CI 會先下載 base）
 const BASE_MODEL = join(import.meta.dirname, "../../public/models/whisper", models.base.dir, "onnx/decoder_model_merged_quantized.onnx");
 const hasModel = existsSync(BASE_MODEL);
+const hasSpeakerModel = existsSync(join(import.meta.dirname, "../../public/models/speaker", speakerModel.dir, speakerModel.file));
 
 async function open(page: Page, name: string, data: Uint8Array) {
   await page.goto("./transcribe/");
@@ -76,6 +78,30 @@ test("靜音的錄音不送進模型，說明沒有辨識到說話的內容", as
   await page.getByLabel("1", { exact: true }).check();
   await page.getByRole("button", { name: "開始轉逐字稿" }).click();
   await expect(page.getByTestId("transcribe-status")).toHaveText("沒有辨識到說話的內容。", { timeout: 200_000 });
+});
+
+test("建置產物裡沒有其他檔案匯入 Worker 的進入點", ({ browserName }) => {
+  // WebKit 會把被匯入的 Worker 進入點當成另一份模組再執行一次，蓋掉 onmessage（src/ui/speaker-embed.ts）。
+  // 只看建置產物，一種瀏覽器檢查一次就夠
+  test.skip(browserName !== "chromium");
+  const assets = join(import.meta.dirname, "../../dist/assets");
+  const offenders = readdirSync(assets).filter((f) => f.endsWith(".js") && !f.startsWith("transcribe.worker-") && /["/]transcribe\.worker-[\w-]+\.js"/.test(readFileSync(join(assets, f), "utf8")));
+  expect(offenders).toEqual([]);
+});
+
+test("分辨說話者：從自己的網域載入聲紋模型，跟 Whisper 共用 onnxruntime", async ({ page }) => {
+  test.skip(!hasModel || !hasSpeakerModel, "沒有下載 base 或 CAM++ 模型");
+  test.setTimeout(240_000);
+  const loaded: string[] = [];
+  page.on("request", (r) => r.url().includes("/models/speaker/") && loaded.push(new URL(r.url()).pathname));
+  await open(page, "silence.wav", wav(5));
+  await page.getByLabel(/^base：比較快/).check();
+  await page.getByLabel("1", { exact: true }).check();
+  await expect(page.getByText(`另外下載約 ${Math.round(speakerModel.bytes / 1e6)} MB`)).toBeVisible();
+  await page.getByLabel(/^分辨說話者/).check();
+  await page.getByRole("button", { name: "開始轉逐字稿" }).click();
+  await expect(page.getByTestId("transcribe-status")).toHaveText("沒有辨識到說話的內容。", { timeout: 200_000 });
+  expect(loaded).toEqual([`/gears/models/speaker/${speakerModel.dir}/${speakerModel.file}`]);
 });
 
 test("超過 256 MB、2.5 小時的 WAV 分段處理，記憶體裡只有一段", async ({ page, browserName }) => {

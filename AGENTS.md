@@ -7,7 +7,7 @@
 - 預設在瀏覽器裡處理。之後若提供上傳到社群伺服器的選項，上傳前要在畫面上寫清楚檔案送到哪裡、誰看得到、保留多久、伺服器會不會留下紀錄，由讀者決定
 - 上傳端點不經過 Cloudflare。Cloudflare 在邊緣解開 TLS，經過的檔案對它是明文
 - 頁面能連線的對象寫死在 CSP 裡（`vite.config.ts`），新增任何對外連線都要改那裡，並在畫面上標示。目前唯一的例外是逐字稿的大模型從 Hugging Face 下載（見下方「逐字稿」），只開在伺服器送的 CSP 標頭，頁面的 meta 標籤仍然只有自己的網域
-- 執行期的相依套件只有 `preact`、`qrcode-generator`（QR code 產生）、`jsqr`（QR code 讀取）、`age-encryption`（加密，連同它相依的 noble 系列）、`libheif-js`（HEIC 解碼，LGPL-3.0，見下方「HEIC」）、`pdf-lib`（PDF 的解析與寫出，見下方「文件」），以及遮蔽的自動尋找用的 `onnxruntime-web` 與 `tesseract.js`（見下方「遮蔽的自動尋找」）、逐字稿用的 `@huggingface/transformers` 與 `opencc-js`（見下方「逐字稿」）。新增套件前先想能不能自己寫，必要時鎖定確切的版本。工具用到的套件在打開工具時才載入
+- 執行期的相依套件只有 `preact`、`qrcode-generator`（QR code 產生）、`jsqr`（QR code 讀取）、`age-encryption`（加密，連同它相依的 noble 系列）、`libheif-js`（HEIC 解碼，LGPL-3.0，見下方「HEIC」）、`pdf-lib`（PDF 的解析與寫出，見下方「文件」），以及遮蔽的自動尋找用的 `onnxruntime-web` 與 `tesseract.js`（見下方「遮蔽的自動尋找」）、逐字稿用的 `@huggingface/transformers` 與 `opencc-js`（見下方「逐字稿」，分辨說話者用的 onnxruntime 是 Transformers.js 帶的那一份）。新增套件前先想能不能自己寫，必要時鎖定確切的版本。工具用到的套件在打開工具時才載入
 - 結構有問題的檔案就停下來，不交出一份沒處理乾淨的檔案
 
 ## 支援的瀏覽器
@@ -113,6 +113,10 @@ Tesseract 的 WebAssembly 會把執行紀錄寫到標準錯誤輸出，瀏覽器
 - 長錄音分段處理（`src/ui/audio-stream.ts`）：每次解碼約 10 分鐘，換成 16 kHz 單聲道交給 Worker，處理完才解碼下一段，記憶體用量跟錄音長短無關，轉好的段落邊轉邊顯示。WAV 直接讀 PCM。MP3 在音訊框的邊界切開，多帶前兩框一起解碼（音訊框會借用前一框的資料）。MP4、M4A、MOV 從 moov 的索引取出 AAC 樣本，交給 WebCodecs 的 `AudioDecoder`。檔案結構的解析在 `src/tools/transcribe/sources.ts`，有單元測試
 - 這幾種格式超過 256 MB 也能處理（工具的 `acceptsLarge`），不限長度。其他格式，以及瀏覽器不支援 `AudioDecoder` 時的 AAC，整個檔案一次解碼，限制在 256 MB 與 2 小時。瀏覽器解不出聲音的檔案（例如沒有音軌的影片）畫面上說明
 - 一段話碰到分段的結尾時先留著，接到下一段一起辨識，一句話不會被切成兩半。接縫上重複的那一句合併
+- 分辨說話者（勾選才做，另外下載 28 MB）：每一段逐字稿用 3D-Speaker 的 CAM++ 算一個 192 維的聲紋（`src/ui/speaker-embed.ts`，特徵是 Transformers.js 的 `WeSpeakerFeatureExtractor` 換成 povey 視窗），全部辨識完再分群（`src/tools/transcribe/speakers.ts`，有單元測試）。平均連結的階層式分群，餘弦相似度低於 0.5 就不再合併，總共說不到 10 秒的群併到最相近的大群，依第一次開口的順序編號。分群樹用 nearest-neighbor chain 建，兩千段在一秒左右分完。不到 0.3 秒的段落算不出可靠的聲紋，沿用前一段的說話者
+- 用 Whisper 的段落當單位，不另外執行分段模型：研究時比較過 pyannote 的分段、固定視窗與音量偵測，Whisper 的段落最準。換人點落在同一段裡時，那一段只能整段標給一個人，兩人同時說話時也只標一位。實測（base 模型，在畫面上用四位朗讀者剪接的錄音）兩人的錄音 71 段、三人的困難組（切在句子中間、沒有停頓就換人）130 段，人數都估對，以段落計標對 96.6% 與 93.7%
+- CAM++ 的 ONNX 檔取自 sherpa-onnx 的 release，來源與 SHA-256 寫在 `src/tools/transcribe/speaker-model.json`，`node scripts/fetch-whisper.mjs` 一起下載到 `public/models/speaker/`。存進跟 Whisper 同一個不隨版本清掉的快取
+- `src/ui/speaker-embed.ts` 跟 Transformers.js 共用同一份 onnxruntime（從同一個檔案路徑匯入，Vite 當成同一個模組），不另外下載 WebAssembly。這個檔案只能匯入 Transformers.js 與 onnxruntime，跟 Worker 共用的程式（模型清單、分群）由參數傳進來：打包時共用的程式會放進 Worker 的進入點，這裡再匯入它的話，WebKit 會把 Worker 的進入點當成另一份模組再執行一次，蓋掉 `onmessage`。瀏覽器測試會檢查建置產物裡沒有其他檔案匯入 Worker 的進入點
 - 失敗時在主控台印出錯誤訊息（不含錄音的內容），讀者回報問題時用
 
 ## 離線使用
@@ -131,7 +135,7 @@ Tesseract 的 WebAssembly 會把執行紀錄寫到標準錯誤輸出，瀏覽器
 
 ## 部署
 
-- 部署前執行 `node scripts/fetch-165.mjs` 與 `node scripts/fetch-whisper.mjs`，再建置
+- 部署前執行 `node scripts/fetch-165.mjs` 與 `node scripts/fetch-whisper.mjs`（Whisper small、base 與分辨說話者的 CAM++），再建置
 - 伺服器要送 `Cross-Origin-Opener-Policy: same-origin` 與 `Cross-Origin-Embedder-Policy: require-corp`（逐字稿的多執行緒），以及 `vite.config.ts` 的 `HEADER_CSP`（`npx vite preview` 送出的就是它，Web Worker 吃標頭的 CSP，不吃頁面的 meta 標籤）。換大模型的版本時 CSP 裡的 commit 跟著變，nginx 的設定要一起改。service worker 預先存的檔案連當時的標頭一起存，所以先改 nginx 再部署新版本，順序反過來的話，讀者的 Worker 會一直帶著舊的 CSP，直到下一次換版本
 - `.wasm` 要用 `application/wasm` 送出並開壓縮，onnxruntime 的 WebAssembly 壓縮後約小四分之三
 - `sw.js` 不快取（見上方「離線使用」）
@@ -301,5 +305,5 @@ iPhone 預設拍出來的是 HEIC，在網頁上選照片時交出來的也是�
 - HEIC 解碼器來自 [libheif-js](https://github.com/catdad-experiments/libheif-js) 1.23.5（libheif 與 libde265，LGPL-3.0），見 `licenses/libheif.txt`
 - PDF 的解析與寫出用 [pdf-lib](https://github.com/Hopding/pdf-lib) 1.17.1（MIT），見 `licenses/pdf-lib.txt`
 - 遮蔽的自動尋找用 [YuNet](https://github.com/opencv/opencv_zoo/tree/main/models/face_detection_yunet) 模型（MIT）與 [onnxruntime-web](https://github.com/microsoft/onnxruntime) 1.30.0（MIT）、[Tesseract.js](https://github.com/naptha/tesseract.js) 7.0.0 與 tessdata_best 的語言資料（Apache-2.0），見 `licenses/redact-detect.txt`
-- 逐字稿用 [Transformers.js](https://github.com/huggingface/transformers.js) 4.3.1（Apache-2.0）、Whisper small 與 base 的 ONNX 檔（onnx-community，原始模型的模型卡標示 Apache-2.0）、讀者選擇之後從 Hugging Face 下載的 large-v3-turbo（模型卡標示 MIT）、[opencc-js](https://github.com/nk2028/opencc-js) 1.4.2（MIT，字典 Apache-2.0），見 `licenses/transcribe.txt`
+- 逐字稿用 [Transformers.js](https://github.com/huggingface/transformers.js) 4.3.1（Apache-2.0）、Whisper small 與 base 的 ONNX 檔（onnx-community，原始模型的模型卡標示 Apache-2.0）、讀者選擇之後從 Hugging Face 下載的 large-v3-turbo（模型卡標示 MIT）、分辨說話者用的 3D-Speaker CAM++（Apache-2.0，ONNX 檔取自 sherpa-onnx）、[opencc-js](https://github.com/nk2028/opencc-js) 1.4.2（MIT，字典 Apache-2.0），見 `licenses/transcribe.txt`
 - 165 反詐騙清單見上方，部署時下載，不進版控
