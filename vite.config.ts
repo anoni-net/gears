@@ -1,3 +1,6 @@
+import { createHash } from "node:crypto";
+import { readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import { join, relative } from "node:path";
 import { defineConfig, type Plugin } from "vite";
 import { zhTW } from "./src/i18n/zh-TW.ts";
 import { toolIds } from "./src/tools/index.ts";
@@ -66,9 +69,42 @@ function toolPages(): Plugin {
   };
 }
 
+// 離線使用：建置完成後列出 dist/ 裡的檔案，產生 /gears/sw.js（範本在 src/sw/sw-template.js）。
+// vendor/ 底下的辨識模型很大，不預先存，用到時才存。版本是所有檔案內容的雜湊，
+// 任何檔案改了（包括每月更新的 165 清單），瀏覽器就會裝新的 service worker
+function serviceWorker(base: string): Plugin {
+  return {
+    name: "gears-service-worker",
+    apply: "build",
+    closeBundle() {
+      const dist = join(import.meta.dirname, "dist");
+      const files: string[] = [];
+      const walk = (dir: string) => {
+        for (const name of readdirSync(dir)) {
+          const path = join(dir, name);
+          if (statSync(path).isDirectory()) walk(path);
+          else files.push(relative(dist, path).split("\\").join("/"));
+        }
+      };
+      walk(dist);
+      const precache = files.filter((f) => !f.startsWith("vendor/") && !f.startsWith("models/") && f !== "sw.js" && !f.endsWith(".map")).sort();
+      const hash = createHash("sha256");
+      for (const f of precache) hash.update(f).update(readFileSync(join(dist, f)));
+      const template = readFileSync(join(import.meta.dirname, "src/sw/sw-template.js"), "utf8");
+      writeFileSync(
+        join(dist, "sw.js"),
+        template
+          .replace("__VERSION__", hash.digest("hex").slice(0, 16))
+          .replace("__FILES__", JSON.stringify(precache))
+          .replace("__BASE__", base),
+      );
+    },
+  };
+}
+
 export default defineConfig({
   base: "/gears/",
-  plugins: [csp(), toolPages()],
+  plugins: [csp(), toolPages(), serviceWorker("/gears/")],
   oxc: {
     jsx: { runtime: "automatic", importSource: "preact" },
   },

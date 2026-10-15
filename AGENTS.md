@@ -94,6 +94,17 @@ npm run test:unit    # 只執行單元測試，不需要瀏覽器
 
 兩者的 WebAssembly 會把執行紀錄寫到標準錯誤輸出，瀏覽器當成 `console.error`。瀏覽器測試的守門程式（`tests/e2e/guard.ts`）把這幾種已知的訊息列為例外。
 
+## 離線使用
+
+第一次開啟之後，沒有網路也能使用。service worker 的範本在 `src/sw/sw-template.js`，建置時 `vite.config.ts` 的 `serviceWorker()` 列出 `dist/` 的檔案、算出版本（所有檔案內容的雜湊），輸出成 `/gears/sw.js`。
+
+- 安裝時先存頁面、程式、圖示與 165 清單，約 4 MB。人臉與文字辨識的模型（`vendor/`、`models/`）用到時才存
+- 只存工作台自己的檔案。讀者放進暫存區的檔案只在記憶體裡，不經過 service worker，也不寫進快取
+- 有新版本時畫面上方提示，讀者按「重新載入」才換上，避免同一個分頁混用新舊程式。重新載入會清空暫存區，提示裡寫明
+- 比對快取時忽略 `Vary`：模組腳本的請求帶著 `Origin`，伺服器回應的 `Vary: Origin` 會讓預先存的那份對不上
+- 部署時 `sw.js` 要設定不快取（`Cache-Control: no-cache`），瀏覽器才查得到新版本
+- 瀏覽器測試預設擋掉 service worker（`playwright.config.ts`），它接手的請求 `page.route` 攔不到。離線的測試（`tests/e2e/offline.spec.ts`）自己打開，只在 Chromium 執行
+
 ## 165 反詐騙清單
 
 網址檢查比對 165 反詐騙諮詢專線公開的「遭停止解析涉詐網站」清單（政府資料開放平台資料集 176455，內政部警政署，政府資料開放授權條款第 1 版），每月更新。
@@ -235,7 +246,7 @@ iPhone 預設拍出來的是 HEIC，在網頁上選照片時交出來的也是�
 
 ## 規劃
 
-產品規劃記錄在社群的工作區，還沒有公開。目前完成第一階段：桌面、檔案暫存區，以及清除中繼資料（JPEG、PNG、HEIC、AVIF、WebP、GIF、TIFF、SVG、BMP、PNM、JPEG XL，Word、Excel、PowerPoint、LibreOffice 文件與 PDF，MP3、M4A、MP4、MOV、WAV、AVI、FLAC、Ogg、Opus、MKV、WebM，ZIP、TAR、gzip、EPUB、種子檔、HTML）、遮蔽、加密與解密、age 金鑰產生器、QR code 產生器與讀取、網址檢查、密語與密碼產生器，可以下載與系統分享。部署到 `anoni.net/gears/` 是下一步。
+產品規劃記錄在社群的工作區，還沒有公開。目前完成第一階段：桌面、檔案暫存區，以及清除中繼資料（JPEG、PNG、HEIC、AVIF、WebP、GIF、TIFF、SVG、BMP、PNM、JPEG XL，Word、Excel、PowerPoint、LibreOffice 文件與 PDF，MP3、M4A、MP4、MOV、WAV、AVI、FLAC、Ogg、Opus、MKV、WebM，ZIP、TAR、gzip、EPUB、種子檔、HTML）、遮蔽（可以自動找人臉與個資）、加密與解密、age 金鑰產生器、QR code 產生器與讀取、網址檢查、密語與密碼產生器，可以下載與系統分享，一次處理多個檔案，也可以離線使用。部署到 `anoni.net/gears/` 是下一步。
 
 ## 第三方資料
 
