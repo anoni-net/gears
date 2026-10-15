@@ -172,6 +172,8 @@ export function App() {
           selected={state.selected}
           onSelect={selectFile}
           onPick={pick}
+          busy={state.busy}
+          failed={state.failed}
           compact={!atHome && !state.files.length}
         />
         <div class="view">{view}</div>

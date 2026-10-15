@@ -12,7 +12,7 @@ import { inspectPdf, stripPdf } from "./pdf.ts";
 import { inspectEbml, stripEbml } from "./ebml.ts";
 import { inspectFlac, stripFlac } from "./flac.ts";
 import { inspectMp3, stripMp3 } from "./mp3.ts";
-import { inspectMp4, stripMp4 } from "./mp4.ts";
+import { inspectMp4, inspectMp4Blob, stripMp4, stripMp4Blob } from "./mp4.ts";
 import { inspectOgg, stripOgg } from "./ogg.ts";
 import { inspectRiff, stripRiff } from "./riff.ts";
 import { inspectZipArchive, stripZipArchive } from "./archive.ts";
@@ -100,6 +100,9 @@ function inner(depth: number): Inner {
   };
 }
 
+// 大檔案只處理 MP4、MOV、M4A：中繼資料都在 mdat 以外，可以只讀那幾段
+const LARGE_FORMATS: Format[] = ["mp4", "mov", "m4a"];
+
 export const STRIP_FORMATS = Object.keys(HANDLERS) as Format[];
 
 export const stripMetadata: Tool = {
@@ -113,6 +116,20 @@ export const stripMetadata: Tool = {
   async inspect(data: Uint8Array, format: Format): Promise<Finding[]> {
     const handler = HANDLERS[format];
     return handler ? mergeFindings(await handler.inspect(data, inner(0))) : [];
+  },
+
+  acceptsLarge(format: Format) {
+    return LARGE_FORMATS.includes(format);
+  },
+
+  async inspectLarge(blob: Blob, format: Format) {
+    if (!LARGE_FORMATS.includes(format)) return [];
+    return mergeFindings(await inspectMp4Blob(blob));
+  },
+
+  async runLarge(blob: Blob, format: Format) {
+    if (!LARGE_FORMATS.includes(format)) throw new ToolError("unsupported");
+    return stripMp4Blob(blob);
   },
 
   async run(data: Uint8Array, format: Format): Promise<RunResult> {

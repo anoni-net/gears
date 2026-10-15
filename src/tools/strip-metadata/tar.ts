@@ -2,6 +2,7 @@ import { ascii, concat } from "../../core/bytes.ts";
 import { type Finding, type RunResult, ToolError } from "../../core/tool.ts";
 import { SYSTEM_FILE } from "./archive.ts";
 import { type Inner, Tally } from "./package.ts";
+import { other } from "./preview.ts";
 
 // TAR：每個檔案前面一個 512 位元組的標頭，記錄檔名、權限、擁有者的 ID 與帳號名稱、修改時間。
 // POSIX 的延伸標頭（pax）還有存取時間、變更時間與延伸屬性，macOS 的延伸屬性常帶著下載
@@ -179,7 +180,7 @@ export async function inspectTar(bytes: Uint8Array, inner: Inner): Promise<Findi
   for (const entry of list) {
     if (entry.type === "x" || entry.type === "g") {
       const extra = paxRecords(entry.data).filter(([key]) => !KEEP_PAX.test(key));
-      if (extra.length) findings.push({ code: "other", value: extra.map(([key]) => key).slice(0, 3).join("、") });
+      for (const [key, value] of extra) findings.push(other(key, value));
       continue;
     }
     if (SYSTEM_FILE.test(entry.name)) {

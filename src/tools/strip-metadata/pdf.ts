@@ -1,6 +1,7 @@
 import type * as PdfLib from "pdf-lib";
 import { type Finding, type RunResult, ToolError } from "../../core/tool.ts";
 import { type Inner, NEUTRAL_AUTHOR, Tally } from "./package.ts";
+import { other } from "./preview.ts";
 
 // PDF。用 pdf-lib 解析整份檔案，處理完整個重新寫出來。pdf-lib 約 500 KB，打開 PDF 時才載入。
 //
@@ -213,13 +214,13 @@ export async function inspectPdf(bytes: Uint8Array, inner: Inner): Promise<Findi
       if (value) findings.push({ code: "text", value: value.slice(0, 80) });
     }
   }
-  if (context.trailerInfo.ID) findings.push({ code: "other" });
+  if (context.trailerInfo.ID) findings.push(other("ID", context.trailerInfo.ID.toString()));
 
   for (const [, obj] of context.enumerateIndirectObjects()) {
     const dict = dictOf(lib, obj);
     if (!dict) continue;
     if (dict.has(lib.PDFName.of("Metadata"))) findings.push({ code: "xmp" });
-    if (dict.has(lib.PDFName.of("PieceInfo"))) findings.push({ code: "other" });
+    if (dict.has(lib.PDFName.of("PieceInfo"))) findings.push(other("PieceInfo", dict.get(lib.PDFName.of("PieceInfo"))!.toString()));
     if (isAnnot(lib, dict) && MARKUP.has(nameOf(lib, dict, "Subtype")!)) {
       comments++;
       const author = textOf(lib, dict, "T");

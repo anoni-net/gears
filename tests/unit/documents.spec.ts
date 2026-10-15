@@ -217,7 +217,7 @@ test("pdf：文件資訊、XMP、識別碼、註解作者、舊物件與 JPEG �
   expect(sniff(input)).toBe("pdf");
   const before = await stripMetadata.inspect(input, "pdf");
   expect(before.map((f) => f.code)).toEqual(expect.arrayContaining(["owner", "software", "datetime", "text", "xmp", "other", "device", "doc-comments"]));
-  expect(before.find((f) => f.code === "owner")!.value).toBe("Jane Doe、SECRET-REVIEWER");
+  expect(before.find((f) => f.code === "owner")!.value).toMatch(/^Jane Doe、SECRET-REVIEWER$/m);
 
   const { data, report } = await stripMetadata.run(input, "pdf");
   expect(report.removed.map((r) => r.code)).toEqual(

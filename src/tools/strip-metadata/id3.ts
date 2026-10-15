@@ -1,6 +1,7 @@
 import { ascii, u32be } from "../../core/bytes.ts";
 import { id3v2Size, syncsafe } from "../../core/media.ts";
 import type { Finding, FindingCode } from "../../core/tool.ts";
+import { other } from "./preview.ts";
 
 // ID3：MP3 的標籤，也會出現在 WAV、FLAC、AAC 的開頭。v2 在檔案開頭，v1 是檔尾的 128 個位元組。
 
@@ -59,7 +60,11 @@ export function id3v2Findings(bytes: Uint8Array, at: number): Finding[] {
     if (code === null) continue;
     // 壓縮或加密的欄位讀不到內容，只列出有這一項
     const unreadable = (version === 3 && formatFlags & 0xc0) || (version === 4 && formatFlags & 0x0c);
-    if (code === "thumbnail" || code === "other" || unreadable) {
+    if (code === "other") {
+      findings.push(other(id, unreadable ? undefined : data));
+      continue;
+    }
+    if (code === "thumbnail" || unreadable) {
       findings.push({ code });
       continue;
     }

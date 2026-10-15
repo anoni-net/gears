@@ -1,6 +1,7 @@
 import { ascii, concat, indexOf, startsWith, u16be } from "../../core/bytes.ts";
 import { type Finding, type Report, type ReportItem, type RunResult, ToolError } from "../../core/tool.ts";
 import { exifFindings, orientationSegment, parseExif } from "./exif.ts";
+import { other } from "./preview.ts";
 
 // JPEG 的中繼資料都放在 marker 區段裡，壓縮過的影像資料在 SOS 之後。清除時只拿掉
 // 區段、其餘照抄，影像資料一個位元都不動，輸出也不會留下重新編碼的痕跡。
@@ -218,7 +219,7 @@ export function inspectJpeg(bytes: Uint8Array): Finding[] {
         if (jfifThumbnailSize(bytes, s) > 0) findings.push({ code: "thumbnail" });
         break;
       case "app":
-        findings.push({ code: "other" });
+        findings.push(other(`APP${bytes[s.start + 1]! - 0xe0}`, bytes.subarray(body(s), s.end)));
         break;
     }
   }

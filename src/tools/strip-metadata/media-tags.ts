@@ -1,4 +1,5 @@
 import type { Finding, FindingCode } from "../../core/tool.ts";
+import { other } from "./preview.ts";
 
 // 音訊與影片的標籤各格式寫法不同（MP4 的 ©nam、ID3 的 TIT2、Vorbis 的 TITLE、RIFF 的
 // INAM），名稱整理成小寫之後用同一張表判斷是哪一種資訊。
@@ -64,7 +65,7 @@ export function tagFinding(key: string, value: string | undefined): Finding {
   const code = LOOKUP.get(name) ?? "other";
   const text = value?.replace(/\0+$/, "").trim().slice(0, 80) || undefined;
   if (code === "location") return { code, value: (text && iso6709(text)) ?? text };
-  if (code === "other") return { code };
+  if (code === "other") return other(key, text);
   return { code, value: text };
 }
 

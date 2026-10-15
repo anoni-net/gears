@@ -1,6 +1,7 @@
 import { ascii, concat, indexOf, startsWith, u32le } from "../../core/bytes.ts";
 import { type Finding, type ReportItem, type RunResult, ToolError } from "../../core/tool.ts";
 import { exifFindings, parseExif } from "./exif.ts";
+import { other } from "./preview.ts";
 
 // WebP：RIFF 容器，chunk 是「代號(4) 長度(4，小端序) 資料」，長度是奇數時補一個位元組。
 // 影像、透明度、動畫與色彩描述檔的 chunk 保留，EXIF、XMP 與不認得的拿掉。延伸格式的
@@ -73,7 +74,7 @@ export function inspectWebp(bytes: Uint8Array): Finding[] {
     else if (c.type === "XMP ") {
       findings.push({ code: "xmp" });
       if (indexOf(bytes.subarray(c.data, c.data + c.size), "GPSLatitude") >= 0) findings.push({ code: "location" });
-    } else findings.push({ code: "other" });
+    } else findings.push(other(c.type.trim(), bytes.subarray(c.data, c.data + c.size)));
   }
   return findings;
 }

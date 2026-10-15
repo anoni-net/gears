@@ -1,6 +1,7 @@
 import { concat } from "../../core/bytes.ts";
 import { type Finding, type RunResult, ToolError } from "../../core/tool.ts";
 import { Tally } from "./package.ts";
+import { other } from "./preview.ts";
 
 // BitTorrent 的種子檔（bencode）。最上層除了 info（檔案清單與雜湊，改了就是另一個種子）
 // 與 tracker 的網址，還有建立的程式、建立時間、註解與發布者。只留下載需要的欄位。
@@ -88,7 +89,7 @@ export function inspectTorrent(bytes: Uint8Array): Finding[] {
       findings.push({ code: "datetime", value: new Date(seconds * 1000).toISOString().replace("T", " ").slice(0, 19) });
     } else if (f.key.startsWith("comment")) findings.push({ code: "comment", value: text });
     else if (f.key.startsWith("publisher")) findings.push({ code: "owner", value: text });
-    else findings.push({ code: "other" });
+    else findings.push(other(f.key, text));
   }
   if (parsed.end < bytes.length) findings.push({ code: "trailer" });
   return findings;

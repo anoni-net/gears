@@ -3,6 +3,7 @@ import { type Finding, type RunResult, ToolError } from "../../core/tool.ts";
 import { id3v1Findings, id3v2Findings } from "./id3.ts";
 import { tagFinding } from "./media-tags.ts";
 import { Tally } from "./package.ts";
+import { other } from "./preview.ts";
 
 // WAV 與 AVI 都是 RIFF：一串「代號(4) 長度(4，小端序) 內容」的 chunk，LIST 裡面還有 chunk。
 //
@@ -140,9 +141,9 @@ function inspectChunks(bytes: Uint8Array, start: number, end: number, findings: 
     } else if (c.id === "_PMX") findings.push({ code: "xmp" });
     else if (c.id.toLowerCase() === "id3 ") findings.push(...id3v2Findings(bytes, c.data));
     else if (c.id === "IDIT") findings.push({ code: "datetime", value: text(bytes, c.data, c.end - c.data) });
-    else if (c.id === "iXML" || c.id === "strd" || c.id === "cart" || c.id === "axml") findings.push({ code: "other" });
+    else if (c.id === "iXML" || c.id === "strd" || c.id === "cart" || c.id === "axml") findings.push(other(c.id, bytes.subarray(c.data, c.end)));
     else if (PADDING.has(c.id) && /[A-Za-z]{6}/.test(new TextDecoder("latin1").decode(bytes.subarray(c.data, Math.min(c.end, c.data + 4096)))))
-      findings.push({ code: "other" });
+      findings.push(other(c.id, bytes.subarray(c.data, c.end)));
   }
 }
 

@@ -125,7 +125,14 @@ export interface Tool {
   // 文件類的格式要先解壓縮或載入 pdf-lib，所以兩者都可以是非同步的
   inspect(data: Uint8Array, format: Format): Finding[] | Promise<Finding[]>;
   run(data: Uint8Array, format: Format): RunResult | Promise<RunResult>;
+  // 太大、不能一次讀進記憶體的檔案（例如好幾 GB 的影片）。支援的格式才有，只讀需要的部分
+  acceptsLarge?(format: Format): boolean;
+  inspectLarge?(blob: Blob, format: Format): Promise<Finding[]>;
+  runLarge?(blob: Blob, format: Format): Promise<{ blob: Blob; report: Report }>;
 }
+
+// 超過這個大小就不整個讀進記憶體，只交給支援大檔案的工具
+export const LARGE_FILE = 256 * 1024 * 1024;
 
 // 需要編輯畫面的檔案工具，例如遮蔽：讀者在畫面上操作，結果由介面產生之後交給
 // 暫存區（tray.addVersion）。編輯畫面登記在 src/ui/registry.tsx。
@@ -150,16 +157,21 @@ export class ToolError extends Error {
   }
 }
 
-// 同一種資訊出現在多個地方時（例如 EXIF 與 XMP 都有時間）合併成一項。
+// 同一種資訊出現在多個地方時（例如 EXIF 與 XMP 都有時間）合併成一項，不同的值逐行列出，
+// 太多時只列前幾個，後面註明還有幾項
+const MAX_VALUES = 8;
+
 export function mergeFindings(findings: Finding[]): Finding[] {
-  const merged = new Map<FindingCode, Finding>();
+  const merged = new Map<FindingCode, string[]>();
   for (const finding of findings) {
-    const existing = merged.get(finding.code);
-    if (!existing) {
-      merged.set(finding.code, { ...finding });
-    } else if (finding.value && !existing.value) {
-      existing.value = finding.value;
-    }
+    const values = merged.get(finding.code) ?? [];
+    if (finding.value && !values.includes(finding.value)) values.push(finding.value);
+    merged.set(finding.code, values);
   }
-  return [...merged.values()];
+  return [...merged].map(([code, values]) => {
+    if (!values.length) return { code };
+    const shown = values.slice(0, MAX_VALUES);
+    if (values.length > MAX_VALUES) shown.push(`… +${values.length - MAX_VALUES}`);
+    return { code, value: shown.join("\n") };
+  });
 }

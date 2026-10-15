@@ -3,6 +3,7 @@ import { type Finding, type RunResult, ToolError } from "../../core/tool.ts";
 import { findMp3Frame, id3v2Size } from "../../core/media.ts";
 import { id3v1Findings, id3v2Findings } from "./id3.ts";
 import { Tally } from "./package.ts";
+import { other } from "./preview.ts";
 
 // MP3：聲音資料是一連串的 MPEG 音訊框，標籤接在前後。開頭是 ID3v2（標題、演出者、封面、
 // 註解、編碼軟體與各種私有欄位），檔尾可能有 ID3v1、APEv2 與 Lyrics3。這些全部拿掉，
@@ -63,7 +64,7 @@ export function inspectMp3(bytes: Uint8Array): Finding[] {
   for (let at = 0; at < parts.start; at += id3v2Size(bytes, at)) findings.push(...id3v2Findings(bytes, at));
   for (const { kind, at } of parts.tail) {
     if (kind === "id3v1") findings.push(...id3v1Findings(bytes, at));
-    else findings.push({ code: "other" });
+    else findings.push(other(kind === "ape" ? "APEv2" : "Lyrics3", bytes.subarray(at, at + 4096)));
   }
   return findings;
 }

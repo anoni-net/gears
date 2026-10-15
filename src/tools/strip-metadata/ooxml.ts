@@ -16,6 +16,7 @@ import {
   stripInner,
   writeParts,
 } from "./package.ts";
+import { other } from "./preview.ts";
 
 // Office 文件（docx、xlsx、pptx，Office Open XML）。zip 裡是一組 XML，部件之間用
 // .rels 檔裡的關聯互相指向，[Content_Types].xml 列出每個部件的類型。
@@ -114,6 +115,16 @@ function printerName(data: Uint8Array): string | undefined {
   const name = new TextDecoder("utf-16le").decode(data.subarray(0, 64)).replace(/\0.*$/s, "").trim();
   // 不是 DEVMODE 的話讀出來是亂碼，不顯示
   return /^[\p{L}\p{N}][\p{L}\p{N} _\-.,()#@\\/]+$/u.test(name) ? name : undefined;
+}
+
+// XML 裡的文字與屬性值，給「其他欄位」顯示內容用
+function xmlValues(text: string): string {
+  const values: string[] = [];
+  walkXml(text, (el, value) => {
+    if (value !== null) values.push(value);
+    else for (const a of el.attrs) if (!a.name.startsWith("xmlns") && a.local !== "fmtid" && a.local !== "pid") values.push(`${a.local}=${a.value}`);
+  });
+  return values.join(" ");
 }
 
 // 各部件的改寫規則。authors 是 Excel 註解的作者，舊版的 Excel 會把作者名字寫進註解內文的開頭
@@ -303,7 +314,9 @@ export async function inspectOoxml(bytes: Uint8Array, inner: Inner): Promise<Fin
     if (/^docProps\/thumbnail/.test(name)) findings.push({ code: "thumbnail" });
     else if (/^_xmlsignatures\/.*\.xml$/.test(name)) findings.push({ code: "signature" });
     else if (/printerSettings\/.*\.bin$/.test(name)) findings.push({ code: "printer", value: printerName(part.data) });
-    else if (/^docProps\/custom\.xml$|^customXml\/item\d*\.xml$|^docMetadata\//.test(name)) findings.push({ code: "other" });
+    else if (/^docProps\/custom\.xml$|^customXml\/item\d*\.xml$|^docMetadata\//.test(name))
+      // 自訂屬性與敏感度標籤（裡面有組織的 ID）：只顯示文字與屬性值，不顯示 XML 標籤
+      findings.push(other(name.split("/").at(-1)!, xmlValues(partText(part))));
     else if (/\/embeddings\//.test(name)) {
       // 內嵌的 Office 文件一起檢查，其他內嵌物件（OLE）沒有辦法檢查，列出來提醒讀者
       const inside = await inner.inspect(part.data);
@@ -326,7 +339,7 @@ export async function inspectOoxml(bytes: Uint8Array, inner: Inner): Promise<Fin
         } else if (part.name === "docProps/app.xml") {
           if (el.local === "Application") findings.push({ code: "software", value: text });
           else if (el.local === "Company" || el.local === "Manager") names.add(text);
-          else if (el.local === "TotalTime" && text !== "0") findings.push({ code: "other" });
+          else if (el.local === "TotalTime" && text !== "0") findings.push(other("TotalTime", text));
         } else if (is(el, "x", "author")) names.add(text);
         return;
       }
@@ -340,8 +353,8 @@ export async function inspectOoxml(bytes: Uint8Array, inner: Inner): Promise<Fin
       }
       if (is(el, "w", "comment") || is(el, "p", "cm") || is(el, "p188", "cm") || is(el, "x", "comment")) comments++;
       if (is(el, "w", "ins") || is(el, "w", "del") || is(el, "w", "moveFrom") || is(el, "w", "moveTo")) revisions++;
-      if (is(el, "w", "rsids") || is(el, "w14", "docId") || is(el, "w15", "docId") || is(el, "xr", "revisionPtr"))
-        findings.push({ code: "other" });
+      if (is(el, "w", "rsidRoot") || is(el, "w14", "docId") || is(el, "w15", "docId") || is(el, "xr", "revisionPtr"))
+        findings.push(other(el.local, el.attrs.filter((a) => a.ns !== "http://www.w3.org/2000/xmlns/").map((a) => a.value).join(" ")));
       if (is(el, "x15ac", "absPath")) {
         const url = el.attrs.find((a) => a.local === "url")?.value;
         if (url) findings.push({ code: "path", value: url });

@@ -1,6 +1,7 @@
 import { ascii } from "../../core/bytes.ts";
 import { type Finding, type ReportItem, type RunResult, ToolError } from "../../core/tool.ts";
 import { exifFindings, parseExif } from "./exif.ts";
+import { other } from "./preview.ts";
 
 // TIFF：中繼資料與影像結構的標籤放在同一個 IFD 裡。用白名單保留解碼需要的標籤，
 // 原地改寫 IFD（項目變少，放得下），被拿掉的標籤如果資料放在 IFD 外面（字串、
@@ -151,7 +152,8 @@ export function inspectTiff(bytes: Uint8Array): Finding[] {
         if (value) findings.push({ code, value });
       } else if (e.tag === 700) findings.push({ code: "xmp" });
       else if (e.tag === 33723) findings.push({ code: "iptc" });
-      else if (![271, 272, 305, 306, 315, 33432, 34665, 34853].includes(e.tag)) findings.push({ code: "other" });
+      else if (![271, 272, 305, 306, 315, 33432, 34665, 34853].includes(e.tag))
+        findings.push(other(`tag ${e.tag}`, e.at + e.size <= bytes.length ? bytes.subarray(e.at, e.at + Math.min(e.size, 4096)) : undefined));
     }
   }
   return findings;

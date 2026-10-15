@@ -4,6 +4,7 @@ import { id3v2Size } from "../../core/media.ts";
 import { id3v1Findings, id3v2Findings } from "./id3.ts";
 import { vorbisCommentFindings } from "./media-tags.ts";
 import { Tally } from "./package.ts";
+import { other } from "./preview.ts";
 
 // FLAC：「fLaC」之後是一串描述區塊，接著是音訊框。保留解碼需要的 STREAMINFO、
 // 搜尋表（SEEKTABLE）與 CD 曲目表（CUESHEET），標籤（VORBIS_COMMENT）、封面
@@ -62,7 +63,7 @@ export function inspectFlac(bytes: Uint8Array): Finding[] {
   for (const b of parts.blocks) {
     if (b.type === 4) findings.push(...vorbisCommentFindings(bytes, b.start + 4, b.end));
     else if (b.type === 6) findings.push({ code: "thumbnail" });
-    else if (b.type === 2) findings.push({ code: "other" });
+    else if (b.type === 2) findings.push(other("APPLICATION", bytes.subarray(b.start + 4, b.end)));
   }
   if (parts.end < bytes.length) findings.push(...id3v1Findings(bytes, parts.end));
   return findings;

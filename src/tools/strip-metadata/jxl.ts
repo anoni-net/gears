@@ -1,6 +1,7 @@
 import { ascii, concat, u32be } from "../../core/bytes.ts";
 import { type Finding, type ReportItem, type RunResult, ToolError } from "../../core/tool.ts";
 import { exifFindings, parseExif, tiffStart } from "./exif.ts";
+import { other } from "./preview.ts";
 
 // JPEG XL：只有編碼資料的「裸」格式沒有中繼資料。容器格式由 box 組成，EXIF（Exif）、
 // XMP（xml ）與 JUMBF（jumb）是獨立的 box，可能用 brotli 壓縮後包在 brob 裡。
@@ -63,7 +64,7 @@ export function inspectJxl(bytes: Uint8Array): Finding[] {
       const at = b.start + b.header;
       findings.push(...exifFindings(parseExif(bytes.subarray(at + tiffStart(bytes, at, b.end), b.end))));
     } else if (b.type === "xml ") findings.push({ code: "xmp" });
-    else if (REMOVE.has(b.type)) findings.push({ code: "other" });
+    else if (REMOVE.has(b.type)) findings.push(other(b.type.trim(), bytes.subarray(b.start + b.header, b.end)));
   }
   return findings;
 }

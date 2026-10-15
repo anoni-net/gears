@@ -229,7 +229,10 @@ export function FileView({ file, index, busy, preferred, onOpenTool }: Props) {
   const current = file.versions.at(-1)!;
   const isImage = isPhoto(current.format);
   const media = isMedia(current.format);
-  const canInspect = fileTools.some((tool) => tool.accepts(current.format));
+  // 大檔案只交給支援大檔案的工具，需要編輯畫面的工具（遮蔽、加密）會把整個檔案讀進記憶體
+  const usable = (tool: { accepts(f: Version["format"]): boolean; acceptsLarge?(f: Version["format"]): boolean }) =>
+    current.large ? !!tool.acceptsLarge?.(current.format) : tool.accepts(current.format);
+  const canInspect = fileTools.some(usable);
   const preview = useObjectUrl(isImage ? current.blob : undefined);
   const [error, setError] = useState<string>();
   // 從編輯類工具的網址進來（例如遮蔽的任務），選好檔案就直接打開編輯畫面
@@ -256,7 +259,7 @@ export function FileView({ file, index, busy, preferred, onOpenTool }: Props) {
   // 適用這個格式的工具。能處理目前找到的資訊的標成建議，排在前面
   const found = new Set(current.findings.map((f) => f.code));
   const shelf = [...fileTools.map((tool) => ({ tool, editor: false })), ...editorTools.map((tool) => ({ tool, editor: true }))]
-    .filter(({ tool }) => tool.accepts(current.format))
+    .filter(({ tool }) => usable(tool))
     .map(({ tool, editor }) => ({
       tool,
       editor,
@@ -315,7 +318,7 @@ export function FileView({ file, index, busy, preferred, onOpenTool }: Props) {
               <Findings version={current} previous={file.versions.at(-2)} />
             </>
           ) : (
-            <p class="note">{t(current.format === "age" ? "file.encrypted" : "file.unsupported")}</p>
+            <p class="note">{t(current.large ? "file.tooLarge" : current.format === "age" ? "file.encrypted" : "file.unsupported")}</p>
           )}
 
           {isImage && file.versions[0]!.tool === null ? <QrInImage blob={current.blob} onOpenTool={onOpenTool} /> : null}

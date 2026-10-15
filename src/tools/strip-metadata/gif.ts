@@ -1,5 +1,6 @@
 import { ascii, concat } from "../../core/bytes.ts";
 import { type Finding, type ReportItem, type RunResult, ToolError } from "../../core/tool.ts";
+import { other } from "./preview.ts";
 
 // GIF：標頭與調色盤之後是一連串的區塊。影像（0x2C）與控制動畫的延伸區塊照抄，
 // 註解（0xFE）與不認得的應用程式延伸（XMP 也放在這裡）拿掉。迴圈次數
@@ -89,7 +90,7 @@ export function inspectGif(bytes: Uint8Array): Finding[] {
     } else if (b.app?.startsWith("XMP Data")) {
       findings.push({ code: "xmp" });
     } else {
-      findings.push({ code: "other" });
+      findings.push(other(b.app?.trim() || "extension", bytes.subarray(b.start, b.end)));
     }
   }
   if (result.trailer < bytes.length) findings.push({ code: "trailer" });

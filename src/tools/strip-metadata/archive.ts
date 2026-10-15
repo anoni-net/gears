@@ -1,6 +1,7 @@
 import { type Finding, type RunResult, ToolError } from "../../core/tool.ts";
 import { dosDate, entryData, readZip, writeZip, type NewEntry } from "../../core/zip.ts";
 import { type Inner, Tally } from "./package.ts";
+import { other } from "./preview.ts";
 
 // ZIP 壓縮檔。每個檔案帶著修改時間、建立的系統，附加欄位裡常有精確到秒的時間與 Unix 的
 // 使用者 ID，壓縮檔與個別檔案還可以有註解。重新打包時這些全部統一或拿掉（見 src/core/zip.ts）。
@@ -13,6 +14,8 @@ import { type Inner, Tally } from "./package.ts";
 
 // 解壓縮之後的總大小上限，跟文件一樣
 const MAX_TOTAL = 512 * 1024 * 1024;
+
+const SYSTEMS: Record<number, string> = { 0: "MS-DOS", 3: "Unix", 10: "NTFS", 19: "macOS" };
 
 export const SYSTEM_FILE = /(^|\/)(__MACOSX\/|\._[^/]*$|\.DS_Store$|Thumbs\.db$|ehthumbs\.db$|desktop\.ini$)/i;
 
@@ -52,7 +55,9 @@ export async function inspectZipArchive(bytes: Uint8Array, inner: Inner): Promis
   const findings: Finding[] = [];
   const dates = entries.map(dosDate).filter((d): d is string => !!d).sort();
   if (dates.length) findings.push({ code: "datetime", value: dates.at(-1) });
-  if (entries.some((e) => e.extraLength || e.madeBy !== 0)) findings.push({ code: "other" });
+  // 建立的系統與附加欄位：Unix 的附加欄位帶著使用者 ID 與精確的時間
+  const systems = [...new Set(entries.filter((e) => e.extraLength || e.madeBy !== 0).map((e) => SYSTEMS[e.madeBy] ?? `system ${e.madeBy}`))];
+  if (systems.length) findings.push(other("extra field", systems.join(" ")));
   if (commentLength || entries.some((e) => e.commentLength)) findings.push({ code: "comment" });
   const system = [...new Set(entries.filter((e) => SYSTEM_FILE.test(e.name)).map((e) => (e.name.startsWith("__MACOSX/") ? "__MACOSX" : e.name.split("/").at(-1)!)))];
   if (system.length) findings.push({ code: "system-files", value: system.slice(0, 5).join("、") });

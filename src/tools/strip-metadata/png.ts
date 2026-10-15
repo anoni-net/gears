@@ -1,6 +1,7 @@
 import { ascii, concat, startsWith, u32be } from "../../core/bytes.ts";
 import { type Finding, type ReportItem, type RunResult, type SegmentCode, ToolError } from "../../core/tool.ts";
 import { exifFindings, parseExif } from "./exif.ts";
+import { other } from "./preview.ts";
 
 // PNG 由 chunk 組成：長度(4) 型別(4) 資料 CRC(4)。每個 chunk 各自帶 CRC，整個拿掉
 // 不影響其他 chunk，不必重算。解碼與顏色需要的 chunk 用白名單保留，其他一律拿掉，
@@ -117,7 +118,7 @@ export function inspectPng(bytes: Uint8Array): Finding[] {
         findings.push(...exifFindings(parseExif(bytes.subarray(c.data, c.data + c.length))));
         break;
       default:
-        findings.push({ code: "other" });
+        findings.push(other(c.type, bytes.subarray(c.data, c.data + c.length)));
     }
   }
   if (result.trailer < bytes.length) findings.push({ code: "trailer" });

@@ -16,7 +16,7 @@ interface ItemProps {
 function Item({ file, selected, onSelect }: ItemProps) {
   const current = file.versions.at(-1)!;
   const isImage = isPhoto(current.format);
-  const canInspect = fileTools.some((tool) => tool.accepts(current.format));
+  const canInspect = fileTools.some((tool) => (current.large ? tool.acceptsLarge?.(current.format) : tool.accepts(current.format)));
   // 文件的註解與追蹤修訂是內容，清除之後仍然在，不算在找到的項目裡
   const found = current.findings.filter((f) => !CONTENT_FINDINGS.includes(f.code)).length;
   const url = useObjectUrl(isImage ? current.blob : undefined);
@@ -58,14 +58,22 @@ interface Props {
   selected: number | null;
   onSelect(id: number): void;
   onPick(): void;
+  busy: boolean;
+  failed: string[];
   compact: boolean; // 在工具裡、暫存區又是空的，手機上收起來，不擋在工具前面
 }
 
 // 暫存區一直放在桌面上。空的時候就是拖放區。
-export function TrayList({ files, selected, onSelect, onPick, compact }: Props) {
+export function TrayList({ files, selected, onSelect, onPick, busy, failed, compact }: Props) {
   return (
     <section class={compact ? "tray compact" : "tray"} aria-labelledby="tray-title">
       <h2 id="tray-title">{t("tray.title")}</h2>
+      {busy ? <p class="hint" role="status">{t("tray.reading")}</p> : null}
+      {failed.length ? (
+        <p class="error" role="alert">
+          {t("tray.failed", { names: failed.join("、") })}
+        </p>
+      ) : null}
       {files.length ? (
         <>
           <ul>

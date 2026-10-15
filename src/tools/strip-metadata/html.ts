@@ -1,5 +1,6 @@
 import { type Finding, type RunResult } from "../../core/tool.ts";
 import { Tally } from "./package.ts";
+import { other } from "./preview.ts";
 
 // HTML。另存網頁時瀏覽器會在開頭加上「saved from url=」的註解，記著原本的網址；
 // 編輯器與網站產生器留下 meta 標籤（作者、產生的軟體、描述、社群分享的網址與圖片）。
@@ -66,7 +67,7 @@ export function inspectHtml(bytes: Uint8Array): Finding[] {
     else if (key === "generator") findings.push({ code: "software", value });
     else if (key === "description" || key === "keywords" || key.endsWith(":title") || key.endsWith(":description")) findings.push({ code: "text", value });
     else if (key.endsWith(":url")) findings.push({ code: "path", value });
-    else findings.push({ code: "other" });
+    else findings.push(other(key || "meta", value));
   }
   return findings;
 }

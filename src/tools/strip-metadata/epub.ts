@@ -1,6 +1,7 @@
 import { type Finding, type RunResult, ToolError } from "../../core/tool.ts";
 import { type XmlElement, type XmlName, rewriteXml, walkXml } from "../../core/xml.ts";
 import { type Inner, type Part, Tally, inspectInner, partText, readParts, setText, stripInner, writeParts } from "./package.ts";
+import { other } from "./preview.ts";
 
 // EPUB 電子書：zip 裡是 XHTML 與一份 OPF，OPF 的 metadata 記錄作者、出版者、日期、識別碼，
 // calibre 這類管理軟體會再加上自己的欄位。從 Apple Books 匯出的檔案還有 iTunesMetadata.plist，
@@ -144,7 +145,7 @@ export async function inspectEpub(bytes: Uint8Array, inner: Inner): Promise<Find
   const findings: Finding[] = [];
   const names = new Set<string>();
   for (const part of parts) {
-    if (REMOVED_PARTS.some((re) => re.test(part.name))) findings.push({ code: "other", value: part.name.split("/").at(-1) });
+    if (REMOVED_PARTS.some((re) => re.test(part.name))) findings.push(other(part.name.split("/").at(-1)!, part.data));
   }
   const opfText = partText(parts.find((p) => p.name === opfPath)!);
   let uniqueId = "";
@@ -155,7 +156,7 @@ export async function inspectEpub(bytes: Uint8Array, inner: Inner): Promise<Find
     const parent = el.parents.at(-1);
     if (!parent || !is(parent, "opf", "metadata")) return;
     if (text === null) {
-      if (is(el, "opf", "meta") && attr(el, "name") && attr(el, "name") !== "cover") findings.push({ code: "other" });
+      if (is(el, "opf", "meta") && attr(el, "name") && attr(el, "name") !== "cover") findings.push(other(attr(el, "name")!, attr(el, "content")));
       return;
     }
     if (is(el, "dc", "creator") || is(el, "dc", "contributor") || is(el, "dc", "publisher") || is(el, "dc", "rights")) names.add(text);
@@ -163,7 +164,7 @@ export async function inspectEpub(bytes: Uint8Array, inner: Inner): Promise<Find
       findings.push({ code: "datetime", value: text });
     else if (is(el, "dc", "description")) findings.push({ code: "comment", value: text.slice(0, 80) });
     // 主要的識別碼規定要有，清除時換成隨機的，不列出來；其他的識別碼（ISBN、書店的編號）會拿掉
-    else if (is(el, "dc", "identifier") && attr(el, "id") !== uniqueId) findings.push({ code: "other", value: text.slice(0, 80) });
+    else if (is(el, "dc", "identifier") && attr(el, "id") !== uniqueId) findings.push(other("identifier", text));
     else if (is(el, "dc", "subject") || is(el, "dc", "source")) findings.push({ code: "text", value: text.slice(0, 80) });
   });
   for (const part of parts) {

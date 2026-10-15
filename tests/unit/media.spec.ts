@@ -118,3 +118,23 @@ test("多個串流交錯的 Ogg 不處理", async () => {
   const mixed = new Uint8Array([...opus, ...second]);
   await expect(stripMetadata.run(mixed, "opus")).rejects.toThrow(ToolError);
 });
+
+test("MP4 大檔案：用 Blob 分段處理的結果跟整檔處理一樣", async () => {
+  const { inspectMp4, inspectMp4Blob, stripMp4, stripMp4Blob } = await import("../../src/tools/strip-metadata/mp4.ts");
+  for (const file of [syntheticMp4(), syntheticMp4("qt  ")]) {
+    const whole = stripMp4(file);
+    const parts = await stripMp4Blob(new Blob([file as Uint8Array<ArrayBuffer>]));
+    expect(new Uint8Array(await parts.blob.arrayBuffer())).toEqual(whole.data);
+    expect(parts.report).toEqual(whole.report);
+    expect(await inspectMp4Blob(new Blob([file as Uint8Array<ArrayBuffer>]))).toEqual(inspectMp4(file));
+    expect(await inspectMp4Blob(parts.blob)).toEqual([]);
+  }
+});
+
+test("其他欄位列出名稱與內容，二進位資料抽出可讀的字串", async () => {
+  const { preview } = await import("../../src/tools/strip-metadata/preview.ts");
+  expect(preview(new Uint8Array([0, 1, ...new TextEncoder().encode("SN-12345"), 0, 2]))).toBe("SN-12345");
+  expect(preview(new Uint8Array([0xff, 0x00, 0x10]))).toBe("ff 00 10");
+  const findings = await stripMetadata.inspect(syntheticMp3(), "mp3");
+  expect(findings.find((f) => f.code === "other")?.value).toMatch(/^PRIV: SECRET-PRIVATE$/m);
+});

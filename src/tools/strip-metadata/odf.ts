@@ -14,6 +14,7 @@ import {
   stripInner,
   writeParts,
 } from "./package.ts";
+import { other } from "./preview.ts";
 
 // ODF 文件（odt、ods、odp、odg，LibreOffice 的預設格式）。zip 的第一個檔案是不壓縮的
 // mimetype，META-INF/manifest.xml 列出每個檔案。
@@ -179,7 +180,7 @@ export async function inspectOdf(bytes: Uint8Array, inner: Inner): Promise<Findi
           if (is(el, "meta", "template")) {
             const href = el.attrs.find((a) => is(a, "xlink", "href"))?.value;
             if (href && isLocalPath(href)) findings.push({ code: "path", value: href.slice(0, 120) });
-          } else if (is(el, "meta", "user-defined")) findings.push({ code: "other" });
+          }
           return;
         }
         if (is(el, "meta", "initial-creator") || is(el, "dc", "creator") || is(el, "meta", "printed-by")) names.add(text);
@@ -188,15 +189,16 @@ export async function inspectOdf(bytes: Uint8Array, inner: Inner): Promise<Findi
         else if (is(el, "meta", "generator")) findings.push({ code: "software", value: text.slice(0, 80) });
         else if (is(el, "dc", "title") || is(el, "dc", "description") || is(el, "dc", "subject") || is(el, "meta", "keyword"))
           findings.push({ code: "text", value: text.slice(0, 80) });
-        else if (is(el, "meta", "editing-duration")) findings.push({ code: "other" });
+        else if (is(el, "meta", "editing-duration")) findings.push(other("editing-duration", text));
+        else if (is(el, "meta", "user-defined")) findings.push(other(el.attrs.find((a) => is(a, "meta", "name"))?.value ?? "user-defined", text));
+        else if (is(el, "meta", "editing-cycles")) findings.push(other("editing-cycles", text));
         return;
       }
       if (name === "settings.xml") {
         if (text !== null && is(el, "config", "config-item")) {
           const item = configName(el);
           if (item === "PrinterName") findings.push({ code: "printer", value: text });
-          else if (item === "CurrentDatabaseDataSource") findings.push({ code: "other" });
-          else if (item === "RsidRoot") findings.push({ code: "other" });
+          else if (item === "CurrentDatabaseDataSource" || item === "RsidRoot") findings.push(other(item, text));
         }
         return;
       }
@@ -206,7 +208,8 @@ export async function inspectOdf(bytes: Uint8Array, inner: Inner): Promise<Findi
       }
       if (el.local === "annotation" && (is(el, "office") || is(el, "officeooo"))) comments++;
       if (is(el, "office", "change-info") && !inAnnotation(el)) revisions++;
-      if (el.attrs.some((a) => is(a, "officeooo") && a.local.endsWith("rsid"))) findings.push({ code: "other" });
+      const rsid = el.attrs.find((a) => is(a, "officeooo") && a.local.endsWith("rsid"));
+      if (rsid) findings.push(other("rsid", rsid.value));
     });
   }
 
