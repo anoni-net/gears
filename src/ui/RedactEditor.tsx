@@ -3,6 +3,7 @@ import type { Format } from "../core/bytes.ts";
 import type { Report } from "../core/tool.ts";
 import { t } from "../i18n/index.ts";
 import { type Box, boxFromPoints, isDark, isUsable, samplePoints } from "../tools/redact/index.ts";
+import { decodeImage } from "./image-decode.ts";
 import type { FileEditorProps } from "./types.ts";
 
 // 編輯時畫面上的圖最多 1600 像素寬，框的座標一律存成原圖的像素
@@ -19,13 +20,15 @@ async function render(bitmap: ImageBitmap, boxes: Box[], format: Format): Promis
   canvas.width = bitmap.width;
   canvas.height = bitmap.height;
   const ctx = canvas.getContext("2d")!;
-  if (format === "jpeg") {
+  // HEIC 沒有辦法在瀏覽器裡編碼，遮蔽之後輸出成 JPEG
+  const jpeg = format !== "png";
+  if (jpeg) {
     ctx.fillStyle = "#fff";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
   ctx.drawImage(bitmap, 0, 0);
   drawBoxes(ctx, boxes, 1);
-  const type = format === "jpeg" ? "image/jpeg" : "image/png";
+  const type = jpeg ? "image/jpeg" : "image/png";
   const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, type, 0.92));
   if (!blob) throw new Error("encode");
 
@@ -56,7 +59,7 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
   useEffect(() => {
     let alive = true;
     let opened: ImageBitmap | null = null;
-    createImageBitmap(blob)
+    decodeImage(blob)
       .then((bmp) => {
         opened = bmp;
         if (alive) {

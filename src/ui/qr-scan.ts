@@ -3,6 +3,8 @@
 // 大張的照片先縮小再讀，1200 萬畫素直接丟給 jsQR 要好幾秒。縮小後讀不到，再用
 // 比較大的尺寸試一次，照片裡的 QR code 可能只佔一小塊。
 
+import { decodeImage } from "./image-decode.ts";
+
 type Decode = (data: Uint8ClampedArray, width: number, height: number) => { data: string } | null;
 
 let jsQR: Promise<Decode> | null = null;
@@ -27,7 +29,7 @@ export async function decodeQrFromBlob(blob: Blob): Promise<string | null> {
   const decode = await loadJsQR();
   let bitmap: ImageBitmap;
   try {
-    bitmap = await createImageBitmap(blob);
+    bitmap = await decodeImage(blob);
   } catch {
     return null;
   }

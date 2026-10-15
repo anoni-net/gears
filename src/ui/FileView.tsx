@@ -10,6 +10,7 @@ import { IconCircle } from "./Icon.tsx";
 import { TOOL_META } from "./tool-meta.ts";
 import { useObjectUrl } from "./hooks.ts";
 import { QrContentView } from "./QrContentView.tsx";
+import { decodeImage } from "./image-decode.ts";
 import { decodeQrFromBlob } from "./qr-scan.ts";
 
 // 下載的檔名不沿用原檔名（常帶有拍攝日期），只決定副檔名。不能預覽的檔案沒有
@@ -20,12 +21,40 @@ function extension(name: string, format: Version["format"]): string {
   return ext ? ext.toLowerCase() : EXTENSION.unknown;
 }
 
-// 預覽圖。Chrome、Firefox 不能顯示 HEIC，載入失敗時說明原因，中繼資料照樣能處理
-function Preview({ url }: { url?: string }) {
-  const [broken, setBroken] = useState(false);
+// 預覽圖。Brave、Chrome、Firefox 不能直接顯示 HEIC，載入失敗時改用 libheif 解碼，
+// 畫成 PNG 再顯示。解碼也失敗時說明原因，中繼資料照樣能處理
+function Preview({ url, blob, format }: { url?: string; blob: Blob; format: Version["format"] }) {
+  const [state, setState] = useState<"native" | "decoding" | "decoded" | "broken">("native");
+  const [decoded, setDecoded] = useState<string>();
+  useEffect(() => () => {
+    if (decoded) URL.revokeObjectURL(decoded);
+  }, [decoded]);
+
+  const fallback = async () => {
+    if (format !== "heic") return setState("broken");
+    setState("decoding");
+    try {
+      const bitmap = await decodeImage(blob);
+      const canvas = document.createElement("canvas");
+      canvas.width = bitmap.width;
+      canvas.height = bitmap.height;
+      canvas.getContext("2d")!.drawImage(bitmap, 0, 0);
+      bitmap.close();
+      const png = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
+      if (!png) throw new Error("encode");
+      setDecoded(URL.createObjectURL(png));
+      setState("decoded");
+    } catch {
+      setState("broken");
+    }
+  };
+
   return (
     <figure class="preview">
-      {broken ? <p class="hint">{t("file.noPreview")}</p> : url ? <img src={url} alt="" onError={() => setBroken(true)} /> : null}
+      {state === "native" && url ? <img src={url} alt="" onError={fallback} /> : null}
+      {state === "decoding" ? <p class="hint">{t("file.decoding")}</p> : null}
+      {state === "decoded" ? <img src={decoded} alt="" /> : null}
+      {state === "broken" ? <p class="hint">{t("file.noPreview")}</p> : null}
     </figure>
   );
 }
@@ -227,7 +256,7 @@ export function FileView({ file, index, busy, preferred, onOpenTool }: Props) {
         </section>
       ) : (
       <div class={isImage ? "columns" : "columns single"}>
-        {isImage ? <Preview url={preview} key={preview} /> : null}
+        {isImage ? <Preview url={preview} blob={current.blob} format={current.format} key={preview} /> : null}
 
         <div class="panel">
           {isImage ? (
