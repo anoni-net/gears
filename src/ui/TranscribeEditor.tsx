@@ -285,11 +285,12 @@ export function TranscribeEditor({ blob, onCancel }: FileEditorProps) {
             onClick={() => {
               void removeModel(model).then(() => {
                 refresh();
-                setNote(t("transcribe.modelRemoved"));
+                setNote(t("transcribe.modelRemoved", { model }));
               });
             }}
           >
-            {t("transcribe.removeModel", { size: mb(MODELS[model].bytes) })}
+            {/* 只刪目前選取的模型，按鈕上寫出是哪一個 */}
+            {t("transcribe.removeModel", { model, size: mb(MODELS[model].bytes) })}
           </button>
         </p>
       ) : null}

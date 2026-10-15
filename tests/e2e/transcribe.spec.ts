@@ -68,8 +68,11 @@ test.describe("離線快取", () => {
     await expect.poll(async () => (await cached()).length).toBe(Object.keys(models.base.files).length);
     expect((await cached()).every((p) => p.startsWith(`/gears/models/whisper/${models.base.dir}/`))).toBe(true);
     await expect(page.getByText("已下載", { exact: true })).toBeVisible();
-    await page.getByRole("button", { name: /刪除已下載的模型/ }).click();
-    await expect(page.getByTestId("transcribe-status")).toHaveText("已刪除下載的模型。");
-    expect(await cached()).toEqual([]);
+    // small 也下載過的話，刪 base 時要留著
+    const small = `/gears/models/whisper/${models.small.dir}/config.json`;
+    await page.evaluate((url) => caches.open("gears-models").then((c) => c.put(url, new Response("{}"))), small);
+    await page.getByRole("button", { name: `刪除已下載的 base 模型（${Math.round(models.base.bytes / 1e6)} MB）` }).click();
+    await expect(page.getByTestId("transcribe-status")).toHaveText("已刪除下載的 base 模型，其他模型不受影響。");
+    expect(await cached()).toEqual([small]);
   });
 });
