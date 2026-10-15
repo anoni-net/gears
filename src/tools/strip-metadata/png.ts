@@ -124,3 +124,12 @@ export function inspectPng(bytes: Uint8Array): Finding[] {
   if (result.trailer < bytes.length) findings.push({ code: "trailer" });
   return findings;
 }
+
+export function exifOfPng(bytes: Uint8Array): Uint8Array | null {
+  try {
+    const c = walk(bytes).chunks.find((chunk) => chunk.type === "eXIf");
+    return c ? bytes.subarray(c.data, c.data + c.length) : null;
+  } catch {
+    return null;
+  }
+}

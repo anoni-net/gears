@@ -205,3 +205,12 @@ export function stripHeif(bytes: Uint8Array): RunResult {
   }
   return { data: out, report: { removed, kept: [{ code: "heif-image" }] } };
 }
+
+export function exifOfHeif(bytes: Uint8Array): Uint8Array | null {
+  try {
+    const item = metadataItems(bytes).find((i) => i.kind === "exif");
+    return item ? tiffOf(bytes, item) : null;
+  } catch {
+    return null;
+  }
+}

@@ -78,3 +78,12 @@ export function inspectWebp(bytes: Uint8Array): Finding[] {
   }
   return findings;
 }
+
+export function exifOfWebp(bytes: Uint8Array): Uint8Array | null {
+  try {
+    const c = walk(bytes).find((chunk) => chunk.type === "EXIF");
+    return c ? tiffOf(bytes, c) : null;
+  } catch {
+    return null;
+  }
+}

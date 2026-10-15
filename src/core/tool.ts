@@ -58,6 +58,7 @@ export const SEGMENT_CODES = [
   "orientation",
   "redaction",
   "reencode",
+  "exif-kept",
   "age-passphrase",
   "age-recipients",
   "age-armor",

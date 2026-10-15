@@ -785,6 +785,20 @@ footer a {
   margin-bottom: 0.75rem;
 }
 
+/* 勾選框帶一行說明時，說明換行、對齊文字 */
+.check small {
+  display: block;
+  color: var(--muted);
+}
+
+.check:has(small) {
+  align-items: flex-start;
+}
+
+.check:has(small) input {
+  margin-top: 0.3rem;
+}
+
 .segmented {
   display: flex;
   flex-wrap: wrap;
