@@ -7,7 +7,7 @@
 - 預設在瀏覽器裡處理。之後若提供上傳到社群伺服器的選項，上傳前要在畫面上寫清楚檔案送到哪裡、誰看得到、保留多久、伺服器會不會留下紀錄，由讀者決定
 - 上傳端點不經過 Cloudflare。Cloudflare 在邊緣解開 TLS，經過的檔案對它是明文
 - 頁面能連線的對象寫死在 CSP 裡（`vite.config.ts`），新增任何對外連線都要改那裡，並在畫面上標示
-- 執行期的相依套件只有 `preact`、`qrcode-generator`（QR code 產生）、`jsqr`（QR code 讀取）、`age-encryption`（加密，連同它相依的 noble 系列）、`libheif-js`（HEIC 解碼，LGPL-3.0，見下方「HEIC」）與 `pdf-lib`（PDF 的解析與寫出，見下方「文件」）。新增套件前先想能不能自己寫，必要時鎖定確切的版本。工具用到的套件在打開工具時才載入
+- 執行期的相依套件只有 `preact`、`qrcode-generator`（QR code 產生）、`jsqr`（QR code 讀取）、`age-encryption`（加密，連同它相依的 noble 系列）、`libheif-js`（HEIC 解碼，LGPL-3.0，見下方「HEIC」）、`pdf-lib`（PDF 的解析與寫出，見下方「文件」），以及遮蔽的自動尋找用的 `@mediapipe/tasks-vision` 與 `tesseract.js`（見下方「遮蔽的自動尋找」）。新增套件前先想能不能自己寫，必要時鎖定確切的版本。工具用到的套件在打開工具時才載入
 - 結構有問題的檔案就停下來，不交出一份沒處理乾淨的檔案
 
 ## 支援的瀏覽器
@@ -44,7 +44,7 @@ npm run test:unit    # 只執行單元測試，不需要瀏覽器
 | `tests/e2e/` | 在 Chromium、WebKit、Firefox 與 iPhone 尺寸上測整個流程 |
 | `tests/helpers/` | 產生測試檔案的程式 |
 | `public/` | 網站圖示、主畫面圖示與 manifest |
-| `licenses/` | 第三方圖示、HEIC 解碼器與 pdf-lib 的授權全文 |
+| `licenses/` | 第三方圖示、HEIC 解碼器、pdf-lib 與自動尋找的授權全文 |
 
 ## 工具模組
 
@@ -72,6 +72,19 @@ npm run test:unit    # 只執行單元測試，不需要瀏覽器
 暫存區有兩個以上的檔案時，下方可以一次清除全部的中繼資料（`tray.applyAll`，逐一處理，一個失敗不影響其他的），也可以把每個檔案的最新版本下載成一個壓縮檔（`src/ui/BatchActions.tsx`）。壓縮檔裡的檔名跟單檔下載一樣用 `gears-第幾個`（`src/ui/output-name.ts`），在記憶體裡組成，超過 512 MB 的部分請讀者個別下載。
 
 暫存區每次處理都產生新版本並保留原檔。處理完的影像會先實際解碼一次（`src/state.ts`），解不開就放棄這次的結果。加密檔由加密工具自己驗證，用密語加密時會用同一組密語解密一次。
+
+## 遮蔽的自動尋找
+
+遮蔽畫面有「找人臉」與「找電話、Email 等個資」兩個按鈕，找到的範圍直接加成框，讀者逐一確認、點一下刪掉框錯的。自動尋找一定會漏，畫面上寫明，不自動套用（`src/ui/redact-detect.ts`）。
+
+- 人臉：MediaPipe 的 BlazeFace 短距離模型（`public/models/`，進版控，約 230 KB）。模型以 128 像素的縮圖偵測，大圖的小臉會漏，所以整張圖偵測一次，再切成重疊的區塊各偵測一次，一直切到約 640 像素，用分數與 IoU 合併，拿掉同時包住兩張臉的大框。MediaPipe 一定要用 WebGL，關閉 WebGL 的瀏覽器顯示說明
+- 個資：Tesseract 用正體中文與英文辨識文字，`src/tools/redact/pii.ts` 把同一行的字接起來比對電話、Email、身分證與居留證、卡號、長串數字、網址與 @帳號，再把對到的字合成一個框。辨識完也可以把每一行文字都框起來
+- WebAssembly 與語言資料由 `scripts/copy-vendor.mjs` 從 `node_modules` 複製到 `public/vendor/`（不進版控，`npm run build` 與 `npm run dev` 之前自動執行），按下按鈕時才下載，人臉約 13 MB、文字約 9 MB
+- `@mediapipe/tasks-vision` 停在 0.10.35：1.0.0 起會把使用紀錄送到 `odml.pa.googleapis.com`。CSP 擋得下，但不該靠 CSP，升級前先在套件裡搜尋對外的網址
+- Tesseract 的語言資料不寫進 IndexedDB（`cacheMethod: "none"`），靠瀏覽器的 HTTP 快取
+- 授權與來源寫在 `licenses/redact-detect.txt`
+
+兩者的 WebAssembly 會把執行紀錄寫到標準錯誤輸出，瀏覽器當成 `console.error`。瀏覽器測試的守門程式（`tests/e2e/guard.ts`）把這幾種已知的訊息列為例外。
 
 ## 165 反詐騙清單
 
@@ -222,4 +235,5 @@ iPhone 預設拍出來的是 HEIC，在網頁上選照片時交出來的也是�
 - 工具的圖示來自 [Material Design Icons](https://pictogrammers.com/library/mdi/)，Pictogrammers Free License
 - HEIC 解碼器來自 [libheif-js](https://github.com/catdad-experiments/libheif-js) 1.23.5（libheif 與 libde265，LGPL-3.0），見 `licenses/libheif.txt`
 - PDF 的解析與寫出用 [pdf-lib](https://github.com/Hopding/pdf-lib) 1.17.1（MIT），見 `licenses/pdf-lib.txt`
+- 遮蔽的自動尋找用 [MediaPipe](https://github.com/google-ai-edge/mediapipe) 0.10.35 與 BlazeFace 模型、[Tesseract.js](https://github.com/naptha/tesseract.js) 7.0.0 與 tessdata_best 的語言資料（Apache-2.0），見 `licenses/redact-detect.txt`
 - 165 反詐騙清單見上方，部署時下載，不進版控
