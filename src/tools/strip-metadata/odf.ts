@@ -37,6 +37,8 @@ const NS = {
   officeooo: "http://openoffice.org/2009/office",
   dc: "http://purl.org/dc/elements/1.1/",
   xlink: "http://www.w3.org/1999/xlink",
+  text: "urn:oasis:names:tc:opendocument:xmlns:text:1.0",
+  table: "urn:oasis:names:tc:opendocument:xmlns:table:1.0",
 };
 
 const is = (n: XmlName, ns: keyof typeof NS, local?: string) => n.ns === NS[ns] && (local === undefined || n.local === local);
@@ -84,6 +86,7 @@ export async function stripOdf(bytes: Uint8Array, inner: Inner): Promise<RunResu
   checkManifest(all);
   const tally = new Tally();
   const removed = new Set<string>();
+  const { removeComments = false, acceptRevisions = false } = inner.options;
   for (const part of all) {
     if (!isRemoved(part.name)) continue;
     removed.add(part.name);
@@ -127,7 +130,17 @@ export async function stripOdf(bytes: Uint8Array, inner: Inner): Promise<RunResu
       const result = rewriteXml(partText(part), {
         keepComments: true,
         dropElement(el) {
-          // 註解的時間與縮寫可以拿掉；追蹤修訂的時間是必填，改成固定的值
+          // 讀者選擇刪除註解：註解本身與標示範圍結尾的 annotation-end
+          if (removeComments && (el.local === "annotation" || el.local === "annotation-end") && (is(el, "office") || is(el, "officeooo"))) {
+            tally.add("doc-comments-removed");
+            return true;
+          }
+          // 讀者選擇接受修訂：刪除的內容都在 tracked-changes 裡，內文只有標記，插入的文字已經在內文裡
+          if (acceptRevisions && ((el.local === "tracked-changes" && (is(el, "text") || is(el, "table"))) || (is(el, "text") && ["change", "change-start", "change-end"].includes(el.local)))) {
+            tally.add("doc-revisions-accepted");
+            return true;
+          }
+          // 註解的時間與縮寫可以拿掉。追蹤修訂的時間是必填，改成固定的值
           if ((is(el, "dc", "date") && inAnnotation(el)) || is(el, "meta", "creator-initials")) {
             tally.add("doc-authors");
             return true;

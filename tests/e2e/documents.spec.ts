@@ -47,3 +47,22 @@ test("PDF：打開時才載入 pdf-lib，清除後下載", async ({ page }) => {
   await cleanAndDownload(page, "pdf");
   await expect(page.getByText("沒有用到的物件", { exact: false })).toBeVisible();
 });
+
+test("Word：勾選刪除註解與接受修訂，套用之後兩者都不在", async ({ page }) => {
+  await add(page, "plan.docx", await syntheticDocx());
+  const content = page.getByTestId("content-findings");
+  const apply = content.getByRole("button", { name: "套用，同時清除中繼資料" });
+  await expect(apply).toBeDisabled();
+  await content.getByRole("checkbox", { name: /刪除所有註解/ }).check();
+  await content.getByRole("checkbox", { name: /接受所有追蹤修訂/ }).check();
+  await apply.click();
+  await expect(page.getByText("沒有找到可能透露身分的中繼資料。")).toBeVisible();
+  // 測試檔裡還有一個沒有辦法檢查的內嵌物件，那一項仍然列著，註解與修訂的選項不見了
+  await expect(content.getByRole("checkbox")).toHaveCount(0);
+  await expect(content.getByText(/^註解，|^追蹤修訂，/)).toHaveCount(0);
+  await expect(page.getByText("註解（依你的選擇刪除）")).toBeVisible();
+  await expect(page.getByText("追蹤修訂（依你的選擇全部接受，刪除的文字一併拿掉）")).toBeVisible();
+  const file = await downloadFrom(page, () => page.getByRole("link", { name: "下載" }).click());
+  const left = (await stripMetadata.inspect(file.data, "docx")).map((f) => f.code);
+  expect(left).toEqual(["attachments"]);
+});

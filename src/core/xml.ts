@@ -117,11 +117,14 @@ export interface XmlName {
 export interface XmlElement extends XmlName {
   attrs: (XmlName & { value: string })[]; // value 已經解開跳脫
   parents: XmlName[]; // 由外到內
+  index: number; // 在檔案裡是第幾個標記，先用 walkXml 掃描、再用 rewriteXml 改寫時對得上
 }
 
 export interface XmlRules {
   // 拿掉整個元素，連同裡面的內容
   dropElement?(el: XmlElement): boolean;
+  // 拿掉元素的標籤，裡面的內容留著，例如接受追蹤修訂時的 w:ins
+  unwrapElement?(el: XmlElement): boolean;
   // 改寫屬性：回傳 null 拿掉，回傳字串改成那個值，undefined 不動
   attr?(attr: XmlName & { value: string }, el: XmlElement): string | null | undefined;
   // 改寫元素裡直接的文字，回傳新的文字，undefined 不動
@@ -161,11 +164,12 @@ function resolve(name: string, scope: Scope, isAttr: boolean): XmlName {
   return { name, local, ns: scope.get(prefix) ?? null };
 }
 
-function element(t: { name: string; attrs: XmlAttr[] }, scope: Scope, parents: XmlName[]): XmlElement {
+function element(t: { name: string; attrs: XmlAttr[] }, scope: Scope, parents: XmlName[], index: number): XmlElement {
   return {
     ...resolve(t.name, scope, false),
     attrs: t.attrs.map((a) => ({ ...resolve(a.name, scope, true), value: unescapeXml(a.value) })),
     parents,
+    index,
   };
 }
 
@@ -180,10 +184,10 @@ export function rewriteXml(source: string, rules: XmlRules): XmlRewrite {
   const tokens = tokenizeXml(source);
   const result: XmlRewrite = { text: "", elements: 0, attributes: 0, texts: 0, comments: 0 };
   const out: string[] = [];
-  const stack: { el: XmlElement; scope: Scope }[] = [];
+  const stack: { el: XmlElement; scope: Scope; unwrapped?: boolean }[] = [];
   let scope: Scope = new Map();
   let skipDepth = 0;
-  for (const t of tokens) {
+  for (const [index, t] of tokens.entries()) {
     if (t.kind === "open" || t.kind === "close" || t.kind === "empty") {
       if (skipDepth > 0) {
         if (t.kind === "open") skipDepth++;
@@ -194,14 +198,22 @@ export function rewriteXml(source: string, rules: XmlRules): XmlRewrite {
         const top = stack.pop();
         if (!top || top.el.name !== t.name) throw new ToolError("broken");
         scope = stack.at(-1)?.scope ?? new Map();
-        out.push(t.raw);
+        if (!top.unwrapped) out.push(t.raw);
         continue;
       }
       const ownScope = declare(t.attrs, scope);
-      const el = element(t, ownScope, stack.map((s) => s.el));
+      const el = element(t, ownScope, stack.map((s) => s.el), index);
       if (rules.dropElement?.(el)) {
         result.elements++;
         if (t.kind === "open") skipDepth = 1;
+        continue;
+      }
+      if (rules.unwrapElement?.(el)) {
+        result.elements++;
+        if (t.kind === "open") {
+          stack.push({ el, scope: ownScope, unwrapped: true });
+          scope = ownScope;
+        }
         continue;
       }
       let changed = false;
@@ -247,13 +259,13 @@ export function rewriteXml(source: string, rules: XmlRules): XmlRewrite {
 export function walkXml(source: string, visit: (el: XmlElement, text: string | null) => void) {
   const stack: { el: XmlElement; scope: Scope }[] = [];
   let scope: Scope = new Map();
-  for (const t of tokenizeXml(source)) {
+  for (const [index, t] of tokenizeXml(source).entries()) {
     if (t.kind === "close") {
       stack.pop();
       scope = stack.at(-1)?.scope ?? new Map();
     } else if (t.kind === "open" || t.kind === "empty") {
       const ownScope = declare(t.attrs, scope);
-      const el = element(t, ownScope, stack.map((s) => s.el));
+      const el = element(t, ownScope, stack.map((s) => s.el), index);
       visit(el, null);
       if (t.kind === "open") {
         stack.push({ el, scope: ownScope });
