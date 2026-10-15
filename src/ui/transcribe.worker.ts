@@ -50,6 +50,23 @@ const MODEL_CACHE = "gears-models";
 // Transformers.js 會把 env.fetch 的錯誤換成「找不到檔案」，下載失敗的原因另外記下來回報
 let remoteError: Error | null = null;
 
+// 模型檔讀到多少位元組就回報給畫面
+function counted(response: Response, file: string): Response {
+  if (!response.ok || !response.body) return response;
+  let n = 0;
+  const body = response.body.pipeThrough(
+    new TransformStream<Uint8Array, Uint8Array>({
+      transform(chunk, controller) {
+        n += chunk.length;
+        files[file] = n;
+        reportDownload();
+        controller.enqueue(chunk);
+      },
+    }),
+  );
+  return new Response(body, { status: response.status, statusText: response.statusText, headers: response.headers });
+}
+
 // 大模型的檔案：先找快取，沒有就從 Hugging Face 下載、比對 SHA-256，存進快取再交給
 // Transformers.js。快取的網址跟 small、base 一樣用自己網域的路徑，畫面判斷「已下載」與
 // 刪除模型時不必分開處理
@@ -120,7 +137,8 @@ async function load(model: ModelId, base: string, threads: number): Promise<Pipe
         remoteError = error;
         throw error;
       });
-    return fetch(input, { ...init, cache: "no-store" });
+    const response = fetch(input, { ...init, cache: "no-store" });
+    return url.pathname.startsWith(dir) ? response.then((r) => counted(r, url.pathname.slice(dir.length))) : response;
   };
   // Transformers.js 載入時填上了 CDN 的網址，換成自己網域上的同一個檔案。舊版 Safari 用的是
   // 沒有 asyncify 的版本，照它的選擇
@@ -132,15 +150,10 @@ async function load(model: ModelId, base: string, threads: number): Promise<Pipe
   const asr = (await pipeline("automatic-speech-recognition", MODELS[model].dir, {
     dtype: MODELS[model].dtype as "q8" | "q4",
     device: "wasm",
-    // 有 progress_callback 時，Transformers.js 會先對每個檔案發一次請求查大小。大模型的進度由
-    // remoteFetch 回報，不傳，免得查大小的請求也觸發下載
-    progress_callback: MODELS[model].remote
-      ? undefined
-      : (info: { status: string; file?: string; loaded?: number }) => {
-          if (info.status !== "progress" || !info.file) return;
-          files[info.file] = info.loaded ?? 0;
-          reportDownload();
-        },
+    // 不傳 progress_callback：有它時 Transformers.js 會先對每個檔案發一次完整的 GET 查大小，
+    // 回應的內容不讀。大模型會因此多下載一次，這些沒讀完的連線還會佔住瀏覽器對同一個主機的
+    // 連線數。實測 Firefox 從開始到能辨識，base 要兩分鐘（改了之後 9 秒），用多個核心時約四分之一
+    // 的機率整個停住。下載進度改由 env.fetch 計算（counted）
   }).finally(() => downloads.clear())) as unknown as Pipeline;
   loaded = { model, asr };
   return asr;

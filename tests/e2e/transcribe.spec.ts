@@ -71,13 +71,18 @@ test("瀏覽器讀不了聲音的檔案，說明原因，不下載模型", async
 test("靜音的錄音不送進模型，說明沒有辨識到說話的內容", async ({ page }) => {
   test.skip(!hasModel, "沒有下載 base 模型");
   // 跟其他測試平行執行時 CPU 很忙，用 1 個核心，也涵蓋單執行緒的路徑（多執行緒由下面
-  // 離線快取的測試涵蓋）。Firefox 同時開好幾個執行緒池時，建立推論環境會慢到逾時
+  // 離線快取的測試涵蓋）
   test.setTimeout(240_000);
+  const onnx: string[] = [];
+  page.on("request", (r) => r.url().endsWith(".onnx") && onnx.push(new URL(r.url()).pathname.split("/").pop()!));
   await open(page, "silence.wav", wav(5));
   await page.getByLabel(/^base：比較快/).check();
   await page.getByLabel("1", { exact: true }).check();
   await page.getByRole("button", { name: "開始轉逐字稿" }).click();
   await expect(page.getByTestId("transcribe-status")).toHaveText("沒有辨識到說話的內容。", { timeout: 200_000 });
+  // 每個模型檔只請求一次。Transformers.js 有 progress_callback 時會先發一次不讀內容的 GET 查大小，
+  // 這些連線佔住瀏覽器的連線數，Firefox 會慢到兩分鐘、偶發整個停住（src/ui/transcribe.worker.ts）
+  expect(onnx.sort()).toEqual(["decoder_model_merged_quantized.onnx", "encoder_model_quantized.onnx"]);
 });
 
 test("建置產物裡沒有其他檔案匯入 Worker 的進入點", ({ browserName }) => {
