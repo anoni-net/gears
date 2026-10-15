@@ -22,6 +22,12 @@ jobs:
       # 瀏覽器測試用 pillow-heif 產生真的 HEIC（tests/global-setup.ts）
       - uses: astral-sh/setup-uv@v10.3.0
       - run: npm run typecheck
+      # 逐字稿的瀏覽器測試要 Whisper base 模型（約 80 MB，不進 repo），依模型清單快取
+      - uses: actions/cache@v6.1.0
+        with:
+          path: public/models/whisper
+          key: whisper-base-${{ hashFiles('src/tools/transcribe/models.json') }}
+      - run: node scripts/fetch-whisper.mjs base
       - run: npx playwright install --with-deps chromium webkit firefox
       - run: npm test
       - uses: actions/upload-artifact@v7

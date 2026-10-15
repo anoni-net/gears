@@ -12,6 +12,7 @@ export const TOOL_META: Record<string, { icon: IconName; cat: Category }> = {
   "heic-to-jpeg": { icon: "file-jpg-box", cat: "privacy" },
   encrypt: { icon: "lock-outline", cat: "secure" },
   decrypt: { icon: "lock-open-variant-outline", cat: "secure" },
+  transcribe: { icon: "subtitles-outline", cat: "secure" },
   passphrase: { icon: "dice-multiple-outline", cat: "secure" },
   "age-keygen": { icon: "key-plus", cat: "secure" },
   "text-crypt": { icon: "message-lock-outline", cat: "secure" },

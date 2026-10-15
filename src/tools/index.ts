@@ -1,3 +1,4 @@
+import { isMedia } from "../core/bytes.ts";
 import type { CreateTool, EditorTool, Tool } from "../core/tool.ts";
 import { stripMetadata } from "./strip-metadata/index.ts";
 
@@ -19,6 +20,8 @@ export const editorTools: EditorTool[] = [
   { id: "heic-to-jpeg", resolves: [], accepts: (format) => format === "heic" },
   { id: "encrypt", resolves: [], accepts: (format) => format !== "age" },
   { id: "decrypt", resolves: [], accepts: (format) => format === "age" },
+  // 瀏覽器解碼得了聲音的錄音與影片，解碼不了時畫面上說明
+  { id: "transcribe", resolves: [], accepts: isMedia },
 ];
 
 // 從空白開始的工具

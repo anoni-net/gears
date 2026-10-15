@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { extname, join } from "node:path";
+import whisper from "../../src/tools/transcribe/models.json" with { type: "json" };
 import { expect, test } from "./guard.ts";
 
 // Playwright 只在 Chromium 支援 service worker 的離線測試
@@ -110,6 +111,24 @@ test.describe("換上新版本", () => {
     await page.reload();
     await expect(page.getByTestId("offline-ready")).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText("已換上新版本。")).toBeHidden();
+  });
+
+  test("逐字稿的模型換版本時留著，模型清單以外的舊版本刪掉", async ({ page, browserName }) => {
+    test.skip(browserName !== "chromium", "離線測試只在 Chromium 執行");
+    await page.goto("./");
+    await expect(page.getByTestId("offline-ready")).toBeVisible({ timeout: 30_000 });
+    const current = `/gears/models/whisper/${whisper.base.dir}/config.json`;
+    const old = "/gears/models/whisper/whisper-base-0000000/config.json";
+    await page.evaluate(async (urls) => {
+      const cache = await caches.open("gears-models");
+      for (const url of urls) await cache.put(url, new Response("{}"));
+    }, [current, old]);
+    await serveNewVersion(page, "e2e-models");
+    await page.getByRole("button", { name: "重新載入" }).click();
+    await expect(page.getByText("已換上新版本。")).toBeVisible({ timeout: 10_000 });
+    const kept = () => page.evaluate(async () => (await (await caches.open("gears-models")).keys()).map((r) => new URL(r.url).pathname));
+    await expect.poll(kept).toEqual([current]);
+    expect(await page.evaluate(() => caches.keys())).toEqual(expect.arrayContaining(["gears-e2e-models", "gears-models"]));
   });
 
   test("新版本沒有接手時，按下重新載入一樣會重新載入，不會停在那裡", async ({ page, browserName }) => {

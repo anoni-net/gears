@@ -5,6 +5,7 @@ import { join, relative } from "node:path";
 import { defineConfig, type Plugin } from "vite";
 import { LOCALES, messagesOf } from "./src/i18n/index.ts";
 import { toolIds } from "./src/tools/index.ts";
+import whisper from "./src/tools/transcribe/models.json" with { type: "json" };
 
 // 頁面能連線的對象寫死在 CSP 裡。就算某個相依套件被植入程式，檔案也送不出去，
 // 讀者也能從頁面原始碼自行確認。connect-src 只有自己的網域，之後的伺服器處理與
@@ -106,6 +107,7 @@ function serviceWorker(base: string): Plugin {
         template
           .replace("__VERSION__", hash.digest("hex").slice(0, 16))
           .replace("__FILES__", JSON.stringify(precache))
+          .replace("__MODEL_DIRS__", JSON.stringify(Object.values(whisper).map((m) => `models/whisper/${m.dir}/`)))
           .replace("__BASE__", base),
       );
     },
@@ -121,8 +123,18 @@ function commit(): string {
   }
 }
 
+// cross-origin isolation：逐字稿的 WebAssembly 要用多執行緒，頁面要在這兩個標頭底下。
+// 工作台所有的資源都來自自己的網域，加上之後不影響其他功能。部署時 nginx 也要送一樣的標頭
+const isolation = { "Cross-Origin-Opener-Policy": "same-origin", "Cross-Origin-Embedder-Policy": "require-corp" };
+
 export default defineConfig({
   base: "/gears/",
+  server: { headers: isolation },
+  // 預覽伺服器另外用標頭送 CSP：Web Worker 不受頁面 meta 標籤的 CSP 約束，要靠標頭。
+  // 部署時 nginx 也要送一樣的 CSP 標頭（開發伺服器需要內嵌腳本，不加）
+  preview: { headers: { ...isolation, "Content-Security-Policy": CSP } },
+  // Worker 裡用 import() 延後載入 Transformers.js 與 OpenCC，要輸出成 ES 模組
+  worker: { format: "es" },
   define: { __GEARS_COMMIT__: JSON.stringify(commit()) },
   plugins: [csp(), toolPages(), serviceWorker("/gears/")],
   oxc: {
