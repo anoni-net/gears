@@ -295,7 +295,7 @@ export const en: Record<MessageKey, string> = {
   "redact.decodeFailed": "This image can't be opened.",
   "redact.findFaces": "Find faces",
   "redact.findText": "Find phone numbers, emails and other personal details",
-  "redact.findLines": "Mark all text ({n} lines)",
+  "redact.findLines": "Mark all text",
   "redact.loadingFaces": "Loading the recognition model… The first time downloads about 13 MB.",
   "redact.findingFaces": "Looking for faces…",
   "redact.loadingText": "Loading the recognition model… The first time downloads about 9 MB.",

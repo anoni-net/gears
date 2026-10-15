@@ -296,7 +296,7 @@ export const zhCN: Record<MessageKey, string> = {
   "redact.decodeFailed": "没有办法打开这张图片。",
   "redact.findFaces": "找人脸",
   "redact.findText": "找电话、Email 等个资",
-  "redact.findLines": "框起所有文本（{n} 行）",
+  "redact.findLines": "框起所有文本",
   "redact.loadingFaces": "加载识别模型中…第一次使用要下载约 13 MB。",
   "redact.findingFaces": "寻找人脸中…",
   "redact.loadingText": "加载识别模型中…第一次使用要下载约 9 MB。",
