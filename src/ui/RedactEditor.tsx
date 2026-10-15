@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "preact/hooks";
+import { Icon } from "./Icon.tsx";
 import type { Format } from "../core/bytes.ts";
 import type { Report } from "../core/tool.ts";
 import { t } from "../i18n/index.ts";
@@ -337,6 +338,7 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
           {t("redact.decodeFailed")}
         </p>
       ) : null}
+      {/* 會改變框的動作都在圖片上方，套用與取消固定在底部的完成列 */}
       <div class="redact-auto">
         <button type="button" disabled={!bitmap || running} onClick={() => runAuto("faces")}>
           {t("redact.findFaces")}
@@ -346,6 +348,16 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
         </button>
         <button type="button" disabled={!bitmap || running} onClick={() => runAuto("lines")}>
           {t("redact.findLines")}
+        </button>
+        <span class="redact-toolbar-divider" aria-hidden="true" />
+        {/* 窄螢幕只顯示圖示，文字仍在按鈕裡給讀螢幕軟體，滑鼠移上去也看得到 */}
+        <button type="button" class="icon-button" title={t("redact.undo")} disabled={!boxes.length} onClick={() => setBoxes((list) => list.slice(0, -1))}>
+          <Icon name="undo" />
+          <span class="label">{t("redact.undo")}</span>
+        </button>
+        <button type="button" class="icon-button" title={t("redact.clear")} disabled={!boxes.length} onClick={() => setBoxes([])}>
+          <Icon name="delete-sweep-outline" />
+          <span class="label">{t("redact.clear")}</span>
         </button>
       </div>
       {/* 訊息區的高度固定：所有可能出現的訊息疊在同一格，用最長的那一則撐開，
@@ -397,12 +409,6 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
         {/* 處理中蓋在圖片上，不佔版面 */}
         {running ? <AutoProgress label={t(auto!.kind === "faces" ? "redact.findFaces" : auto!.kind === "lines" ? "redact.findLines" : "redact.findText")} value={auto!.progress ?? null} /> : null}
       </div>
-      <p class="hint" id="redact-keys">
-        {t("redact.keys")}
-      </p>
-      <p class="hint" aria-live="polite">
-        {corner ? t("redact.cornerSet") : t("redact.count", { n: boxes.length })}
-      </p>
       {exif ? (
         <label class="check">
           <input type="checkbox" checked={keepExif} onChange={(e) => setKeepExif((e.currentTarget as HTMLInputElement).checked)} />
@@ -412,25 +418,25 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
           </span>
         </label>
       ) : null}
-      <div class="buttons">
-        <button type="button" class="primary" disabled={!boxes.length || status === "working"} onClick={apply}>
-          {status === "working" ? t("redact.working") : t("redact.apply")}
-        </button>
-        <button type="button" disabled={!boxes.length} onClick={() => setBoxes((list) => list.slice(0, -1))}>
-          {t("redact.undo")}
-        </button>
-        <button type="button" disabled={!boxes.length} onClick={() => setBoxes([])}>
-          {t("redact.clear")}
-        </button>
-        <button type="button" onClick={onCancel}>
-          {t("redact.cancel")}
-        </button>
+      <div class="redact-actions">
+        <p aria-live="polite">{corner ? t("redact.cornerSet") : t("redact.count", { n: boxes.length })}</p>
+        <div class="buttons">
+          <button type="button" onClick={onCancel}>
+            {t("redact.cancel")}
+          </button>
+          <button type="button" class="primary" disabled={!boxes.length || status === "working"} onClick={apply}>
+            {status === "working" ? t("redact.working") : t("redact.apply")}
+          </button>
+        </div>
       </div>
       {status === "failed" ? (
         <p class="error" role="alert">
           {t("redact.failed")}
         </p>
       ) : null}
+      <p class="hint" id="redact-keys">
+        {t("redact.keys")}
+      </p>
       <p class="hint">{t("redact.note")}</p>
     </div>
   );

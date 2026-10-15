@@ -1135,6 +1135,58 @@ footer a {
   gap: 0.5rem;
 }
 
+/* 自動尋找與復原、清除之間的分隔 */
+.redact-toolbar-divider {
+  align-self: stretch;
+  width: 1px;
+  margin: 0.25rem 0.25rem;
+  background: var(--line);
+}
+
+/* 復原與清除：寬螢幕圖示加文字，窄螢幕只留圖示 */
+.redact .icon-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.redact .icon-button .icon {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+@media (max-width: 40rem) {
+  .redact .icon-button .label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+/* 完成列：捲動時固定在畫面底部，結束時去哪裡按一直是同一個位置 */
+.redact-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  margin: 0.5rem 0 1rem;
+  padding: 0.75rem 0;
+  border-top: 1px solid var(--line);
+  background: var(--bg);
+}
+
+.redact-actions p {
+  margin: 0;
+  color: var(--muted);
+}
+
 /* 加密與解密 */
 
 .age .buttons {
