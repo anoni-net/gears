@@ -24,3 +24,24 @@ test("每個代碼與工具都有正體中文的字串", () => {
 test("同一個變數出現兩次，兩處都會替換", () => {
   expect(tDynamic("url.warn.brandSubdomain", { detail: "shopee" })).toBe("「shopee」出現在子網域裡，網站本身並不是 shopee");
 });
+
+test("每個語系的鍵都齊全，變數一致", async () => {
+  const { LOCALES, messagesOf } = await import("../../src/i18n/index.ts");
+  const vars = (s: string) => [...s.matchAll(/\{\w+\}/g)].map((m) => m[0]).sort();
+  for (const locale of LOCALES) {
+    const messages = messagesOf(locale.id) as Record<string, string>;
+    expect(Object.keys(messages).sort(), locale.id).toEqual(Object.keys(zhTW).sort());
+    for (const [key, value] of Object.entries(zhTW)) {
+      expect(messages[key]!.length, `${locale.id} ${key}`).toBeGreaterThan(0);
+      expect(vars(messages[key]!), `${locale.id} ${key}`).toEqual(vars(value));
+    }
+  }
+});
+
+test("網址決定語系", async () => {
+  const { localeFromPath } = await import("../../src/i18n/index.ts");
+  expect(localeFromPath("/gears/")).toBe("zh-TW");
+  expect(localeFromPath("/gears/qrcode/")).toBe("zh-TW");
+  expect(localeFromPath("/gears/zh-cn/qrcode/")).toBe("zh-CN");
+  expect(localeFromPath("/gears/en/")).toBe("en");
+});

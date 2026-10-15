@@ -1,7 +1,7 @@
 import { isPhoto } from "../core/bytes.ts";
 import { CONTENT_FINDINGS } from "../core/tool.ts";
 import type { TrayFile } from "../core/tray.ts";
-import { t } from "../i18n/index.ts";
+import { list, t } from "../i18n/index.ts";
 import { tray } from "../state.ts";
 import { fileTools } from "../tools/index.ts";
 import { useState } from "preact/hooks";
@@ -72,7 +72,7 @@ export function TrayList({ files, selected, onSelect, onPick, busy, failed, comp
       {busy ? <p class="hint" role="status">{t("tray.reading")}</p> : null}
       {failed.length ? (
         <p class="error" role="alert">
-          {t("tray.failed", { names: failed.join("、") })}
+          {t("tray.failed", { names: list(failed) })}
         </p>
       ) : null}
       {files.length ? (
