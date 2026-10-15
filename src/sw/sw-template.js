@@ -10,7 +10,7 @@ const BASE = "__BASE__";
 const CACHE = `gears-${VERSION}`;
 const RUNTIME = `gears-${VERSION}-runtime`;
 // 用到時才存的大檔案
-const LAZY = [`${BASE}vendor/`, `${BASE}models/`];
+const LAZY = [`${BASE}vendor/`, `${BASE}models/`, `${BASE}assets/ort-wasm-`];
 
 // index.html 存成資料夾的網址，瀏覽器開啟的是 /gears/qrcode/ 不是 /gears/qrcode/index.html
 const url = (file) => BASE + file.replace(/(^|\/)index\.html$/, "$1");

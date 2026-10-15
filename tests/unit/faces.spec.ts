@@ -1,152 +1,95 @@
 import { expect, test } from "@playwright/test";
-import { type Detection, faceTiles, selectFaces } from "../../src/tools/redact/faces.ts";
+import { type Detection, type Outputs, decodeYunet, inputSize, selectFaces, toImage } from "../../src/tools/redact/faces.ts";
 
-test("大合照切到 12×12，最細的區塊夠小，30 像素的臉佔得到區塊的五分之一", () => {
-  const tiles = faceTiles(1440, 1080);
-  expect([...new Set(tiles.map((t) => t.grid))]).toEqual([1, 2, 4, 8, 12]);
-  expect(tiles).toHaveLength(1 + 4 + 16 + 64 + 144);
-  const finest = tiles.filter((t) => t.grid === 12);
-  expect(Math.max(...finest.map((t) => t.w))).toBeLessThanOrEqual(150);
+test("輸入尺寸：長邊縮到指定的大小，寬高補到 32 的倍數", () => {
+  // 手機拍的直式原始檔
+  expect(inputSize(3648, 5472, 960)).toEqual({ scale: 960 / 5472, width: 640, height: 960, padWidth: 640, padHeight: 960 });
+  // 1440×1080 的合照
+  expect(inputSize(1440, 1080, 960)).toMatchObject({ width: 960, height: 720, padWidth: 960, padHeight: 736 });
+  expect(inputSize(1440, 1080, 320)).toMatchObject({ width: 320, height: 240, padWidth: 320, padHeight: 256 });
+  // 小圖也放大到指定的長邊，模型對 10 像素以下的臉找不到
+  expect(inputSize(300, 200, 960)).toMatchObject({ width: 960, height: 640 });
 });
 
-test("每一層的區塊蓋住整張圖，彼此重疊，不超出邊界", () => {
-  const width = 1440;
-  const height = 1080;
-  const tiles = faceTiles(width, height);
-  for (const n of [2, 4, 8, 12]) {
-    const level = tiles.filter((t) => t.grid === n);
-    for (const t of level) {
-      expect(t.x).toBeGreaterThanOrEqual(0);
-      expect(t.y).toBeGreaterThanOrEqual(0);
-      expect(t.x + t.w).toBeLessThanOrEqual(width);
-      expect(t.y + t.h).toBeLessThanOrEqual(height);
-    }
-    // 區塊排成格子，橫向與縱向各自蓋滿就蓋住整張圖
-    const covers = (size: number, spans: [number, number][]) => {
-      for (let p = 0; p < size; p++) if (!spans.some(([a, b]) => p >= a && p < b)) return false;
-      return true;
-    };
-    expect(covers(width, level.map((t) => [t.x, t.x + t.w]))).toBe(true);
-    expect(covers(height, level.map((t) => [t.y, t.y + t.h]))).toBe(true);
-    // 相鄰的區塊重疊，切在邊界上的臉至少有一塊是完整的
-    const row = level.filter((t) => t.y === level[0]!.y).sort((a, b) => a.x - b.x);
-    expect(row[0]!.x + row[0]!.w).toBeGreaterThan(row[1]!.x);
+// 64×64 的輸入：stride 8、16、32 各有 64、16、4 個格子，全部填 0，再把指定的格子填上數值
+function outputs(cells: { stride: number; index: number; cls: number; obj: number; bbox: number[]; kps?: number[] }[]): Outputs {
+  const out: Record<string, { data: Float32Array }> = {};
+  for (const stride of [8, 16, 32]) {
+    const n = (64 / stride) ** 2;
+    out[`cls_${stride}`] = { data: new Float32Array(n) };
+    out[`obj_${stride}`] = { data: new Float32Array(n) };
+    out[`bbox_${stride}`] = { data: new Float32Array(n * 4) };
+    out[`kps_${stride}`] = { data: new Float32Array(n * 10) };
   }
-});
-
-test("小圖不切：區塊小於 120 像素就停在上一層", () => {
-  expect(faceTiles(200, 150).map((t) => t.grid)).toEqual([1]);
-  expect([...new Set(faceTiles(640, 480).map((t) => t.grid))]).toEqual([1, 2, 4]);
-});
-
-// 依框的大小擺出特徵點：兩眼在框高 0.35、鼻子 0.55、嘴巴 0.75，tilt 是兩眼連線的傾斜角度
-function keypoints(box: { x: number; y: number; w: number; h: number }, tilt = 0): [number, number][] {
-  const cx = box.x + box.w / 2;
-  const ey = box.y + box.h * 0.35;
-  const dx = box.w * 0.2 * Math.cos((tilt * Math.PI) / 180);
-  const dy = box.w * 0.2 * Math.sin((tilt * Math.PI) / 180);
-  return [
-    [cx - dx, ey - dy],
-    [cx + dx, ey + dy],
-    [cx, box.y + box.h * 0.55],
-    [cx, box.y + box.h * 0.75],
-  ];
+  for (const c of cells) {
+    out[`cls_${c.stride}`]!.data[c.index] = c.cls;
+    out[`obj_${c.stride}`]!.data[c.index] = c.obj;
+    out[`bbox_${c.stride}`]!.data.set(c.bbox, c.index * 4);
+    if (c.kps) out[`kps_${c.stride}`]!.data.set(c.kps, c.index * 10);
+  }
+  return out;
 }
 
-const face = (x: number, y: number, w: number, score: number, grid = 4, tilt = 0): Detection => {
-  const box = { x, y, w, h: w };
-  return { box, score, grid, keypoints: keypoints(box, tilt) };
-};
-
-// 假的重新偵測：依框的位置給固定的分數，順便記下被重新偵測的框
-function verifier(scores: Map<number, number[]>) {
-  const calls: number[] = [];
-  return {
-    calls,
-    verify: async (d: Detection) => {
-      calls.push(d.box.x);
-      return scores.get(d.box.x) ?? [0, 0, 0, 0];
-    },
-  };
-}
-
-test("分數夠高的直接採用，不重新偵測；同一張臉只留分數最高的", async () => {
-  const v = verifier(new Map());
-  const boxes = (await selectFaces([face(100, 100, 30, 0.9), face(102, 101, 30, 0.7, 8), face(200, 100, 30, 0.88)], v.verify)).faces;
-  expect(boxes).toEqual([
-    { x: 100, y: 100, w: 30, h: 30 },
-    { x: 200, y: 100, w: 30, h: 30 },
-  ]);
-  expect(v.calls).toEqual([]);
-});
-
-test("分數不夠高的，重新偵測四次都過 0.6 才算", async () => {
-  const v = verifier(
-    new Map([
-      // 歪著頭、嘴巴被手遮住的臉：轉正之後認得出來
-      [508, [0.63, 0.79, 0.77, 0.68]],
-      // 花叢：有幾次認得出來，但不是每一次
-      [177, [0.61, 0, 0.5, 0.66]],
-      // 招牌的字
-      [390, [0.62, 0, 0.67, 0]],
+test("解碼：分數是 sqrt(cls × obj)，框與特徵點依格子的位置還原", () => {
+  const found = decodeYunet(
+    outputs([
+      // stride 8 的第 9 格：第 1 列第 1 欄
+      { stride: 8, index: 9, cls: 0.81, obj: 1, bbox: [0.5, 0.5, Math.log(4), Math.log(5)], kps: [0.25, 0.5, 0.75, 0.5, 0.5, 1, 0.25, 1.5, 0.75, 1.5] },
+      // 分數 0.3，低於門檻
+      { stride: 16, index: 0, cls: 0.3, obj: 0.3, bbox: [0, 0, 0, 0] },
+      // stride 32 的最後一格：第 1 列第 1 欄
+      { stride: 32, index: 3, cls: 0.64, obj: 0.64, bbox: [0, 0, 0, 0] },
     ]),
+    64,
+    64,
+    0.5,
   );
-  const boxes = (await selectFaces([face(508, 929, 91, 0.7, 4, 31), face(177, 837, 45, 0.65, 12), face(390, 533, 42, 0.57, 8)], v.verify)).faces;
-  expect(boxes).toEqual([{ x: 508, y: 929, w: 91, h: 91 }]);
-  expect(v.calls.sort()).toEqual([177, 390, 508]);
+  expect(found).toHaveLength(2);
+  const [a, b] = found as [Detection, Detection];
+  expect(a.score).toBeCloseTo(0.9);
+  // 中心 (1.5 × 8, 1.5 × 8) = (12, 12)，寬 4 × 8、高 5 × 8
+  expect(a.box.x).toBeCloseTo(-4);
+  expect(a.box.y).toBeCloseTo(-8);
+  expect(a.box.w).toBeCloseTo(32);
+  expect(a.box.h).toBeCloseTo(40);
+  expect(a.keypoints![0]![0]).toBeCloseTo(10);
+  expect(a.keypoints![0]![1]).toBeCloseTo(12);
+  expect(a.keypoints![4]![1]).toBeCloseTo(20);
+  expect(b.score).toBeCloseTo(0.64);
+  expect(b.box).toEqual({ x: 16, y: 16, w: 32, h: 32 });
 });
 
-test("特徵點不像臉的低分結果不重新偵測：兩眼歪斜，或嘴巴擠在眼睛旁邊", async () => {
-  const v = verifier(new Map([[390, [0.9, 0.9, 0.9, 0.9]], [600, [0.9, 0.9, 0.9, 0.9]]]));
-  const flat: Detection = {
-    box: { x: 600, y: 100, w: 60, h: 60 },
-    score: 0.6,
-    grid: 8,
-    keypoints: [
-      [615, 120],
-      [645, 120],
-      [630, 122],
-      [630, 125], // 嘴巴只在眼睛下方框高的 0.08
-    ],
-  };
-  expect((await selectFaces([face(390, 533, 42, 0.57, 8, 42), flat], v.verify)).faces).toEqual([]);
-  expect(v.calls).toEqual([]);
+test("解碼：輸出少了某個 stride 就停下來，不交出不完整的結果", () => {
+  const broken = outputs([]);
+  delete broken["kps_16"];
+  expect(() => decodeYunet(broken, 64, 64, 0.5)).toThrow();
 });
 
-test("同一張臉已經有框，分數較低的其他偵測不必重新偵測", async () => {
-  const v = verifier(new Map());
-  await selectFaces([face(753, 926, 109, 0.88), face(751, 933, 107, 0.7, 8), face(777, 933, 103, 0.52, 12)], v.verify);
-  expect(v.calls).toEqual([]);
+test("座標換回原圖", () => {
+  const d = toImage({ box: { x: 10, y: 20, w: 30, h: 40 }, score: 0.9, keypoints: [[15, 25]] }, 0.5);
+  expect(d.box).toEqual({ x: 20, y: 40, w: 60, h: 80 });
+  expect(d.keypoints).toEqual([[30, 50]]);
 });
 
-test("整張圖偵測的低分大框，重新偵測不過就不算", async () => {
-  // 婚紗照：整張圖偵測把裙襬認成 0.55 分、814 像素的大臉
-  const v = verifier(new Map([[784, [0.9, 0.9, 0.9, 0.9]]]));
-  const boxes = (await selectFaces([face(378, 1195, 814, 0.55, 1), face(784, 957, 127, 0.8)], v.verify)).faces;
-  expect(boxes).toEqual([{ x: 784, y: 957, w: 127, h: 127 }]);
-});
+const det = (x: number, y: number, w: number, score: number, h = w): Detection => ({ box: { x, y, w, h }, score });
 
-test("同時包住兩張臉的大框拿掉", async () => {
-  const boxes = (await selectFaces([face(100, 100, 30, 0.95), face(200, 100, 30, 0.95), { box: { x: 80, y: 60, w: 200, h: 120 }, score: 0.9, grid: 1 }], verifier(new Map()).verify)).faces;
-  expect(boxes).toHaveLength(2);
-});
-
-test("重新偵測沒過、但另一種切法在同一個位置也找到的，列為可能是臉", async () => {
-  // 原始解析度的吹花瓣照片：歪著頭又被手遮住的臉，4×4 與 12×12 都找到，分數 0.55
-  const g4 = face(1398, 2566, 271, 0.55, 4, 29);
-  const g12 = face(1393, 2529, 149, 0.55, 12, 19);
-  // 花叢：只有 12×12 找到
-  const petal = face(2671, 880, 87, 0.56, 12, 17);
-  const v = verifier(new Map([[1398, [0.5, 0, 0.7, 0]], [1393, [0, 0, 0, 0.58]], [2671, [0.66, 0.58, 0, 0.53]]]));
-  const { faces, maybe } = await selectFaces([g4, g12, petal], v.verify);
-  expect(faces).toEqual([]);
-  expect(maybe).toEqual([g4.box]);
-});
-
-test("可能是臉的範圍跟確定的臉同一個位置時不列", async () => {
-  const sure = face(100, 100, 60, 0.9);
-  const v = verifier(new Map());
-  const { faces, maybe } = await selectFaces([sure, face(110, 110, 50, 0.6, 8), face(108, 105, 52, 0.55, 12)], v.verify);
-  expect(faces).toEqual([sure.box]);
+test("合併：同一張臉在兩種尺寸都找到時只留分數最高的", () => {
+  // 臉佔滿畫面的自拍：長邊 320 找到 0.95 的大框，960 找到 0.73 與 0.51 的小框，中心都落在大框裡
+  const big = det(100, 100, 775, 0.95);
+  const { faces, maybe } = selectFaces([det(250, 300, 469, 0.73), big, det(260, 280, 526, 0.51)]);
+  expect(faces).toEqual([big.box]);
   expect(maybe).toEqual([]);
+});
+
+test("0.7 以上加成框，0.6 到 0.7 是可能是臉，0.6 以下不要", () => {
+  const sure = det(100, 100, 50, 0.9);
+  const unsure = det(400, 100, 50, 0.65);
+  const { faces, maybe } = selectFaces([sure, unsure, det(700, 100, 50, 0.55)]);
+  expect(faces).toEqual([sure.box]);
+  expect(maybe).toEqual([unsure.box]);
+});
+
+test("同時包住兩張臉的大框拿掉", () => {
+  const { faces } = selectFaces([det(100, 100, 30, 0.95), det(200, 100, 30, 0.95), det(80, 60, 200, 0.9, 120)]);
+  expect(faces).toHaveLength(2);
 });

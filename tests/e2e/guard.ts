@@ -8,9 +8,9 @@ export interface Guard {
   errors: string[];
 }
 
-// WebAssembly 寫到標準錯誤輸出的訊息，瀏覽器一律當成 console.error。這幾種是正常的執行紀錄：
-// Tesseract 讀只含 LSTM 的語言資料時，舊引擎的參數找不到；TensorFlow Lite 啟動 CPU 加速
-const BENIGN = [/^Warning: Parameter not found: /, /^INFO: Created TensorFlow Lite XNNPACK delegate for CPU\.$/];
+// WebAssembly 寫到標準錯誤輸出的訊息，瀏覽器一律當成 console.error。這是正常的執行紀錄：
+// Tesseract 讀只含 LSTM 的語言資料時，舊引擎的參數找不到
+const BENIGN = [/^Warning: Parameter not found: /];
 
 export const test = base.extend<{ guard: Guard }>({
   guard: [

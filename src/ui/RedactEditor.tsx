@@ -90,7 +90,7 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
   // progress 是 0 到 1，null 表示還在載入模型
   const [auto, setAuto] = useState<{
     kind: "faces" | "text" | "lines";
-    state: "running" | "done" | "failed" | "noWebgl";
+    state: "running" | "done" | "failed";
     n: number;
     progress?: number | null;
   } | null>(null);
@@ -276,13 +276,11 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
       setAuto({ kind, state: "done", n: addFound(textLines) });
       return;
     }
-    let detectError: (new () => Error) | undefined;
     setAuto({ kind, state: "running", n: 0, progress: null });
     const onProgress = (progress: number | null) =>
       setAuto((a) => (a?.kind === kind && a.state === "running" ? { ...a, progress } : a));
     try {
-      const { findFaces, findText, NoWebGLError } = await import("./redact-detect.ts");
-      detectError = NoWebGLError;
+      const { findFaces, findText } = await import("./redact-detect.ts");
       if (kind === "faces") {
         const { faces, maybe: possible } = await findFaces(bitmap, onProgress);
         setAuto({ kind, state: "done", n: addFound(faces) || faces.length });
@@ -293,8 +291,8 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
         const found = kind === "lines" ? lines : pii.map((m) => m.box);
         setAuto({ kind, state: "done", n: addFound(found) || found.length });
       }
-    } catch (e) {
-      setAuto({ kind, state: detectError && e instanceof detectError ? "noWebgl" : "failed", n: 0 });
+    } catch {
+      setAuto({ kind, state: "failed", n: 0 });
     }
   };
 
@@ -302,7 +300,6 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
 
   const autoMessage = (a: typeof auto): string => {
     if (!a) return t("redact.autoNote");
-    if (a.state === "noWebgl") return t("redact.noWebgl");
     if (a.state === "failed") return t("redact.findFailed");
     if (a.state === "running") {
       if (a.kind === "faces") return t(a.progress == null ? "redact.loadingFaces" : "redact.findingFaces");
@@ -354,7 +351,7 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
           換訊息時下面的圖片不會跳動。看得到、唸得出來的只有目前那一則 */}
       <div class="redact-auto-message">
         <div>
-          <p class={auto?.state === "failed" || auto?.state === "noWebgl" ? "error" : "hint"} role="status" data-testid="redact-auto-status">
+          <p class={auto?.state === "failed" ? "error" : "hint"} role="status" data-testid="redact-auto-status">
             {autoMessage(auto)}
           </p>
           {maybe.length && auto?.state !== "running" ? (
@@ -441,7 +438,6 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
 // 訊息區可能出現的每一則訊息，用來撐開固定的高度
 const AUTO_MESSAGES = [
   "redact.autoNote",
-  "redact.noWebgl",
   "redact.findFailed",
   "redact.loadingFaces",
   "redact.findingFaces",
