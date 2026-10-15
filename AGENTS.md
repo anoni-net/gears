@@ -119,6 +119,7 @@ QR code 的測試把產生的 PNG 解碼回像素，用 `jsQR` 讀出文字，�
 | Word、Excel、PowerPoint（docx、xlsx、pptx） | 見下方「文件」 |
 | LibreOffice（odt、ods、odp、odg） | 見下方「文件」 |
 | PDF | 見下方「文件」 |
+| MP3、M4A、MP4、MOV、WAV、AVI、FLAC、Ogg、Opus、MKV、WebM | 見下方「音訊與影片」 |
 
 驗證時在本機用 Pillow 產生帶中繼資料的真實檔案，清除之後再用 Pillow 解碼，確認像素與原檔相同。
 
@@ -141,6 +142,25 @@ Office 與 LibreOffice 的文件都是 zip 包著一組 XML，`src/core/zip.ts` 
 pdf-lib（MIT，相依的 pako、tslib 等也一起打包）壓縮後約 180 KB，打開 PDF 時才載入，授權全文在 `licenses/pdf-lib.txt`。透過 `src/tools/strip-metadata/pdf-lib.ts` 載入，建置出來的檔名才看得出用途。
 
 單元測試用 `tests/helpers/documents.ts` 組出在各處都塞了秘密字串的文件，清除後逐一確認不在檔案裡、內文還在、套件內部的關聯前後一致。真實的檔案在本機用 python-docx、openpyxl、python-pptx 產生，再用 LibreOffice 轉成 ODF 與 PDF，清除之後用 LibreOffice 開啟並轉成 PDF，比對文字與原檔相同。
+
+## 音訊與影片
+
+手機錄的影片在 MP4、MOV 裡記錄拍攝位置、手機型號與系統版本，音樂與錄音的標籤記錄演出者、封面與編碼軟體。
+
+| 格式 | 做法 |
+|---|---|
+| MP4、MOV、M4A（`mp4.ts`） | `udta`、`meta`、XMP 與廠商的 `uuid` 改成 `free`、內容清成零，`mvhd`、`tkhd`、`mdhd` 的時間清成零，計時的中繼資料軌（iPhone 的 `mebx`、GoPro 的 `gpmd`、Google 的 `camm`）每一格的資料清成零 |
+| MP3（`mp3.ts`） | 拿掉開頭的 ID3v2，檔尾的 ID3v1、APEv2 與 Lyrics3，只留音訊框 |
+| WAV、AVI（`riff.ts`） | 用白名單保留需要的 chunk，其他的代號改成 `JUNK`、內容清成零，`JUNK` 原本的內容也清掉，RIFF 之後附加的資料拿掉 |
+| FLAC（`flac.ts`） | 保留 STREAMINFO、SEEKTABLE、CUESHEET，標籤、封面、程式自訂的區塊拿掉 |
+| Ogg Vorbis、Opus（`ogg.ts`） | 註解封包換成空白的，標頭重新分頁，後面每一頁重編序號、重算 CRC |
+| MKV、WebM（`ebml.ts`） | `Tags`、標題、建立時間、軌道名稱換成同樣長度的 `Void`，`MuxingApp`、`WritingApp` 清成空字串，母元素的 CRC-32 重算 |
+
+MP4、MOV、AVI、MKV 的影音資料位置記在索引裡，所以原地處理，檔案長度不變，影音資料一個位元都不動。各格式的標籤名稱不同，`media-tags.ts` 把它們對應到同一組資訊。附加檔案（MKV 的字型與封面）是內容，保留下來，檢查時另外提醒。
+
+檔案畫面用瀏覽器內建的播放器預覽，CSP 加上 `media-src blob:`，只能播放暫存區裡的檔案。播放器自己建立與收回網址，換版本時先讓播放器放掉網址，iOS 的 Safari 才不會去讀已經收回的網址。
+
+單元測試用 `tests/helpers/media.ts` 組出各格式的測試檔。真實的檔案在本機用 ffmpeg 產生（帶標題、演出者、位置、封面），清除之後用 ffprobe 確認標籤不見，用 `ffmpeg -f md5` 比對解碼後的聲音與影像跟原檔相同。
 
 ## HEIC
 
@@ -170,7 +190,7 @@ iPhone 預設拍出來的是 HEIC，在網頁上選照片時交出來的也是�
 
 ## 規劃
 
-產品規劃記錄在社群的工作區，還沒有公開。目前完成第一階段：桌面、檔案暫存區，以及清除中繼資料（JPEG、PNG、HEIC、AVIF、WebP、GIF、TIFF、SVG、BMP、PNM、JPEG XL，Word、Excel、PowerPoint、LibreOffice 文件與 PDF）、遮蔽、加密與解密、age 金鑰產生器、QR code 產生器與讀取、網址檢查、密語與密碼產生器，可以下載與系統分享。部署到 `anoni.net/gears/` 是下一步。
+產品規劃記錄在社群的工作區，還沒有公開。目前完成第一階段：桌面、檔案暫存區，以及清除中繼資料（JPEG、PNG、HEIC、AVIF、WebP、GIF、TIFF、SVG、BMP、PNM、JPEG XL，Word、Excel、PowerPoint、LibreOffice 文件與 PDF，MP3、M4A、MP4、MOV、WAV、AVI、FLAC、Ogg、Opus、MKV、WebM）、遮蔽、加密與解密、age 金鑰產生器、QR code 產生器與讀取、網址檢查、密語與密碼產生器，可以下載與系統分享。部署到 `anoni.net/gears/` 是下一步。
 
 ## 第三方資料
 

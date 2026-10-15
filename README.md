@@ -10,6 +10,7 @@
 
 - 清除照片的拍攝位置、手機型號與拍攝時間（JPEG、PNG、HEIC、WebP、GIF、TIFF 等）
 - 清除 Word、Excel、PowerPoint、LibreOffice 文件與 PDF 的作者、公司、印表機與電腦上的路徑
+- 清除手機影片的拍攝位置與手機型號，以及音樂與錄音的標籤與封面（MP4、MOV、MP3、WAV、FLAC、Ogg、MKV 等）
 - 把 iPhone 的 HEIC 照片轉成 JPEG
 - 遮蔽截圖上的名字、頭像與電話
 - 用密語或 age 公鑰加密任何檔案，以及解密
@@ -52,6 +53,7 @@ Gears is under development and not deployed yet. Tools in the first version:
 
 - Strip location, device model and capture time from photos (JPEG, PNG, HEIC, WebP, GIF, TIFF and more)
 - Strip authors, company, printer and local file paths from Word, Excel, PowerPoint, LibreOffice documents and PDF
+- Strip location and device model from phone videos, and tags and cover art from music and recordings (MP4, MOV, MP3, WAV, FLAC, Ogg, MKV and more)
 - Convert iPhone HEIC photos to JPEG
 - Redact names, avatars and phone numbers in screenshots
 - Encrypt any file with a passphrase or an age public key, and decrypt

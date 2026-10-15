@@ -12,14 +12,14 @@ import { exifFindings, parseExif, tiffStart } from "./exif.ts";
 // EXIF 與 XMP，長度不變，檔案結構與影像資料一個位元都不動。旋轉方向在 HEIF 裡由
 // irot 與 imir 這兩個屬性記錄，跟 EXIF 無關，所以清掉 EXIF 不會讓照片轉向。
 
-interface Box {
+export interface Box {
   type: string;
   start: number;
   header: number; // box 標頭的長度
   end: number;
 }
 
-function readBoxes(bytes: Uint8Array, start: number, end: number): Box[] {
+export function readBoxes(bytes: Uint8Array, start: number, end: number): Box[] {
   const boxes: Box[] = [];
   let i = start;
   while (i + 8 <= end) {

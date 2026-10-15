@@ -81,6 +81,11 @@ export const SEGMENT_CODES = [
   "doc-images",
   "doc-unused",
   "doc-content",
+  "media-tags",
+  "media-times",
+  "media-timed",
+  "media-app",
+  "media-stream",
 ] as const;
 
 export type SegmentCode = (typeof SEGMENT_CODES)[number];

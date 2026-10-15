@@ -9,6 +9,12 @@ import { inspectOdf, stripOdf } from "./odf.ts";
 import { inspectOoxml, stripOoxml } from "./ooxml.ts";
 import type { Inner } from "./package.ts";
 import { inspectPdf, stripPdf } from "./pdf.ts";
+import { inspectEbml, stripEbml } from "./ebml.ts";
+import { inspectFlac, stripFlac } from "./flac.ts";
+import { inspectMp3, stripMp3 } from "./mp3.ts";
+import { inspectMp4, stripMp4 } from "./mp4.ts";
+import { inspectOgg, stripOgg } from "./ogg.ts";
+import { inspectRiff, stripRiff } from "./riff.ts";
 import { inspectPng, stripPng } from "./png.ts";
 import { inspectPnm, stripPnm } from "./pnm.ts";
 import { inspectSvg, stripSvg } from "./svg.ts";
@@ -23,6 +29,10 @@ type Handler = {
 
 const OOXML: Handler = { inspect: inspectOoxml, strip: stripOoxml };
 const ODF: Handler = { inspect: inspectOdf, strip: stripOdf };
+const MP4: Handler = { inspect: inspectMp4, strip: stripMp4 };
+const RIFF: Handler = { inspect: inspectRiff, strip: stripRiff };
+const OGG: Handler = { inspect: inspectOgg, strip: stripOgg };
+const EBML: Handler = { inspect: inspectEbml, strip: stripEbml };
 
 const HANDLERS: Partial<Record<Format, Handler>> = {
   jpeg: { inspect: inspectJpeg, strip: stripJpeg },
@@ -44,6 +54,17 @@ const HANDLERS: Partial<Record<Format, Handler>> = {
   odp: ODF,
   odg: ODF,
   pdf: { inspect: inspectPdf, strip: stripPdf },
+  mp3: { inspect: inspectMp3, strip: stripMp3 },
+  m4a: MP4,
+  mp4: MP4,
+  mov: MP4,
+  wav: RIFF,
+  avi: RIFF,
+  flac: { inspect: inspectFlac, strip: stripFlac },
+  ogg: OGG,
+  opus: OGG,
+  mkv: EBML,
+  webm: EBML,
 };
 
 // 文件裡的圖片與內嵌的文件交回這裡處理。內嵌的層數有上限，避免刻意做成的檔案無限遞迴

@@ -1,4 +1,5 @@
 import { odfKind, ooxmlKind } from "./documents.ts";
+import { type MediaFormat, mediaKind } from "./media.ts";
 import { zipNames } from "./zip.ts";
 
 // 處理位元組的小工具。工具模組只依賴這裡與 tool.ts，不碰 DOM，
@@ -69,6 +70,7 @@ export type Format =
   | "odp"
   | "odg"
   | "pdf"
+  | MediaFormat
   | "age"
   | "unknown";
 
@@ -90,6 +92,8 @@ export function sniff(bytes: Uint8Array): Format {
   // Office 與 ODF 都是 zip，看裡面的檔案
   const names = zipNames(bytes);
   if (names) return ooxmlKind(names) ?? odfKind(bytes) ?? "unknown";
+  const media = mediaKind(bytes);
+  if (media) return media;
   // age 的二進位格式與 ASCII armor 文字格式
   if (startsWith(bytes, 0, "age-encryption.org/v1\n") || startsWith(bytes, 0, "-----BEGIN AGE ENCRYPTED FILE-----")) return "age";
   return "unknown";
@@ -135,6 +139,11 @@ export const isPhoto = (format: Format) =>
 // 文件類的格式：沒有預覽，中繼資料照樣能檢查與清除
 export const isDocument = (format: Format) => ["docx", "xlsx", "pptx", "odt", "ods", "odp", "odg", "pdf"].includes(format);
 
+// 音訊與影片：瀏覽器播得了就給播放器，播不了照樣能檢查與清除
+export const AUDIO_FORMATS: readonly Format[] = ["mp3", "m4a", "wav", "flac", "ogg", "opus"];
+export const VIDEO_FORMATS: readonly Format[] = ["mp4", "mov", "avi", "mkv", "webm"];
+export const isMedia = (format: Format) => AUDIO_FORMATS.includes(format) || VIDEO_FORMATS.includes(format);
+
 export const MIME: Record<Format, string> = {
   jpeg: "image/jpeg",
   png: "image/png",
@@ -155,6 +164,17 @@ export const MIME: Record<Format, string> = {
   odp: "application/vnd.oasis.opendocument.presentation",
   odg: "application/vnd.oasis.opendocument.graphics",
   pdf: "application/pdf",
+  mp3: "audio/mpeg",
+  m4a: "audio/mp4",
+  mp4: "video/mp4",
+  mov: "video/quicktime",
+  wav: "audio/wav",
+  avi: "video/x-msvideo",
+  flac: "audio/flac",
+  ogg: "audio/ogg",
+  opus: "audio/ogg",
+  mkv: "video/x-matroska",
+  webm: "video/webm",
   age: "application/octet-stream",
   unknown: "application/octet-stream",
 };
@@ -179,6 +199,17 @@ export const EXTENSION: Record<Format, string> = {
   odp: "odp",
   odg: "odg",
   pdf: "pdf",
+  mp3: "mp3",
+  m4a: "m4a",
+  mp4: "mp4",
+  mov: "mov",
+  wav: "wav",
+  avi: "avi",
+  flac: "flac",
+  ogg: "ogg",
+  opus: "opus",
+  mkv: "mkv",
+  webm: "webm",
   age: "age",
   unknown: "bin",
 };

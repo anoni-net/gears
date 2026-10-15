@@ -46,7 +46,7 @@ async function previewLoaded(page: Page) {
 test("桌面有暫存區、任務捷徑與兩組工具，沒有檔案時不顯示清空按鈕", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "隱私工作台" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "暫存區" })).toBeVisible();
-  await expect(page.getByRole("button", { name: /分享照片前，拿掉拍攝位置/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /分享照片與影片前，拿掉拍攝位置/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /把 Wi-Fi 密碼傳給朋友/ })).toBeVisible();
   await expect(page.getByRole("heading", { name: "處理檔案" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "從空白開始" })).toBeVisible();
@@ -89,7 +89,7 @@ test("退回上一步，再清空暫存區", async ({ page }) => {
   await expect(page.getByRole("button", { name: "退回上一步" })).toHaveCount(0);
 
   await page.getByRole("button", { name: "清空暫存區" }).click();
-  await expect(page.getByRole("button", { name: /分享照片前，拿掉拍攝位置/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /分享照片與影片前，拿掉拍攝位置/ })).toBeVisible();
   await expect(page.locator(".tray .item")).toHaveCount(0);
   await expect(page.getByText("把檔案拖進來，或")).toBeVisible();
 });

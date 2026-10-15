@@ -1,5 +1,5 @@
-import { useEffect, useState } from "preact/hooks";
-import { EXTENSION, isDocument, isPhoto } from "../core/bytes.ts";
+import { useEffect, useRef, useState } from "preact/hooks";
+import { EXTENSION, VIDEO_FORMATS, isDocument, isMedia, isPhoto } from "../core/bytes.ts";
 import { CONTENT_FINDINGS, type Report, ToolError } from "../core/tool.ts";
 import type { TrayFile, Version } from "../core/tray.ts";
 import { t, tDynamic } from "../i18n/index.ts";
@@ -57,6 +57,36 @@ function Preview({ url, blob, format }: { url?: string; blob: Blob; format: Vers
       {state === "decoding" ? <p class="hint">{t("file.decoding")}</p> : null}
       {state === "decoded" ? <img src={decoded} alt="" /> : null}
       {state === "broken" ? <p class="hint">{t("file.noPreview")}</p> : null}
+    </figure>
+  );
+}
+
+// 音訊與影片用瀏覽器內建的播放器。MKV、AVI 這類多半播不了，改成說明。
+// 網址自己管：換版本時先讓播放器放掉網址再收回，iOS 的 Safari 才不會去讀已經收回的網址
+function MediaPreview({ blob, format }: { blob: Blob; format: Version["format"] }) {
+  const ref = useRef<HTMLVideoElement & HTMLAudioElement>(null);
+  const [url, setUrl] = useState<string>();
+  const [broken, setBroken] = useState(false);
+  useEffect(() => {
+    const next = URL.createObjectURL(blob);
+    setUrl(next);
+    setBroken(false);
+    return () => {
+      ref.current?.removeAttribute("src");
+      ref.current?.load();
+      URL.revokeObjectURL(next);
+    };
+  }, [blob]);
+  if (!url) return null;
+  return (
+    <figure class="preview media">
+      {broken ? (
+        <p class="hint">{t("file.noPlayback")}</p>
+      ) : VIDEO_FORMATS.includes(format) ? (
+        <video ref={ref} src={url} controls preload="metadata" playsInline onError={() => setBroken(true)} />
+      ) : (
+        <audio ref={ref} src={url} controls preload="metadata" onError={() => setBroken(true)} />
+      )}
     </figure>
   );
 }
@@ -195,7 +225,8 @@ function QrInImage({ blob, onOpenTool }: { blob: Blob; onOpenTool: Props["onOpen
 export function FileView({ file, index, busy, preferred, onOpenTool }: Props) {
   const current = file.versions.at(-1)!;
   const isImage = isPhoto(current.format);
-  const canInspect = isImage || isDocument(current.format);
+  const media = isMedia(current.format);
+  const canInspect = isImage || media || isDocument(current.format);
   const preview = useObjectUrl(isImage ? current.blob : undefined);
   const [error, setError] = useState<string>();
   // 從編輯類工具的網址進來（例如遮蔽的任務），選好檔案就直接打開編輯畫面
@@ -270,8 +301,9 @@ export function FileView({ file, index, busy, preferred, onOpenTool }: Props) {
           ) : null}
         </section>
       ) : (
-      <div class={isImage ? "columns" : "columns single"}>
+      <div class={isImage || media ? "columns" : "columns single"}>
         {isImage ? <Preview url={preview} blob={current.blob} format={current.format} key={preview} /> : null}
+        {media ? <MediaPreview blob={current.blob} format={current.format} /> : null}
 
         <div class="panel">
           {canInspect ? (

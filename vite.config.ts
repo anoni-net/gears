@@ -12,6 +12,8 @@ const CSP = [
   "script-src 'self' 'wasm-unsafe-eval'",
   "style-src 'self'",
   "img-src 'self' blob: data:",
+  // 音訊與影片的預覽：只播放暫存區裡的檔案（blob:），不從任何網址載入
+  "media-src blob:",
   "connect-src 'self'",
   "worker-src 'self' blob:",
   "font-src 'self'",
