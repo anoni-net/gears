@@ -96,9 +96,28 @@ node scripts/fetch-165.mjs   # 下載並整理成 public/data/165.txt
 
 照片與圖檔不進 repo，品牌圖示（`public/icons/`）例外。單元測試用 `tests/helpers/fixtures.ts` 組出結構完整的檔案。瀏覽器測試先用 canvas 產生一張可以解碼的圖，再塞進中繼資料。
 
-HEIC 有兩種測試檔。單元測試在測試裡組出結構完整、不能解碼的檔案。能解碼的真 HEIC 由 `tests/global-setup.ts` 在瀏覽器測試開始前呼叫 `scripts/make-test-heic.py`，用 pillow-heif 產生到 `tests/.generated/`（不進版控）。有 `uv` 就用 `uv run --with pillow-heif==1.8.1`，CI 用 `astral-sh/setup-uv` 安裝。產生不了時，用到真 HEIC 的測試會略過。
+HEIC 有兩種測試檔。單元測試在測試裡組出結構完整、不能解碼的檔案。能解碼的真 HEIC 由 `tests/global-setup.ts` 在瀏覽器測試開始前呼叫 `scripts/make-test-images.py`，用 pillow-heif 產生到 `tests/.generated/`（不進版控）。有 `uv` 就用 `uv run --with pillow-heif==1.8.1`，CI 用 `astral-sh/setup-uv` 安裝。產生不了時，用到真 HEIC 的測試會略過。
 
 QR code 的測試把產生的 PNG 解碼回像素，用 `jsQR` 讀出文字，跟輸入比對，中文與 Wi-Fi 的特殊字元都要測。編碼寫錯的典型後果是掃得出來、內容卻錯。
+
+## 清除中繼資料支援的格式
+
+格式的範圍參考 mat2（Tails 的 Metadata Cleaner 背後的工具），每種格式一個檔案，在 `src/tools/strip-metadata/index.ts` 登記。原則跟 JPEG 一樣：用白名單保留影像需要的部分，其他一律拿掉，不重新編碼。
+
+| 格式 | 做法 |
+|---|---|
+| JPEG | 拿掉 APP 區段與註解，接在影像後面的資料一併拿掉，只把旋轉方向寫回去 |
+| PNG | 保留影像需要的 chunk，文字、時間與 eXIf 拿掉 |
+| HEIC、AVIF | 原地把 EXIF 與 XMP 換成空白的內容，長度與結構不變 |
+| WebP | 拿掉 EXIF 與 XMP chunk，清掉 VP8X 的旗標，重算 RIFF 長度 |
+| GIF | 拿掉註解與不認得的應用程式延伸，保留迴圈與色彩描述檔 |
+| TIFF | 用白名單保留解碼需要的標籤，原地改寫 IFD，拿掉的標籤與 EXIF、GPS 子 IFD 的資料清成零 |
+| SVG | 拿掉 metadata、註解與 inkscape、sodipodi 的元素與屬性（常帶著電腦上的路徑） |
+| BMP | 沒有描述用的欄位，只拿掉檔尾的附加資料 |
+| PNM | 拿掉 # 開頭的註解 |
+| JPEG XL | 拿掉 Exif、xml、jumb、brob box |
+
+驗證時在本機用 Pillow 產生帶中繼資料的真實檔案，清除之後再用 Pillow 解碼，確認像素與原檔相同。
 
 ## HEIC
 
@@ -128,7 +147,7 @@ iPhone 預設拍出來的是 HEIC，在網頁上選照片時交出來的也是�
 
 ## 規劃
 
-產品規劃記錄在社群的工作區，還沒有公開。目前完成第一階段：桌面、檔案暫存區，以及清除中繼資料（JPEG、PNG、HEIC）、遮蔽、加密與解密、age 金鑰產生器、QR code 產生器與讀取、網址檢查、密語與密碼產生器，可以下載與系統分享。部署到 `anoni.net/gears/` 是下一步。
+產品規劃記錄在社群的工作區，還沒有公開。目前完成第一階段：桌面、檔案暫存區，以及清除中繼資料（JPEG、PNG、HEIC、AVIF、WebP、GIF、TIFF、SVG、BMP、PNM、JPEG XL）、遮蔽、加密與解密、age 金鑰產生器、QR code 產生器與讀取、網址檢查、密語與密碼產生器，可以下載與系統分享。部署到 `anoni.net/gears/` 是下一步。
 
 ## 第三方資料
 

@@ -53,6 +53,12 @@ export const SEGMENT_CODES = [
   "age-decrypted",
   "heif-image",
   "heic-converted",
+  "tiff-tags",
+  "tiff-image",
+  "svg-metadata",
+  "svg-editor",
+  "bmp-image",
+  "jxl-image",
 ] as const;
 
 export type SegmentCode = (typeof SEGMENT_CODES)[number];

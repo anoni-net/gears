@@ -1,6 +1,6 @@
 import { ascii, indexOf, isHeifBrand, u16be, u32be } from "../../core/bytes.ts";
 import { type Finding, type RunResult, ToolError } from "../../core/tool.ts";
-import { exifFindings, parseExif } from "./exif.ts";
+import { exifFindings, parseExif, tiffStart } from "./exif.ts";
 
 // HEIC（HEIF）的中繼資料。iPhone 預設拍出來的就是這個格式。
 //
@@ -146,11 +146,10 @@ function metadataItems(bytes: Uint8Array): MetadataItem[] {
   return items;
 }
 
-// EXIF item 的資料是 4 個位元組的位移，接著才是 TIFF 結構（中間常有 Exif\0\0）
+// EXIF item 的資料：4 個位元組的位移再接 TIFF（中間常有 Exif\0\0），有些程式省略位移
 function tiffOf(bytes: Uint8Array, item: MetadataItem): Uint8Array {
-  const skip = u32be(bytes, item.start);
-  const at = item.start + 4 + skip;
-  return bytes.subarray(Math.min(at, item.start + item.length), item.start + item.length);
+  const end = item.start + item.length;
+  return bytes.subarray(item.start + tiffStart(bytes, item.start, end), end);
 }
 
 // 空白的 TIFF：大端序標頭、IFD0 沒有任何項目、沒有下一個 IFD
@@ -188,9 +187,8 @@ export function stripHeif(bytes: Uint8Array): RunResult {
   for (const item of items) {
     const region = out.subarray(item.start, item.start + item.length);
     if (item.kind === "exif") {
-      // 保留前面 4 個位元組的位移與 Exif\0\0，從 TIFF 開始換成空白的結構，其餘補零
-      const skip = Math.min(u32be(bytes, item.start), Math.max(0, item.length - 4));
-      const tiffAt = 4 + skip;
+      // 保留 TIFF 之前的位移與 Exif\0\0，從 TIFF 開始換成空白的結構，其餘補零
+      const tiffAt = tiffStart(bytes, item.start, item.start + item.length);
       if (tiffAt + EMPTY_TIFF.length > item.length) {
         region.fill(0);
       } else {

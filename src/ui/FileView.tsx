@@ -16,6 +16,8 @@ import { decodeQrFromBlob } from "./qr-scan.ts";
 // 下載的檔名不沿用原檔名（常帶有拍攝日期），只決定副檔名。不能預覽的檔案沒有
 // 可靠的格式判斷，沿用原檔名的副檔名，解密時先拿掉 .age
 function extension(name: string, format: Version["format"]): string {
+  // PNM 有 pbm、pgm、ppm、pam 幾種副檔名，沿用原本的
+  if (format === "pnm") return /\.(pbm|pgm|ppm|pnm|pam)$/i.exec(name)?.[1]?.toLowerCase() ?? EXTENSION.pnm;
   if (format !== "unknown") return EXTENSION[format];
   const ext = /\.([a-z0-9]{1,5})$/i.exec(name.replace(/\.age$/i, ""))?.[1];
   return ext ? ext.toLowerCase() : EXTENSION.unknown;
