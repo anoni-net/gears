@@ -560,6 +560,20 @@ footer a {
   color: inherit;
 }
 
+/* 切換語系：三個按鈕之間留間距，目前的語系不畫底線 */
+footer .languages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  margin: 0.25rem 0;
+}
+
+footer .languages button[aria-current] {
+  color: inherit;
+  font-weight: 600;
+  text-decoration: none;
+}
+
 /* 暫存區 */
 
 .tray .drop {
