@@ -1,5 +1,5 @@
 import { useEffect, useState } from "preact/hooks";
-import { EXTENSION } from "../core/bytes.ts";
+import { EXTENSION, isPhoto } from "../core/bytes.ts";
 import { type Report, ToolError } from "../core/tool.ts";
 import type { TrayFile, Version } from "../core/tray.ts";
 import { t, tDynamic } from "../i18n/index.ts";
@@ -18,6 +18,16 @@ function extension(name: string, format: Version["format"]): string {
   if (format !== "unknown") return EXTENSION[format];
   const ext = /\.([a-z0-9]{1,5})$/i.exec(name.replace(/\.age$/i, ""))?.[1];
   return ext ? ext.toLowerCase() : EXTENSION.unknown;
+}
+
+// 預覽圖。Chrome、Firefox 不能顯示 HEIC，載入失敗時說明原因，中繼資料照樣能處理
+function Preview({ url }: { url?: string }) {
+  const [broken, setBroken] = useState(false);
+  return (
+    <figure class="preview">
+      {broken ? <p class="hint">{t("file.noPreview")}</p> : url ? <img src={url} alt="" onError={() => setBroken(true)} /> : null}
+    </figure>
+  );
 }
 
 function versionLabel(v: Version) {
@@ -141,7 +151,7 @@ function QrInImage({ blob, onOpenTool }: { blob: Blob; onOpenTool: Props["onOpen
 
 export function FileView({ file, index, busy, preferred, onOpenTool }: Props) {
   const current = file.versions.at(-1)!;
-  const isImage = current.format === "jpeg" || current.format === "png";
+  const isImage = isPhoto(current.format);
   const preview = useObjectUrl(isImage ? current.blob : undefined);
   const [error, setError] = useState<string>();
   // 從編輯類工具的網址進來（例如遮蔽的任務），選好檔案就直接打開編輯畫面
@@ -217,7 +227,7 @@ export function FileView({ file, index, busy, preferred, onOpenTool }: Props) {
         </section>
       ) : (
       <div class={isImage ? "columns" : "columns single"}>
-        {isImage ? <figure class="preview">{preview ? <img src={preview} alt="" /> : null}</figure> : null}
+        {isImage ? <Preview url={preview} key={preview} /> : null}
 
         <div class="panel">
           {isImage ? (

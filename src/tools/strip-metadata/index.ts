@@ -1,6 +1,7 @@
 import type { Format } from "../../core/bytes.ts";
 import { FINDING_CODES, type Finding, type RunResult, type Tool, ToolError, mergeFindings } from "../../core/tool.ts";
 import { inspectJpeg, stripJpeg } from "./jpeg.ts";
+import { inspectHeif, stripHeif } from "./heif.ts";
 import { inspectPng, stripPng } from "./png.ts";
 
 export const stripMetadata: Tool = {
@@ -8,18 +9,20 @@ export const stripMetadata: Tool = {
   resolves: FINDING_CODES,
 
   accepts(format: Format) {
-    return format === "jpeg" || format === "png";
+    return format === "jpeg" || format === "png" || format === "heic";
   },
 
   inspect(data: Uint8Array, format: Format): Finding[] {
     if (format === "jpeg") return mergeFindings(inspectJpeg(data));
     if (format === "png") return mergeFindings(inspectPng(data));
+    if (format === "heic") return mergeFindings(inspectHeif(data));
     return [];
   },
 
   run(data: Uint8Array, format: Format): RunResult {
     if (format === "jpeg") return stripJpeg(data);
     if (format === "png") return stripPng(data);
+    if (format === "heic") return stripHeif(data);
     throw new ToolError("unsupported");
   },
 };
