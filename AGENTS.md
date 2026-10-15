@@ -7,7 +7,7 @@
 - 預設在瀏覽器裡處理。之後若提供上傳到社群伺服器的選項，上傳前要在畫面上寫清楚檔案送到哪裡、誰看得到、保留多久、伺服器會不會留下紀錄，由讀者決定
 - 上傳端點不經過 Cloudflare。Cloudflare 在邊緣解開 TLS，經過的檔案對它是明文
 - 頁面能連線的對象寫死在 CSP 裡（`vite.config.ts`），新增任何對外連線都要改那裡，並在畫面上標示
-- 執行期的相依套件只有 `preact`、`qrcode-generator`（QR code 產生）、`jsqr`（QR code 讀取）、`age-encryption`（加密，連同它相依的 noble 系列）、`libheif-js`（HEIC 解碼，LGPL-3.0，見下方「HEIC」）、`pdf-lib`（PDF 的解析與寫出，見下方「文件」），以及遮蔽的自動尋找用的 `onnxruntime-web` 與 `tesseract.js`（見下方「遮蔽的自動尋找」）。新增套件前先想能不能自己寫，必要時鎖定確切的版本。工具用到的套件在打開工具時才載入
+- 執行期的相依套件只有 `preact`、`qrcode-generator`（QR code 產生）、`jsqr`（QR code 讀取）、`age-encryption`（加密，連同它相依的 noble 系列）、`libheif-js`（HEIC 解碼，LGPL-3.0，見下方「HEIC」）、`pdf-lib`（PDF 的解析與寫出，見下方「文件」），以及遮蔽的自動尋找用的 `onnxruntime-web` 與 `tesseract.js`（見下方「遮蔽的自動尋找」）、逐字稿用的 `@huggingface/transformers` 與 `opencc-js`（見下方「逐字稿」）。新增套件前先想能不能自己寫，必要時鎖定確切的版本。工具用到的套件在打開工具時才載入
 - 結構有問題的檔案就停下來，不交出一份沒處理乾淨的檔案
 
 ## 支援的瀏覽器
@@ -52,7 +52,7 @@ npm run test:unit    # 只執行單元測試，不需要瀏覽器
 
 | | 處理檔案的工具（`fileTools`） | 需要編輯畫面的工具（`editorTools`） | 從空白開始的工具（`createTools`） |
 |---|---|---|---|
-| 例子 | 清除中繼資料 | 遮蔽、轉成 JPEG、加密、解密 | QR code 產生器與讀取、網址檢查、密語與密碼產生器、age 金鑰產生器、加密文字 |
+| 例子 | 清除中繼資料 | 遮蔽、轉成 JPEG、加密、解密、逐字稿 | QR code 產生器與讀取、網址檢查、密語與密碼產生器、age 金鑰產生器、加密文字 |
 | 介面 | `src/core/tool.ts` 的 `Tool` | `EditorTool`，編輯畫面登記在 `src/ui/registry.tsx` | `CreateTool`，元件登記在 `src/ui/registry.tsx` |
 | 結果 | 暫存區裡那個檔案的新版本 | 同左，由 `tray.addVersion` 加入 | 產出檔案的放進暫存區，產出文字的只顯示在畫面上 |
 
@@ -96,11 +96,26 @@ npm run test:unit    # 只執行單元測試，不需要瀏覽器
 
 Tesseract 的 WebAssembly 會把執行紀錄寫到標準錯誤輸出，瀏覽器當成 `console.error`。瀏覽器測試的守門程式（`tests/e2e/guard.ts`）把這種已知的訊息列為例外。
 
+## 逐字稿
+
+把錄音或影片的聲音轉成帶時間的段落，以華語為主（`src/ui/TranscribeEditor.tsx`）。結果不是錄音的新版本，TXT 與 SRT 另外放進暫存區，也可以直接下載或複製。逐字稿是草稿，畫面上寫明要對照錄音校對。
+
+- 模型：Whisper small（252 MB，預設）與 base（80 MB），onnx-community 的 8 位元量化版，讀者自己選。tiny 對華語幾乎不能用（實測字錯率 98%，會掉進英文的重複迴圈），不提供。用魯迅〈阿Q正傳〉的 LibriVox 朗讀實測字錯率：small 約 24%、base 約 56%
+- 模型不進版控，`node scripts/fetch-whisper.mjs` 從 Hugging Face 下載到 `public/models/whisper/`，版本與每個檔案的 SHA-256 寫在 `src/tools/transcribe/models.json`。部署前先執行一次，網頁只從自己的網域載入
+- 推論在 Web Worker（`src/ui/transcribe.worker.ts`）用 Transformers.js 執行。關掉 Hugging Face 的下載（`allowRemoteModels`）與 Transformers.js 自己的快取（`useBrowserCache`、`useWasmCache`），請求不寫 HTTP 快取（`cache: "no-store"`，模型檔最大 157 MB，無痕視窗的記憶體快取寫不下時整個請求會失敗）
+- Transformers.js 帶著自己的 onnxruntime-web（1.31.0 的開發版，跟找人臉的 1.30.0 分開），不指定的話會從 jsDelivr 的 CDN 載入 WebAssembly。Worker 不受頁面 meta 標籤的 CSP 約束，請求真的會送出去，所以用 `?url` 匯入它那一份 WebAssembly，從自己的網域載入。預覽伺服器也用標頭送 CSP，部署時 nginx 一樣要送（見下方「部署」）
+- 語音偵測：Whisper 在靜音上會產生重複的幻覺文字（實測 base 對 5 秒的靜音輸出「你懂你懂……」直到長度上限）。先用音量找出說話的段落，裝成不超過 30 秒的片段（裝得下就連同停頓放在一起，Whisper 不管片段多短都補到 30 秒再算），只把這些片段送進模型。每個片段依長度限制最多產生的詞元數。整理結果時拿掉靜音段落、短短一段的字幕標語（「字幕製作」、「請不吝點讚」這類），收掉重複的迴圈（`src/tools/transcribe/segments.ts`，有單元測試）
+- 簡體轉台灣正體與台灣慣用詞：`opencc-js` 的 `cn2t`（cn → twp），在 Worker 裡用到時才載入
+- 同時使用的 CPU 核心讀者自己選（1、2、4、8，預設 4）。多執行緒要頁面在 cross-origin isolation 底下（COOP 與 COEP 標頭），換核心數時換一個新的 Worker（onnxruntime 第一次載入時就決定了執行緒數）。實測 small 轉 2 分鐘的錄音：1 個核心約 140 秒、2 個約 116 秒、4 個約 96 秒、8 個約 90 秒。Brave 的防指紋保護會讓 `navigator.hardwareConcurrency` 比實際少，選項不依它限制
+- 解碼用 16 kHz 的 `OfflineAudioContext`，一小時單聲道約 230 MB，超過 2 小時先不處理。瀏覽器解不出聲音的檔案（例如沒有音軌的影片）畫面上說明
+- 失敗時在主控台印出錯誤訊息（不含錄音的內容），讀者回報問題時用
+
 ## 離線使用
 
 第一次開啟之後，沒有網路也能使用。service worker 的範本在 `src/sw/sw-template.js`，建置時 `vite.config.ts` 的 `serviceWorker()` 列出 `dist/` 的檔案、算出版本（所有檔案內容的雜湊），輸出成 `/gears/sw.js`。
 
 - 安裝時先存頁面、程式、圖示與 165 清單，約 4 MB。人臉與文字辨識的模型與 WebAssembly（`vendor/`、`models/`、`assets/ort-wasm-*`）用到時才存
+- 逐字稿的 Whisper 模型存在另一個不隨版本清掉的快取（`gears-models`），換新版本時不必重新下載 80 到 250 MB。網址帶著模型的版本，清單以外的在新版本接手時刪掉。畫面上標出已下載的模型，可以刪除
 - 只存工作台自己的檔案。讀者放進暫存區的檔案只在記憶體裡，不經過 service worker，也不寫進快取
 - 有新版本時畫面上方提示，讀者按「重新載入」才換上，避免同一個分頁混用新舊程式。重新載入會清空暫存區，提示裡寫明
 - 按下「重新載入」之後按鈕改成「更新中…」。新版本接手時收到 `controllerchange` 就重新載入，4 秒內沒收到（等著的那一版已經被更新的一版取代，或瀏覽器沒有切換）也直接重新載入，按鈕不會停在那裡。重新載入之後顯示「已換上新版本」，這個記號放在 `history.state`，不寫進 localStorage
@@ -108,6 +123,13 @@ Tesseract 的 WebAssembly 會把執行紀錄寫到標準錯誤輸出，瀏覽器
 - 比對快取時忽略 `Vary`：模組腳本的請求帶著 `Origin`，伺服器回應的 `Vary: Origin` 會讓預先存的那份對不上
 - 部署時 `sw.js` 要設定不快取（`Cache-Control: no-cache`），瀏覽器才查得到新版本
 - 瀏覽器測試預設擋掉 service worker（`playwright.config.ts`），它接手的請求 `page.route` 攔不到。離線的測試（`tests/e2e/offline.spec.ts`）自己打開，只在 Chromium 執行
+
+## 部署
+
+- 部署前執行 `node scripts/fetch-165.mjs` 與 `node scripts/fetch-whisper.mjs`，再建置
+- 伺服器要送 `Cross-Origin-Opener-Policy: same-origin` 與 `Cross-Origin-Embedder-Policy: require-corp`（逐字稿的多執行緒），以及跟 `vite.config.ts` 一樣的 `Content-Security-Policy` 標頭（Web Worker 吃標頭的 CSP，不吃頁面的 meta 標籤）
+- `.wasm` 要用 `application/wasm` 送出並開壓縮，onnxruntime 的 WebAssembly 壓縮後約小四分之三
+- `sw.js` 不快取（見上方「離線使用」）
 
 ## 165 反詐騙清單
 
@@ -265,7 +287,7 @@ iPhone 預設拍出來的是 HEIC，在網頁上選照片時交出來的也是�
 
 ## 規劃
 
-產品規劃記錄在社群的工作區，還沒有公開。目前完成第一階段：桌面、檔案暫存區，以及清除中繼資料（JPEG、PNG、HEIC、AVIF、WebP、GIF、TIFF、SVG、BMP、PNM、JPEG XL，Word、Excel、PowerPoint、LibreOffice 文件與 PDF，MP3、M4A、MP4、MOV、WAV、AVI、FLAC、Ogg、Opus、MKV、WebM，ZIP、TAR、gzip、EPUB、種子檔、HTML）、遮蔽（可以自動找人臉與個資）、加密與解密（檔案與一段文字）、age 金鑰產生器、QR code 產生器與讀取、網址檢查、密語與密碼產生器，可以下載與系統分享，一次處理多個檔案，也可以離線使用。部署到 `anoni.net/gears/` 是下一步。
+產品規劃記錄在社群的工作區，還沒有公開。目前完成第一階段：桌面、檔案暫存區，以及清除中繼資料（JPEG、PNG、HEIC、AVIF、WebP、GIF、TIFF、SVG、BMP、PNM、JPEG XL，Word、Excel、PowerPoint、LibreOffice 文件與 PDF，MP3、M4A、MP4、MOV、WAV、AVI、FLAC、Ogg、Opus、MKV、WebM，ZIP、TAR、gzip、EPUB、種子檔、HTML）、遮蔽（可以自動找人臉與個資）、逐字稿、加密與解密（檔案與一段文字）、age 金鑰產生器、QR code 產生器與讀取、網址檢查、密語與密碼產生器，可以下載與系統分享，一次處理多個檔案，也可以離線使用。部署到 `anoni.net/gears/` 是下一步。
 
 ## 第三方資料
 
@@ -274,4 +296,5 @@ iPhone 預設拍出來的是 HEIC，在網頁上選照片時交出來的也是�
 - HEIC 解碼器來自 [libheif-js](https://github.com/catdad-experiments/libheif-js) 1.23.5（libheif 與 libde265，LGPL-3.0），見 `licenses/libheif.txt`
 - PDF 的解析與寫出用 [pdf-lib](https://github.com/Hopding/pdf-lib) 1.17.1（MIT），見 `licenses/pdf-lib.txt`
 - 遮蔽的自動尋找用 [YuNet](https://github.com/opencv/opencv_zoo/tree/main/models/face_detection_yunet) 模型（MIT）與 [onnxruntime-web](https://github.com/microsoft/onnxruntime) 1.30.0（MIT）、[Tesseract.js](https://github.com/naptha/tesseract.js) 7.0.0 與 tessdata_best 的語言資料（Apache-2.0），見 `licenses/redact-detect.txt`
+- 逐字稿用 [Transformers.js](https://github.com/huggingface/transformers.js) 4.3.1（Apache-2.0）、Whisper small 與 base 的 ONNX 檔（onnx-community，原始模型的模型卡標示 Apache-2.0）、[opencc-js](https://github.com/nk2028/opencc-js) 1.4.2（MIT，字典 Apache-2.0），見 `licenses/transcribe.txt`
 - 165 反詐騙清單見上方，部署時下載，不進版控

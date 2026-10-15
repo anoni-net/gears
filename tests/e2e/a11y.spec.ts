@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
+import { wav } from "../helpers/audio.ts";
 import { syntheticDocx } from "../helpers/documents.ts";
 import { expect, test } from "./guard.ts";
 
@@ -29,6 +30,13 @@ test("加入文件、清除之後的檔案畫面沒有無障礙問題", async ({
   expect(await audit(page)).toEqual([]);
   await page.getByRole("button", { name: "清除", exact: true }).click();
   await expect(page.getByText("沒有找到可能透露身分的中繼資料。")).toBeVisible();
+  expect(await audit(page)).toEqual([]);
+});
+
+test("逐字稿的編輯畫面沒有無障礙問題", async ({ page }) => {
+  await page.goto("./transcribe/");
+  await page.getByTestId("file-input").setInputFiles({ name: "talk.wav", mimeType: "audio/wav", buffer: Buffer.from(wav(2)) });
+  await expect(page.getByRole("button", { name: "開始轉逐字稿" })).toBeVisible();
   expect(await audit(page)).toEqual([]);
 });
 

@@ -1187,6 +1187,56 @@ footer a {
   color: var(--muted);
 }
 
+/* 逐字稿 */
+.choices {
+  border: 0;
+  padding: 0;
+  margin: 0 0 0.25rem;
+}
+
+.choices legend {
+  font-weight: 600;
+  padding: 0;
+  margin-bottom: 0.4rem;
+}
+
+.choices .badge {
+  margin-left: 0.4rem;
+  font-style: normal;
+}
+
+.transcribe-progress {
+  margin-bottom: 0.75rem;
+}
+
+.transcript {
+  list-style: none;
+  max-height: 60vh;
+  overflow-y: auto;
+  margin: 0.5rem 0 1rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.transcript li {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.3rem 0;
+  border-bottom: 1px solid var(--hair);
+}
+
+.transcript li:last-child {
+  border-bottom: 0;
+}
+
+.transcript .time {
+  flex: none;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
 /* 加密與解密 */
 
 .age .buttons {

@@ -9,6 +9,10 @@ const FILES = __FILES__;
 const BASE = "__BASE__";
 const CACHE = `gears-${VERSION}`;
 const RUNTIME = `gears-${VERSION}-runtime`;
+// 逐字稿的 Whisper 模型（80 到 250 MB）另外存一個不隨版本清掉的快取，換新版本時不必重新下載。
+// 網址帶著模型的版本，清單以外的（舊版本的模型）在新版本接手時刪掉
+const MODELS = "gears-models";
+const MODEL_DIRS = __MODEL_DIRS__.map((dir) => `${BASE}${dir}`);
 // 用到時才存的大檔案
 const LAZY = [`${BASE}vendor/`, `${BASE}models/`, `${BASE}assets/ort-wasm-`];
 
@@ -23,7 +27,15 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches
       .keys()
-      .then((keys) => Promise.all(keys.filter((key) => key.startsWith("gears-") && key !== CACHE && key !== RUNTIME).map((key) => caches.delete(key))))
+      .then((keys) => Promise.all(keys.filter((key) => key.startsWith("gears-") && ![CACHE, RUNTIME, MODELS].includes(key)).map((key) => caches.delete(key))))
+      // 沒下載過模型就不建立這個快取
+      .then(async () => {
+        if (!(await caches.has(MODELS))) return;
+        const cache = await caches.open(MODELS);
+        for (const request of await cache.keys()) {
+          if (!MODEL_DIRS.some((dir) => new URL(request.url).pathname.startsWith(dir))) await cache.delete(request);
+        }
+      })
       .then(() => self.clients.claim()),
   );
 });
@@ -41,6 +53,16 @@ self.addEventListener("fetch", (event) => {
 });
 
 async function respond(request, target) {
+  if (MODEL_DIRS.some((dir) => target.pathname.startsWith(dir))) {
+    const cached = await caches.match(request, { cacheName: MODELS });
+    if (cached) return cached;
+    const response = await fetch(request);
+    if (response.ok) {
+      const copy = response.clone();
+      caches.open(MODELS).then((cache) => cache.put(request, copy));
+    }
+    return response;
+  }
   // 模組腳本的請求帶著 Origin，伺服器的回應常有 Vary: Origin，預先存的那份會對不上
   const options = { ignoreSearch: true, ignoreVary: true };
   const cached = (await caches.match(request, { ...options, cacheName: CACHE })) ?? (await caches.match(request, { ...options, cacheName: RUNTIME }));
