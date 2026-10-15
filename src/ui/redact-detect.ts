@@ -1,5 +1,5 @@
 import type { Box } from "../tools/redact/index.ts";
-import { TILE_MIN_SCORE, faceTiles, mergeFaces } from "../tools/redact/faces.ts";
+import { type Detection, faceTiles, mergeFaces } from "../tools/redact/faces.ts";
 import { type PiiMatch, type Word, findPii, pad } from "../tools/redact/pii.ts";
 
 // 遮蔽的自動尋找：人臉用 MediaPipe 的 BlazeFace，文字用 Tesseract 辨識之後找出個資。
@@ -9,6 +9,13 @@ import { type PiiMatch, type Word, findPii, pad } from "../tools/redact/pii.ts";
 // 自動尋找一定會漏，畫面上把找到的框起來讓讀者逐一確認，不直接套用。
 
 const BASE = new URL(import.meta.env.BASE_URL, location.href).href;
+
+// 進度：0 到 1，null 表示還在下載或載入模型，不知道要多久
+export type OnProgress = (progress: number | null) => void;
+
+// 偵測在主執行緒上跑，每隔一小段時間讓出一次，畫面才能更新進度、回應操作
+const YIELD_MS = 100;
+const nextFrame = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
 
 function canvasOf(bitmap: ImageBitmap, x = 0, y = 0, w = bitmap.width, h = bitmap.height): HTMLCanvasElement {
   const canvas = document.createElement("canvas");
@@ -33,8 +40,9 @@ function hasWebGL(): boolean {
   }
 }
 
-export async function findFaces(bitmap: ImageBitmap): Promise<Box[]> {
+export async function findFaces(bitmap: ImageBitmap, onProgress?: OnProgress): Promise<Box[]> {
   if (!hasWebGL()) throw new NoWebGLError();
+  onProgress?.(null);
   const { FilesetResolver, FaceDetector } = await import("@mediapipe/tasks-vision");
   const fileset = await FilesetResolver.forVisionTasks(`${BASE}vendor/mediapipe`);
   const detector = await FaceDetector.createFromOptions(fileset, {
@@ -42,17 +50,24 @@ export async function findFaces(bitmap: ImageBitmap): Promise<Box[]> {
     runningMode: "IMAGE",
     minDetectionConfidence: 0.5,
   });
-  const found: { box: Box; score: number }[] = [];
+  const found: Detection[] = [];
   try {
-    for (const tile of faceTiles(bitmap.width, bitmap.height)) {
+    const tiles = faceTiles(bitmap.width, bitmap.height);
+    let last = performance.now();
+    for (const [i, tile] of tiles.entries()) {
       const result = detector.detect(canvasOf(bitmap, tile.x, tile.y, tile.w, tile.h));
       for (const d of result.detections) {
         const b = d.boundingBox;
-        const score = d.categories[0]?.score ?? 0;
-        if (!b || (tile.grid > 1 && score < TILE_MIN_SCORE)) continue;
-        found.push({ box: { x: tile.x + b.originX, y: tile.y + b.originY, w: b.width, h: b.height }, score });
+        if (!b) continue;
+        found.push({ box: { x: tile.x + b.originX, y: tile.y + b.originY, w: b.width, h: b.height }, score: d.categories[0]?.score ?? 0, grid: tile.grid });
+      }
+      if (performance.now() - last > YIELD_MS) {
+        onProgress?.((i + 1) / tiles.length);
+        await nextFrame();
+        last = performance.now();
       }
     }
+    onProgress?.(1);
   } finally {
     detector.close();
   }
@@ -66,7 +81,8 @@ export interface TextResult {
   lines: Box[]; // 每一行文字的範圍，讀者想把文字全部框起來時用
 }
 
-export async function findText(bitmap: ImageBitmap): Promise<TextResult> {
+export async function findText(bitmap: ImageBitmap, onProgress?: OnProgress): Promise<TextResult> {
+  onProgress?.(null);
   const Tesseract = (await import("./tesseract.ts")).default;
   const worker = await Tesseract.createWorker(["chi_tra", "eng"], Tesseract.OEM.LSTM_ONLY, {
     workerPath: `${BASE}vendor/tesseract/worker.min.js`,
@@ -75,6 +91,8 @@ export async function findText(bitmap: ImageBitmap): Promise<TextResult> {
     workerBlobURL: false,
     // 語言資料不寫進 IndexedDB，瀏覽器的 HTTP 快取已經夠用
     cacheMethod: "none",
+    // 下載與載入語言資料時不知道要多久，辨識時才有進度
+    logger: (m: { status: string; progress: number }) => onProgress?.(m.status === "recognizing text" ? m.progress : null),
   });
   try {
     const { data } = await worker.recognize(canvasOf(bitmap), {}, { blocks: true });

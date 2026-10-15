@@ -50,3 +50,22 @@ test("找人臉：模型在 CSP 底下載入，沒有人臉時說明沒有找到
   const expected = browserName === "firefox" ? "這個瀏覽器關閉了 WebGL，沒有辦法自動找人臉，請手動框選。找個資不受影響。" : "沒有找到。自動尋找會漏掉，請自己再看一次整張圖。";
   await expect(page.getByTestId("redact-auto-status")).toHaveText(expected, { timeout: 90_000 });
 });
+
+test("找人臉：載入模型與尋找時顯示進度，完成後拿掉", async ({ page, browserName }) => {
+  test.skip(browserName === "firefox", "無頭模式的 Firefox 沒有 WebGL");
+  test.setTimeout(120_000);
+  // 模型晚一點才回來，載入的階段才看得到
+  await page.route("**/models/blaze_face_short_range.tflite", async (route) => {
+    await new Promise((r) => setTimeout(r, 1500));
+    await route.continue();
+  });
+  await openRedact(page, await screenshot(page, false));
+  await page.getByRole("button", { name: "找人臉" }).click();
+  const bar = page.getByRole("progressbar", { name: "找人臉" });
+  await expect(bar).toBeVisible();
+  await expect(bar).not.toHaveAttribute("aria-valuenow");
+  await expect(page.getByTestId("redact-auto-status")).toHaveText("載入辨識模型中…第一次使用要下載約 13 MB。");
+  await expect(page.getByRole("button", { name: "找人臉" })).toBeDisabled();
+  await expect(page.getByTestId("redact-auto-status")).toHaveText("沒有找到。自動尋找會漏掉，請自己再看一次整張圖。", { timeout: 90_000 });
+  await expect(bar).toBeHidden();
+});

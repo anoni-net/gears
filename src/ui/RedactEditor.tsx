@@ -72,7 +72,13 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
   const panning = useRef<number | null>(null);
   const middle = () => [...touches.current.values()].reduce((n, [, y]) => n + y, 0) / touches.current.size;
   // 自動尋找：哪一種正在跑、找到幾個，文字辨識另外留下每一行的範圍
-  const [auto, setAuto] = useState<{ kind: "faces" | "text" | "lines"; state: "running" | "done" | "failed" | "noWebgl"; n: number } | null>(null);
+  // progress 是 0 到 1，null 表示還在載入模型
+  const [auto, setAuto] = useState<{
+    kind: "faces" | "text" | "lines";
+    state: "running" | "done" | "failed" | "noWebgl";
+    n: number;
+    progress?: number | null;
+  } | null>(null);
   const [textLines, setTextLines] = useState<Box[]>([]);
   // 原檔的拍攝資訊（已經重組、拿掉縮圖），沒有時間、地點或型號就不提供保留的選項
   const [exif, setExif] = useState<Uint8Array | null>(null);
@@ -241,15 +247,17 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
   const runAuto = async (kind: "faces" | "text") => {
     if (!bitmap) return;
     let detectError: (new () => Error) | undefined;
-    setAuto({ kind, state: "running", n: 0 });
+    setAuto({ kind, state: "running", n: 0, progress: null });
+    const onProgress = (progress: number | null) =>
+      setAuto((a) => (a?.kind === kind && a.state === "running" ? { ...a, progress } : a));
     try {
       const { findFaces, findText, NoWebGLError } = await import("./redact-detect.ts");
       detectError = NoWebGLError;
       if (kind === "faces") {
-        const faces = await findFaces(bitmap);
+        const faces = await findFaces(bitmap, onProgress);
         setAuto({ kind, state: "done", n: addFound(faces) || faces.length });
       } else {
-        const { pii, lines } = await findText(bitmap);
+        const { pii, lines } = await findText(bitmap, onProgress);
         setTextLines(lines);
         setAuto({ kind, state: "done", n: addFound(pii.map((m) => m.box)) || pii.length });
       }
@@ -305,7 +313,9 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
           {auto.state === "noWebgl"
             ? t("redact.noWebgl")
             : auto.state === "running"
-            ? t(auto.kind === "faces" ? "redact.findingFaces" : "redact.findingText")
+            ? auto.progress == null
+              ? t(auto.kind === "faces" ? "redact.loadingFaces" : "redact.loadingText")
+              : t(auto.kind === "faces" ? "redact.findingFaces" : "redact.findingText")
             : auto.state === "failed"
               ? t("redact.findFailed")
               : auto.n
@@ -313,6 +323,7 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
                 : t("redact.foundNone")}
         </p>
       ) : null}
+      {auto?.state === "running" ? <AutoProgress label={t(auto.kind === "faces" ? "redact.findFaces" : "redact.findText")} value={auto.progress ?? null} /> : null}
       <canvas
         ref={canvas}
         class="redact-canvas"
@@ -368,6 +379,26 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
       ) : null}
       <p class="hint">{t("redact.autoNote")}</p>
       <p class="hint">{t("redact.note")}</p>
+    </div>
+  );
+}
+
+// 自動尋找的進度條。載入模型時不知道要多久，顯示來回移動的條紋；偵測時顯示百分比
+function AutoProgress({ label, value }: { label: string; value: number | null }) {
+  const percent = value === null ? null : Math.round(value * 100);
+  return (
+    <div class="auto-progress" data-testid="redact-auto-progress">
+      <div
+        class="auto-progress-track"
+        role="progressbar"
+        aria-label={label}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={percent ?? undefined}
+      >
+        <div class={percent === null ? "auto-progress-bar indeterminate" : "auto-progress-bar"} style={percent === null ? undefined : { width: `${percent}%` }} />
+      </div>
+      <span aria-hidden="true">{percent === null ? "" : `${percent}%`}</span>
     </div>
   );
 }
