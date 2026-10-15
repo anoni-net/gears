@@ -38,6 +38,12 @@ test("逐字稿的編輯畫面沒有無障礙問題", async ({ page }) => {
   await page.getByTestId("file-input").setInputFiles({ name: "talk.wav", mimeType: "audio/wav", buffer: Buffer.from(wav(2)) });
   await expect(page.getByRole("button", { name: "開始轉逐字稿" })).toBeVisible();
   expect(await audit(page)).toEqual([]);
+  // 選了從 Hugging Face 下載的模型時出現的說明，深色模式也檢查
+  await page.getByLabel(/^large-v3-turbo/).check();
+  await expect(page.getByTestId("transcribe-remote")).toBeVisible();
+  expect(await audit(page)).toEqual([]);
+  await page.emulateMedia({ colorScheme: "dark" });
+  expect(await audit(page)).toEqual([]);
 });
 
 test("深色模式沒有對比問題", async ({ page }) => {

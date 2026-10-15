@@ -2,13 +2,17 @@
 ==========================================
 
 逐字稿在讀者按下「開始轉逐字稿」時，才從本站載入以下檔案，在瀏覽器的 Web Worker 裡
-執行，錄音不會上傳。程式與模型原封不動使用，沒有修改。
+執行，錄音不會上傳。程式與模型原封不動使用，沒有修改。large-v3-turbo 例外，讀者選擇之後
+由網頁直接從 Hugging Face 下載，本站不轉發這個模型。
 
 語音辨識模型（scripts/fetch-whisper.mjs 下載，版本與每個檔案的 SHA-256 寫在
 src/tools/transcribe/models.json）
 - onnx-community/whisper-small 與 onnx-community/whisper-base 的 ONNX 檔（8 位元量化版）
   原始模型：openai/whisper-small、openai/whisper-base（Hugging Face 模型卡標示 Apache-2.0）
   來源：https://huggingface.co/onnx-community/whisper-small、https://huggingface.co/onnx-community/whisper-base
+- onnx-community/whisper-large-v3-turbo 的 ONNX 檔（4 位元量化版），讀者選擇之後從 Hugging Face 下載
+  原始模型：openai/whisper-large-v3-turbo（Hugging Face 模型卡標示 MIT）
+  來源：https://huggingface.co/onnx-community/whisper-large-v3-turbo
 
 執行
 - @huggingface/transformers 4.3.1（Apache-2.0，Copyright Hugging Face）
