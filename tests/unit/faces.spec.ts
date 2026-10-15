@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { faceTiles, mergeFaces } from "../../src/tools/redact/faces.ts";
+import { type Detection, faceTiles, selectFaces } from "../../src/tools/redact/faces.ts";
 
 test("大合照切到 12×12，最細的區塊夠小，30 像素的臉佔得到區塊的五分之一", () => {
   const tiles = faceTiles(1440, 1080);
@@ -39,50 +39,6 @@ test("小圖不切：區塊小於 120 像素就停在上一層", () => {
   expect([...new Set(faceTiles(640, 480).map((t) => t.grid))]).toEqual([1, 2, 4]);
 });
 
-test("合併：同一張臉留分數最高的，包住兩張臉的大框拿掉", () => {
-  const boxes = mergeFaces([
-    { box: { x: 100, y: 100, w: 30, h: 30 }, score: 0.7, grid: 1 },
-    { box: { x: 102, y: 101, w: 30, h: 30 }, score: 0.9, grid: 4 },
-    { box: { x: 200, y: 100, w: 30, h: 30 }, score: 0.88, grid: 1 },
-    // 分數夠高、但同時包住兩張臉
-    { box: { x: 80, y: 80, w: 200, h: 80 }, score: 0.86, grid: 1 },
-  ]);
-  expect(boxes).toEqual([
-    { x: 102, y: 101, w: 30, h: 30 },
-    { x: 200, y: 100, w: 30, h: 30 },
-  ]);
-});
-
-test("區塊裡分數不夠高的，要另一種切法在同一個位置也找到才算", () => {
-  const button = { x: 500, y: 500, w: 20, h: 20 };
-  const face = { x: 100, y: 100, w: 30, h: 30 };
-  const sharp = { x: 300, y: 100, w: 30, h: 30 };
-  const boxes = mergeFaces([
-    // 只在 8×8 找到、分數 0.6：衣服上的按鈕
-    { box: button, score: 0.6, grid: 8 },
-    // 8×8 與 12×12 都找到：小臉
-    { box: face, score: 0.6, grid: 8 },
-    { box: { ...face, x: 101 }, score: 0.55, grid: 12 },
-    // 分數夠高，只有一種切法找到也算
-    { box: sharp, score: 0.9, grid: 12 },
-  ]);
-  expect(boxes).toEqual([sharp, face]);
-});
-
-test("整張圖偵測找到的低分大框，沒有其他切法確認也不算", () => {
-  const face = { x: 784, y: 957, w: 127, h: 127 };
-  // 婚紗照：整張圖偵測把裙襬認成 0.55 分、814 像素的大臉
-  const skirt = { x: 378, y: 1195, w: 814, h: 814 };
-  const boxes = mergeFaces([
-    { box: skirt, score: 0.55, grid: 1 },
-    { box: face, score: 0.91, grid: 4 },
-  ]);
-  expect(boxes).toEqual([face]);
-  // 分數夠高的整張圖偵測照樣採用，例如臉佔滿畫面的自拍
-  const selfie = { x: 100, y: 100, w: 800, h: 800 };
-  expect(mergeFaces([{ box: selfie, score: 0.92, grid: 1 }])).toEqual([selfie]);
-});
-
 // 依框的大小擺出特徵點：兩眼在框高 0.35、鼻子 0.55、嘴巴 0.75，tilt 是兩眼連線的傾斜角度
 function keypoints(box: { x: number; y: number; w: number; h: number }, tilt = 0): [number, number][] {
   const cx = box.x + box.w / 2;
@@ -97,41 +53,80 @@ function keypoints(box: { x: number; y: number; w: number; h: number }, tilt = 0
   ];
 }
 
-test("特徵點不像臉的低分結果不算：兩眼歪斜，或嘴巴擠在眼睛旁邊", () => {
-  const sign = { x: 390, y: 533, w: 42, h: 42 };
-  const pattern = { x: 600, y: 100, w: 60, h: 60 };
-  const flat: [number, number][] = [
-    [600 + 15, 120],
-    [600 + 45, 120],
-    [630, 122],
-    [630, 125], // 嘴巴只在眼睛下方框高的 0.08
-  ];
-  const boxes = mergeFaces([
-    { box: sign, score: 0.57, grid: 8, keypoints: keypoints(sign, 42) },
-    { box: { ...sign, x: 395, w: 40, h: 40 }, score: 0.58, grid: 12, keypoints: keypoints({ ...sign, x: 395, w: 40, h: 40 }, 42) },
-    { box: pattern, score: 0.6, grid: 8, keypoints: flat },
-    { box: { ...pattern, x: 602 }, score: 0.6, grid: 12, keypoints: flat.map(([x, y]) => [x + 2, y]) },
+const face = (x: number, y: number, w: number, score: number, grid = 4, tilt = 0): Detection => {
+  const box = { x, y, w, h: w };
+  return { box, score, grid, keypoints: keypoints(box, tilt) };
+};
+
+// 假的重新偵測：依框的位置給固定的分數，順便記下被重新偵測的框
+function verifier(scores: Map<number, number[]>) {
+  const calls: number[] = [];
+  return {
+    calls,
+    verify: async (d: Detection) => {
+      calls.push(d.box.x);
+      return scores.get(d.box.x) ?? [0, 0, 0, 0];
+    },
+  };
+}
+
+test("分數夠高的直接採用，不重新偵測；同一張臉只留分數最高的", async () => {
+  const v = verifier(new Map());
+  const boxes = await selectFaces([face(100, 100, 30, 0.9), face(102, 101, 30, 0.7, 8), face(200, 100, 30, 0.88)], v.verify);
+  expect(boxes).toEqual([
+    { x: 100, y: 100, w: 30, h: 30 },
+    { x: 200, y: 100, w: 30, h: 30 },
   ]);
-  expect(boxes).toEqual([]);
+  expect(v.calls).toEqual([]);
 });
 
-test("兩種切法的特徵點對不上，不算互相確認", () => {
-  const a = { x: 390, y: 533, w: 42, h: 42 };
-  const b = { x: 395, y: 535, w: 32, h: 32 };
-  // 兩次的特徵點都像臉，但位置差了半個框
-  const boxes = mergeFaces([
-    { box: a, score: 0.57, grid: 8, keypoints: keypoints(a) },
-    { box: b, score: 0.58, grid: 12, keypoints: keypoints(b).map(([x, y]) => [x + 20, y + 10]) },
-  ]);
-  expect(boxes).toEqual([]);
+test("分數不夠高的，重新偵測四次都過 0.6 才算", async () => {
+  const v = verifier(
+    new Map([
+      // 歪著頭、嘴巴被手遮住的臉：轉正之後認得出來
+      [508, [0.63, 0.79, 0.77, 0.68]],
+      // 花叢：有幾次認得出來，但不是每一次
+      [177, [0.61, 0, 0.5, 0.66]],
+      // 招牌的字
+      [390, [0.62, 0, 0.67, 0]],
+    ]),
+  );
+  const boxes = await selectFaces([face(508, 929, 91, 0.7, 4, 31), face(177, 837, 45, 0.65, 12), face(390, 533, 42, 0.57, 8)], v.verify);
+  expect(boxes).toEqual([{ x: 508, y: 929, w: 91, h: 91 }]);
+  expect(v.calls.sort()).toEqual([177, 390, 508]);
 });
 
-test("歪著頭的小臉：特徵點對得上就算，傾斜 30° 以內不受影響", () => {
-  const a = { x: 100, y: 100, w: 40, h: 40 };
-  const b = { x: 102, y: 101, w: 38, h: 38 };
-  const boxes = mergeFaces([
-    { box: a, score: 0.62, grid: 8, keypoints: keypoints(a, 30) },
-    { box: b, score: 0.6, grid: 12, keypoints: keypoints(b, 30) },
-  ]);
-  expect(boxes).toEqual([a]);
+test("特徵點不像臉的低分結果不重新偵測：兩眼歪斜，或嘴巴擠在眼睛旁邊", async () => {
+  const v = verifier(new Map([[390, [0.9, 0.9, 0.9, 0.9]], [600, [0.9, 0.9, 0.9, 0.9]]]));
+  const flat: Detection = {
+    box: { x: 600, y: 100, w: 60, h: 60 },
+    score: 0.6,
+    grid: 8,
+    keypoints: [
+      [615, 120],
+      [645, 120],
+      [630, 122],
+      [630, 125], // 嘴巴只在眼睛下方框高的 0.08
+    ],
+  };
+  expect(await selectFaces([face(390, 533, 42, 0.57, 8, 42), flat], v.verify)).toEqual([]);
+  expect(v.calls).toEqual([]);
+});
+
+test("同一張臉已經有框，分數較低的其他偵測不必重新偵測", async () => {
+  const v = verifier(new Map());
+  await selectFaces([face(753, 926, 109, 0.88), face(751, 933, 107, 0.7, 8), face(777, 933, 103, 0.52, 12)], v.verify);
+  expect(v.calls).toEqual([]);
+});
+
+test("整張圖偵測的低分大框，重新偵測不過就不算", async () => {
+  // 婚紗照：整張圖偵測把裙襬認成 0.55 分、814 像素的大臉
+  const v = verifier(new Map([[784, [0.9, 0.9, 0.9, 0.9]]]));
+  const boxes = await selectFaces([face(378, 1195, 814, 0.55, 1), face(784, 957, 127, 0.8)], v.verify);
+  expect(boxes).toEqual([{ x: 784, y: 957, w: 127, h: 127 }]);
+});
+
+test("同時包住兩張臉的大框拿掉", async () => {
+  const boxes = await selectFaces([face(100, 100, 30, 0.95), face(200, 100, 30, 0.95), { box: { x: 80, y: 60, w: 200, h: 120 }, score: 0.9, grid: 1 }], verifier(new Map()).verify);
+  expect(boxes).toHaveLength(2);
 });

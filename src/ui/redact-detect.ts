@@ -1,5 +1,6 @@
 import type { Box } from "../tools/redact/index.ts";
-import { type Detection, faceTiles, mergeFaces } from "../tools/redact/faces.ts";
+import type { FaceDetector } from "@mediapipe/tasks-vision";
+import { CONFIRMED_SCORE, type Detection, VERIFY_SCALES, eyeTilt, faceTiles, selectFaces } from "../tools/redact/faces.ts";
 import { type PiiMatch, type Word, findPii, pad } from "../tools/redact/pii.ts";
 import { type OcrWord, textSpans } from "../tools/redact/text-lines.ts";
 
@@ -53,8 +54,15 @@ export async function findFaces(bitmap: ImageBitmap, onProgress?: OnProgress): P
   });
   const found: Detection[] = [];
   try {
+    // 進度的前九成是切塊偵測，後一成是重新偵測
     const tiles = faceTiles(bitmap.width, bitmap.height);
     let last = performance.now();
+    const pause = async (progress: number) => {
+      if (performance.now() - last <= YIELD_MS) return;
+      onProgress?.(progress);
+      await nextFrame();
+      last = performance.now();
+    };
     for (const [i, tile] of tiles.entries()) {
       const result = detector.detect(canvasOf(bitmap, tile.x, tile.y, tile.w, tile.h));
       for (const d of result.detections) {
@@ -68,17 +76,56 @@ export async function findFaces(bitmap: ImageBitmap, onProgress?: OnProgress): P
           keypoints: d.keypoints.map((k): [number, number] => [tile.x + k.x * tile.w, tile.y + k.y * tile.h]),
         });
       }
-      if (performance.now() - last > YIELD_MS) {
-        onProgress?.((i + 1) / tiles.length);
-        await nextFrame();
-        last = performance.now();
-      }
+      await pause(((i + 1) / tiles.length) * 0.9);
     }
+    const pending = Math.max(1, found.filter((d) => d.score < CONFIRMED_SCORE).length);
+    let checked = 0;
+    const faces = await selectFaces(found, async (d) => {
+      const scores = verifyFace(detector, bitmap, d);
+      await pause(0.9 + 0.1 * Math.min(1, ++checked / pending));
+      return scores;
+    });
     onProgress?.(1);
+    return faces.map((box) => pad(box, 0.2, bitmap.width, bitmap.height));
   } finally {
     detector.close();
   }
-  return mergeFaces(found).map((box) => pad(box, 0.2, bitmap.width, bitmap.height));
+}
+
+// 以候選為中心裁一塊正方形，依兩眼的連線轉正（左右翻轉時一起翻），再偵測一次。
+// 回傳每一次在中心附近、大小相近的臉的分數，沒找到是 0
+function verifyFace(detector: FaceDetector, bitmap: ImageBitmap, d: Detection): number[] {
+  const angle = ((eyeTilt(d) ?? 0) * Math.PI) / 180;
+  const side = Math.max(d.box.w, d.box.h);
+  const cx = d.box.x + d.box.w / 2;
+  const cy = d.box.y + d.box.h / 2;
+  const scores: number[] = [];
+  for (const scale of VERIFY_SCALES) {
+    for (const flip of [false, true]) {
+      const size = Math.round(side * scale);
+      const canvas = document.createElement("canvas");
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d")!;
+      if (flip) {
+        ctx.translate(size, 0);
+        ctx.scale(-1, 1);
+      }
+      ctx.translate(size / 2, size / 2);
+      ctx.rotate(-angle);
+      ctx.translate(-size / 2, -size / 2);
+      ctx.drawImage(bitmap, Math.round(cx - size / 2), Math.round(cy - size / 2), size, size, 0, 0, size, size);
+      let best = 0;
+      for (const r of detector.detect(canvas).detections) {
+        const b = r.boundingBox;
+        if (!b) continue;
+        const off = Math.hypot(b.originX + b.width / 2 - size / 2, b.originY + b.height / 2 - size / 2);
+        if (off < side * 0.5 && b.width > side * 0.5 && b.width < side * 2) best = Math.max(best, r.categories[0]?.score ?? 0);
+      }
+      scores.push(best);
+    }
+  }
+  return scores;
 }
 
 // --- 文字 ---
