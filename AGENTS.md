@@ -101,6 +101,8 @@ npm run test:unit    # 只執行單元測試，不需要瀏覽器
 - 安裝時先存頁面、程式、圖示與 165 清單，約 4 MB。人臉與文字辨識的模型（`vendor/`、`models/`）用到時才存
 - 只存工作台自己的檔案。讀者放進暫存區的檔案只在記憶體裡，不經過 service worker，也不寫進快取
 - 有新版本時畫面上方提示，讀者按「重新載入」才換上，避免同一個分頁混用新舊程式。重新載入會清空暫存區，提示裡寫明
+- 按下「重新載入」之後按鈕改成「更新中…」。新版本接手時收到 `controllerchange` 就重新載入，4 秒內沒收到（等著的那一版已經被更新的一版取代，或瀏覽器沒有切換）也直接重新載入，按鈕不會停在那裡。重新載入之後顯示「已換上新版本」，這個記號放在 `history.state`，不寫進 localStorage
+- 換版本的測試自己起一個靜態伺服器提供 `dist/`，瀏覽器檢查更新的請求 `page.route` 攔不到
 - 比對快取時忽略 `Vary`：模組腳本的請求帶著 `Origin`，伺服器回應的 `Vary: Origin` 會讓預先存的那份對不上
 - 部署時 `sw.js` 要設定不快取（`Cache-Control: no-cache`），瀏覽器才查得到新版本
 - 瀏覽器測試預設擋掉 service worker（`playwright.config.ts`），它接手的請求 `page.route` 攔不到。離線的測試（`tests/e2e/offline.spec.ts`）自己打開，只在 Chromium 執行

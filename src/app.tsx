@@ -171,8 +171,15 @@ export function App() {
       {offline.update ? (
         <div class="update-bar frame" role="status">
           <span>{t("app.update")}</span>
-          <button type="button" class="primary" onClick={offline.update}>
-            {t("app.updateReload")}
+          <button type="button" class="primary" onClick={offline.update} disabled={offline.updating}>
+            {t(offline.updating ? "app.updating" : "app.updateReload")}
+          </button>
+        </div>
+      ) : offline.updated ? (
+        <div class="update-bar frame" role="status">
+          <span>{t("app.updated")}</span>
+          <button type="button" onClick={offline.dismissUpdated}>
+            {t("app.updatedClose")}
           </button>
         </div>
       ) : null}
