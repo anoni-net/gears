@@ -40,6 +40,8 @@ test("service worker 只存工作台自己的檔案", async ({ page, browserName
   expect(cached.length).toBeGreaterThan(10);
   expect(cached.every((u) => new URL(u).pathname.startsWith("/gears/"))).toBe(true);
   expect(cached.some((u) => u.startsWith("blob:") || u.includes("secret"))).toBe(false);
+  // 人臉辨識的 WebAssembly 約 14 MB，用到時才存，第一次開啟不先下載
+  expect(cached.some((u) => /\/assets\/ort-wasm-|\/models\/|\/vendor\//.test(u))).toBe(false);
 });
 
 test("第一次開啟時 service worker 接手頁面，不會重新載入、清掉暫存區", async ({ page, browserName }) => {

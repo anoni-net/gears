@@ -7,7 +7,7 @@
 - 預設在瀏覽器裡處理。之後若提供上傳到社群伺服器的選項，上傳前要在畫面上寫清楚檔案送到哪裡、誰看得到、保留多久、伺服器會不會留下紀錄，由讀者決定
 - 上傳端點不經過 Cloudflare。Cloudflare 在邊緣解開 TLS，經過的檔案對它是明文
 - 頁面能連線的對象寫死在 CSP 裡（`vite.config.ts`），新增任何對外連線都要改那裡，並在畫面上標示
-- 執行期的相依套件只有 `preact`、`qrcode-generator`（QR code 產生）、`jsqr`（QR code 讀取）、`age-encryption`（加密，連同它相依的 noble 系列）、`libheif-js`（HEIC 解碼，LGPL-3.0，見下方「HEIC」）、`pdf-lib`（PDF 的解析與寫出，見下方「文件」），以及遮蔽的自動尋找用的 `@mediapipe/tasks-vision` 與 `tesseract.js`（見下方「遮蔽的自動尋找」）。新增套件前先想能不能自己寫，必要時鎖定確切的版本。工具用到的套件在打開工具時才載入
+- 執行期的相依套件只有 `preact`、`qrcode-generator`（QR code 產生）、`jsqr`（QR code 讀取）、`age-encryption`（加密，連同它相依的 noble 系列）、`libheif-js`（HEIC 解碼，LGPL-3.0，見下方「HEIC」）、`pdf-lib`（PDF 的解析與寫出，見下方「文件」），以及遮蔽的自動尋找用的 `onnxruntime-web` 與 `tesseract.js`（見下方「遮蔽的自動尋找」）。新增套件前先想能不能自己寫，必要時鎖定確切的版本。工具用到的套件在打開工具時才載入
 - 結構有問題的檔案就停下來，不交出一份沒處理乾淨的檔案
 
 ## 支援的瀏覽器
@@ -85,22 +85,22 @@ npm run test:unit    # 只執行單元測試，不需要瀏覽器
 
 遮蔽畫面有「找人臉」與「找電話、Email 等個資」兩個按鈕，找到的範圍直接加成框，讀者逐一確認、點一下刪掉框錯的。自動尋找一定會漏，畫面上寫明，不自動套用（`src/ui/redact-detect.ts`）。
 
-- 人臉：MediaPipe 的 BlazeFace 短距離模型（`public/models/`，進版控，約 230 KB）。模型以 128 像素的縮圖偵測，臉要佔畫面的一成以上才認得出來，所以整張圖偵測一次，再切成 2×2、4×4、8×8、12×12 的重疊區塊各偵測一次（區塊小於 120 像素就不再切），用分數與 IoU 合併，拿掉同時包住兩張臉的大框。分數 0.85 以上的直接採用。衣服的圖案、招牌的字與花叢也常被認成 0.5 到 0.75 分的臉，跟歪著頭、被手遮住一半的真臉分不開，所以分數不夠高的再做兩道檢查：BlazeFace 給的特徵點要像一張臉（兩眼的傾斜在 35° 以內、嘴巴在眼睛下方夠遠），再以它為中心裁一塊、依兩眼的連線轉正之後重新偵測四次（框的 2 倍與 3 倍，各加左右翻轉），四次都過 0.6 才算。同一張臉已經有框時不再重新偵測。重新偵測沒過、但另一種切法在同一個位置也找到的（框的 IoU 超過 0.15），列為「可能是臉」，畫成黃色虛線，讀者點一下才變成遮蔽框，訊息區也有「全部加上」的按鈕。歪著頭又被手遮住的臉常落在這裡，花叢與紋路的誤判多半只有一種切法找到。切法與合併在 `src/tools/redact/faces.ts`，有單元測試。MediaPipe 一定要用 WebGL，關閉 WebGL 的瀏覽器顯示說明
+- 人臉：OpenCV 的 YuNet 模型（`public/models/yunet-2023mar-dynamic.onnx`，進版控，約 225 KB），用 onnxruntime-web 的 WebAssembly 執行，不需要 WebGL。官方模型的輸入固定 640×640，`scripts/make-yunet.py` 從官方檔案改成可變的輸入尺寸（權重不動，比對過 sha256）。整張圖縮到長邊 960 與 320 各偵測一次：960 抓合照裡的小臉，320 抓佔滿畫面的大臉（模型適合約 10 到 300 像素的臉）。縮小時每次最多縮一半，原始解析度的照片一口氣縮小會產生鋸齒，分數會掉。0.7 以上直接加成框，0.6 到 0.7 列為「可能是臉」，畫成黃色虛線，讀者點一下才變成遮蔽框，訊息區也有「全部加上」的按鈕。同一張臉在兩種尺寸都找到時只留分數最高的。解碼與合併在 `src/tools/redact/faces.ts`，有單元測試。實測 14 張照片，Chromium、WebKit、Firefox、Brave 都是 71 張臉全找到、零誤判，真臉最低 0.81，不是臉最高 0.55
 - 個資：Tesseract 用正體中文與英文辨識文字，`src/tools/redact/pii.ts` 把同一行的字接起來比對電話、Email、身分證與居留證、卡號、長串數字、網址與 @帳號，再把對到的字合成一個框。「框起所有文字」把每一行文字都框起來，還沒辨識過時先辨識。照片裡的紋路與人影常被認成「| = ~ aa」這類碎片，所以只框信心分數夠高的字（`src/tools/redact/text-lines.ts`）：含字母、數字或漢字、85 分以上（4 個字元以上的長字 75 分），一段裡有兩個以上這樣的字，或一個 3 個字元以上的字，才算有文字
-- WebAssembly 與語言資料由 `scripts/copy-vendor.mjs` 從 `node_modules` 複製到 `public/vendor/`（不進版控，`npm run build` 與 `npm run dev` 之前自動執行），按下按鈕時才下載，人臉約 13 MB、文字約 9 MB
-- `@mediapipe/tasks-vision` 停在 0.10.35：1.0.0 起會把使用紀錄送到 `odml.pa.googleapis.com`。CSP 擋得下，但不該靠 CSP，升級前先在套件裡搜尋對外的網址
+- Tesseract 的 WebAssembly 與語言資料由 `scripts/copy-vendor.mjs` 從 `node_modules` 複製到 `public/vendor/`（不進版控，`npm run build` 與 `npm run dev` 之前自動執行）。onnxruntime 的 WebAssembly 由 Vite 打包到 `assets/ort-wasm-*.wasm`（檔名帶雜湊）。都是按下按鈕時才下載，人臉約 14 MB（伺服器有壓縮時約 4 MB）、文字約 9 MB
+- onnxruntime-web 只用單執行緒的 WebAssembly（`env.wasm.numThreads = 1`），多執行緒要伺服器另外送 cross-origin isolation 的標頭。升級前先在套件裡搜尋對外的網址，1.30.0 只在一段警告文字裡有說明頁的網址。先前用的 MediaPipe 1.0.0 起會把使用紀錄送到 `odml.pa.googleapis.com`，這種事要在升級時擋下來，不該靠 CSP
 - Tesseract 的語言資料不寫進 IndexedDB（`cacheMethod: "none"`），靠瀏覽器的 HTTP 快取
-- 處理中在圖片上蓋一層遮罩，中間顯示進度條：載入模型時不知道要多久，條紋來回移動，偵測時顯示百分比。按鈕下方的訊息區高度固定，所有可能出現的訊息疊在同一格、由最長的那一則撐開，換訊息時圖片不會跳動。人臉的偵測在主執行緒上，每 100 ms 讓出一次，畫面才更新得了進度。文字的進度取自 Tesseract 的 `logger`
+- 處理中在圖片上蓋一層遮罩，中間顯示進度條：載入模型時不知道要多久，條紋來回移動，偵測時顯示百分比。按鈕下方的訊息區高度固定，所有可能出現的訊息疊在同一格、由最長的那一則撐開，換訊息時圖片不會跳動。人臉的進度依兩種尺寸的偵測推進，文字的進度取自 Tesseract 的 `logger`
 - 授權與來源寫在 `licenses/redact-detect.txt`
-- 網址帶 `?debug-faces`（例如 `/gears/redact/?debug-faces`）時，找人臉會在主控台印出建置的 commit 與每個候選的分數、位置、傾斜、重新偵測的四次分數與有沒有採用，讀者回報漏判、誤判時請對方整段貼回來。只有數字與座標，不含圖片的內容。不同電腦的 GPU 會讓分數略有不同，本機重現不出來時靠它
+- 網址帶 `?debug-faces`（例如 `/gears/redact/?debug-faces`）時，找人臉會在主控台印出建置的 commit 與每次偵測的尺寸、分數、位置與有沒有採用，讀者回報漏判、誤判時請對方整段貼回來。只有數字與座標，不含圖片的內容。不同的瀏覽器與照片的原始解析度會讓分數略有不同，本機重現不出來時靠它
 
-兩者的 WebAssembly 會把執行紀錄寫到標準錯誤輸出，瀏覽器當成 `console.error`。瀏覽器測試的守門程式（`tests/e2e/guard.ts`）把這幾種已知的訊息列為例外。
+Tesseract 的 WebAssembly 會把執行紀錄寫到標準錯誤輸出，瀏覽器當成 `console.error`。瀏覽器測試的守門程式（`tests/e2e/guard.ts`）把這種已知的訊息列為例外。
 
 ## 離線使用
 
 第一次開啟之後，沒有網路也能使用。service worker 的範本在 `src/sw/sw-template.js`，建置時 `vite.config.ts` 的 `serviceWorker()` 列出 `dist/` 的檔案、算出版本（所有檔案內容的雜湊），輸出成 `/gears/sw.js`。
 
-- 安裝時先存頁面、程式、圖示與 165 清單，約 4 MB。人臉與文字辨識的模型（`vendor/`、`models/`）用到時才存
+- 安裝時先存頁面、程式、圖示與 165 清單，約 4 MB。人臉與文字辨識的模型與 WebAssembly（`vendor/`、`models/`、`assets/ort-wasm-*`）用到時才存
 - 只存工作台自己的檔案。讀者放進暫存區的檔案只在記憶體裡，不經過 service worker，也不寫進快取
 - 有新版本時畫面上方提示，讀者按「重新載入」才換上，避免同一個分頁混用新舊程式。重新載入會清空暫存區，提示裡寫明
 - 按下「重新載入」之後按鈕改成「更新中…」。新版本接手時收到 `controllerchange` 就重新載入，4 秒內沒收到（等著的那一版已經被更新的一版取代，或瀏覽器沒有切換）也直接重新載入，按鈕不會停在那裡。重新載入之後顯示「已換上新版本」，這個記號放在 `history.state`，不寫進 localStorage
@@ -272,5 +272,5 @@ iPhone 預設拍出來的是 HEIC，在網頁上選照片時交出來的也是�
 - 工具的圖示來自 [Material Design Icons](https://pictogrammers.com/library/mdi/)，Pictogrammers Free License
 - HEIC 解碼器來自 [libheif-js](https://github.com/catdad-experiments/libheif-js) 1.23.5（libheif 與 libde265，LGPL-3.0），見 `licenses/libheif.txt`
 - PDF 的解析與寫出用 [pdf-lib](https://github.com/Hopding/pdf-lib) 1.17.1（MIT），見 `licenses/pdf-lib.txt`
-- 遮蔽的自動尋找用 [MediaPipe](https://github.com/google-ai-edge/mediapipe) 0.10.35 與 BlazeFace 模型、[Tesseract.js](https://github.com/naptha/tesseract.js) 7.0.0 與 tessdata_best 的語言資料（Apache-2.0），見 `licenses/redact-detect.txt`
+- 遮蔽的自動尋找用 [YuNet](https://github.com/opencv/opencv_zoo/tree/main/models/face_detection_yunet) 模型（MIT）與 [onnxruntime-web](https://github.com/microsoft/onnxruntime) 1.30.0（MIT）、[Tesseract.js](https://github.com/naptha/tesseract.js) 7.0.0 與 tessdata_best 的語言資料（Apache-2.0），見 `licenses/redact-detect.txt`
 - 165 反詐騙清單見上方，部署時下載，不進版控

@@ -5,11 +5,6 @@ import { copyFileSync, existsSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 const FILES = [
-  // MediaPipe 的人臉偵測：支援 SIMD 的瀏覽器用前者，其他用 nosimd
-  ["@mediapipe/tasks-vision/wasm/vision_wasm_internal.js", "mediapipe/vision_wasm_internal.js"],
-  ["@mediapipe/tasks-vision/wasm/vision_wasm_internal.wasm", "mediapipe/vision_wasm_internal.wasm"],
-  ["@mediapipe/tasks-vision/wasm/vision_wasm_nosimd_internal.js", "mediapipe/vision_wasm_nosimd_internal.js"],
-  ["@mediapipe/tasks-vision/wasm/vision_wasm_nosimd_internal.wasm", "mediapipe/vision_wasm_nosimd_internal.wasm"],
   // Tesseract 的文字辨識：worker 與只含 LSTM 的核心，依瀏覽器支援的指令集挑一個
   ["tesseract.js/dist/worker.min.js", "tesseract/worker.min.js"],
   ["tesseract.js-core/tesseract-core-lstm.wasm.js", "tesseract/tesseract-core-lstm.wasm.js"],

@@ -43,7 +43,7 @@ npm test
 
 ## 授權
 
-程式碼以 [MIT](./LICENSE) 授權。密語的字詞表來自 [asian-diceware](https://github.com/anoni-net/asian-diceware)，以 CC BY 4.0 授權。工具的圖示來自 [Material Design Icons](https://pictogrammers.com/library/mdi/)。HEIC 的解碼器來自 [libheif-js](https://github.com/catdad-experiments/libheif-js)（libheif 與 libde265，LGPL-3.0），原封不動使用。PDF 的解析與寫出用 [pdf-lib](https://github.com/Hopding/pdf-lib)（MIT）。遮蔽的自動尋找用 [MediaPipe](https://github.com/google-ai-edge/mediapipe) 與 [Tesseract.js](https://github.com/naptha/tesseract.js)（Apache-2.0）。授權全文在 [licenses/](./licenses/)。
+程式碼以 [MIT](./LICENSE) 授權。密語的字詞表來自 [asian-diceware](https://github.com/anoni-net/asian-diceware)，以 CC BY 4.0 授權。工具的圖示來自 [Material Design Icons](https://pictogrammers.com/library/mdi/)。HEIC 的解碼器來自 [libheif-js](https://github.com/catdad-experiments/libheif-js)（libheif 與 libde265，LGPL-3.0），原封不動使用。PDF 的解析與寫出用 [pdf-lib](https://github.com/Hopding/pdf-lib)（MIT）。遮蔽的自動尋找用 [YuNet](https://github.com/opencv/opencv_zoo/tree/main/models/face_detection_yunet) 與 [onnxruntime-web](https://github.com/microsoft/onnxruntime)（MIT），以及 [Tesseract.js](https://github.com/naptha/tesseract.js)（Apache-2.0）。授權全文在 [licenses/](./licenses/)。
 
 ---
 
@@ -92,4 +92,4 @@ See [AGENTS.md](./AGENTS.md) (in Chinese) for details on development and testing
 
 ## License
 
-The code is released under the [MIT License](./LICENSE). The passphrase wordlist comes from [asian-diceware](https://github.com/anoni-net/asian-diceware) under CC BY 4.0. Tool icons come from [Material Design Icons](https://pictogrammers.com/library/mdi/). The HEIC decoder is [libheif-js](https://github.com/catdad-experiments/libheif-js) (libheif and libde265, LGPL-3.0), used unmodified. PDF parsing and writing uses [pdf-lib](https://github.com/Hopding/pdf-lib) (MIT). Automatic detection in redaction uses [MediaPipe](https://github.com/google-ai-edge/mediapipe) and [Tesseract.js](https://github.com/naptha/tesseract.js) (Apache-2.0). See [licenses/](./licenses/).
+The code is released under the [MIT License](./LICENSE). The passphrase wordlist comes from [asian-diceware](https://github.com/anoni-net/asian-diceware) under CC BY 4.0. Tool icons come from [Material Design Icons](https://pictogrammers.com/library/mdi/). The HEIC decoder is [libheif-js](https://github.com/catdad-experiments/libheif-js) (libheif and libde265, LGPL-3.0), used unmodified. PDF parsing and writing uses [pdf-lib](https://github.com/Hopding/pdf-lib) (MIT). Automatic detection in redaction uses [YuNet](https://github.com/opencv/opencv_zoo/tree/main/models/face_detection_yunet) and [onnxruntime-web](https://github.com/microsoft/onnxruntime) (MIT), and [Tesseract.js](https://github.com/naptha/tesseract.js) (Apache-2.0). See [licenses/](./licenses/).
