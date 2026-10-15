@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { defaultThreads } from "../../src/tools/transcribe/threads.ts";
+import { gpuUsable } from "../../src/tools/transcribe/device.ts";
 import { MODELS, SAMPLE_RATE, cleanSegments, clock, collapseRepeats, fullWidthPunctuation, maxTokens, speechPieces, toSrt, toTxt } from "../../src/tools/transcribe/segments.ts";
 
 // 指定秒數的錄音：有聲音的範圍填 0.1 的方波，其他是靜音
@@ -139,4 +140,14 @@ test("預設的核心數：回報的數字只會比實際少，夠多就用 12�
   expect(defaultThreads({ ...hints, reported: 8, safari: true })).toBe(8);
   expect(defaultThreads({ ...hints, reported: 2 })).toBe(8);
   expect(defaultThreads({ ...hints, reported: 2, safari: true, mobileApple: true })).toBe(4);
+});
+
+test("顯示卡：軟體模擬的、緩衝區放不下詞嵌入表的都改用 CPU", () => {
+  const need = MODELS.small.webgpu.buffer;
+  expect(gpuUsable({ fallback: false, maxBuffer: 4 * 1024 ** 3 }, need)).toBe(true);
+  expect(gpuUsable({ fallback: true, maxBuffer: 4 * 1024 ** 3 }, need)).toBe(false);
+  // WebGPU 規格的預設上限 128 MiB 放不下 small 的詞嵌入表，放得下 base 的
+  expect(gpuUsable({ fallback: false, maxBuffer: 128 * 1024 ** 2 }, need)).toBe(false);
+  expect(gpuUsable({ fallback: false, maxBuffer: 128 * 1024 ** 2 }, MODELS.base.webgpu.buffer)).toBe(true);
+  expect(gpuUsable(null, need)).toBe(false);
 });

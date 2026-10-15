@@ -9,6 +9,7 @@ import plainWasm from "../../node_modules/@huggingface/transformers/node_modules
 import { REMOTE_ERROR, hfUrl, readVerified } from "../tools/transcribe/remote.ts";
 import { MODELS, type ModelId, type RawChunk, SAMPLE_RATE, type Segment, cleanSegments, maxTokens, speechPieces } from "../tools/transcribe/segments.ts";
 import { MIN_EMBED_SECONDS, assignSpeakers, normalize } from "../tools/transcribe/speakers.ts";
+import type { Device } from "../tools/transcribe/device.ts";
 import speakerModel from "../tools/transcribe/speaker-model.json" with { type: "json" };
 import type { Embedder } from "./speaker-embed.ts";
 
@@ -24,12 +25,13 @@ import type { Embedder } from "./speaker-embed.ts";
 // threads 是同時使用的 CPU 核心數。onnxruntime 在第一次載入時就決定了執行緒數，
 // 換核心數要換一個新的 Worker（src/ui/TranscribeEditor.tsx）
 export type Request =
-  | { type: "start"; model: ModelId; language: "zh" | null; base: string; threads: number; speakers: boolean }
+  | { type: "start"; model: ModelId; language: "zh" | null; base: string; threads: number; speakers: boolean; device: Device }
   | { type: "chunk"; audio: Float32Array; offset: number; last: boolean };
 
 export type Reply =
   | { type: "download"; loaded: number; total: number }
   | { type: "ready" }
+  | { type: "device"; device: Device } // 拿不到顯示卡，在這個 Worker 裡改用 CPU
   | { type: "progress"; at: number } // 處理到第幾秒
   | { type: "segments"; segments: Segment[] }
   | { type: "speakers"; speakers: { start: number; speaker: number }[] } // 每段的說話者，最後一段處理完才送
@@ -39,7 +41,7 @@ export type Reply =
 const post = (reply: Reply) => (self as unknown as DedicatedWorkerGlobalScope).postMessage(reply);
 
 type Pipeline = ((audio: Float32Array, options: Record<string, unknown>) => Promise<{ chunks?: RawChunk[] }>) & { dispose(): Promise<void> };
-let loaded: { model: ModelId; asr: Pipeline } | null = null;
+let loaded: { model: ModelId; device: Device; asr: Pipeline } | null = null;
 let convert: ((text: string) => string) | null = null;
 // 每個檔案下載了多少位元組，加總之後回報給畫面
 let files: Record<string, number> = {};
@@ -115,8 +117,8 @@ async function download(model: ModelId, file: string, sha256: string, url: strin
   );
 }
 
-async function load(model: ModelId, base: string, threads: number): Promise<Pipeline> {
-  if (loaded?.model === model) return loaded.asr;
+async function load(model: ModelId, base: string, threads: number, device: Device): Promise<Pipeline> {
+  if (loaded?.model === model && loaded.device === device) return loaded.asr;
   // 換模型時先放掉舊的，兩個模型不同時佔著記憶體
   if (loaded) await loaded.asr.dispose();
   loaded = null;
@@ -148,14 +150,15 @@ async function load(model: ModelId, base: string, threads: number): Promise<Pipe
   // 多執行緒要頁面在 cross-origin isolation 底下（伺服器送 COOP 與 COEP 標頭），沒有時用單執行緒
   wasmEnv.numThreads = self.crossOriginIsolated ? threads : 1;
   const asr = (await pipeline("automatic-speech-recognition", MODELS[model].dir, {
-    dtype: MODELS[model].dtype as "q8" | "q4",
-    device: "wasm",
+    // WebGPU 用 4 位元的模型（src/tools/transcribe/device.ts）
+    dtype: (device === "webgpu" ? MODELS[model].webgpu.dtype : MODELS[model].dtype) as "q8" | "q4",
+    device,
     // 不傳 progress_callback：有它時 Transformers.js 會先對每個檔案發一次完整的 GET 查大小，
     // 回應的內容不讀。大模型會因此多下載一次，這些沒讀完的連線還會佔住瀏覽器對同一個主機的
     // 連線數。實測 Firefox 從開始到能辨識，base 要兩分鐘（改了之後 9 秒），用多個核心時約四分之一
     // 的機率整個停住。下載進度改由 env.fetch 計算（counted）
   }).finally(() => downloads.clear())) as unknown as Pipeline;
-  loaded = { model, asr };
+  loaded = { model, device, asr };
   return asr;
 }
 
@@ -174,6 +177,11 @@ let embedder: Embedder | null = null;
 let voices: { start: number; seconds: number; embedding: Float32Array | null }[] = [];
 
 let job: { asr: Pipeline; language: "zh" | null; speakers: boolean } | null = null;
+
+const message = (error: unknown) => (error instanceof Error ? error.message : String(error));
+const gpuAdapter = () =>
+  (navigator as unknown as { gpu?: { requestAdapter(): Promise<unknown> } }).gpu?.requestAdapter().catch(() => null) ?? Promise.resolve(null);
+const modelBytes = (model: ModelId, device: Device) => (device === "webgpu" ? MODELS[model].webgpu.bytes : MODELS[model].bytes);
 // 碰到這一段結尾的最後一句話先留著，接到下一段一起辨識，一句話才不會被切成兩半
 let carry: { audio: Float32Array; offset: number } | null = null;
 
@@ -240,8 +248,18 @@ self.onmessage = async (event: MessageEvent<Request>) => {
       remoteError = null;
       voices = [];
       files = {};
-      downloadTotal = MODELS[request.model].bytes + (request.speakers && !embedder ? speakerModel.bytes : 0);
-      const asr = await load(request.model, request.base, request.threads);
+      downloadTotal = modelBytes(request.model, request.device) + (request.speakers && !embedder ? speakerModel.bytes : 0);
+      // 畫面問過瀏覽器才選 WebGPU。Worker 拿不到 adapter 時直接改用 CPU，不白白下載 4 位元的模型，
+      // onnxruntime 也還沒初始化，不必換 Worker。其他顯示卡的錯誤由畫面換一個新的 Worker 改用 CPU
+      // （src/ui/TranscribeEditor.tsx）
+      let device = request.device;
+      if (device === "webgpu" && !(await gpuAdapter())) {
+        console.warn("[gears] Worker 拿不到顯示卡，改用 CPU");
+        device = "wasm";
+        downloadTotal = modelBytes(request.model, device) + (request.speakers && !embedder ? speakerModel.bytes : 0);
+        post({ type: "device", device });
+      }
+      const asr = await load(request.model, request.base, request.threads, device);
       // 聲紋模型在 Whisper 之後載入，onnxruntime 的設定（WebAssembly 的位置、執行緒數）已經就緒
       if (request.speakers && !embedder) {
         const { speakerEmbedder } = await import("./speaker-embed.ts");
@@ -257,6 +275,6 @@ self.onmessage = async (event: MessageEvent<Request>) => {
       post({ type: "done" });
     }
   } catch (error) {
-    post({ type: "error", message: remoteError?.message ?? (error instanceof Error ? error.message : String(error)) });
+    post({ type: "error", message: remoteError?.message ?? message(error) });
   }
 };

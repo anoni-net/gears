@@ -4,6 +4,7 @@
 //   node scripts/fetch-whisper.mjs          下載 small、base 與分辨說話者的 CAM++
 //   node scripts/fetch-whisper.mjs base     只下載 base（瀏覽器測試用）
 //   node scripts/fetch-whisper.mjs speaker  只下載 CAM++
+//   --no-webgpu                             不下載 WebGPU 用的 4 位元版（瀏覽器測試用，CI 沒有 GPU）
 //   node scripts/fetch-whisper.mjs --hash turbo
 //                                           只印出每個檔案的 SHA-256，不存檔（更新 models.json 用）
 //
@@ -19,7 +20,8 @@ import { dirname, join } from "node:path";
 const root = new URL("..", import.meta.url).pathname;
 const models = JSON.parse(readFileSync(join(root, "src/tools/transcribe/models.json"), "utf8"));
 const hashOnly = process.argv.includes("--hash");
-const wanted = process.argv.slice(2).filter((arg) => arg !== "--hash");
+const noWebgpu = process.argv.includes("--no-webgpu");
+const wanted = process.argv.slice(2).filter((arg) => !arg.startsWith("--"));
 const sha256 = (data) => createHash("sha256").update(data).digest("hex");
 const speaker = JSON.parse(readFileSync(join(root, "src/tools/transcribe/speaker-model.json"), "utf8"));
 
@@ -50,7 +52,8 @@ if (!wanted.length || wanted.includes("speaker")) {
 for (const [id, model] of Object.entries(models)) {
   if (wanted.length ? !wanted.includes(id) : model.remote) continue;
   if (model.remote && !hashOnly) throw new Error(`${id} 由網頁從 Hugging Face 下載，不放進 public/，要確認雜湊請加 --hash`);
-  for (const [file, hash] of Object.entries(model.files)) {
+  // CPU（wasm）用 dtype 那一組，WebGPU 用 webgpu 那一組，設定檔與詞彙表共用
+  for (const [file, hash] of Object.entries({ ...model.files, ...(noWebgpu ? {} : model.webgpu.files) })) {
     const target = join(root, "public/models/whisper", model.dir, file);
     await download(`https://huggingface.co/${model.repo}/resolve/${model.revision}/${file}`, hash, target, `${id} ${file}`);
   }

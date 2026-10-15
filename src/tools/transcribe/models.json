@@ -14,7 +14,16 @@
       "onnx/encoder_model_quantized.onnx": "a43a83f3c5361cd591cfa7c36f14b43cf7cb22f47a415cc14a8d557be800fa92",
       "onnx/decoder_model_merged_quantized.onnx": "ec07c3cbb64172c39791e26ee870a65ac22b458c36722bfe2776b3dbf741e0c9"
     },
-    "bytes": 251846613
+    "bytes": 251846613,
+    "webgpu": {
+      "dtype": "q4",
+      "files": {
+        "onnx/encoder_model_q4.onnx": "9f088ad0fe15ba2cf094c9fb22ac7fe1111fc9ef317c1e4d1f6a3bca38a931ba",
+        "onnx/decoder_model_merged_q4.onnx": "795c61b344576719c2b249cc9911c78b4cc552c8c6a5407be21a3380a0791b13"
+      },
+      "bytes": 302101039,
+      "buffer": 160000000
+    }
   },
   "base": {
     "repo": "onnx-community/whisper-base",
@@ -31,7 +40,16 @@
       "onnx/encoder_model_quantized.onnx": "5862993336bf33acd23736071aae2b32261d3b1b2f37780194460d4ef974dd46",
       "onnx/decoder_model_merged_quantized.onnx": "fa3ef9902734ce5ae6f9ef2bdb2ba9a6c4b5785b09f4f420ce036573dc9d090b"
     },
-    "bytes": 79664191
+    "bytes": 79664191,
+    "webgpu": {
+      "dtype": "q4",
+      "files": {
+        "onnx/encoder_model_q4.onnx": "9d4e9c31e8559e71de3e0e49d60b830951484699ef53747a4a06261bbbc8cb88",
+        "onnx/decoder_model_merged_q4.onnx": "09f83b71ceedc97dab1d90b914715dc532a646a147abda11d83c64867b7c319c"
+      },
+      "bytes": 145144432,
+      "buffer": 107000000
+    }
   },
   "turbo": {
     "repo": "onnx-community/whisper-large-v3-turbo",
@@ -48,6 +66,15 @@
       "onnx/encoder_model_q4.onnx": "7e64b20dd7b556cb7a2c1c65d9fbf31af985323c006f993d2a9dd10083547d78",
       "onnx/decoder_model_merged_q4.onnx": "8b933ac24074a24a1635084d06a4ed37e387ef22d980f184a5fc27418e9ceeb8"
     },
-    "bytes": 761859026
+    "bytes": 761859026,
+    "webgpu": {
+      "dtype": "q4",
+      "files": {
+        "onnx/encoder_model_q4.onnx": "7e64b20dd7b556cb7a2c1c65d9fbf31af985323c006f993d2a9dd10083547d78",
+        "onnx/decoder_model_merged_q4.onnx": "8b933ac24074a24a1635084d06a4ed37e387ef22d980f184a5fc27418e9ceeb8"
+      },
+      "bytes": 761859026,
+      "buffer": 266000000
+    }
   }
 }
