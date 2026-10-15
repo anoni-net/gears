@@ -9,6 +9,7 @@ import { overlaps } from "../tools/redact/pii.ts";
 import { extractExif, insertExifJpeg, insertExifPng, rebuildExif } from "../tools/redact/keep-exif.ts";
 import { exifFindings, parseExif } from "../tools/strip-metadata/exif.ts";
 import type { FileEditorProps } from "./types.ts";
+import type { PdfPages } from "./pdf-pages.ts";
 
 // 編輯時畫面上的圖最多 1600 像素寬，框的座標一律存成原圖的像素
 const PREVIEW_MAX = 1600;
@@ -33,6 +34,23 @@ function drawMaybe(ctx: CanvasRenderingContext2D, boxes: Box[], scale: number) {
   ctx.restore();
 }
 
+// 把編碼好的圖解碼回來，抽查每個框裡的點，都要是黑的
+async function checkDark(blob: Blob, boxes: Box[]) {
+  const check = await createImageBitmap(blob);
+  const verify = document.createElement("canvas");
+  verify.width = check.width;
+  verify.height = check.height;
+  const vctx = verify.getContext("2d", { willReadFrequently: true })!;
+  vctx.drawImage(check, 0, 0);
+  check.close();
+  for (const box of boxes) {
+    for (const [x, y] of samplePoints(box)) {
+      const [r, g, b] = vctx.getImageData(x, y, 1, 1).data;
+      if (!isDark(r!, g!, b!)) throw new Error("not dark");
+    }
+  }
+}
+
 // 原尺寸塗黑、重新編碼，再把輸出解碼回來抽查每個框，確認真的是黑的。
 // exif 是讀者選擇保留的拍攝資訊（已經拿掉縮圖），抽查通過之後才寫回去
 async function render(bitmap: ImageBitmap, boxes: Box[], format: Format, exif: Uint8Array | null): Promise<Blob> {
@@ -51,20 +69,7 @@ async function render(bitmap: ImageBitmap, boxes: Box[], format: Format, exif: U
   const type = jpeg ? "image/jpeg" : "image/png";
   const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, type, 0.92));
   if (!blob) throw new Error("encode");
-
-  const check = await createImageBitmap(blob);
-  const verify = document.createElement("canvas");
-  verify.width = check.width;
-  verify.height = check.height;
-  const vctx = verify.getContext("2d", { willReadFrequently: true })!;
-  vctx.drawImage(check, 0, 0);
-  check.close();
-  for (const box of boxes) {
-    for (const [x, y] of samplePoints(box)) {
-      const [r, g, b] = vctx.getImageData(x, y, 1, 1).data;
-      if (!isDark(r!, g!, b!)) throw new Error("not dark");
-    }
-  }
+  await checkDark(blob, boxes);
   if (!exif) return blob;
   const bytes = new Uint8Array(await blob.arrayBuffer());
   return new Blob([(jpeg ? insertExifJpeg(bytes, exif) : insertExifPng(bytes, exif)) as Uint8Array<ArrayBuffer>], { type });
@@ -73,7 +78,21 @@ async function render(bitmap: ImageBitmap, boxes: Box[], format: Format, exif: U
 export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const [bitmap, setBitmap] = useState<ImageBitmap | null>(null);
-  const [boxes, setBoxes] = useState<Box[]>([]);
+  // PDF 一頁一頁框選，每一頁的框分開存。圖片只有一頁
+  const isPdf = format === "pdf";
+  const [pdf, setPdf] = useState<PdfPages | null>(null);
+  const [pageIndex, setPageIndex] = useState(0);
+  const [pageBoxes, setPageBoxes] = useState<Box[][]>([]);
+  const boxes = pageBoxes[pageIndex] ?? [];
+  const setBoxes = (next: Box[] | ((list: Box[]) => Box[])) =>
+    setPageBoxes((all) => {
+      const copy = [...all];
+      copy[pageIndex] = typeof next === "function" ? next(all[pageIndex] ?? []) : next;
+      return copy;
+    });
+  const total = pageBoxes.reduce((n, list) => n + (list?.length ?? 0), 0);
+  // 輸出 PDF 時處理到第幾頁
+  const [building, setBuilding] = useState<[number, number] | null>(null);
   // 自動尋找是非同步的，找完時要拿最新的框，不是按下按鈕那時候的
   const latest = useRef<Box[]>([]);
   latest.current = boxes;
@@ -115,7 +134,56 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
     };
   }, [blob, format]);
 
+  // PDF：開啟一次，換頁時再畫那一頁
   useEffect(() => {
+    if (!isPdf) return;
+    let alive = true;
+    let opened: PdfPages | null = null;
+    void (async () => {
+      const { openPdf } = await import("./pdf-pages.ts");
+      opened = await openPdf(new Uint8Array(await blob.arrayBuffer()));
+      if (!alive) return opened.close();
+      setPdf(opened);
+    })().catch(() => alive && setStatus("decodeFailed"));
+    return () => {
+      alive = false;
+      opened?.close();
+    };
+  }, [blob, isPdf]);
+
+  // PDF 換頁時，前一頁的圖片等新的一頁畫好、畫布換過去之後才釋放
+  const shown = useRef<ImageBitmap | null>(null);
+  useEffect(() => () => shown.current?.close(), []);
+
+  useEffect(() => {
+    if (!pdf) return;
+    let alive = true;
+    setBitmap(null);
+    setStatus("loading");
+    // 換頁時，前一頁的自動尋找結果與鍵盤游標不帶過來
+    setAuto(null);
+    setMaybe([]);
+    setTextLines([]);
+    setCursor(null);
+    setCorner(null);
+    pdf
+      .render(pageIndex)
+      .then((bmp) => {
+        if (!alive) return bmp.close();
+        const old = shown.current;
+        shown.current = bmp;
+        setBitmap(bmp);
+        setStatus("ready");
+        old?.close();
+      })
+      .catch(() => alive && setStatus("decodeFailed"));
+    return () => {
+      alive = false;
+    };
+  }, [pdf, pageIndex]);
+
+  useEffect(() => {
+    if (isPdf) return;
     let alive = true;
     let opened: ImageBitmap | null = null;
     decodeImage(blob)
@@ -131,7 +199,7 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
       alive = false;
       opened?.close();
     };
-  }, [blob]);
+  }, [blob, isPdf]);
 
   const scale = bitmap ? Math.min(1, PREVIEW_MAX / bitmap.width) : 1;
 
@@ -298,10 +366,11 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
   };
 
   const running = auto?.state === "running";
+  const turnPage = (step: number) => setPageIndex((i) => Math.min(pdf!.count - 1, Math.max(0, i + step)));
 
   const autoMessage = (a: typeof auto): string => {
     // 圖片還在解碼時也顯示在這裡，不另佔一行，解碼完圖片不會往上跳
-    if (status === "loading") return t("redact.loading");
+    if (status === "loading") return t(isPdf ? "redact.loadingPage" : "redact.loading");
     if (!a) return t("redact.autoNote");
     if (a.state === "failed") return t("redact.findFailed");
     if (a.state === "running") {
@@ -315,17 +384,28 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
   };
 
   const apply = async () => {
-    if (!bitmap || !boxes.length) return;
+    if ((!bitmap && !pdf) || !total) return;
     setStatus("working");
     try {
+      if (pdf) {
+        const { buildRedactedPdf } = await import("./pdf-pages.ts");
+        const out = await buildRedactedPdf(pdf, pageBoxes, {
+          check: checkDark,
+          onProgress: (done, all) => setBuilding([done, all]),
+        });
+        setBuilding(null);
+        onDone(out, { removed: [{ code: "redaction", count: total }, { code: "pdf-pages" }], kept: [] });
+        return;
+      }
       const kept = keepExif ? exif : null;
-      const out = await render(bitmap, boxes, format, kept);
+      const out = await render(bitmap!, boxes, format, kept);
       const report: Report = {
         removed: [{ code: "redaction", count: boxes.length }, { code: "reencode" }],
         kept: kept ? [{ code: "exif-kept" }] : [],
       };
       onDone(out, report);
     } catch {
+      setBuilding(null);
       setStatus("failed");
     }
   };
@@ -335,7 +415,7 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
       <p class="hint">{t("redact.help")}</p>
       {status === "decodeFailed" ? (
         <p class="error" role="alert">
-          {t("redact.decodeFailed")}
+          {t(isPdf ? "redact.pdfFailed" : "redact.decodeFailed")}
         </p>
       ) : null}
       {/* 會改變框的動作都在圖片上方，套用與取消固定在底部的完成列 */}
@@ -355,9 +435,9 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
           <Icon name="undo" />
           <span class="label">{t("redact.undo")}</span>
         </button>
-        <button type="button" class="icon-button" title={t("redact.clear")} disabled={!boxes.length} onClick={() => setBoxes([])}>
+        <button type="button" class="icon-button" title={t(pdf ? "redact.clearPage" : "redact.clear")} disabled={!boxes.length} onClick={() => setBoxes([])}>
           <Icon name="delete-sweep-outline" />
-          <span class="label">{t("redact.clear")}</span>
+          <span class="label">{t(pdf ? "redact.clearPage" : "redact.clear")}</span>
         </button>
       </div>
       {/* 訊息區的高度固定：所有可能出現的訊息疊在同一格，用最長的那一則撐開，
@@ -386,6 +466,17 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
           ))}
         </div>
       </div>
+      {pdf ? (
+        <div class="redact-pages">
+          <button type="button" disabled={pageIndex === 0 || running || status === "working"} onClick={() => turnPage(-1)}>
+            {t("redact.prevPage")}
+          </button>
+          <span aria-live="polite">{t("redact.page", { n: pageIndex + 1, total: pdf.count })}</span>
+          <button type="button" disabled={pageIndex === pdf.count - 1 || running || status === "working"} onClick={() => turnPage(1)}>
+            {t("redact.nextPage")}
+          </button>
+        </div>
+      ) : null}
       <div class="redact-stage">
         <canvas
           ref={canvas}
@@ -419,13 +510,19 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
         </label>
       ) : null}
       <div class="redact-actions">
-        <p aria-live="polite">{corner ? t("redact.cornerSet") : t("redact.count", { n: boxes.length })}</p>
+        <p aria-live="polite">
+          {corner
+            ? t("redact.cornerSet")
+            : pdf && pdf.count > 1
+              ? t("redact.countPages", { n: total, page: boxes.length })
+              : t("redact.count", { n: total })}
+        </p>
         <div class="buttons">
           <button type="button" onClick={onCancel}>
             {t("redact.cancel")}
           </button>
-          <button type="button" class="primary" disabled={!boxes.length || status === "working"} onClick={apply}>
-            {status === "working" ? t("redact.working") : t("redact.apply")}
+          <button type="button" class="primary" disabled={!total || status === "working"} onClick={apply}>
+            {building ? t("redact.workingPage", { n: Math.min(building[0] + 1, building[1]), total: building[1] }) : status === "working" ? t("redact.working") : t("redact.apply")}
           </button>
         </div>
       </div>
@@ -437,6 +534,7 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
       <p class="hint" id="redact-keys">
         {t("redact.keys")}
       </p>
+      {isPdf ? <p class="hint">{t("redact.pdfNote")}</p> : null}
       <p class="hint">{t("redact.note")}</p>
     </div>
   );
