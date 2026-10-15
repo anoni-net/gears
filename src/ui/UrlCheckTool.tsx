@@ -1,5 +1,5 @@
 import { useEffect, useState } from "preact/hooks";
-import { t, tDynamic } from "../i18n/index.ts";
+import { list as joinList, t, tDynamic } from "../i18n/index.ts";
 import { cleanUrl, isShortener, parseUrl } from "../tools/url-check/clean.ts";
 import { type HostWarning, hostFacts } from "../tools/url-check/host.ts";
 import { type ScamList, findScam, parseScamList } from "../tools/url-check/scam-list.ts";
@@ -118,7 +118,7 @@ function Result({ url, list }: { url: URL; list: ScamList | null | undefined }) 
 
       <section aria-labelledby="clean-title">
         <h3 id="clean-title">{t("url.clean.title")}</h3>
-        {cleaned.unwrapped.length ? <p class="hint">{t("url.clean.unwrapped", { hosts: cleaned.unwrapped.join("、") })}</p> : null}
+        {cleaned.unwrapped.length ? <p class="hint">{t("url.clean.unwrapped", { hosts: joinList(cleaned.unwrapped) })}</p> : null}
         {cleaned.removed.length ? (
           <ul class="params">
             {cleaned.removed.map((r) => (

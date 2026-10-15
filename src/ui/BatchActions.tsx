@@ -1,7 +1,7 @@
 import { useState } from "preact/hooks";
 import type { TrayFile } from "../core/tray.ts";
 import { writeZip } from "../core/zip.ts";
-import { t } from "../i18n/index.ts";
+import { list, t } from "../i18n/index.ts";
 import { tray } from "../state.ts";
 import { fileTools } from "../tools/index.ts";
 import { outputName } from "./output-name.ts";
@@ -79,12 +79,12 @@ export function BatchActions({ files, busy }: { files: TrayFile[]; busy: boolean
       {result ? (
         <p class={result.failed.length ? "error" : "ok"} role="status">
           {t("batch.done", { n: result.done })}
-          {result.failed.length ? t("batch.failed", { names: result.failed.join("、") }) : null}
+          {result.failed.length ? t("batch.failed", { names: list(result.failed) }) : null}
         </p>
       ) : null}
       {skipped.length ? (
         <p class="hint" role="status">
-          {t("batch.skipped", { names: skipped.join("、") })}
+          {t("batch.skipped", { names: list(skipped) })}
         </p>
       ) : null}
       <p class="hint">{t("batch.note")}</p>

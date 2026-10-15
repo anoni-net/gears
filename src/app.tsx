@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "preact/hooks";
-import { t, tDynamic } from "./i18n/index.ts";
-import { navigate, routeUrl, useRoute } from "./router.ts";
+import { LOCALES, getLocale, t, tDynamic } from "./i18n/index.ts";
+import { navigate, routeUrl, switchLocale, useRoute } from "./router.ts";
 import { tray } from "./state.ts";
 import { createTools, editorTools, fileTools } from "./tools/index.ts";
 import { Desktop, type Task } from "./ui/Desktop.tsx";
@@ -73,7 +73,7 @@ export function App() {
 
   useEffect(() => {
     document.title = route ? tDynamic(`meta.${route}.title`) : t("meta.home.title");
-  }, [route]);
+  }, [route, getLocale()]);
 
   const pick = () => input.current?.click();
   const onChange = (e: Event) => {
@@ -198,6 +198,20 @@ export function App() {
           {" · "}
           <a href="https://github.com/anoni-net/gears">{t("app.footer.source")}</a>
         </p>
+        <nav class="languages" aria-label={t("app.language")}>
+          {LOCALES.map((l) => (
+            <button
+              key={l.id}
+              type="button"
+              class="link"
+              lang={l.lang}
+              aria-current={l.id === getLocale() ? "true" : undefined}
+              onClick={() => switchLocale(l.id)}
+            >
+              {l.label}
+            </button>
+          ))}
+        </nav>
       </footer>
 
       {dragging ? (

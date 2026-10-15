@@ -39,7 +39,7 @@ npm run test:unit    # 只執行單元測試，不需要瀏覽器
 | `src/tools/` | 各個工具的純邏輯，一個工具一個目錄，在 `src/tools/index.ts` 登記 |
 | `src/ui/`、`src/app.tsx` | 介面元件。`src/ui/registry.tsx` 登記從空白開始的工具用的元件，`src/ui/tool-meta.ts` 是每個工具的圖示與類別 |
 | `src/router.ts` | 每個工具的網址 |
-| `src/i18n/` | 介面字串，第一版只有正體中文 |
+| `src/i18n/` | 介面字串：正體中文、簡體中文、英文 |
 | `tests/unit/` | 在 Node 裡測純邏輯 |
 | `tests/e2e/` | 在 Chromium、WebKit、Firefox 與 iPhone 尺寸上測整個流程 |
 | `tests/helpers/` | 產生測試檔案的程式 |
@@ -66,7 +66,7 @@ npm run test:unit    # 只執行單元測試，不需要瀏覽器
 
 1. 純邏輯放 `src/tools/<工具>/`，在 `src/tools/index.ts` 加進其中一份清單
 2. 編輯畫面或從空白開始的元件登記在 `src/ui/registry.tsx`
-3. 在語系檔加上 `tool.<id>`、`tool.<id>.desc`、`meta.<id>.title` 與 `meta.<id>.description`，會在暫存區留下版本的工具另外加 `file.version.<id>`，用到新的 `FindingCode` 或 `SegmentCode` 時也要加，`tests/unit/i18n.spec.ts` 會檢查
+3. 在三個語系檔加上 `tool.<id>`、`tool.<id>.desc`、`meta.<id>.title` 與 `meta.<id>.description`，會在暫存區留下版本的工具另外加 `file.version.<id>`，用到新的 `FindingCode` 或 `SegmentCode` 時也要加，`tests/unit/i18n.spec.ts` 會檢查
 4. 單元測試放 `tests/unit/`，流程測試放 `tests/e2e/`
 
 暫存區有兩個以上的檔案時，下方可以一次清除全部的中繼資料（`tray.applyAll`，逐一處理，一個失敗不影響其他的），也可以把每個檔案的最新版本下載成一個壓縮檔（`src/ui/BatchActions.tsx`）。壓縮檔裡的檔名跟單檔下載一樣用 `gears-第幾個`（`src/ui/output-name.ts`），在記憶體裡組成，超過 512 MB 的部分請讀者個別下載。
@@ -117,7 +117,7 @@ node scripts/fetch-165.mjs   # 下載並整理成 public/data/165.txt
 
 ## 網址
 
-每個工具有自己的網址，例如 `/gears/qrcode/`。建置時 `vite.config.ts` 替每個工具產生一份 HTML，標題與描述取自語系檔的 `meta.<id>.*`，內容跟首頁相同，打開之後由 `src/router.ts` 判斷要顯示哪個工具。主機不需要轉址設定。
+每個工具有自己的網址，例如 `/gears/qrcode/`，簡體中文與英文在前面加上 `zh-cn/`、`en/`（`/gears/en/qrcode/`）。建置時 `vite.config.ts` 替每個語系、每個工具產生一份 HTML，`lang`、標題、描述與 `noscript` 取自該語系的字串，並列出其他語系的 `hreflang`。內容跟首頁相同，打開之後由 `src/router.ts` 判斷語系與要顯示哪個工具。主機不需要轉址設定。
 
 ## 其他欄位的內容
 
@@ -242,7 +242,11 @@ iPhone 預設拍出來的是 HEIC，在網頁上選照片時交出來的也是�
 
 ## 介面文字
 
-字串集中在 `src/i18n/zh-TW.ts`，元件裡不寫死文字。文字照社群的[寫作風格規範](https://anoni.net/join/writing-style/)，品牌寫成小寫的 `anoni.net`。
+字串集中在 `src/i18n/`，元件裡不寫死文字。正體中文（`zh-TW.ts`）是原稿，簡體中文（`zh-CN.ts`）與英文（`en.ts`）的鍵與變數必須跟它一致，`tests/unit/i18n.spec.ts` 會檢查。列舉用 `list()`，中文用頓號、英文用逗號。
+
+- 語系由網址決定，不用 cookie 或 localStorage 記住。頁尾切換語系時不重新載入（`switchLocale`），暫存區的檔案留著
+- 文字照社群的[寫作風格規範](https://anoni.net/join/writing-style/)，品牌寫成小寫的 `anoni.net`。三個語系各照各的規則（英文另有一套），檢查時把字串放在 `docs/zh-CN/`、`docs/en/` 這樣的路徑底下，linter 才會套用該語系的規則
+- 簡體版的用詞跟著文件站簡體版：元数据、遮蔽、复制、生成器、识别、个资、截图、社区、账号
 
 ## 規劃
 
