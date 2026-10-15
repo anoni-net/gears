@@ -58,9 +58,11 @@ test("找人臉：載入模型與尋找時顯示進度，完成後拿掉", async
     await route.continue();
   });
   await openRedact(page, await screenshot(page, false));
-  // 訊息區與進度條都不佔額外的版面，圖片從頭到尾不會移動
+  // 訊息區與進度條都不佔額外的版面，圖片從頭到尾不會移動。從圖片還在解碼時就開始量
   const canvasTop = () => page.getByTestId("redact-canvas").evaluate((el) => Math.round(el.getBoundingClientRect().top));
   const top = await canvasTop();
+  await expect(page.getByRole("button", { name: "找人臉" })).toBeEnabled();
+  expect(await canvasTop()).toBe(top);
   await page.getByRole("button", { name: "找人臉" }).click();
   const bar = page.getByRole("progressbar", { name: "找人臉" });
   await expect(bar).toBeVisible();

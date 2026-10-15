@@ -299,6 +299,8 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
   const running = auto?.state === "running";
 
   const autoMessage = (a: typeof auto): string => {
+    // 圖片還在解碼時也顯示在這裡，不另佔一行，解碼完圖片不會往上跳
+    if (status === "loading") return t("redact.loading");
     if (!a) return t("redact.autoNote");
     if (a.state === "failed") return t("redact.findFailed");
     if (a.state === "running") {
@@ -330,7 +332,6 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
   return (
     <div class="redact">
       <p class="hint">{t("redact.help")}</p>
-      {status === "loading" ? <p class="hint">{t("redact.loading")}</p> : null}
       {status === "decodeFailed" ? (
         <p class="error" role="alert">
           {t("redact.decodeFailed")}
@@ -437,6 +438,7 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
 
 // 訊息區可能出現的每一則訊息，用來撐開固定的高度
 const AUTO_MESSAGES = [
+  "redact.loading",
   "redact.autoNote",
   "redact.findFailed",
   "redact.loadingFaces",
