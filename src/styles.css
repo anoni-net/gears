@@ -1517,3 +1517,108 @@ button.link {
   border-radius: var(--radius);
   background: var(--fill);
 }
+
+/* 查證：每一節之間留白，雜湊值與座標用等寬字，長字串可以斷行 */
+.verify section {
+  margin-top: 1.5rem;
+}
+
+.verify h3 {
+  margin: 0 0 0.5rem;
+}
+
+.verify h4 {
+  margin: 0.75rem 0 0.25rem;
+}
+
+.verify ul,
+.verify ol {
+  margin: 0.25rem 0 0;
+  padding-left: 1.25rem;
+}
+
+.verify li {
+  margin-bottom: 0.35rem;
+}
+
+.verify .verify-files {
+  list-style: none;
+  padding-left: 0;
+}
+
+.verify-files li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+.verify-files span {
+  color: var(--muted);
+}
+
+.verify-hash {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.verify-hash code,
+.verify-groups code {
+  overflow-wrap: anywhere;
+  font-size: 0.85rem;
+}
+
+.verify-groups small {
+  margin-left: 0.5rem;
+  color: var(--muted);
+}
+
+.verify-groups button {
+  margin-left: 0.5rem;
+}
+
+.verify-warnings li {
+  color: var(--warn);
+}
+
+.verify-timeline time {
+  display: inline-block;
+  min-width: 15.5em;
+  margin-right: 0.5rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 窄螢幕：時間獨立一行，說明接在下一行 */
+@media (max-width: 40rem) {
+  .verify-timeline time {
+    display: block;
+    min-width: 0;
+  }
+}
+
+.verify-thumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.verify-thumbs figure {
+  margin: 0;
+}
+
+.verify-thumbs img {
+  display: block;
+  max-width: 12rem;
+  max-height: 12rem;
+  box-shadow: 0 0 0 1px var(--hair);
+}
+
+.verify-thumbs figcaption {
+  font-size: 0.85rem;
+  color: var(--muted);
+}

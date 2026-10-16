@@ -1,13 +1,13 @@
 # AGENTS.md
 
-給參與開發的人與 AI 工具的說明。隱私工作台是匿名網路社群 anoni.net 的產品，網址是 `anoni.net/gears/`，在瀏覽器裡處理讀者要交出去的檔案。文件站的小工具區（`anoni-net/docs` 的 `utils/`）是另一套，兩邊各自開發，不共用程式。
+給參與開發的人與 AI 工具的說明。隱私工作台是匿名網路社群 anoni.net 的產品，網址是 `anoni.net/gears/`，在瀏覽器裡處理讀者要交出去的檔案，也替收到檔案的人整理可以查證的線索。文件站的小工具區（`anoni-net/docs` 的 `utils/`）是另一套，兩邊各自開發，不共用程式。
 
 ## 原則
 
 - 預設在瀏覽器裡處理。之後若提供上傳到社群伺服器的選項，上傳前要在畫面上寫清楚檔案送到哪裡、誰看得到、保留多久、伺服器會不會留下紀錄，由讀者決定
 - 上傳端點不經過 Cloudflare。Cloudflare 在邊緣解開 TLS，經過的檔案對它是明文
 - 頁面能連線的對象寫死在 CSP 裡（`vite.config.ts`），新增任何對外連線都要改那裡，並在畫面上標示。目前唯一的例外是逐字稿的大模型從 Hugging Face 下載（見下方「逐字稿」），只開在伺服器送的 CSP 標頭，頁面的 meta 標籤仍然只有自己的網域
-- 執行期的相依套件只有 `preact`、`qrcode-generator`（QR code 產生）、`jsqr`（QR code 讀取）、`age-encryption`（加密，連同它相依的 noble 系列）、`libheif-js`（HEIC 解碼，LGPL-3.0，見下方「HEIC」）、`pdf-lib`（PDF 的解析與寫出，見下方「文件」）、`pdfjs-dist`（PDF 的遮蔽，見下方「PDF 的遮蔽」），以及遮蔽的自動尋找用的 `onnxruntime-web` 與 `tesseract.js`（見下方「遮蔽的自動尋找」）、逐字稿用的 `@huggingface/transformers` 與 `opencc-js`（見下方「逐字稿」，分辨說話者用的 onnxruntime 是 Transformers.js 帶的那一份）。新增套件前先想能不能自己寫，必要時鎖定確切的版本。工具用到的套件在打開工具時才載入
+- 執行期的相依套件只有 `preact`、`qrcode-generator`（QR code 產生）、`jsqr`（QR code 讀取）、`age-encryption`（加密，連同它相依的 noble 系列）、`libheif-js`（HEIC 解碼，LGPL-3.0，見下方「HEIC」）、`pdf-lib`（PDF 的解析與寫出，見下方「文件」）、`pdfjs-dist`（PDF 的遮蔽，見下方「PDF 的遮蔽」），以及遮蔽的自動尋找用的 `onnxruntime-web` 與 `tesseract.js`（見下方「遮蔽的自動尋找」）、逐字稿用的 `@huggingface/transformers` 與 `opencc-js`（見下方「逐字稿」，分辨說話者用的 onnxruntime 是 Transformers.js 帶的那一份），以及查證計算 SHA-256 用的 `@noble/hashes`（age 加密原本就相依它，鎖定同一個版本，見下方「查證」）。新增套件前先想能不能自己寫，必要時鎖定確切的版本。工具用到的套件在打開工具時才載入
 - 結構有問題的檔案就停下來，不交出一份沒處理乾淨的檔案
 
 ## 支援的瀏覽器
@@ -52,7 +52,7 @@ npm run test:unit    # 只執行單元測試，不需要瀏覽器
 
 | | 處理檔案的工具（`fileTools`） | 需要編輯畫面的工具（`editorTools`） | 從空白開始的工具（`createTools`） |
 |---|---|---|---|
-| 例子 | 清除中繼資料 | 遮蔽、轉成 JPEG、選擇 PDF 的頁面、加密、解密、逐字稿 | QR code 產生器與讀取、網址檢查、密語與密碼產生器、age 金鑰產生器、加密文字 |
+| 例子 | 清除中繼資料 | 遮蔽、轉成 JPEG、選擇 PDF 的頁面、加密、解密、逐字稿 | QR code 產生器與讀取、網址檢查、密語與密碼產生器、age 金鑰產生器、加密文字、查證 |
 | 介面 | `src/core/tool.ts` 的 `Tool` | `EditorTool`，編輯畫面登記在 `src/ui/registry.tsx` | `CreateTool`，元件登記在 `src/ui/registry.tsx` |
 | 結果 | 暫存區裡那個檔案的新版本 | 同左，由 `tray.addVersion` 加入 | 產出檔案的放進暫存區，產出文字的只顯示在畫面上 |
 
@@ -129,6 +129,24 @@ pdf-lib 複製頁面時，頁面引用到的東西會一路複製過去，直接
 單元測試（`tests/unit/pdf-pages.spec.ts`）組出三頁共用 `Resources`、各頁有自己的圖片、第一頁有各種連到第二頁的參照的 PDF，確認只留一頁時其他頁的字、圖片、表單的值、作者與書籤都不在新檔裡，也確認有其他沒清掉的參照時檢查會擋下。本機另外用 Chromium 列印的 PDF（頁內連結、書籤、結構標記、只在第二頁的圖片）驗證過，圖片沒有跟過去，共用字型的提醒也正確出現。
 
 Tesseract 的 WebAssembly 會把執行紀錄寫到標準錯誤輸出，瀏覽器當成 `console.error`。瀏覽器測試的守門程式（`tests/e2e/guard.ts`）把這種已知的訊息列為例外。
+
+## 查證
+
+記者與公民團體收到檔案時，想知道裡面有哪些資訊可以用來驗證（`src/tools/verify/`，畫面在 `src/ui/VerifyTool.tsx`）。清除中繼資料讀的是同一批欄位，清除時當成風險，查證時當成線索。暫存區裡讀者加入的檔案算成一批，一律讀原檔（第一個版本），整理成一份查證紀錄：
+
+- 檔案與雜湊值：格式、大小、加入暫存區的時間（`TrayFile.addedAt`）、SHA-256。用 `@noble/hashes` 一次讀 8 MB 分段計算，幾 GB 的影片也不必整個讀進記憶體，HTTP 頁面上也能用（`crypto.subtle` 只在 HTTPS 才有，而且不能分段）
+- 時間線：所有檔案的時間排在一起，標出是哪一種時間、來源與時區。沒有時區的不猜，依字面排序，畫面上說明（`times.ts`）
+- 裝置、序號、軟體、人名，同一個值出現在哪幾個檔案。位置只列座標，不畫地圖、不換算地址
+- 編輯痕跡：照片內嵌的縮圖跟主圖並排、XMP 的編輯紀錄、Office 與 LibreOffice 的修訂次數與編輯時間、PDF 的數位簽章（只看簽章涵蓋到哪裡，不驗證憑證），以及 PDF 的舊版本：每一個 `%%EOF` 是一次存檔的結尾，切到那裡讀得出來就是一個版本，可以取出來放進暫存區（來源記成 `verify`，也算進這一批）。線性化的 PDF 第一個 `%%EOF` 不算
+- 需要留意的地方（`summary.ts`）：內容相同、副檔名跟格式不符、修改早於建立、拍攝時間跟 GPS 時間對不上（有時區時差 5 分鐘以上，沒有時區時差距不接近任何真實的時區）、記錄的軟體是影像編輯軟體、簽章之後還有加入內容、PDF 有舊版本
+
+只給線索，不下真假的判決：中繼資料很容易改，有矛盾不代表造假，沒有矛盾也不代表是真的，畫面與匯出的紀錄開頭都寫明。誤差分析與 AI 生成偵測的分數常被誤讀成判決，不做。也不提供填入假的中繼資料，假資料跟檔案的解析度、壓縮參數與內部結構對不上，比空白更顯眼。
+
+查證紀錄可以下載成 Markdown，開頭是產生的時間（裝置的時鐘與時區）與建置的 commit，接著是雜湊值。也可以放進暫存區（來源記成 `verify-report`，不算進這一批），接著用 age 加密。紀錄裡有從檔案讀出來的人名與位置，畫面上提醒讀者小心保管。
+
+在查證的畫面加入檔案時留在查證的畫面（`src/app.tsx` 的 `addFiles`），其他從空白開始的工具加入檔案時回到桌面。
+
+照片讀 EXIF（`extractExif` 支援的格式，`parseExif` 補上了拍攝、數位化、修改三種時間與各自的時區、GPS 的 UTC 時間與縮圖的位置），PDF 用 pdf-lib 讀文件資訊、XMP、簽章與舊版本，Office 讀 `docProps/core.xml` 與 `app.xml`，LibreOffice 讀 `meta.xml`，XMP 在其他格式裡用 `<x:xmpmeta` 搜尋。其他格式用加入暫存區時清除中繼資料的檢查結果，MP4、MOV、M4A 的時間是 UTC。單元測試在 `tests/unit/verify.spec.ts`。本機另外用 Pillow 寫入 EXIF 的照片、python-docx 產生的 Word 與 Chromium 列印的 PDF 驗證過。
 
 ## 逐字稿
 
@@ -337,7 +355,7 @@ iPhone 預設拍出來的是 HEIC，在網頁上選照片時交出來的也是�
 
 ## 規劃
 
-產品規劃記錄在社群的工作區，還沒有公開。目前完成第一階段：桌面、檔案暫存區，以及清除中繼資料（JPEG、PNG、HEIC、AVIF、WebP、GIF、TIFF、SVG、BMP、PNM、JPEG XL，Word、Excel、PowerPoint、LibreOffice 文件與 PDF，MP3、M4A、MP4、MOV、WAV、AVI、FLAC、Ogg、Opus、MKV、WebM，ZIP、TAR、gzip、EPUB、種子檔、HTML）、遮蔽（圖片與 PDF，可以自動找人臉與個資）、選擇 PDF 的頁面、逐字稿、加密與解密（檔案與一段文字）、age 金鑰產生器、QR code 產生器與讀取、網址檢查、密語與密碼產生器，可以下載與系統分享，一次處理多個檔案，也可以離線使用。部署到 `anoni.net/gears/` 是下一步。
+產品規劃記錄在社群的工作區，還沒有公開。目前完成第一階段：桌面、檔案暫存區，以及清除中繼資料（JPEG、PNG、HEIC、AVIF、WebP、GIF、TIFF、SVG、BMP、PNM、JPEG XL，Word、Excel、PowerPoint、LibreOffice 文件與 PDF，MP3、M4A、MP4、MOV、WAV、AVI、FLAC、Ogg、Opus、MKV、WebM，ZIP、TAR、gzip、EPUB、種子檔、HTML）、遮蔽（圖片與 PDF，可以自動找人臉與個資）、選擇 PDF 的頁面、查證收到的檔案、逐字稿、加密與解密（檔案與一段文字）、age 金鑰產生器、QR code 產生器與讀取、網址檢查、密語與密碼產生器，可以下載與系統分享，一次處理多個檔案，也可以離線使用。部署到 `anoni.net/gears/` 是下一步。
 
 ## 第三方資料
 

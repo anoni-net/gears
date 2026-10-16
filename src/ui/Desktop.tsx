@@ -5,7 +5,7 @@ import { IconCircle } from "./Icon.tsx";
 import { TOOL_META } from "./tool-meta.ts";
 
 export interface Task {
-  id: "photo" | "document" | "heic" | "redact" | "pages" | "encrypt" | "wifi";
+  id: "photo" | "document" | "heic" | "redact" | "pages" | "verify" | "encrypt" | "wifi";
   tool: string;
   preset?: string;
   pick?: boolean; // 處理檔案的任務，點了直接請讀者選檔案
@@ -19,6 +19,7 @@ export const TASKS: Task[] = [
   { id: "heic", tool: "heic-to-jpeg", pick: true },
   { id: "redact", tool: "redact", pick: true },
   { id: "pages", tool: "pdf-pages", pick: true },
+  { id: "verify", tool: "verify", pick: true },
   { id: "encrypt", tool: "encrypt", pick: true },
   { id: "wifi", tool: "qrcode", preset: "wifi" },
 ];
