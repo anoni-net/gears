@@ -1552,6 +1552,34 @@ footer .languages button[aria-current] {
   font-size: 0.9rem;
 }
 
+/* 使用的模型與授權：收起來放在逐字稿畫面的最下面 */
+.transcribe-models {
+  margin-top: 1.5rem;
+  font-size: 0.9rem;
+}
+
+.transcribe-models summary {
+  cursor: pointer;
+  color: var(--muted);
+}
+
+.transcribe-models ul {
+  margin: 0.5rem 0;
+  padding-left: 1.2rem;
+}
+
+.transcribe-models li {
+  margin: 0.4rem 0;
+}
+
+.transcribe-models strong {
+  display: block;
+}
+
+.transcribe-models a {
+  overflow-wrap: anywhere;
+}
+
 .transcript {
   list-style: none;
   max-height: 60vh;
@@ -2040,4 +2068,29 @@ button.link {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   background: var(--fill);
+}
+
+/* 授權與來源 */
+
+.licenses ul {
+  list-style: none;
+  padding: 0;
+}
+
+.licenses li {
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--hair);
+}
+
+.licenses li:last-child {
+  border-bottom: 0;
+}
+
+.licenses li p {
+  margin: 0.25rem 0;
+}
+
+.licenses pre {
+  white-space: pre-wrap;
+  font-size: 0.85rem;
 }

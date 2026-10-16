@@ -1,0 +1,46 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import models from "../../src/tools/transcribe/models.json" with { type: "json" };
+import { wav } from "../helpers/audio.ts";
+import { expect, test } from "./guard.ts";
+
+// 授權與來源（src/ui/Licenses.tsx）：從頁尾進入、直接用網址打開，授權全文跟著建置一起輸出
+
+const licenses = ["transcribe", "redact-detect", "pdfjs", "pdf-lib", "libheif", "material-design-icons"];
+
+test("從頁尾打開授權與來源，每份授權全文都下載得到、內容跟 licenses/ 相同", async ({ page }) => {
+  await page.goto("./");
+  await page.getByRole("button", { name: "授權與來源" }).click();
+  await expect(page).toHaveURL(/\/gears\/licenses\/$/);
+  await expect(page.getByRole("heading", { name: "授權與來源" })).toBeVisible();
+  const links = page.getByTestId("licenses").getByRole("link", { name: "授權全文" });
+  await expect(links).toHaveCount(licenses.length);
+  for (const [i, name] of licenses.entries()) {
+    const href = await links.nth(i).getAttribute("href");
+    const text = await page.evaluate(async (url) => (await fetch(url!)).text(), href);
+    expect(text, name).toBe(readFileSync(join(import.meta.dirname, "../../licenses", `${name}.txt`), "utf8"));
+  }
+  // 工作台自己的授權直接展開在頁面上
+  await page.getByTestId("licenses").locator("summary").click();
+  await expect(page.getByText(/^MIT License/)).toBeVisible();
+});
+
+test("直接打開英文版的授權頁", async ({ page }) => {
+  await page.goto("./en/licenses/");
+  await expect(page.getByRole("heading", { name: "Licenses and sources" })).toBeVisible();
+  await expect(page).toHaveTitle("Licenses and sources | Gears");
+});
+
+test("逐字稿列出每個模型的原始來源、授權與下載的位置", async ({ page }) => {
+  await page.goto("./transcribe/");
+  await page.getByTestId("file-input").setInputFiles({ name: "talk.wav", mimeType: "application/octet-stream", buffer: Buffer.from(wav(2)) });
+  const details = page.getByTestId("transcribe-models");
+  await details.getByText("使用的模型與授權").click();
+  for (const info of Object.values(models)) {
+    await expect(details.locator(`a[href="${info.source}"]`)).toHaveCount(1);
+  }
+  await expect(details).toContainText("assets.anoni.net（社群轉檔）");
+  await expect(details).toContainText("下載自 Hugging Face");
+  await details.getByRole("button", { name: "所有授權全文" }).click();
+  await expect(page).toHaveURL(/\/gears\/licenses\/$/);
+});

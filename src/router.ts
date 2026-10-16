@@ -1,5 +1,6 @@
 import { useEffect, useState } from "preact/hooks";
 import { type Locale, getLocale, localeFromPath, localeInfo, setLocale } from "./i18n/index.ts";
+import { pageIds } from "./pages.ts";
 import { toolIds } from "./tools/index.ts";
 
 // 每個工具有自己的網址（/gears/qrcode/），可以被搜尋到，也可以直接分享。
@@ -13,7 +14,7 @@ export function parseRoute(pathname: string): string {
   const prefix = localeInfo(localeFromPath(pathname)).prefix;
   const rest = pathname.startsWith(BASE + prefix) ? pathname.slice(BASE.length + prefix.length) : "";
   const id = rest.replace(/\/+$/, "").split("/")[0] ?? "";
-  return toolIds.includes(id) ? id : "";
+  return toolIds.includes(id) || pageIds.includes(id) ? id : "";
 }
 
 export function routeUrl(id: string, locale: Locale = getLocale()): string {
