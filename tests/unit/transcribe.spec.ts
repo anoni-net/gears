@@ -129,7 +129,7 @@ test("分辨說話者時，SRT 與 TXT 的每段前面加上說話者", () => {
 });
 
 test("預設的核心數：回報的數字只會比實際少，夠多就用 12，不可信時用 8", () => {
-  const hints = { reported: 16, brave: false, safari: false, mobileApple: false };
+  const hints = { reported: 16, brave: false, safari: false, mobileApple: false, firefox: false };
   expect(defaultThreads(hints)).toBe(12);
   // Chrome 回報真實數字：不超過它的最大選項
   expect(defaultThreads({ ...hints, reported: 10 })).toBe(8);
@@ -140,6 +140,8 @@ test("預設的核心數：回報的數字只會比實際少，夠多就用 12�
   expect(defaultThreads({ ...hints, reported: 8, safari: true })).toBe(8);
   expect(defaultThreads({ ...hints, reported: 2 })).toBe(8);
   expect(defaultThreads({ ...hints, reported: 2, safari: true, mobileApple: true })).toBe(4);
+  // Firefox 用多個核心偶爾會停住，預設 1 個
+  expect(defaultThreads({ ...hints, firefox: true })).toBe(1);
 });
 
 test("顯示卡：軟體模擬的、緩衝區放不下詞嵌入表的都改用 CPU", () => {

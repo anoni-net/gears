@@ -148,6 +148,7 @@ export const en: Record<MessageKey, string> = {
   "transcribe.threads": "CPU cores to use",
   "transcribe.threads.note": "More cores finish faster, but the computer gets busier and the fan may speed up. Pick fewer if you want to keep working on other things. Choosing more than the computer actually has won't help and may slow things down.",
   "transcribe.threads.single": "This site can only use 1 core right now.",
+  "transcribe.threads.firefox": "Firefox sometimes stops at \"Downloading model\" when using several cores, so it uses 1 core by default, which is slower. You can pick more to go faster. If it stops, reload the page and try again with 1 core.",
   "transcribe.start": "Start transcribing",
   "transcribe.stop": "Stop",
   "transcribe.decoding": "Reading the recording…",
