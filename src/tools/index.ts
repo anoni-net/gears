@@ -19,6 +19,7 @@ export const editorTools: EditorTool[] = [
     accepts: (format) => ["jpeg", "png", "heic", "avif", "webp", "gif", "bmp", "pdf"].includes(format),
   },
   { id: "heic-to-jpeg", resolves: [], accepts: (format) => format === "heic" },
+  { id: "pdf-pages", resolves: [], accepts: (format) => format === "pdf" },
   { id: "encrypt", resolves: [], accepts: (format) => format !== "age" },
   { id: "decrypt", resolves: [], accepts: (format) => format === "age" },
   // 瀏覽器解碼得了聲音的錄音與影片，解碼不了時畫面上說明。可以分段解碼的格式不限大小

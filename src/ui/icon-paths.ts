@@ -3,6 +3,7 @@
 // 只放用到的圖示，路徑直接內嵌，不從外部載入。
 
 export const ICON_PATHS = {
+  "file-document-multiple-outline": "M16 0H8C6.9 0 6 .9 6 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V6zm4 18H8V2h7v5h5zM4 4v18h16v2H4c-1.1 0-2-.9-2-2V4zm6 6v2h8v-2zm0 4v2h5v-2z",
   "subtitles-outline": "M20 4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm0 14V6H4v12zM6 10h2v2H6zm0 4h8v2H6zm10 0h2v2h-2zm-6-4h8v2h-8z",
   undo: "M12.5 8c-2.65 0-5.05 1-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8",
   "delete-sweep-outline": "M15 16h4v2h-4zm0-8h7v2h-7zm0 4h6v2h-6zm-4-2v8H5v-8zm2-2H3v10a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2zm1-3h-3l-1-1H6L5 5H2v2h12z",

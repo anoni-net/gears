@@ -2,7 +2,9 @@ import { GlobalWorkerOptions, getDocument, type PDFDocumentProxy } from "pdfjs-d
 import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import type { Box } from "../tools/redact/index.ts";
 
-// PDF 的遮蔽：用 pdf.js 把每一頁畫成圖片，讀者在圖片上框選，輸出時每一頁重新畫一次、
+// 用 pdf.js 把 PDF 的頁面畫成圖片，遮蔽的編輯畫面與選擇頁面的縮圖都用它。
+//
+// PDF 的遮蔽：讀者在圖片上框選，輸出時每一頁重新畫一次、
 // 塗黑之後編碼成 JPEG，組成一份只有圖片的新 PDF。原檔的文字、字型、中繼資料、附件、
 // 表單與 JavaScript 都不會帶過去，框起來的內容也就不會留在文字層裡。代價是文字不能再
 // 選取與搜尋，檔案通常也會變大。
@@ -24,8 +26,8 @@ export interface PdfPages {
   count: number;
   // 第 index 頁原本的大小，單位是點（1/72 英寸），輸出的每一頁維持原本的大小
   size(index: number): Promise<[number, number]>;
-  // 第 index 頁（從 0 開始）畫成的圖片。用完要 close()
-  render(index: number): Promise<ImageBitmap>;
+  // 第 index 頁（從 0 開始）畫成的圖片，長邊最多 maxSide 像素（縮圖用比較小的值）。用完要 close()
+  render(index: number, maxSide?: number): Promise<ImageBitmap>;
   close(): void;
 }
 
@@ -55,10 +57,10 @@ export async function openPdf(data: Uint8Array): Promise<PdfPages> {
       const view = (await doc.getPage(index + 1)).getViewport({ scale: 1 });
       return [view.width, view.height];
     },
-    async render(index) {
+    async render(index, maxSide = MAX_SIDE) {
       const page = await doc.getPage(index + 1);
       const base = page.getViewport({ scale: 1 });
-      const scale = Math.min(DPI / 72, MAX_SIDE / Math.max(base.width, base.height));
+      const scale = Math.min(DPI / 72, maxSide / Math.max(base.width, base.height));
       const viewport = page.getViewport({ scale });
       const canvas = document.createElement("canvas");
       canvas.width = Math.round(viewport.width);
@@ -83,13 +85,15 @@ export interface PdfBuildHooks {
   onProgress(done: number, total: number): void;
 }
 
-// 逐頁處理，同一時間只有一頁的圖片在記憶體裡
-export async function buildRedactedPdf(pages: PdfPages, boxes: Box[][], hooks: PdfBuildHooks): Promise<Blob> {
+// 逐頁處理，同一時間只有一頁的圖片在記憶體裡。indices 是要輸出的頁面（從 0 開始），
+// 選擇頁面時只輸出選中的那幾頁，沒有框的頁面一樣轉成圖片
+export async function buildRedactedPdf(pages: PdfPages, boxes: Box[][], hooks: PdfBuildHooks, indices?: number[]): Promise<Blob> {
   const lib = await import("../tools/strip-metadata/pdf-lib.ts");
   // 不寫入 pdf-lib 預設的 Producer、Creator 與時間
   const out = await lib.PDFDocument.create({ updateMetadata: false });
-  for (let i = 0; i < pages.count; i++) {
-    hooks.onProgress(i, pages.count);
+  const order = indices ?? Array.from({ length: pages.count }, (_, i) => i);
+  for (const [done, i] of order.entries()) {
+    hooks.onProgress(done, order.length);
     const bitmap = await pages.render(i);
     const canvas = document.createElement("canvas");
     canvas.width = bitmap.width;
@@ -108,10 +112,10 @@ export async function buildRedactedPdf(pages: PdfPages, boxes: Box[][], hooks: P
     const [width, height] = await pages.size(i);
     out.addPage([width, height]).drawImage(image, { x: 0, y: 0, width, height });
   }
-  hooks.onProgress(pages.count, pages.count);
+  hooks.onProgress(order.length, order.length);
   const bytes = await out.save();
   // 重新開啟一次，頁數不對或讀不回來的結果不交出去
   const reopened = await lib.PDFDocument.load(bytes, { updateMetadata: false });
-  if (reopened.getPageCount() !== pages.count) throw new Error("page count");
+  if (reopened.getPageCount() !== order.length) throw new Error("page count");
   return new Blob([bytes as Uint8Array<ArrayBuffer>], { type: "application/pdf" });
 }

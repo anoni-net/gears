@@ -12,7 +12,7 @@ async function audit(page: Page) {
   return result.violations.map((v) => `${v.id}: ${v.help} (${v.nodes.map((n) => n.target.join(" ")).slice(0, 3).join(" | ")})`);
 }
 
-for (const path of ["./", "./en/", "./qrcode/", "./url-check/", "./passphrase/", "./age-keygen/", "./text-crypt/", "./qr-read/", "./redact/", "./strip-metadata/"]) {
+for (const path of ["./", "./en/", "./qrcode/", "./url-check/", "./passphrase/", "./age-keygen/", "./text-crypt/", "./qr-read/", "./redact/", "./pdf-pages/", "./strip-metadata/"]) {
   test(`${path} 沒有無障礙問題`, async ({ page }) => {
     await page.goto(path);
     await page.waitForLoadState("networkidle");
@@ -51,6 +51,13 @@ test("PDF 的遮蔽畫面（換頁列）沒有無障礙問題", async ({ page })
   await page.getByTestId("file-input").setInputFiles({ name: "a.pdf", mimeType: "application/pdf", buffer: Buffer.from(await syntheticPdf()) });
   await expect(page.getByTestId("redact-auto-status")).toContainText("自動尋找在你的瀏覽器裡執行", { timeout: 15000 });
   await expect(page.getByText(/第 1 頁，共 \d+ 頁/)).toBeVisible();
+  expect(await audit(page)).toEqual([]);
+});
+
+test("選擇 PDF 頁面的畫面沒有無障礙問題", async ({ page }) => {
+  await page.goto("./pdf-pages/");
+  await page.getByTestId("file-input").setInputFiles({ name: "a.pdf", mimeType: "application/pdf", buffer: Buffer.from(await syntheticPdf()) });
+  await page.getByRole("checkbox", { name: "第 1 頁" }).check({ timeout: 15000 });
   expect(await audit(page)).toEqual([]);
 });
 

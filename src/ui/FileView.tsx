@@ -177,8 +177,9 @@ function ReportView({ report }: { report: Report }) {
   const rows = (items: Report["removed"]) =>
     items.map((item, i) => (
       <li key={i}>
-        <span>{tDynamic(`segment.${item.code}`)}</span>
-        {item.count !== undefined ? <small>{t("report.count", { n: item.count })}</small> : null}
+        {/* 字串裡有 {n} 的（例如「沒有選的 3 頁」）直接帶入數量，其他的另外附上「N 個範圍」 */}
+        <span>{tDynamic(`segment.${item.code}`, item.count !== undefined ? { n: item.count } : undefined)}</span>
+        {item.count !== undefined && !tDynamic(`segment.${item.code}`).includes("{n}") ? <small>{t("report.count", { n: item.count })}</small> : null}
         {item.bytes !== undefined ? <small>{t("report.bytes", { n: item.bytes.toLocaleString() })}</small> : null}
       </li>
     ));
