@@ -7,11 +7,11 @@ import asyncifyWasm from "../../node_modules/@huggingface/transformers/node_modu
 import plainMjs from "../../node_modules/@huggingface/transformers/node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.mjs?url";
 import plainWasm from "../../node_modules/@huggingface/transformers/node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.wasm?url";
 import { type Part, joinParts, partName } from "../tools/transcribe/parts.ts";
-import { REMOTE_ERROR, hfUrl, readVerified } from "../tools/transcribe/remote.ts";
+import { REMOTE_ERROR, assetsUrl, hfUrl, readVerified } from "../tools/transcribe/remote.ts";
 import { MODELS, type ModelId, type RawChunk, SAMPLE_RATE, type Segment, cleanSegments, maxTokens, speechPieces } from "../tools/transcribe/segments.ts";
 import { MIN_EMBED_SECONDS, assignSpeakers, normalize } from "../tools/transcribe/speakers.ts";
 import type { Device } from "../tools/transcribe/device.ts";
-import { type Language, isChinese } from "../tools/transcribe/languages.ts";
+import { type Language, isChinese, whisperLanguage } from "../tools/transcribe/languages.ts";
 import speakerModel from "../tools/transcribe/speaker-model.json" with { type: "json" };
 import type { Embedder } from "./speaker-embed.ts";
 
@@ -71,9 +71,9 @@ function counted(response: Response, file: string): Response {
   return new Response(body, { status: response.status, statusText: response.statusText, headers: response.headers });
 }
 
-// 大模型的檔案：先找快取，沒有就從 Hugging Face 下載、比對 SHA-256，存進快取再交給
-// Transformers.js。快取的網址跟 small、base 一樣用自己網域的路徑，畫面判斷「已下載」與
-// 刪除模型時不必分開處理
+// 別的網域的模型檔（src/tools/transcribe/remote.ts）：先找快取，沒有就下載、比對 SHA-256，
+// 存進快取再交給 Transformers.js。快取的網址跟 small、base 一樣用自己網域的路徑，畫面判斷
+// 「已下載」與刪除模型時不必分開處理。service worker 只快取自己網域的請求，所以由這裡存
 //
 // 同一個檔案同時有好幾個請求時共用同一次下載。存進快取的回傳 null，存不進去的（無痕視窗的
 // 配額很小）把內容留在這裡，載入完才放掉
@@ -82,7 +82,7 @@ const downloads = new Map<string, Promise<Uint8Array<ArrayBuffer> | null>>();
 async function remoteFetch(model: ModelId, file: string, url: string): Promise<Response> {
   const info = MODELS[model];
   const sha256 = (info.files as Record<string, string>)[file];
-  // Transformers.js 會試著讀一些選用的檔案，清單以外的當作不存在，不送到 Hugging Face
+  // Transformers.js 會試著讀一些選用的檔案，清單以外的當作不存在，不送出請求
   if (!sha256) return new Response(null, { status: 404 });
   // Firefox 的無痕視窗不能用 Cache API，那時每次都重新下載
   const cache = await caches.open(MODEL_CACHE).catch(() => null);
@@ -98,16 +98,28 @@ async function remoteFetch(model: ModelId, file: string, url: string): Promise<R
   return stored ?? new Response(data, { headers: { "content-type": "application/octet-stream", "content-length": String(data?.length ?? 0) } });
 }
 
-async function download(model: ModelId, file: string, sha256: string, url: string, cache: Cache | null): Promise<Uint8Array<ArrayBuffer> | null> {
-  const info = MODELS[model];
-  const response = await fetch(hfUrl(info.repo, info.revision, file), { credentials: "omit", referrerPolicy: "no-referrer", cache: "no-store" }).catch((error: Error) => {
+const remoteGet = (url: string) =>
+  fetch(url, { credentials: "omit", referrerPolicy: "no-referrer", cache: "no-store" }).catch((error: Error) => {
     throw new Error(`${REMOTE_ERROR}: ${error.message}`);
   });
-  if (!response.ok) throw new Error(`${REMOTE_ERROR}: HTTP ${response.status} (${file})`);
-  const data = await readVerified(response, sha256, (n) => {
+
+async function download(model: ModelId, file: string, sha256: string, url: string, cache: Cache | null): Promise<Uint8Array<ArrayBuffer> | null> {
+  const info = MODELS[model];
+  const at = (name: string) => (info.host === "hf" ? hfUrl(info.repo, info.revision, name) : assetsUrl(info.dir, name));
+  const onBytes = (n: number) => {
     files[file] = n;
     reportDownload();
-  });
+  };
+  // 切成好幾段的檔案逐段下載、比對、接回來，每段都比對過，不必再算整個檔案
+  const parts = (info.parts as Record<string, Part[]>)[file];
+  const data = parts
+    ? await joinParts(parts, (i) => remoteGet(at(partName(file, i))), onBytes).catch((error: Error) => {
+        throw new Error(error.message.startsWith(REMOTE_ERROR) ? error.message : `${REMOTE_ERROR}: ${error.message}`);
+      })
+    : await remoteGet(at(file)).then((response) => {
+        if (!response.ok) throw new Error(`${REMOTE_ERROR}: HTTP ${response.status} (${file})`);
+        return readVerified(response, sha256, onBytes);
+      });
   if (!cache) return data;
   const headers = { "content-type": "application/octet-stream", "content-length": String(data.length) };
   return cache.put(url, new Response(data, { headers })).then(
@@ -136,7 +148,7 @@ async function load(model: ModelId, base: string, threads: number, device: Devic
   const dir = `${new URL(base).pathname}models/whisper/${MODELS[model].dir}/`;
   env.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
     const url = new URL(input instanceof Request ? input.url : String(input), self.location.href);
-    if (MODELS[model].remote && url.pathname.startsWith(dir))
+    if (MODELS[model].host !== "self" && url.pathname.startsWith(dir))
       return remoteFetch(model, url.pathname.slice(dir.length), url.href).catch((error: Error) => {
         remoteError = error;
         throw error;
@@ -144,7 +156,7 @@ async function load(model: ModelId, base: string, threads: number, device: Devic
     if (!url.pathname.startsWith(dir)) return fetch(input, { ...init, cache: "no-store" });
     const file = url.pathname.slice(dir.length);
     // 切成好幾段的檔案逐段下載、比對、接回來（src/tools/transcribe/parts.ts）
-    const parts = (MODELS[model] as { parts?: Record<string, Part[]> }).parts?.[file];
+    const parts = (MODELS[model].parts as Record<string, Part[]>)[file];
     if (parts)
       return joinParts(
         parts,
@@ -190,7 +202,7 @@ let embedder: Embedder | null = null;
 // 每段的聲紋，最後一段處理完一起分群。太短的段落是 null
 let voices: { start: number; seconds: number; embedding: Float32Array | null }[] = [];
 
-let job: { asr: Pipeline; language: Language; speakers: boolean } | null = null;
+let job: { asr: Pipeline; language: Language; speakers: boolean; model: ModelId } | null = null;
 
 const message = (error: unknown) => (error instanceof Error ? error.message : String(error));
 const gpuAdapter = () =>
@@ -201,6 +213,7 @@ let carry: { audio: Float32Array; offset: number } | null = null;
 
 async function recognize(chunk: Float32Array, at: number, last: boolean) {
   const { asr, language } = job!;
+  const traditional = MODELS[job!.model].traditional;
   const audio = carry ? concat(carry.audio, chunk) : chunk;
   const offset = carry ? carry.offset : at;
   carry = null;
@@ -216,14 +229,15 @@ async function recognize(chunk: Float32Array, at: number, last: boolean) {
     const start = offset + piece.start / SAMPLE_RATE;
     const out = await asr(audio.subarray(piece.start, piece.end), {
       // 一定要指定語言：Transformers.js 沒有語言偵測，不指定時一律當成英文（src/tools/transcribe/languages.ts）
-      language,
+      language: whisperLanguage(language),
       task: "transcribe",
       return_timestamps: true,
       max_new_tokens: maxTokens(piece.end - piece.start),
     });
     for (const c of out.chunks ?? []) {
       const [s, e] = c.timestamp;
-      raw.push({ text: isChinese(language) ? await toTaiwan(c.text) : c.text, timestamp: [s + start, e === null ? offset + piece.end / SAMPLE_RATE : e + start] });
+      // Breeze 本來就輸出正體字，不再轉一次（models.json 的 traditional）
+      raw.push({ text: isChinese(language) && !traditional ? await toTaiwan(c.text) : c.text, timestamp: [s + start, e === null ? offset + piece.end / SAMPLE_RATE : e + start] });
     }
     post({ type: "progress", at: offset + piece.end / SAMPLE_RATE });
   }
@@ -283,7 +297,7 @@ self.onmessage = async (event: MessageEvent<Request>) => {
           reportDownload();
         });
       }
-      job = { asr, language: request.language, speakers: request.speakers };
+      job = { asr, language: request.language, speakers: request.speakers, model: request.model };
       post({ type: "ready" });
     } else {
       await recognize(request.audio, request.offset, request.last);

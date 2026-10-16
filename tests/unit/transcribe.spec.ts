@@ -1,7 +1,8 @@
 import { expect, test } from "@playwright/test";
 import { defaultThreads } from "../../src/tools/transcribe/threads.ts";
 import { gpuUsable } from "../../src/tools/transcribe/device.ts";
-import { MODELS, SAMPLE_RATE, cleanSegments, clock, collapseRepeats, fullWidthPunctuation, maxTokens, speechPieces, toSrt, toTxt } from "../../src/tools/transcribe/segments.ts";
+import { LANGUAGES, modelsFor, preferredModel, whisperLanguage } from "../../src/tools/transcribe/languages.ts";
+import { MODELS, MODEL_IDS, SAMPLE_RATE, cleanSegments, clock, collapseRepeats, fullWidthPunctuation, maxTokens, speechPieces, toSrt, toTxt } from "../../src/tools/transcribe/segments.ts";
 
 // 指定秒數的錄音：有聲音的範圍填 0.1 的方波，其他是靜音
 function audio(seconds: number, loud: [number, number][]): Float32Array {
@@ -159,4 +160,35 @@ test("華語以外的語言不把半形標點換成全形", () => {
   const raw = [{ text: "Hello, world! 日本語です, ok?", timestamp: [0, 2] as [number, number] }];
   expect(cleanSegments(raw, audio, 0, false)[0]!.text).toBe("Hello, world! 日本語です, ok?");
   expect(cleanSegments(raw, audio)[0]!.text).toBe("Hello, world！日本語です, ok?");
+});
+
+test("先選語言，再列出能用的模型：泰語、台語預設用專門訓練的模型", () => {
+  expect(modelsFor("zh")).toEqual(["small", "base", "turbo", "breeze25"]);
+  expect(modelsFor("nan")).toEqual(["breeze26"]);
+  expect(modelsFor("th")).toEqual(["small", "base", "turbo", "thai"]);
+  expect(modelsFor("ja")).toEqual(["small", "base", "turbo"]);
+  expect(preferredModel("zh")).toBe("small");
+  expect(preferredModel("th")).toBe("thai");
+  expect(preferredModel("nan")).toBe("breeze26");
+  // 台語用 Breeze-ASR-26，它輸出華語文字，傳給 Whisper 的是 zh
+  expect(whisperLanguage("nan")).toBe("zh");
+  expect(whisperLanguage("th")).toBe("th");
+  for (const language of LANGUAGES) expect(modelsFor(language).length).toBeGreaterThan(0);
+});
+
+test("models.json：切段的檔案都在清單裡，大小加總一致，每段都在 Cloudflare 的快取上限以下", () => {
+  for (const id of MODEL_IDS) {
+    const info = MODELS[id];
+    const files = { ...info.files, ...info.webgpu.files } as Record<string, string>;
+    for (const [file, parts] of Object.entries(info.parts as Record<string, { sha256: string; bytes: number }[]>)) {
+      expect(files[file], `${id} ${file}`).toMatch(/^[0-9a-f]{64}$/);
+      for (const part of parts) {
+        expect(part.sha256).toMatch(/^[0-9a-f]{64}$/);
+        expect(part.bytes).toBeLessThan(512 * 1024 * 1024);
+      }
+    }
+    // 別的網域的模型由 Worker 下載與比對，其他的在自己的網域
+    expect(["self", "hf", "assets"]).toContain(info.host);
+    if (info.host !== "assets") expect(Object.keys(info.parts)).toEqual([]);
+  }
 });

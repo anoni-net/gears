@@ -3,8 +3,20 @@
     "repo": "onnx-community/whisper-small",
     "revision": "36050c46d777d46dc4b5f43f6d90574fc38f8732",
     "dir": "whisper-small-36050c4",
+    "host": "self",
+    "languages": [
+      "zh",
+      "en",
+      "ja",
+      "ko",
+      "vi",
+      "th",
+      "id",
+      "ms",
+      "tl"
+    ],
+    "traditional": false,
     "dtype": "q8",
-    "remote": false,
     "files": {
       "config.json": "457854d452f17661e197d74aee12b8e74fb75ba30ebfaa7426d0d61ea1e08a18",
       "generation_config.json": "f538b28220c6a6d6f1af1458d4141cacb4ef4963df3de98a19490440c412ddf0",
@@ -23,14 +35,27 @@
       },
       "bytes": 302101039,
       "buffer": 160000000
-    }
+    },
+    "parts": {}
   },
   "base": {
     "repo": "onnx-community/whisper-base",
     "revision": "1846881b6b3a3024392c1eea3ad983695bc23925",
     "dir": "whisper-base-1846881",
+    "host": "self",
+    "languages": [
+      "zh",
+      "en",
+      "ja",
+      "ko",
+      "vi",
+      "th",
+      "id",
+      "ms",
+      "tl"
+    ],
+    "traditional": false,
     "dtype": "q8",
-    "remote": false,
     "files": {
       "config.json": "f4d0608f7d918166da7edb3e188de5ef1bfe70d9802e785d271fd88111e9cf4b",
       "generation_config.json": "61070cf8de25b1e9256e8e102ded49d8d24a8369ed36ef84fdf21549e68125a0",
@@ -49,14 +74,27 @@
       },
       "bytes": 145144432,
       "buffer": 107000000
-    }
+    },
+    "parts": {}
   },
   "turbo": {
     "repo": "onnx-community/whisper-large-v3-turbo",
     "revision": "360ebcde2559d60bb474678be3c1de9ef347d01a",
     "dir": "whisper-large-v3-turbo-360ebcd",
+    "host": "hf",
+    "languages": [
+      "zh",
+      "en",
+      "ja",
+      "ko",
+      "vi",
+      "th",
+      "id",
+      "ms",
+      "tl"
+    ],
+    "traditional": false,
     "dtype": "q4",
-    "remote": true,
     "files": {
       "config.json": "35cd83669f75bc2867f3b3a4461850392d5e308cd6ea951c3700539883c28df1",
       "generation_config.json": "16f95291d2f47c944d3c2b19390bba7965666555c1ea2a0bdc850d1fab45612f",
@@ -75,6 +113,178 @@
       },
       "bytes": 761859026,
       "buffer": 266000000
+    },
+    "parts": {}
+  },
+  "thai": {
+    "repo": "biodatlab/distill-whisper-th-small",
+    "revision": "14d3037426d67d69029a06b4597cd939118523f6",
+    "dir": "th-distill-small-14d3037",
+    "host": "assets",
+    "languages": [
+      "th"
+    ],
+    "traditional": false,
+    "dtype": "q8",
+    "files": {
+      "config.json": "ba92e89efb50b3715b9d0151ea8befc6919e39be89cf41506244ec9813a1c197",
+      "generation_config.json": "54bb1731d5a062baea07bca9cead6a505dc66d3f96906d5a97e49ff479bf4c0b",
+      "preprocessor_config.json": "a6a76d28c93edb273669eb9e0b0636a2bddbb1272c3261e47b7ca6dfdbac1b8d",
+      "tokenizer.json": "55fd49c4bca57c6f8afe760b3f2bc1222058bbf8e72220b7c41c075a7111d2e5",
+      "tokenizer_config.json": "4a5b5d589336cefaef5fd27995c030a42d7fab3de5ac19b6c6fa0afbcbcc4309",
+      "onnx/encoder_model_quantized.onnx": "140eae57cccb7ffbb597a3b76a83d750e4edc27f8496d05cf1aef3e6922f2657",
+      "onnx/decoder_model_merged_quantized.onnx": "896ea489aff15106e0d6d2a8d6c71e257e00b2090bbe182f84a7ec6fc44036fb"
+    },
+    "bytes": 174915773,
+    "webgpu": {
+      "dtype": "q4",
+      "files": {
+        "onnx/encoder_model_q4.onnx": "2ae5823f36abd0ee525e34f72d9a97372cf26564e101cd9c4e9b97da961b8a91",
+        "onnx/decoder_model_merged_q4.onnx": "51179d26a36640cdaba11cf303870ead2ecb06a7b49f526996b20894b679c8f4"
+      },
+      "bytes": 257082069,
+      "buffer": 160000000
+    },
+    "parts": {}
+  },
+  "breeze25": {
+    "repo": "MediaTek-Research/Breeze-ASR-25",
+    "revision": "cffe7ccb404d025296a00758d0a33468bec3a9d0",
+    "dir": "breeze-asr-25-cffe7cc",
+    "host": "assets",
+    "languages": [
+      "zh"
+    ],
+    "traditional": true,
+    "dtype": "q8",
+    "files": {
+      "config.json": "ab03506210da3437207acba1f7b3b270f989cf583472c35df8f02b4b59905f61",
+      "generation_config.json": "325659b98cede58f23514ca8be9c78177d3bcb442b55a95b15f980d7191522d7",
+      "preprocessor_config.json": "a6a76d28c93edb273669eb9e0b0636a2bddbb1272c3261e47b7ca6dfdbac1b8d",
+      "tokenizer.json": "ad9d585ff6f7948ae7687f0fbcccf52c9e0ab8105729e542e47a11e2e5f05071",
+      "tokenizer_config.json": "4a5b5d589336cefaef5fd27995c030a42d7fab3de5ac19b6c6fa0afbcbcc4309",
+      "onnx/encoder_model_quantized.onnx": "1e1d72365e8051119e814687d8a58c325f83d6eca64b6255404d1df3898e4815",
+      "onnx/decoder_model_merged_quantized.onnx": "d8fef9493ded024cf08e91cdcd52c40ec22e9e32c63e3166c9de4b9e1b777cc6"
+    },
+    "bytes": 1561321319,
+    "webgpu": {
+      "dtype": "q4",
+      "files": {
+        "onnx/encoder_model_q4.onnx": "4edc4aa5a551bca60f9e77008ff1db2e9c72cf9993ac9f61f16aa6fbc0f7dd89",
+        "onnx/decoder_model_merged_q4.onnx": "fa3ace44799b4a888d05db268c0469dad044636524c1375f3a2ca6b648a14750"
+      },
+      "bytes": 1248657097,
+      "buffer": 266000000
+    },
+    "parts": {
+      "onnx/encoder_model_quantized.onnx": [
+        {
+          "sha256": "245f9a51ab98c157c326870346e82fed93f85d0673c06cbb2a04f9bccf6d87a1",
+          "bytes": 400000000
+        },
+        {
+          "sha256": "c7a2c3f5255107d0de0592781a2aeb8ab8763274cf7521e0d2e927d25f05f4e1",
+          "bytes": 244882540
+        }
+      ],
+      "onnx/decoder_model_merged_quantized.onnx": [
+        {
+          "sha256": "54c117eb61edb990b98245cb876c4f8d69fb60731a6ecd55f02095b6d86ab3a0",
+          "bytes": 400000000
+        },
+        {
+          "sha256": "53999712faab6473b35c1309658872e5ef26619b318be3602ab22acca82870de",
+          "bytes": 400000000
+        },
+        {
+          "sha256": "6e79e072c26d05df7019846eb79e4d25dcfb7913f3285029403498475319e10f",
+          "bytes": 112219147
+        }
+      ],
+      "onnx/decoder_model_merged_q4.onnx": [
+        {
+          "sha256": "e6043cd62fc258d5f68474a92c9cf3b23b48090d19da05f695952e537908035a",
+          "bytes": 400000000
+        },
+        {
+          "sha256": "28a8557f0d80e98cd45cb8131dc05958c259ac65a8cd32269766b7ba0e977381",
+          "bytes": 400000000
+        },
+        {
+          "sha256": "9a7cd8deac6a5a654ceb2c4acdfed2dc9621719eb0e799fda199c4101089b8dc",
+          "bytes": 10329668
+        }
+      ]
+    }
+  },
+  "breeze26": {
+    "repo": "MediaTek-Research/Breeze-ASR-26",
+    "revision": "7b992682e7f5ceedd0a41ebec240f01ba469d19e",
+    "dir": "breeze-asr-26-7b99268",
+    "host": "assets",
+    "languages": [
+      "nan"
+    ],
+    "traditional": true,
+    "dtype": "q8",
+    "files": {
+      "config.json": "1935bb5e8c3aa2d83b7134ba12b0539b705f769a2f222d55eabcec8a6d733f7a",
+      "generation_config.json": "7847d293b436a6d190000b643e653a9f5527cae162988253103436fda9004d3e",
+      "preprocessor_config.json": "a6a76d28c93edb273669eb9e0b0636a2bddbb1272c3261e47b7ca6dfdbac1b8d",
+      "tokenizer.json": "7b469ff15eb7816315aa45eec391f5943d639b9d73d110f5c003df5192fd54e3",
+      "tokenizer_config.json": "21a4fc0483c14b87f4e0bbc177a9a357479bfa7c95aaf21ad53d71e9c5afafb9",
+      "onnx/encoder_model_quantized.onnx": "cb7ef46a25840090a9ed6acf03baaa4db7d243ad863db08ed76f8dcc9b52f841",
+      "onnx/decoder_model_merged_quantized.onnx": "94dd37860271ed63ebf7e92e827d5545fe82908b818312a501d05f3ea49fb684"
+    },
+    "bytes": 1561320932,
+    "webgpu": {
+      "dtype": "q4",
+      "files": {
+        "onnx/encoder_model_q4.onnx": "d76e1bb5d5b1d2c8253bffe55e6de3911890c4b607296eb0a7b62cf8a0e5e63f",
+        "onnx/decoder_model_merged_q4.onnx": "70a4451beb676a36304f3573c36ffcc37075e7c6cfa7f710a36b2bfc081a275a"
+      },
+      "bytes": 1248656709,
+      "buffer": 266000000
+    },
+    "parts": {
+      "onnx/encoder_model_quantized.onnx": [
+        {
+          "sha256": "c6eac18bb632b3b691c3ad63a79df1831120b6d7b519e67773552f7e09088e7f",
+          "bytes": 400000000
+        },
+        {
+          "sha256": "670db9c3fb4103ea1fb6a84e0a344308ff509361e66669985a0c95eb388ae879",
+          "bytes": 244882541
+        }
+      ],
+      "onnx/decoder_model_merged_quantized.onnx": [
+        {
+          "sha256": "642c20cf0f6f4925a9c43ed1d527add542df6750713a7a808ef64c08fe36af77",
+          "bytes": 400000000
+        },
+        {
+          "sha256": "10cb2c2b32c6848e1ab783e9020314ef51eb89350107d920a3e96fc1566dadb6",
+          "bytes": 400000000
+        },
+        {
+          "sha256": "4b9444fac3f38c6921e91f894fc49fe785bb8fbdc0abf27c174ef6f0802900ff",
+          "bytes": 112219147
+        }
+      ],
+      "onnx/decoder_model_merged_q4.onnx": [
+        {
+          "sha256": "aada35baa320c46156f9f9dd5c9db53da8fd481de48ee368eeaa28fbb581618f",
+          "bytes": 400000000
+        },
+        {
+          "sha256": "87694df4cc2a6efc54fc9d9ff4f889bc91e470f9287c245302661e9245c25439",
+          "bytes": 400000000
+        },
+        {
+          "sha256": "364cd7c322681477198b6bdaf0d53cc048e23feb0412a4dfc75f1a7f57bc486d",
+          "bytes": 10329668
+        }
+      ]
     }
   }
 }

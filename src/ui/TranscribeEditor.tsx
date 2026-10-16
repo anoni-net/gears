@@ -3,7 +3,7 @@ import { t } from "../i18n/index.ts";
 import { tray } from "../state.ts";
 import { MODELS, MODEL_IDS, type ModelId, SAMPLE_RATE, type Segment, clock, mergeSegments, toSrt, toTxt } from "../tools/transcribe/segments.ts";
 import { type Device, type GpuInfo, gpuUsable } from "../tools/transcribe/device.ts";
-import { LANGUAGES, type Language } from "../tools/transcribe/languages.ts";
+import { LANGUAGES, type Language, modelsFor, preferredModel } from "../tools/transcribe/languages.ts";
 import { type Part, partName } from "../tools/transcribe/parts.ts";
 import { REMOTE_ERROR } from "../tools/transcribe/remote.ts";
 import speakerModel from "../tools/transcribe/speaker-model.json" with { type: "json" };
@@ -30,7 +30,8 @@ const STALLED = "stalled";
 
 const newWorker = () => new Worker(`${workerUrl}?n=${++workers}`, { type: "module" });
 const MODEL_CACHE = "gears-models";
-const mb = (bytes: number) => `${Math.round(bytes / 1e6)} MB`;
+// 超過 1 GB 的寫成 1.6 GB，比 1561 MB 好讀
+const mb = (bytes: number) => (bytes >= 1e9 ? `${(bytes / 1e9).toFixed(1)} GB` : `${Math.round(bytes / 1e6)} MB`);
 const modelUrl = (id: ModelId) => `${BASE}models/whisper/${MODELS[id].dir}/`;
 // 每種裝置用的模型檔與大小（src/tools/transcribe/device.ts）
 const modelFiles = (id: ModelId, device: Device) => (device === "webgpu" ? MODELS[id].webgpu.files : MODELS[id].files);
@@ -276,15 +277,32 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
   const progress = phase.kind === "download" ? phase.loaded / phase.total : phase.kind === "recognize" ? Math.min(1, phase.at / phase.duration) : null;
   const speakerName = (n: number) => t("transcribe.speakerPrefix", { n: n + 1 });
   const error = phase.kind === "failed" || phase.kind === "remoteFailed" || phase.kind === "stalled" || phase.kind === "decodeFailed" || phase.kind === "tooLong";
-  // 從 Hugging Face 下載的模型，還沒下載時先說明會連到哪裡、送出什麼，按鈕上也寫明
-  const remote = MODELS[model].remote && !downloaded[model];
+  // 從 Hugging Face 下載的模型，還沒下載時先說明會連到哪裡、送出什麼，按鈕上也寫明。
+  // assets.anoni.net 是社群自己的網域，不另外說明
+  const remote = MODELS[model].host === "hf" && !downloaded[model];
+  // 先選語言，再列出這個語言能用的模型（src/tools/transcribe/languages.ts）
+  const chooseLanguage = (id: Language) => {
+    setLanguage(id);
+    if (!modelsFor(id).includes(model)) setModel(preferredModel(id));
+    else if (preferredModel(id) !== "small") setModel(preferredModel(id));
+  };
 
   return (
     <div class="transcribe">
       <p class="hint">{t("transcribe.note")}</p>
+      <fieldset class="segmented" disabled={busy}>
+        <legend>{t("transcribe.language")}</legend>
+        {LANGUAGES.map((id) => (
+          <label key={id}>
+            <input type="radio" name="transcribe-language" checked={language === id} onChange={() => chooseLanguage(id)} />
+            <span>{t(`transcribe.language.${id}`)}</span>
+          </label>
+        ))}
+      </fieldset>
+      <p class="hint">{t("transcribe.language.note")}</p>
       <fieldset class="choices" disabled={busy}>
         <legend>{t("transcribe.model")}</legend>
-        {MODEL_IDS.map((id) => (
+        {modelsFor(language).map((id) => (
           <label key={id} class="check">
             <input type="radio" name="transcribe-model" checked={model === id} onChange={() => setModel(id)} />
             <span>
@@ -302,16 +320,6 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
       ) : !downloaded[model] ? (
         <p class="hint">{t("transcribe.firstTime")}</p>
       ) : null}
-      <fieldset class="segmented" disabled={busy}>
-        <legend>{t("transcribe.language")}</legend>
-        {LANGUAGES.map((id) => (
-          <label key={id}>
-            <input type="radio" name="transcribe-language" checked={language === id} onChange={() => setLanguage(id)} />
-            <span>{t(`transcribe.language.${id}`)}</span>
-          </label>
-        ))}
-      </fieldset>
-      <p class="hint">{t("transcribe.language.note")}</p>
 
       {gpuUsable(gpu ?? null, MODELS[model].webgpu.buffer) ? (
         <label class="check">

@@ -9,8 +9,9 @@
 //                                           只印出每個檔案的 SHA-256，不存檔（更新 models.json 用）
 //
 // 來源是 Hugging Face 的 onnx-community，Whisper 的權重是 MIT 授權（OpenAI）。
-// 網頁從 anoni.net 自己的網域載入這些檔案，不連 Hugging Face。標成 remote 的大模型例外，
-// 讀者選擇之後由網頁直接從 Hugging Face 下載（src/tools/transcribe/remote.ts），這裡不下載。
+// 網頁從 anoni.net 自己的網域載入這些檔案（models.json 的 host 是 self）。其他的由網頁直接下載，
+// 這裡不下載：hf 是讀者選擇之後從 Hugging Face 下載，assets 是社群轉檔、放在 assets.anoni.net 的
+// 模型（src/tools/transcribe/remote.ts，上傳方式見 AGENTS.md）。
 // 分辨說話者的 CAM++（3D-Speaker，Apache-2.0）取自 sherpa-onnx 的 release，來源與 SHA-256 寫在
 // src/tools/transcribe/speaker-model.json，放在 public/models/speaker/。
 import { createHash } from "node:crypto";
@@ -50,8 +51,10 @@ if (!wanted.length || wanted.includes("speaker")) {
 }
 
 for (const [id, model] of Object.entries(models)) {
-  if (wanted.length ? !wanted.includes(id) : model.remote) continue;
-  if (model.remote && !hashOnly) throw new Error(`${id} 由網頁從 Hugging Face 下載，不放進 public/，要確認雜湊請加 --hash`);
+  // 別的網域的模型（Hugging Face、assets.anoni.net）由網頁直接下載，不放進 public/
+  if (wanted.length ? !wanted.includes(id) : model.host !== "self") continue;
+  if (model.host === "assets") throw new Error(`${id} 放在 assets.anoni.net，由網頁直接下載（見 AGENTS.md）`);
+  if (model.host === "hf" && !hashOnly) throw new Error(`${id} 由網頁從 Hugging Face 下載，不放進 public/，要確認雜湊請加 --hash`);
   // CPU（wasm）用 dtype 那一組，WebGPU 用 webgpu 那一組，設定檔與詞彙表共用
   for (const [file, hash] of Object.entries({ ...model.files, ...(noWebgpu ? {} : model.webgpu.files) })) {
     const target = join(root, "public/models/whisper", model.dir, file);

@@ -1,13 +1,19 @@
-// 從 Hugging Face 下載的大模型。small 與 base 從 anoni.net 自己的網域載入，大模型的流量太重，
-// 讀者在畫面上選擇之後才從 Hugging Face 下載（見 AGENTS.md「逐字稿」）。
+// 從別的網域下載的模型（models.json 的 host）：
+// - hf：large-v3-turbo，讀者在畫面上選擇之後從 Hugging Face 下載，網址鎖定 commit
+// - assets：社群自己轉檔的模型（泰語、Breeze），放在 assets.anoni.net，大檔案切成好幾段
+//   （src/tools/transcribe/parts.ts）
+// small、base 與分辨說話者的模型（host 是 self）跟工作台同一個網域，由 service worker 快取。
 //
-// 網址鎖定 models.json 記錄的 commit，每個檔案下載完比對 SHA-256，對不上就不存、停下來。
-// 不帶 cookie 與 Referer，Hugging Face 收到的是讀者的 IP、瀏覽器與下載了哪個檔案。
+// 每個檔案下載完比對 SHA-256，對不上就不存、停下來。不帶 cookie 與 Referer。
 
 export const hfUrl = (repo: string, revision: string, file: string) => `https://huggingface.co/${repo}/resolve/${revision}/${file}`;
 
-// 錯誤訊息都以 Hugging Face 開頭，畫面靠它分辨是下載出了問題
-export const REMOTE_ERROR = "Hugging Face";
+// 社群轉檔的模型，目錄名稱帶著原始模型的 commit，內容不會變
+export const ASSETS_MODELS = "https://assets.anoni.net/gears/models/";
+export const assetsUrl = (dir: string, file: string) => `${ASSETS_MODELS}${dir}/${file}`;
+
+// 下載失敗的錯誤訊息都以這個開頭，畫面靠它分辨是下載出了問題
+export const REMOTE_ERROR = "Model download";
 
 const hex = (buffer: ArrayBuffer) => Array.from(new Uint8Array(buffer), (b) => b.toString(16).padStart(2, "0")).join("");
 

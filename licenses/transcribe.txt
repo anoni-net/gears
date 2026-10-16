@@ -3,7 +3,7 @@
 
 逐字稿在讀者按下「開始轉逐字稿」時，才從本站載入以下檔案，在瀏覽器的 Web Worker 裡
 執行，錄音不會上傳。程式與模型原封不動使用，沒有修改。large-v3-turbo 例外，讀者選擇之後
-由網頁直接從 Hugging Face 下載，本站不轉發這個模型。
+由網頁直接從 Hugging Face 下載，本站不轉發這個模型。社群轉檔的三個模型從 assets.anoni.net 載入。
 
 語音辨識模型（scripts/fetch-whisper.mjs 下載，版本與每個檔案的 SHA-256 寫在
 src/tools/transcribe/models.json）
@@ -13,6 +13,15 @@ src/tools/transcribe/models.json）
 - onnx-community/whisper-large-v3-turbo 的 ONNX 檔（4 位元量化版），讀者選擇之後從 Hugging Face 下載
   原始模型：openai/whisper-large-v3-turbo（Hugging Face 模型卡標示 MIT）
   來源：https://huggingface.co/onnx-community/whisper-large-v3-turbo
+- 社群自己轉檔的 ONNX 檔，放在 https://assets.anoni.net/gears/models/，用 Transformers.js 3.8.1 的
+  轉檔腳本匯出與量化（8 位元與非對稱的 4 位元），權重除了量化沒有其他修改。每個目錄附 README.txt
+  說明來源與轉檔方式
+  - biodatlab/distill-whisper-th-small（泰語，commit 14d3037426d67d69029a06b4597cd939118523f6，
+    模型卡標示 MIT）：https://huggingface.co/biodatlab/distill-whisper-th-small
+  - MediaTek-Research/Breeze-ASR-25（台灣華語、中英夾雜，commit cffe7ccb404d025296a00758d0a33468bec3a9d0，
+    Apache-2.0）：https://huggingface.co/MediaTek-Research/Breeze-ASR-25
+  - MediaTek-Research/Breeze-ASR-26（台語，commit 7b992682e7f5ceedd0a41ebec240f01ba469d19e，
+    Apache-2.0）：https://huggingface.co/MediaTek-Research/Breeze-ASR-26
 
 分辨說話者的聲紋模型（勾選「分辨說話者」時才載入，scripts/fetch-whisper.mjs 下載，來源與
 SHA-256 寫在 src/tools/transcribe/speaker-model.json）
