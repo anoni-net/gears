@@ -229,3 +229,11 @@ test("先遮蔽：說明中繼資料是重新產生整張圖時一起拿掉的",
   await expect(strip.getByText("目前沒有需要清除的")).toBeVisible();
   await expect(note).toContainText("遮蔽時重新產生了整張圖");
 });
+
+test("手機點過頁首的 logo 之後，名稱底下不會留著底線", async ({ page, isMobile }) => {
+  test.skip(!isMobile, "觸控裝置點過之後 :hover 會一直留著");
+  await page.goto("./qrcode/");
+  await page.locator(".site-header__logo").tap();
+  await expect(page.getByRole("heading", { name: "想做什麼" })).toBeVisible();
+  await expect(page.locator(".site-header__product")).toHaveCSS("text-decoration-line", "none");
+});
