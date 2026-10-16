@@ -46,6 +46,7 @@ export interface Evidence {
   thumbnail?: Uint8Array; // 照片內嵌的縮圖（JPEG）
   revisions: number[]; // PDF：較早版本的結尾位置，不含最後一版
   signatures: Signature[];
+  pages?: number; // PDF 的頁數
 }
 
 const empty = (): Evidence => ({ times: [], devices: [], serials: [], software: [], people: [], locations: [], traces: [], revisions: [], signatures: [] });
@@ -189,7 +190,7 @@ async function examinePdf(ev: Evidence, bytes: Uint8Array) {
   let doc: PdfLib.PDFDocument;
   try {
     doc = await lib.PDFDocument.load(bytes, { updateMetadata: false, ignoreEncryption: true });
-    doc.getPageCount();
+    ev.pages = doc.getPageCount();
   } catch {
     return;
   }

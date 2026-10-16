@@ -28,6 +28,8 @@ export interface PdfPages {
   size(index: number): Promise<[number, number]>;
   // 第 index 頁（從 0 開始）畫成的圖片，長邊最多 maxSide 像素（縮圖用比較小的值）。用完要 close()
   render(index: number, maxSide?: number): Promise<ImageBitmap>;
+  // 第 index 頁的文字，一行一個字串（依 pdf.js 判斷的換行），比對版本用
+  text(index: number): Promise<string[]>;
   close(): void;
 }
 
@@ -72,6 +74,23 @@ export async function openPdf(data: Uint8Array): Promise<PdfPages> {
       await page.render({ canvas, canvasContext: ctx, viewport, background: "#fff" }).promise;
       page.cleanup();
       return createImageBitmap(canvas);
+    },
+    async text(index) {
+      const page = await doc.getPage(index + 1);
+      const content = await page.getTextContent();
+      const lines: string[] = [];
+      let line = "";
+      for (const item of content.items) {
+        if (!("str" in item)) continue;
+        line += item.str;
+        if (item.hasEOL) {
+          lines.push(line);
+          line = "";
+        }
+      }
+      if (line) lines.push(line);
+      page.cleanup();
+      return lines.map((l) => l.replace(/\s+/g, " ").trim()).filter(Boolean);
     },
     close() {
       void task.destroy();
