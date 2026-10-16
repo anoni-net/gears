@@ -133,11 +133,13 @@ export const fullWidthPunctuation = (text: string) =>
 // 整理模型的輸出：去掉空白段落、靜音段落與字幕標語，收掉重複的迴圈，前後一樣的段落合併。
 // 最後一段沒有結束時間時，用錄音的長度
 // audio 是這一段的聲音，從 offset 秒開始（長錄音分段處理，時間是整份錄音的時間）
-export function cleanSegments(chunks: RawChunk[], audio: Float32Array, offset = 0): Segment[] {
+// chinese 是錄音的語言是否為華語，是才把半形標點換成全形
+export function cleanSegments(chunks: RawChunk[], audio: Float32Array, offset = 0, chinese = true): Segment[] {
   const duration = offset + audio.length / SAMPLE_RATE;
   const out: Segment[] = [];
   chunks.forEach((chunk, i) => {
-    const text = fullWidthPunctuation(collapseRepeats(chunk.text.trim()));
+    const repeated = collapseRepeats(chunk.text.trim());
+    const text = chinese ? fullWidthPunctuation(repeated) : repeated;
     if (!normalize(text) || isCaptionCredit(text)) return;
     const start = chunk.timestamp[0];
     const end = chunk.timestamp[1] ?? chunks[i + 1]?.timestamp[0] ?? duration;

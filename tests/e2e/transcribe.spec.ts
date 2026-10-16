@@ -25,6 +25,10 @@ test("選了錄音之後列出模型與下載大小，可以選核心數", async
   await expect(page.getByText(`下載約 ${Math.round(models.small.bytes / 1e6)} MB`)).toBeVisible();
   await expect(page.getByText(`下載約 ${Math.round(models.base.bytes / 1e6)} MB`)).toBeVisible();
   await expect(page.getByText(/第一次使用要下載模型/)).toBeVisible();
+  // 一定要選語言：Transformers.js 沒有語言偵測，不指定時會翻成英文
+  await expect(page.getByLabel("華語", { exact: true })).toBeChecked();
+  await expect(page.getByLabel("日語", { exact: true })).toBeVisible();
+  await expect(page.getByText("自動判斷")).toHaveCount(0);
   // 預覽伺服器送了 COOP 與 COEP，可以用多個核心
   expect(await page.evaluate(() => crossOriginIsolated)).toBe(true);
   // 預設值依瀏覽器回報的核心數決定（src/tools/transcribe/threads.ts），測試的機器上至少勾了一個

@@ -3,6 +3,7 @@ import { t } from "../i18n/index.ts";
 import { tray } from "../state.ts";
 import { MODELS, MODEL_IDS, type ModelId, SAMPLE_RATE, type Segment, clock, mergeSegments, toSrt, toTxt } from "../tools/transcribe/segments.ts";
 import { type Device, type GpuInfo, gpuUsable } from "../tools/transcribe/device.ts";
+import { LANGUAGES, type Language } from "../tools/transcribe/languages.ts";
 import { REMOTE_ERROR } from "../tools/transcribe/remote.ts";
 import speakerModel from "../tools/transcribe/speaker-model.json" with { type: "json" };
 import { THREAD_OPTIONS, defaultThreads } from "../tools/transcribe/threads.ts";
@@ -80,7 +81,7 @@ function download(text: string, name: string) {
 
 export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
   const [model, setModel] = useState<ModelId>("small");
-  const [language, setLanguage] = useState<"zh" | "auto">("zh");
+  const [language, setLanguage] = useState<Language>("zh");
   const [speakers, setSpeakers] = useState(false);
   // 顯示卡：undefined 是還在問瀏覽器，null 是不能用
   const [gpu, setGpu] = useState<GpuInfo | null | undefined>(undefined);
@@ -184,7 +185,7 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
         waiting?.reject(new Error(event.message));
       };
       setRunning({ requested: device, actual: current });
-      await send({ type: "start", model, language: language === "zh" ? "zh" : null, base: BASE, threads, speakers, device: current }, "ready");
+      await send({ type: "start", model, language, base: BASE, threads, speakers, device: current }, "ready");
     };
     // 顯示卡建立推論環境或辨識失敗時，換一個新的 Worker 改用 CPU：onnxruntime 在一個 Worker 裡
     // 只初始化一次，WebGPU 初始化失敗之後，改要 CPU 也拿到同一個失敗。辨識到一半才失敗時，從失敗
@@ -297,13 +298,14 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
       ) : null}
       <fieldset class="segmented" disabled={busy}>
         <legend>{t("transcribe.language")}</legend>
-        {(["zh", "auto"] as const).map((id) => (
+        {LANGUAGES.map((id) => (
           <label key={id}>
             <input type="radio" name="transcribe-language" checked={language === id} onChange={() => setLanguage(id)} />
             <span>{t(`transcribe.language.${id}`)}</span>
           </label>
         ))}
       </fieldset>
+      <p class="hint">{t("transcribe.language.note")}</p>
 
       {gpuUsable(gpu ?? null, MODELS[model].webgpu.buffer) ? (
         <label class="check">

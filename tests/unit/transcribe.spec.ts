@@ -151,3 +151,10 @@ test("顯示卡：軟體模擬的、緩衝區放不下詞嵌入表的都改用 C
   expect(gpuUsable({ fallback: false, maxBuffer: 128 * 1024 ** 2 }, MODELS.base.webgpu.buffer)).toBe(true);
   expect(gpuUsable(null, need)).toBe(false);
 });
+
+test("華語以外的語言不把半形標點換成全形", () => {
+  const audio = new Float32Array(SAMPLE_RATE * 3).map((_, i) => Math.sin(i / 5) * 0.3);
+  const raw = [{ text: "Hello, world! 日本語です, ok?", timestamp: [0, 2] as [number, number] }];
+  expect(cleanSegments(raw, audio, 0, false)[0]!.text).toBe("Hello, world! 日本語です, ok?");
+  expect(cleanSegments(raw, audio)[0]!.text).toBe("Hello, world！日本語です, ok?");
+});
