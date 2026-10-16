@@ -59,6 +59,10 @@ test("選擇 PDF 頁面的畫面沒有無障礙問題", async ({ page }) => {
   await page.getByTestId("file-input").setInputFiles({ name: "a.pdf", mimeType: "application/pdf", buffer: Buffer.from(await syntheticPdf()) });
   await page.getByRole("checkbox", { name: "第 1 頁" }).check({ timeout: 15000 });
   expect(await audit(page)).toEqual([]);
+  // 放大檢視的對話框
+  await page.getByRole("button", { name: "放大第 1 頁" }).click();
+  await expect(page.getByTestId("page-zoom-canvas")).not.toHaveClass(/waiting/, { timeout: 15000 });
+  expect(await audit(page)).toEqual([]);
 });
 
 test("深色模式沒有對比問題", async ({ page }) => {
