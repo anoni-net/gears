@@ -6,7 +6,7 @@ export const zhCN: Record<MessageKey, string> = {
   "app.noscript": "隐私工作台需要 JavaScript 才能在你的浏览器里处理文件。",
   "app.language": "语言",
   "list.separator": "、",
-  "app.title": "隐私工作台",
+  "app.title": "Gears 隐私工作台",
   "app.tagline": "文件交出去之前，先在你的浏览器里处理好。",
   "app.memoryNote": "文件只放在这个分页的内存里，不会上传，关掉分页就会消失。",
   "app.clear": "清空暂存区",

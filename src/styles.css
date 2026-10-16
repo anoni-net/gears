@@ -190,20 +190,32 @@ button.danger {
   width: auto;
 }
 
-/* 產品名稱：Gears 在前，後面接該語系的「隱私工作台」 */
+/* 產品名稱：Gears 在前，華語版後面接「隱私工作台」，英文版就叫 Gears */
 .site-header__product {
   font-weight: 700;
   font-size: 1.125rem;
+  letter-spacing: 0.08em;
   padding-left: 1rem;
   border-left: 1px solid var(--line);
 }
 
-.site-header__sub {
-  letter-spacing: 0.08em;
+html:lang(en) .site-header__product {
+  letter-spacing: 0;
 }
 
-html:lang(en) .site-header__sub {
-  letter-spacing: 0;
+/* 名稱右上角的 Beta：小一號的圓角標記，正式上線之後拿掉 */
+.site-header__beta {
+  position: relative;
+  top: -0.6em;
+  margin-left: 0.3rem;
+  padding: 0.05rem 0.4rem;
+  border: 1px solid var(--link);
+  border-radius: 999px;
+  color: var(--link);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.4;
 }
 
 .site-header__actions {

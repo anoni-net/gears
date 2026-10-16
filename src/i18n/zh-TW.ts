@@ -5,7 +5,7 @@ export const zhTW = {
   "app.noscript": "隱私工作台需要 JavaScript 才能在你的瀏覽器裡處理檔案。",
   "app.language": "語言",
   "list.separator": "、",
-  "app.title": "隱私工作台",
+  "app.title": "Gears 隱私工作台",
   "app.tagline": "檔案交出去之前，先在你的瀏覽器裡處理好。",
   "app.memoryNote": "檔案只放在這個分頁的記憶體裡，不會上傳，關掉分頁就會消失。",
   "app.clear": "清空暫存區",

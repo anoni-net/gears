@@ -142,7 +142,8 @@ export function App() {
     <div class={dragging ? "app dragging" : "app"}>
       {/* 頁首的排版跟新聞導讀一致：anoni.net 字標、分隔線、產品名稱，右邊是操作與語系切換。
           底色維持工作台的淡藍，字標用 tonal 版，深色模式換成白色版（品牌素材頁的用法）。
-          產品名稱是 Gears，每個語系都一樣，後面接該語系的「隱私工作台」。標語放在桌面最上面 */}
+          產品名稱是 Gears，華語版後面接「隱私工作台」，英文版就叫 Gears（app.title）。
+          名稱右上角掛著 Beta，正式上線之後再拿掉。標語放在桌面最上面 */}
       <header class="site-header">
         <div class="frame site-header__inner">
           <h1 class="site-header__title">
@@ -152,7 +153,10 @@ export function App() {
                 <img class="site-header__logo" src={`${import.meta.env.BASE_URL}logo-wordmark-tonal.svg`} alt="anoni.net" width="116" height="28" />
               </picture>
               <span class="site-header__product">
-                <span lang="en">Gears</span> <span class="site-header__sub">{t("app.title")}</span>
+                {t("app.title")}
+                <span class="site-header__beta" lang="en">
+                  Beta
+                </span>
               </span>
             </a>
           </h1>

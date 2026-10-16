@@ -57,7 +57,7 @@ npm test
 
 [正體中文](#zh-tw) | **English**
 
-anoni.net Gears Privacy Workbench handles the files you are about to hand over. It strips metadata from photos and documents, redacts personal details on screen, and encrypts files before they are sent. For files you receive, it lays out leads you can verify. Maintained by the [anoni.net community](https://anoni.net/) at <https://anoni.net/gears/>.
+anoni.net Gears handles the files you are about to hand over. It strips metadata from photos and documents, redacts personal details on screen, and encrypts files before they are sent. For files you receive, it lays out leads you can verify. Maintained by the [anoni.net community](https://anoni.net/) at <https://anoni.net/gears/>.
 
 Gears is under development and not deployed yet. Tools in the first version:
 
