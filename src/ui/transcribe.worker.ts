@@ -6,6 +6,7 @@ import asyncifyMjs from "../../node_modules/@huggingface/transformers/node_modul
 import asyncifyWasm from "../../node_modules/@huggingface/transformers/node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.asyncify.wasm?url";
 import plainMjs from "../../node_modules/@huggingface/transformers/node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.mjs?url";
 import plainWasm from "../../node_modules/@huggingface/transformers/node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.wasm?url";
+import { type Part, joinParts, partName } from "../tools/transcribe/parts.ts";
 import { REMOTE_ERROR, hfUrl, readVerified } from "../tools/transcribe/remote.ts";
 import { MODELS, type ModelId, type RawChunk, SAMPLE_RATE, type Segment, cleanSegments, maxTokens, speechPieces } from "../tools/transcribe/segments.ts";
 import { MIN_EMBED_SECONDS, assignSpeakers, normalize } from "../tools/transcribe/speakers.ts";
@@ -140,8 +141,20 @@ async function load(model: ModelId, base: string, threads: number, device: Devic
         remoteError = error;
         throw error;
       });
-    const response = fetch(input, { ...init, cache: "no-store" });
-    return url.pathname.startsWith(dir) ? response.then((r) => counted(r, url.pathname.slice(dir.length))) : response;
+    if (!url.pathname.startsWith(dir)) return fetch(input, { ...init, cache: "no-store" });
+    const file = url.pathname.slice(dir.length);
+    // 切成好幾段的檔案逐段下載、比對、接回來（src/tools/transcribe/parts.ts）
+    const parts = (MODELS[model] as { parts?: Record<string, Part[]> }).parts?.[file];
+    if (parts)
+      return joinParts(
+        parts,
+        (i) => fetch(new URL(partName(file, i), new URL(dir, self.location.href)), { cache: "no-store" }),
+        (n) => {
+          files[file] = n;
+          reportDownload();
+        },
+      ).then((data) => new Response(data, { headers: { "content-type": "application/octet-stream", "content-length": String(data.length) } }));
+    return fetch(input, { ...init, cache: "no-store" }).then((r) => counted(r, file));
   };
   // Transformers.js 載入時填上了 CDN 的網址，換成自己網域上的同一個檔案。舊版 Safari 用的是
   // 沒有 asyncify 的版本，照它的選擇
