@@ -193,7 +193,7 @@ button.danger {
   width: auto;
 }
 
-/* 產品名稱：Gears 在前，華語版後面接「隱私工作台」，英文版就叫 Gears */
+/* 產品名稱：「檔案工作台」，英文版是 File Workbench */
 .site-header__product {
   font-weight: 700;
   font-size: 1.125rem;
@@ -206,8 +206,8 @@ html:lang(en) .site-header__product {
   letter-spacing: 0;
 }
 
-/* 名稱右上角的 Beta：小一號的圓角標記，正式上線之後拿掉 */
-.site-header__beta {
+/* 名稱右上角的 Gears：小一號的圓角標記 */
+.site-header__badge {
   position: relative;
   top: -0.6em;
   margin-left: 0.3rem;
@@ -300,6 +300,22 @@ html:lang(en) .site-header__product {
     flex-basis: 100%;
     justify-content: flex-end;
     margin-right: -0.5rem;
+  }
+}
+
+/* 320px 寬的手機：字標與間距再縮一點，英文的 File Workbench 才不會折成兩行 */
+@media (max-width: 22.4rem) {
+  .site-header__logo {
+    height: 1.375rem;
+  }
+
+  .site-header__home {
+    gap: 0.5rem;
+  }
+
+  .site-header__product {
+    padding-left: 0.5rem;
+    white-space: nowrap;
   }
 }
 

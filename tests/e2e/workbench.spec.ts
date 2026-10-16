@@ -44,7 +44,7 @@ async function previewLoaded(page: Page) {
 }
 
 test("桌面有暫存區、任務捷徑與兩組工具，沒有檔案時不顯示清空按鈕", async ({ page }) => {
-  await expect(page.getByRole("heading", { name: "隱私工作台" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "檔案工作台" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "暫存區" })).toBeVisible();
   await expect(page.getByRole("button", { name: /分享照片與影片前，拿掉拍攝位置/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /把 Wi-Fi 密碼傳給朋友/ })).toBeVisible();

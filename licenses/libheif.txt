@@ -1,7 +1,7 @@
 HEIC 解碼器：libheif-js 1.23.5
 ================================
 
-隱私工作台在瀏覽器不能直接顯示 HEIC 時，載入 npm 套件 libheif-js 1.23.5 的 WebAssembly 版本
+檔案工作台在瀏覽器不能直接顯示 HEIC 時，載入 npm 套件 libheif-js 1.23.5 的 WebAssembly 版本
 （libheif-wasm/libheif.js 與 libheif-wasm/libheif.wasm），原封不動使用，沒有修改。建置時它被
 打包成獨立的檔案（assets/heif-wasm-*.js 與 assets/libheif-*.wasm），跟工作台的程式分開，可以
 換成自行編譯的版本。

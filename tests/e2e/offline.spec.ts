@@ -16,14 +16,14 @@ test("第一次開啟之後，沒有網路也能開啟首頁與工具，產生 Q
 
   await context.setOffline(true);
   await page.reload();
-  await expect(page.getByRole("heading", { name: "隱私工作台" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "檔案工作台" })).toBeVisible();
   // 直接打開某個工具的網址，以及沒存過的網址（改用首頁）
   await page.goto("./qrcode/");
   await expect(page).toHaveTitle(/QR code/);
   await page.getByLabel("要放進 QR code 的內容").fill("https://anoni.net/");
   await expect(page.getByRole("img", { name: "QR code 預覽" })).toBeVisible();
   await page.goto("./no-such-page/");
-  await expect(page.getByRole("heading", { name: "隱私工作台" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "檔案工作台" })).toBeVisible();
   await context.setOffline(false);
 });
 

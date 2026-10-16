@@ -4,7 +4,7 @@
 
 **正體中文** | [English](#en)
 
-anoni.net Gears 隱私工作台，在瀏覽器裡處理要交出去的檔案：清除照片與文件的中繼資料、遮蔽畫面上的個資、加密之後再傳送。收到檔案時，也能整理出可以查證的線索。由[匿名網路社群 anoni.net](https://anoni.net/) 維護，網址是 <https://anoni.net/gears/>。
+anoni.net Gears 檔案工作台，在瀏覽器裡處理要交出去的檔案：清除照片與文件的中繼資料、遮蔽畫面上的個資、加密之後再傳送。收到檔案時，也能整理出可以查證的線索。由[匿名網路社群 anoni.net](https://anoni.net/) 維護，網址是 <https://anoni.net/gears/>。
 
 目前在開發中，還沒有部署。第一版的工具：
 
