@@ -62,11 +62,13 @@ if ! cmp -s "$new" "$SNIPPET"; then
     prev=$(mktemp)
     [ -f "$SNIPPET" ] && cp "$SNIPPET" "$prev"
     sudo install -m 644 "$new" "$SNIPPET"
-    if sudo nginx -t -q 2>>"$LOG"; then
+    # nginx -t 平常就會印出既有的 ssl_stapling 警告，只在失敗時寫進 log
+    if check=$(sudo nginx -t -q 2>&1); then
         sudo systemctl reload nginx
         log "換上新的 nginx 標頭"
     else
         if [ -s "$prev" ]; then sudo install -m 644 "$prev" "$SNIPPET"; else sudo rm -f "$SNIPPET"; fi
+        echo "$check" >>"$LOG"
         log "新的 nginx 標頭沒有通過 nginx -t，退回原本的，停在 $before"
         rm -f "$new" "$prev"
         exit 1
