@@ -38,8 +38,9 @@
   --accent-text: #ffffff;
   --link: var(--brand-cyan-800);
   --focus: var(--brand-cyan-500);
-  --header-bg: var(--brand-cyan-50);
-  --header-line: var(--brand-cyan-100);
+  --header-bg: var(--brand-cyan-900);
+  --header-text: #ffffff;
+  --header-link: var(--brand-cyan-50);
   --warn: #a84800;
   --warn-bg: color-mix(in srgb, var(--action) 8%, var(--bg));
   --ok: var(--cat-privacy);
@@ -70,9 +71,6 @@
     --accent: var(--brand-cyan-800);
     --link: var(--brand-cyan-200);
     --focus: var(--brand-cyan-400);
-    /* 深色模式不用淡藍底，改用比背景亮一階的藍灰，頁首仍然跟內容分得開 */
-    --header-bg: var(--n-50);
-    --header-line: var(--n-200);
     --warn: #ffb870;
   }
 }
@@ -151,49 +149,122 @@ button.danger {
   padding-right: 1rem;
 }
 
-/* 頁首：cyan-50 淡藍底，在社群首頁的白底與文件站的 cyan-800 之間 */
+/* 頁首：跟新聞導讀同一種做法，cyan-900 的一列，白色的 anoni.net 字標、分隔線、產品名稱，
+   右邊是操作與語系切換。深色模式也用同一個顏色，窄螢幕時右邊的操作換到下一列 */
 .site-header {
   background: var(--header-bg);
-  border-bottom: 1px solid var(--header-line);
+  color: var(--header-text);
 }
 
-.site-header .frame {
+.site-header__inner {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
   align-items: center;
-  justify-content: space-between;
-  padding-top: 0.9rem;
-  padding-bottom: 0.9rem;
+  gap: 0 1rem;
 }
 
-.brand h1 {
+.site-header__title {
   margin: 0;
-  font-size: 1.4rem;
-  line-height: 1.3;
+  font-size: inherit;
 }
 
-.brand h1 a {
+/* flex 會吞掉字標與產品名之間的空格，用 gap 補回跟分隔線的距離 */
+.site-header__home {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  color: var(--strong);
+  gap: 1rem;
+  min-height: 3rem;
+  color: var(--header-text);
   text-decoration: none;
 }
 
-.brand .logo {
-  flex: none;
+.site-header__logo {
+  display: block;
+  height: 1.625rem;
+  width: auto;
 }
 
-.tagline {
-  margin: 0.15rem 0 0;
-  color: var(--muted);
-  font-size: 0.9rem;
+.site-header__product {
+  font-weight: 700;
+  font-size: 1.125rem;
+  letter-spacing: 0.08em;
+  padding-left: 1rem;
+  border-left: 1px solid rgba(255, 255, 255, 0.35);
 }
 
-.header-actions {
+html:lang(en) .site-header__product {
+  letter-spacing: 0;
+}
+
+.site-header__actions {
   display: flex;
-  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 0.25rem;
+  margin-left: auto;
+}
+
+.site-header__actions button {
+  min-height: 3rem;
+  padding: 0 0.5rem;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--header-link);
+  font-size: 0.9375rem;
+}
+
+.site-header__langs {
+  display: flex;
+  align-items: center;
+  margin-left: 0.25rem;
+  padding-left: 0.5rem;
+  border-left: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+.site-header a:hover,
+.site-header a:focus-visible,
+.site-header__actions button:hover,
+.site-header__actions button:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 0.3em;
+}
+
+.site-header :focus-visible {
+  outline: 2px solid var(--header-text);
+  outline-offset: 2px;
+}
+
+/* 360px 的手機：字標與產品名一列，操作換到下一列並靠左 */
+@media (max-width: 30rem) {
+  .site-header__inner {
+    gap: 0 0.75rem;
+  }
+
+  .site-header__home {
+    gap: 0.75rem;
+  }
+
+  .site-header__product {
+    padding-left: 0.75rem;
+  }
+
+  .site-header__actions {
+    margin-left: -0.5rem;
+  }
+}
+
+/* Windows 的高對比模式會把底色換掉，白色的字標就看不見，頁首保留品牌色 */
+@media (forced-colors: active) {
+  .site-header {
+    forced-color-adjust: none;
+  }
+}
+
+/* 桌面最上面的標語 */
+.tagline {
+  margin: 0 0 1rem;
+  color: var(--muted);
 }
 
 /* 圖示圈：顏色代表類別，跟社群首頁的圖示圈同一種樣式 */

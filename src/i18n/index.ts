@@ -7,9 +7,10 @@ export type { MessageKey };
 // 介面語系由網址決定：/gears/ 是正體中文，/gears/zh-cn/、/gears/en/ 是簡體中文與英文，
 // 跟文件站一樣。不用 cookie 或 localStorage 記住選擇，換語系就是換網址。
 export const LOCALES = [
-  { id: "zh-TW", prefix: "", lang: "zh-Hant-TW", label: "正體中文" },
-  { id: "zh-CN", prefix: "zh-cn/", lang: "zh-Hans", label: "简体中文" },
-  { id: "en", prefix: "en/", lang: "en", label: "English" },
+  // short 是頁首放得進手機一列的簡稱，完整名稱放在 aria-label
+  { id: "zh-TW", prefix: "", lang: "zh-Hant-TW", label: "正體中文", short: "正" },
+  { id: "zh-CN", prefix: "zh-cn/", lang: "zh-Hans", label: "简体中文", short: "简" },
+  { id: "en", prefix: "en/", lang: "en", label: "English", short: "EN" },
 ] as const;
 
 export type Locale = (typeof LOCALES)[number]["id"];

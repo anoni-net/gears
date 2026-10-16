@@ -365,8 +365,8 @@ iPhone 預設拍出來的是 HEIC，在網頁上選照片時交出來的也是�
 
 照社群的[品牌素材](https://anoni.net/brand/)，配色與社群首頁的 `static/css/site.css` 用同一組數值：
 
-- logo 是 V3 cyan tonal（三個六角形），頁首內嵌在 `src/ui/Logo.tsx`，網站圖示是 `public/favicon.svg`，兩者跟社群首頁的 `static/favicon.svg` 同一份
-- 頁首用 `--brand-cyan-50` 淡藍底，在社群首頁的白底與文件站的 `cyan-800` 之間，讀者換到工作台時看得出換了網站。深色模式改用比背景亮一階的藍灰
+- 頁首跟新聞導讀同一種做法（2026-10-16 起）：`cyan-900` 的一列，白色的 anoni.net 字標（`public/logo-wordmark-white.svg`，跟 `anoni-net/news` 的 `static/logo-wordmark-white.svg` 同一份）、分隔線、產品名稱，右邊是回到桌面、清空暫存區與語系切換（只列其他語系的簡稱，完整名稱放在 `aria-label`）。深色模式用同一個顏色，高對比模式保留品牌色（`forced-color-adjust: none`），不然白色字標會看不見。標語移到桌面最上面
+- 網站圖示是 `public/favicon.svg`（V3 cyan tonal，三個六角形），跟社群首頁的 `static/favicon.svg` 同一份
 - 主色只用 `--brand-cyan-*`，灰階用品牌的中性色，深色模式的背景是 `#00202d`
 - 工具的圖示用 Material Design Icons，跟文件站小工具區的同一個工具一致，路徑內嵌在 `src/ui/icon-paths.ts`，授權全文在 `licenses/material-design-icons.txt`
 - 圖示圈的顏色照品牌素材頁的「圖示的分類色」：跟個人隱私有關的用 `--cat-privacy`，處理機敏資料與密碼的用 `--cat-secure`。新增工具時在 `src/ui/tool-meta.ts` 指定圖示與類別，`tests/unit/tool-meta.spec.ts` 會檢查
