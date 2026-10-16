@@ -2,6 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
 import { wav } from "../helpers/audio.ts";
 import { syntheticDocx, syntheticPdf } from "../helpers/documents.ts";
+import { incrementalPdf } from "../helpers/pdf-incremental.ts";
 import { expect, test } from "./guard.ts";
 
 // 用 axe-core 檢查 WCAG 2.1 AA。只在 Chromium 跑，結果跟瀏覽器無關
@@ -72,6 +73,11 @@ test("查證的畫面沒有無障礙問題", async ({ page }) => {
     { name: "b.docx", mimeType: "application/octet-stream", buffer: Buffer.from(await syntheticDocx()) },
   ]);
   await expect(page.getByTestId("verify-hash")).toHaveCount(2, { timeout: 15000 });
+  expect(await audit(page)).toEqual([]);
+  // PDF 的版本紀錄與比對結果
+  await page.getByTestId("verify-input").setInputFiles({ name: "c.pdf", mimeType: "application/pdf", buffer: Buffer.from((await incrementalPdf()).bytes) });
+  await page.getByRole("button", { name: "跟第 2 版比對" }).click({ timeout: 15000 });
+  await expect(page.getByText("第 1 頁：有變動")).toBeVisible({ timeout: 15000 });
   expect(await audit(page)).toEqual([]);
 });
 

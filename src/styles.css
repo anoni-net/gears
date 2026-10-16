@@ -1701,3 +1701,91 @@ button.link {
   font-size: 0.85rem;
   color: var(--muted);
 }
+
+/* PDF 的版本紀錄與兩個版本的比對 */
+.verify-versions {
+  margin: 0.5rem 0 0;
+  padding-left: 1.25rem;
+}
+
+.verify-versions li {
+  margin-bottom: 0.6rem;
+}
+
+.verify-versions .verify-type {
+  display: block;
+  margin: 0.1rem 0 0.3rem;
+}
+
+.verify-versions .buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.verify-compare {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid var(--hair);
+  border-radius: 6px;
+  background: var(--fill);
+}
+
+.verify-compare h5 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+
+.verify-compare h6 {
+  margin: 0.75rem 0 0.3rem;
+  font-size: 0.95rem;
+}
+
+.verify-meta {
+  margin: 0 0 0.5rem;
+  padding-left: 1.1rem;
+}
+
+.verify-text-diff {
+  margin: 0 0 0.5rem;
+  padding: 0;
+  list-style: none;
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+
+.verify-text-diff li {
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
+}
+
+.verify-text-diff .removed {
+  background: color-mix(in srgb, var(--danger) 12%, var(--bg));
+}
+
+.verify-text-diff .added {
+  background: color-mix(in srgb, var(--ok) 14%, var(--bg));
+}
+
+/* 只給讀螢幕軟體的文字 */
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* 比對的圖要看得清楚標紅的地方，比縮圖大，窄螢幕一張占滿寬度 */
+.verify-compare .verify-thumbs figure {
+  flex: 1 1 18rem;
+  max-width: 30rem;
+}
+
+.verify-compare .verify-thumbs img {
+  width: 100%;
+  max-width: none;
+  max-height: none;
+  height: auto;
+}

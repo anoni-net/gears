@@ -2,10 +2,12 @@ import { expect, test } from "@playwright/test";
 import { PDFDocument, PDFHexString, PDFName, PDFString } from "pdf-lib";
 import { writeZip } from "../../src/core/zip.ts";
 import { type Evidence, examine } from "../../src/tools/verify/examine.ts";
+import { diffLines, metaChanges } from "../../src/tools/verify/diff.ts";
 import { sha256Blob } from "../../src/tools/verify/hash.ts";
 import { type CaseFile, extensionMatches, summarize } from "../../src/tools/verify/summary.ts";
 import { exifTime, gpsTime, isoTime, pdfTime } from "../../src/tools/verify/times.ts";
 import { LAT, LON, buildTiff, exifSegment, insertIntoJpeg, syntheticJpeg } from "../helpers/fixtures.ts";
+import { incrementalPdf } from "../helpers/pdf-incremental.ts";
 
 const enc = new TextEncoder();
 
@@ -208,4 +210,21 @@ test("SHA-256 分段計算的結果跟一次算的相同", async () => {
   const { bytesToHex } = await import("@noble/hashes/utils.js");
   expect(split).toBe(bytesToHex(sha256(big)));
   expect(progress.at(-1)).toBe(1);
+});
+
+test("文字逐行比對：刪掉與加入的行，順序不變的不列", () => {
+  expect(diffLines(["a", "b", "c", "d"], ["a", "c", "x", "d", "e"])).toEqual({ removed: ["b"], added: ["x", "e"] });
+  expect(diffLines([], ["new"])).toEqual({ removed: [], added: ["new"] });
+  expect(diffLines(["same"], ["same"])).toEqual({ removed: [], added: [] });
+});
+
+test("真正的增量更新：找到較早的版本，兩個版本的中繼資料差在修改時間", async () => {
+  const { bytes, firstEnd } = await incrementalPdf();
+  const ev = await examine(bytes, "pdf");
+  expect(ev.revisions).toEqual([firstEnd]);
+  expect(ev.pages).toBe(2);
+  const before = await examine(bytes.subarray(0, firstEnd), "pdf");
+  expect(before.revisions).toEqual([]);
+  const changes = metaChanges(before, ev, { time: (t) => `${t.text}${t.offset ?? ""}`, list: (items) => items.join(", ") });
+  expect(changes).toEqual([{ field: "modified", before: undefined, after: "2024-06-02 02:00:00+00:00" }]);
 });

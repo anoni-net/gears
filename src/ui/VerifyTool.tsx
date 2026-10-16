@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { TrayFile } from "../core/tray.ts";
-import { list, t } from "../i18n/index.ts";
+import { list, t, tDynamic } from "../i18n/index.ts";
 import { tray } from "../state.ts";
 import { type Evidence, examine } from "../tools/verify/examine.ts";
+import { type MetaChange, metaChanges } from "../tools/verify/diff.ts";
 import { sha256Blob } from "../tools/verify/hash.ts";
 import { type Warning, summarize } from "../tools/verify/summary.ts";
 import { CopyButton } from "./CopyButton.tsx";
+import type { Comparison } from "./pdf-compare.ts";
 import { useObjectUrl, useTray } from "./hooks.ts";
 import { saveBlob } from "./save.ts";
 import type { CreateToolProps } from "./types.ts";
@@ -34,9 +36,9 @@ import {
 // 畫面的順序照讀者想問的：有沒有需要留意的地方、每個檔案是什麼來歷、檔案之間有沒有關聯。
 // 雜湊值與完整的時間這類技術資訊收在每個檔案的「完整資訊」裡，匯出的紀錄照樣全部寫出。
 //
-// 查證時從 PDF 取出的舊版本（來源是 verify）也算進來；查證紀錄本身（verify-report）不算。
+// 只算讀者自己加入的檔案。放進暫存區的查證紀錄（來源是 verify）不算。
 
-const inCase = (f: TrayFile) => f.versions[0]!.tool === null || f.versions[0]!.tool === "verify";
+const inCase = (f: TrayFile) => f.versions[0]!.tool === null;
 
 interface Result {
   hash: string;
@@ -94,7 +96,157 @@ function Fact({ label, children }: { label: string; children: preact.ComponentCh
   );
 }
 
-function FileCard(props: { file: TrayFile; entry?: CaseEntry; failed: boolean; warnings: Warning[]; onRevision(end: number, n: number): void }) {
+function DiffImage({ blob, caption }: { blob: Blob; caption: string }) {
+  const url = useObjectUrl(blob);
+  return (
+    <figure>
+      {url ? <img src={url} alt={caption} /> : null}
+      <figcaption>{caption}</figcaption>
+    </figure>
+  );
+}
+
+// 兩個版本的差異：中繼資料、每一頁的文字與畫面
+function CompareView({ from, to, before, after }: { from: number; to: number; before: Uint8Array; after: Uint8Array }) {
+  const [result, setResult] = useState<Comparison | null>(null);
+  const [meta, setMeta] = useState<MetaChange[]>([]);
+  const [progress, setProgress] = useState<[number, number] | null>(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    setResult(null);
+    setFailed(false);
+    void (async () => {
+      const [a, b] = await Promise.all([examine(before, "pdf"), examine(after, "pdf")]);
+      if (alive) setMeta(metaChanges(a, b, { time: timeText, list }));
+      const { compareVersions } = await import("./pdf-compare.ts");
+      const r = await compareVersions(before, after, (done, total) => alive && setProgress([done, total]));
+      if (alive) setResult(r);
+    })().catch(() => alive && setFailed(true));
+    return () => {
+      alive = false;
+    };
+  }, [before, after]);
+
+  return (
+    <div class="verify-compare" data-testid="verify-compare">
+      <h5>{t("verify.compareTitle", { a: from, b: to })}</h5>
+      {failed ? <p class="error">{t("verify.compareFailed")}</p> : null}
+      {meta.length ? (
+        <ul class="verify-meta">
+          {meta.map((m) => (
+            <li key={m.field}>{t("verify.metaChange", { field: tDynamic(`verify.meta.${m.field}`), before: m.before ?? t("verify.empty"), after: m.after ?? t("verify.empty") })}</li>
+          ))}
+        </ul>
+      ) : null}
+      {!result && !failed ? (
+        <p class="hint" role="status">
+          {progress ? t("verify.comparing", { n: Math.min(progress[0] + 1, progress[1]), total: progress[1] }) : t("verify.reading")}
+        </p>
+      ) : null}
+      {result ? (
+        <>
+          {result.visualSkipped ? <p class="hint">{t("verify.visualSkipped")}</p> : null}
+          {result.pages.length ? null : <p>{t("verify.noDiff")}</p>}
+          {result.pages.map((p) => (
+            <div class="verify-page-diff" key={p.index}>
+              <h6>
+                {t("verify.page", { n: p.index + 1 })}：{tDynamic(`verify.pageStatus.${p.status}`)}
+              </h6>
+              {p.sizeChanged ? <p class="hint">{t("verify.sizeChanged")}</p> : null}
+              {p.status === "changed" && !p.text.added.length && !p.text.removed.length ? <p class="hint">{t("verify.visualOnly")}</p> : null}
+              {p.text.removed.length || p.text.added.length ? (
+                <ul class="verify-text-diff">
+                  {p.text.removed.map((line, i) => (
+                    <li key={`r${i}`} class="removed">
+                      <span class="sr">{t("verify.textRemoved")}</span>− {line}
+                    </li>
+                  ))}
+                  {p.text.added.map((line, i) => (
+                    <li key={`a${i}`} class="added">
+                      <span class="sr">{t("verify.textAdded")}</span>+ {line}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              {p.before || p.after ? (
+                <div class="verify-thumbs">
+                  {p.before ? <DiffImage blob={p.before} caption={t("verify.version", { n: from })} /> : null}
+                  {p.after ? <DiffImage blob={p.after} caption={t("verify.version", { n: to })} /> : null}
+                </div>
+              ) : null}
+            </div>
+          ))}
+          {result.pages.length && result.same ? <p class="hint">{t("verify.samePages", { n: result.same })}</p> : null}
+          <p class="hint">{t("verify.compareNote")}</p>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+// PDF 的版本紀錄：每一個 %%EOF 是一次存檔，切到那裡就是當時的檔案。列出每個版本的大小、頁數
+// 與時間，可以下載，也可以跟下一版比對
+function VersionHistory({ file, revisions }: { file: TrayFile; revisions: number[] }) {
+  const blob = file.versions[0]!.blob;
+  const ends = [...revisions, blob.size];
+  const [info, setInfo] = useState<Evidence[]>([]);
+  const [pair, setPair] = useState<{ from: number; to: number; before: Uint8Array; after: Uint8Array } | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void (async () => {
+      const bytes = new Uint8Array(await blob.arrayBuffer());
+      const list = await Promise.all(ends.map((end) => examine(bytes.subarray(0, end), "pdf")));
+      if (alive) setInfo(list);
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [blob]);
+
+  const base = file.name.replace(/\.pdf$/i, "");
+  const compare = async (i: number) => {
+    const bytes = new Uint8Array(await blob.arrayBuffer());
+    setPair({ from: i + 1, to: i + 2, before: bytes.slice(0, ends[i]!), after: bytes.slice(0, ends[i + 1]!) });
+  };
+
+  return (
+    <div class="verify-block">
+      <p>{t("verify.revisions", { n: ends.length })}</p>
+      <p class="hint">{t("verify.revisionsNote")}</p>
+      <ol class="verify-versions">
+        {ends.map((end, i) => {
+          const ev = info[i];
+          const { start, modified } = ev ? keyTimes(ev) : {};
+          const time = modified ?? start;
+          const facts = [formatSize(end), ev?.pages ? t("verify.pageCount", { n: ev.pages }) : null, time ? `${kindText(time)} ${timeText(time)}` : null].filter(Boolean).join(" · ");
+          return (
+            <li key={end}>
+              <strong>
+                {t("verify.version", { n: i + 1 })}
+                {i === ends.length - 1 ? t("verify.versionCurrent") : ""}
+              </strong>
+              <span class="verify-type">{facts}</span>
+              {i < ends.length - 1 ? (
+                <span class="buttons">
+                  <button type="button" onClick={() => void compare(i)}>
+                    {t("verify.compareWith", { n: i + 2 })}
+                  </button>
+                  <button type="button" onClick={() => saveBlob(blob.slice(0, end, "application/pdf"), `${base}-v${i + 1}.pdf`)}>
+                    {t("verify.downloadVersion", { n: i + 1 })}
+                  </button>
+                </span>
+              ) : null}
+            </li>
+          );
+        })}
+      </ol>
+      {pair ? <CompareView key={`${pair.from}-${pair.to}`} {...pair} /> : null}
+    </div>
+  );
+}
+
+function FileCard(props: { file: TrayFile; entry?: CaseEntry; failed: boolean; warnings: Warning[] }) {
   const { file, entry } = props;
   const original = file.versions[0]!;
   const ev = entry?.evidence;
@@ -146,18 +298,7 @@ function FileCard(props: { file: TrayFile; entry?: CaseEntry; failed: boolean; w
               <ThumbCompare file={file} thumbnail={ev.thumbnail} />
             </div>
           ) : null}
-          {ev.revisions.length ? (
-            <div class="verify-block">
-              <p>{t("verify.revisions", { n: ev.revisions.length + 1 })}</p>
-              <div class="buttons">
-                {ev.revisions.map((end, i) => (
-                  <button type="button" key={end} onClick={() => props.onRevision(end, i + 1)}>
-                    {t("verify.extractRevision", { n: i + 1 })}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : null}
+          {ev.revisions.length ? <VersionHistory file={file} revisions={ev.revisions} /> : null}
           <details class="verify-details">
             <summary>{t("verify.details")}</summary>
             <dl class="verify-facts">
@@ -254,14 +395,10 @@ export function VerifyTool(_: CreateToolProps) {
     const text = buildReport(ready, summary, now, __GEARS_COMMIT__);
     const stamp = localTime(now).slice(0, 16).replace(/[-: ]/g, "");
     const name = `gears-verify-${stamp}.md`;
-    if (toTray) void tray.add([new File([text], name, { type: "text/markdown" })], "verify-report");
+    if (toTray) void tray.add([new File([text], name, { type: "text/markdown" })], "verify");
     else saveBlob(new Blob([text], { type: "text/markdown" }), name);
   };
 
-  const extractRevision = async (file: TrayFile, end: number, n: number) => {
-    const base = file.name.replace(/\.pdf$/i, "");
-    await tray.add([new File([file.versions[0]!.blob.slice(0, end)], `${base}-v${n}.pdf`, { type: "application/pdf" })], "verify");
-  };
 
   return (
     <div class="verify">
@@ -297,7 +434,6 @@ export function VerifyTool(_: CreateToolProps) {
               entry={results.has(f.id) ? entries[i] : undefined}
               failed={failed.has(f.id)}
               warnings={pending ? [] : summary.warnings.filter((w) => w.files.includes(i + 1))}
-              onRevision={(end, n) => void extractRevision(f, end, n)}
             />
           ))}
         </div>
