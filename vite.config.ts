@@ -4,6 +4,7 @@ import { mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "n
 import { join, relative } from "node:path";
 import { defineConfig, type Plugin } from "vite";
 import { LOCALES, messagesOf } from "./src/i18n/index.ts";
+import { pageIds } from "./src/pages.ts";
 import { toolIds } from "./src/tools/index.ts";
 import whisper from "./src/tools/transcribe/models.json" with { type: "json" };
 import { ASSETS_MODELS } from "./src/tools/transcribe/remote.ts";
@@ -91,7 +92,7 @@ function toolPages(): Plugin {
     generateBundle() {
       if (!template) throw new Error("index.html not found");
       for (const locale of LOCALES) {
-        for (const id of ["", ...toolIds]) {
+        for (const id of ["", ...toolIds, ...pageIds]) {
           if (!locale.prefix && !id) continue; // 正體中文的首頁就是 index.html
           this.emitFile({ type: "asset", fileName: `${locale.prefix}${id ? `${id}/` : ""}index.html`, source: localized(template, locale, id) });
         }
