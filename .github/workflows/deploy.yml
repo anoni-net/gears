@@ -70,8 +70,8 @@ jobs:
       - run: npm run build
       - run: node scripts/fetch-whisper.mjs --manifest deploy/models.txt
 
-      # assets/ 的檔名帶雜湊。上一版的檔案多留一輪：Cloudflare 邊緣快取的舊頁面最多 5 分鐘，
-      # 那段時間裡還會要舊的檔案，刪掉的話讀者會拿到 404
+      # assets/ 的檔名帶雜湊。上一版的檔案多留一輪：已經開著舊頁面的讀者，之後才載入的
+      # 工具還會要舊的檔案，刪掉的話會拿到 404
       - name: 推到 build 分支
         run: |
           git config user.name "github-actions[bot]"
