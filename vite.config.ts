@@ -6,6 +6,7 @@ import { defineConfig, type Plugin } from "vite";
 import { LOCALES, messagesOf } from "./src/i18n/index.ts";
 import { toolIds } from "./src/tools/index.ts";
 import whisper from "./src/tools/transcribe/models.json" with { type: "json" };
+import { ASSETS_MODELS } from "./src/tools/transcribe/remote.ts";
 import speakerModel from "./src/tools/transcribe/speaker-model.json" with { type: "json" };
 
 // 頁面能連線的對象寫死在 CSP 裡。就算某個相依套件被植入程式，檔案也送不出去，
@@ -31,12 +32,21 @@ const policy = (connect: string) => [
 // 頁面的 meta 標籤只允許自己的網域
 const CSP = policy("'self'");
 
-// 伺服器用標頭送的 CSP 多開 Hugging Face，給逐字稿的 Worker 下載大模型（讀者選擇之後才連，
-// 見 src/tools/transcribe/remote.ts）。Worker 只吃標頭的 CSP。頁面同時有標頭與 meta 標籤時兩者
-// 都要符合，頁面本身仍然只能連自己的網域。huggingface.co 限定在每個模型的下載路徑，不開放
-// 上傳用的 API，下載會轉址到 *.hf.co 的 CDN（轉址之後 CSP 不比對路徑，只能寫主機）
+// 伺服器用標頭送的 CSP 多開兩個地方，給逐字稿的 Worker 下載別的網域的模型（見
+// src/tools/transcribe/remote.ts）。Worker 只吃標頭的 CSP。頁面同時有標頭與 meta 標籤時兩者
+// 都要符合，頁面本身仍然只能連自己的網域。
+// - Hugging Face（讀者選擇之後才連）：huggingface.co 限定在每個模型的下載路徑，不開放上傳用的
+//   API，下載會轉址到 *.hf.co 的 CDN（轉址之後 CSP 不比對路徑，只能寫主機）
+// - assets.anoni.net：社群轉檔的模型，限定在模型的目錄
 const HEADER_CSP = policy(
-  ["'self'", ...Object.values(whisper).filter((m) => m.remote).map((m) => `https://huggingface.co/${m.repo}/resolve/${m.revision}/`), "https://*.hf.co"].join(" "),
+  [
+    "'self'",
+    ...Object.values(whisper)
+      .filter((m) => m.host === "hf")
+      .map((m) => `https://huggingface.co/${m.repo}/resolve/${m.revision}/`),
+    "https://*.hf.co",
+    ASSETS_MODELS,
+  ].join(" "),
 );
 
 function csp(): Plugin {

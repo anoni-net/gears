@@ -20,8 +20,8 @@ test("下載網址鎖定 models.json 記錄的 commit", () => {
   expect(hfUrl(models.turbo.repo, models.turbo.revision, "onnx/encoder_model_q4.onnx")).toBe(
     `https://huggingface.co/onnx-community/whisper-large-v3-turbo/resolve/${models.turbo.revision}/onnx/encoder_model_q4.onnx`,
   );
-  expect(models.turbo.remote).toBe(true);
-  expect(models.small.remote).toBe(false);
+  expect(models.turbo.host).toBe("hf");
+  expect(models.small.host).toBe("self");
 });
 
 test("SHA-256 對得上時交出完整的內容，回報讀到的位元組數", async () => {
