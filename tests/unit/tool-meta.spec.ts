@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { toolIds } from "../../src/tools/index.ts";
 import { ICON_PATHS } from "../../src/ui/icon-paths.ts";
-import { TOOL_META } from "../../src/ui/tool-meta.ts";
+import { TOOL_GROUPS, TOOL_META } from "../../src/ui/tool-meta.ts";
 
 test("每個工具都有圖示與類別", () => {
   for (const id of toolIds) {
@@ -10,6 +10,12 @@ test("每個工具都有圖示與類別", () => {
     expect(Object.hasOwn(ICON_PATHS, meta!.icon), id).toBe(true);
     expect(["privacy", "secure"]).toContain(meta!.cat);
   }
+});
+
+test("每個工具剛好出現在桌面的一組", () => {
+  const grouped: string[] = TOOL_GROUPS.flatMap((g) => [...g.tools]);
+  expect([...grouped].sort()).toEqual([...toolIds].sort());
+  expect(new Set(grouped).size).toBe(grouped.length);
 });
 
 test("暫存區每種格式都有存在的檔案類型圖示", async () => {

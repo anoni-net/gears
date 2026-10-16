@@ -1,8 +1,7 @@
 import { t, tDynamic } from "../i18n/index.ts";
 import { navigate } from "../router.ts";
-import { createTools, editorTools, fileTools } from "../tools/index.ts";
 import { IconCircle } from "./Icon.tsx";
-import { TOOL_META } from "./tool-meta.ts";
+import { TOOL_GROUPS, TOOL_META } from "./tool-meta.ts";
 
 export interface Task {
   id: "photo" | "document" | "heic" | "redact" | "pages" | "verify" | "email" | "encrypt" | "wifi";
@@ -43,7 +42,7 @@ function ToolCard({ id }: { id: string }) {
   );
 }
 
-// 桌面：全部的工具分兩組，加上任務捷徑。暫存區在旁邊一直看得到。
+// 桌面：任務捷徑，加上依讀者的目的分成三組的工具。暫存區在旁邊一直看得到。
 export function Desktop({ onTask }: Props) {
   return (
     <div class="desktop">
@@ -67,18 +66,17 @@ export function Desktop({ onTask }: Props) {
 
       <section aria-labelledby="tools-title">
         <h2 id="tools-title">{t("desk.tools")}</h2>
-        <h3>{t("desk.group.file")}</h3>
-        <ul class="cards">
-          {[...fileTools, ...editorTools].map((tool) => (
-            <ToolCard key={tool.id} id={tool.id} />
-          ))}
-        </ul>
-        <h3>{t("desk.group.create")}</h3>
-        <ul class="cards">
-          {createTools.map((tool) => (
-            <ToolCard key={tool.id} id={tool.id} />
-          ))}
-        </ul>
+        {TOOL_GROUPS.map((group) => (
+          <div class="tool-group" key={group.id}>
+            <h3>{tDynamic(`desk.group.${group.id}`)}</h3>
+            <p class="hint">{tDynamic(`desk.group.${group.id}.desc`)}</p>
+            <ul class="cards">
+              {group.tools.map((id) => (
+                <ToolCard key={id} id={id} />
+              ))}
+            </ul>
+          </div>
+        ))}
       </section>
     </div>
   );

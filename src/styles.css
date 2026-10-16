@@ -736,6 +736,19 @@ footer .languages button[aria-current] {
   margin-top: 0;
 }
 
+/* 工具依讀者的目的分組，每組一個小標題加一句說明 */
+.tool-group + .tool-group {
+  margin-top: 1.5rem;
+}
+
+.tool-group h3 {
+  margin: 0;
+}
+
+.tool-group .hint {
+  margin: 0.2rem 0 0.6rem;
+}
+
 .cards {
   list-style: none;
   padding: 0;
