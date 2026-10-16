@@ -1518,7 +1518,7 @@ button.link {
   background: var(--fill);
 }
 
-/* 查證：每一節之間留白，雜湊值與座標用等寬字，長字串可以斷行 */
+/* 查證：總覽與需要留意的地方在最上面，每個檔案一張卡片，技術資訊收在「完整資訊」裡 */
 .verify section {
   margin-top: 1.5rem;
 }
@@ -1527,72 +1527,152 @@ button.link {
   margin: 0 0 0.5rem;
 }
 
-.verify h4 {
-  margin: 0.75rem 0 0.25rem;
+.verify-overview p {
+  margin: 0 0 0.75rem;
+  font-size: 1.05rem;
 }
 
-.verify ul,
-.verify ol {
-  margin: 0.25rem 0 0;
-  padding-left: 1.25rem;
-}
-
-.verify li {
-  margin-bottom: 0.35rem;
-}
-
-.verify .verify-files {
+.verify-warnings {
+  margin: 0;
+  padding: 0;
   list-style: none;
-  padding-left: 0;
-}
-
-.verify-files li {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-  padding: 0.6rem 0.75rem;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-}
-
-.verify-files span {
-  color: var(--muted);
-}
-
-.verify-hash {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.verify-hash code,
-.verify-groups code {
-  overflow-wrap: anywhere;
-  font-size: 0.85rem;
-}
-
-.verify-groups small {
-  margin-left: 0.5rem;
-  color: var(--muted);
-}
-
-.verify-groups button {
-  margin-left: 0.5rem;
 }
 
 .verify-warnings li {
+  margin-bottom: 0.6rem;
+  padding: 0.6rem 0.75rem;
+  border-left: 4px solid var(--warn);
+  border-radius: 4px;
+  background: var(--warn-bg);
+}
+
+.verify-warnings strong {
   color: var(--warn);
+}
+
+.verify-warnings p {
+  margin: 0.25rem 0 0;
+}
+
+.verify-warn-files {
+  margin-left: 0.5rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+
+.verify-cards {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.verify-card {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+}
+
+.verify-card h4 {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.verify-type {
+  margin: 0.15rem 0 0.5rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.verify-card-warn {
+  margin: 0 0 0.5rem;
+  color: var(--warn);
+  font-size: 0.95rem;
+}
+
+/* 「標籤 內容」兩欄，窄螢幕改成上下 */
+.verify-facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.3rem 1rem;
+  margin: 0;
+}
+
+.verify-facts dt {
+  color: var(--muted);
+}
+
+.verify-facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.verify-facts ul {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.verify-facts code {
+  font-size: 0.85rem;
+}
+
+@media (max-width: 40rem) {
+  .verify-facts {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .verify-facts dd {
+    margin-bottom: 0.4rem;
+  }
+}
+
+.verify-block {
+  margin-top: 0.75rem;
+}
+
+.verify-block p {
+  margin: 0 0 0.4rem;
+}
+
+.verify-details {
+  margin-top: 0.75rem;
+}
+
+.verify-details summary {
+  cursor: pointer;
+  color: var(--link);
+}
+
+.verify-details[open] summary {
+  margin-bottom: 0.5rem;
+}
+
+.verify-relations {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.verify-relations li {
+  margin-bottom: 0.35rem;
+}
+
+.verify-timeline {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.verify-timeline li {
+  margin-bottom: 0.35rem;
 }
 
 .verify-timeline time {
   display: inline-block;
-  min-width: 15.5em;
+  min-width: 16em;
   margin-right: 0.5rem;
   font-variant-numeric: tabular-nums;
 }
 
-/* 窄螢幕：時間獨立一行，說明接在下一行 */
 @media (max-width: 40rem) {
   .verify-timeline time {
     display: block;
@@ -1604,7 +1684,6 @@ button.link {
   display: flex;
   flex-wrap: wrap;
   gap: 1rem;
-  margin-top: 0.5rem;
 }
 
 .verify-thumbs figure {

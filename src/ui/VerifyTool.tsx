@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
-import { EXTENSION } from "../core/bytes.ts";
 import type { TrayFile } from "../core/tray.ts";
-import { t } from "../i18n/index.ts";
+import { list, t } from "../i18n/index.ts";
 import { tray } from "../state.ts";
 import { type Evidence, examine } from "../tools/verify/examine.ts";
 import { sha256Blob } from "../tools/verify/hash.ts";
-import { summarize } from "../tools/verify/summary.ts";
+import { type Warning, summarize } from "../tools/verify/summary.ts";
 import { CopyButton } from "./CopyButton.tsx";
 import { useObjectUrl, useTray } from "./hooks.ts";
 import { saveBlob } from "./save.ts";
@@ -13,18 +12,27 @@ import type { CreateToolProps } from "./types.ts";
 import {
   type CaseEntry,
   buildReport,
-  fileLabel,
-  filesLabel,
   formatSize,
+  keyTimes,
+  kindText,
   localTime,
-  timeLabel,
+  names,
+  overviewText,
+  peopleText,
+  relations,
+  sourceText,
   timeText,
   traceLines,
-  warningText,
+  typeLine,
+  warningDetail,
+  warningTitle,
 } from "./verify-report.ts";
 
-// 查證：把暫存區裡讀者加入的檔案當成一批，整理出時間線、裝置、人名、位置與編輯痕跡，
+// 查證：把暫存區裡讀者加入的檔案當成一批，整理出每個檔案的重點與檔案之間的關聯，
 // 比對出需要留意的地方，可以匯出成查證紀錄。一律讀原檔（第一個版本），不看處理過的版本。
+//
+// 畫面的順序照讀者想問的：有沒有需要留意的地方、每個檔案是什麼來歷、檔案之間有沒有關聯。
+// 雜湊值與完整的時間這類技術資訊收在每個檔案的「完整資訊」裡，匯出的紀錄照樣全部寫出。
 //
 // 查證時從 PDF 取出的舊版本（來源是 verify）也算進來；查證紀錄本身（verify-report）不算。
 
@@ -63,16 +71,117 @@ function ThumbCompare({ file, thumbnail }: { file: TrayFile; thumbnail: Uint8Arr
   return (
     <div class="verify-thumbs">
       <figure>
-        {thumbUrl ? <img src={thumbUrl} alt={t("verify.thumbAlt")} /> : null}
+        {thumbUrl ? <img src={thumbUrl} alt={t("verify.thumbCaption")} /> : null}
         <figcaption>{t("verify.thumbCaption")}</figcaption>
       </figure>
       {mainUrl ? (
         <figure>
-          <img src={mainUrl} alt={t("verify.mainAlt")} />
+          <img src={mainUrl} alt={t("verify.mainCaption")} />
           <figcaption>{t("verify.mainCaption")}</figcaption>
         </figure>
       ) : null}
     </div>
+  );
+}
+
+// 一列「標籤：內容」
+function Fact({ label, children }: { label: string; children: preact.ComponentChildren }) {
+  return (
+    <>
+      <dt>{label}</dt>
+      <dd>{children}</dd>
+    </>
+  );
+}
+
+function FileCard(props: { file: TrayFile; entry?: CaseEntry; failed: boolean; warnings: Warning[]; onRevision(end: number, n: number): void }) {
+  const { file, entry } = props;
+  const original = file.versions[0]!;
+  const ev = entry?.evidence;
+  const { start, modified } = ev ? keyTimes(ev) : {};
+  const traces = ev ? traceLines(ev) : [];
+  return (
+    <article class="verify-card" aria-label={file.name}>
+      <h4>{file.name}</h4>
+      <p class="verify-type">
+        {typeLine(original.format)} · {formatSize(original.blob.size)}
+      </p>
+      {props.failed ? <p class="error">{t("verify.failed")}</p> : null}
+      {!ev && !props.failed ? <p class="hint">{t("verify.reading")}</p> : null}
+      {props.warnings.length ? (
+        <p class="verify-card-warn">{t("verify.cardWarnings", { list: list(props.warnings.map(warningTitle)) })}</p>
+      ) : null}
+      {ev ? (
+        <>
+          <dl class="verify-facts">
+            {start ? <Fact label={kindText(start)}>{timeText(start)}</Fact> : null}
+            {modified ? <Fact label={t("verify.fact.modified")}>{timeText(modified)}</Fact> : null}
+            {ev.devices.length ? <Fact label={t("verify.device")}>{list(ev.devices)}</Fact> : null}
+            {ev.software.length ? <Fact label={t("verify.software")}>{list(ev.software)}</Fact> : null}
+            {ev.people.length ? <Fact label={t("verify.fact.people")}>{peopleText(ev)}</Fact> : null}
+            {ev.locations.map((l, i) => {
+              const text = `${l.lat.toFixed(5)}, ${l.lon.toFixed(5)}`;
+              return (
+                <Fact key={i} label={t("verify.fact.location")}>
+                  <code>{text}</code> <CopyButton text={text} primary={false} />
+                </Fact>
+              );
+            })}
+            {traces.length ? (
+              <Fact label={t("verify.fact.other")}>
+                <ul>
+                  {traces.map((line, i) => (
+                    <li key={i}>{line}</li>
+                  ))}
+                </ul>
+              </Fact>
+            ) : null}
+          </dl>
+          {!start && !ev.devices.length && !ev.software.length && !ev.people.length && !ev.locations.length && !traces.length ? (
+            <p class="hint">{t("verify.nothing")}</p>
+          ) : null}
+          {ev.thumbnail ? (
+            <div class="verify-block">
+              <p>{t("verify.thumbNote")}</p>
+              <ThumbCompare file={file} thumbnail={ev.thumbnail} />
+            </div>
+          ) : null}
+          {ev.revisions.length ? (
+            <div class="verify-block">
+              <p>{t("verify.revisions", { n: ev.revisions.length + 1 })}</p>
+              <div class="buttons">
+                {ev.revisions.map((end, i) => (
+                  <button type="button" key={end} onClick={() => props.onRevision(end, i + 1)}>
+                    {t("verify.extractRevision", { n: i + 1 })}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
+          <details class="verify-details">
+            <summary>{t("verify.details")}</summary>
+            <dl class="verify-facts">
+              <Fact label="SHA-256">
+                <code data-testid="verify-hash">{entry!.hash}</code> <CopyButton text={entry!.hash ?? ""} primary={false} label={t("verify.copyHash")} />
+              </Fact>
+              <Fact label={t("verify.fact.added")}>{localTime(file.addedAt)}</Fact>
+              {ev.serials.length ? <Fact label={t("verify.serial")}>{list(ev.serials)}</Fact> : null}
+              {ev.times.length ? (
+                <Fact label={t("verify.fact.allTimes")}>
+                  <ul>
+                    {ev.times.map((e, i) => (
+                      <li key={i}>
+                        {timeText(e)}：{kindText(e)}（{sourceText(e)}）
+                      </li>
+                    ))}
+                  </ul>
+                </Fact>
+              ) : null}
+            </dl>
+          </details>
+        </>
+      ) : null}
+    </article>
   );
 }
 
@@ -116,30 +225,33 @@ export function VerifyTool(_: CreateToolProps) {
     return (
       <div class="verify">
         <p class="hint">{t("verify.intro")}</p>
+        <p class="hint">{t("verify.caveat")}</p>
         <div class="buttons">{picker}</div>
       </div>
     );
   }
 
   const pending = files.filter((f) => !results.has(f.id) && !failed.has(f.id)).length;
-  const entries: CaseEntry[] = files
-    .map((f, i) => ({ f, i, r: results.get(f.id) }))
-    .filter((x) => x.r)
-    .map(({ f, i, r }) => ({
+  // 編號依暫存區裡的順序，所有檔案都整理完才算出比對結果，避免數字跟著跳動
+  const entries: CaseEntry[] = files.map((f, i) => {
+    const r = results.get(f.id);
+    return {
       index: i + 1,
       name: f.name,
       format: f.versions[0]!.format,
       size: f.versions[0]!.blob.size,
-      hash: r!.hash,
-      evidence: r!.evidence,
+      hash: r?.hash,
+      evidence: r?.evidence ?? { times: [], devices: [], serials: [], software: [], people: [], locations: [], traces: [], revisions: [], signatures: [] },
       addedAt: f.addedAt,
-    }));
-  const summary = summarize(entries);
-  const byIndex = (n: number) => files[n - 1]!;
+    };
+  });
+  const ready = entries.filter((e) => results.has(files[e.index - 1]!.id));
+  const summary = summarize(ready);
+  const rel = relations(summary);
 
   const exportReport = (toTray: boolean) => {
     const now = Date.now();
-    const text = buildReport(entries, summary, now, __GEARS_COMMIT__);
+    const text = buildReport(ready, summary, now, __GEARS_COMMIT__);
     const stamp = localTime(now).slice(0, 16).replace(/[-: ]/g, "");
     const name = `gears-verify-${stamp}.md`;
     if (toTray) void tray.add([new File([text], name, { type: "text/markdown" })], "verify-report");
@@ -151,171 +263,79 @@ export function VerifyTool(_: CreateToolProps) {
     await tray.add([new File([file.versions[0]!.blob.slice(0, end)], `${base}-v${n}.pdf`, { type: "application/pdf" })], "verify");
   };
 
-  const none = <p class="hint">{t("verify.none")}</p>;
-
   return (
     <div class="verify">
-      <p class="hint">{t("verify.intro")}</p>
-      <div class="buttons">{picker}</div>
-      {pending ? (
-        <p class="hint" role="status">
-          {t("verify.working", { n: pending })}
-        </p>
+      <p class="hint">{t("verify.caveat")}</p>
+
+      <section aria-labelledby="verify-overview" class="verify-overview">
+        <h3 id="verify-overview">{t("verify.section.overview")}</h3>
+        <p role="status">{pending ? t("verify.working", { n: pending }) : overviewText(ready, summary)}</p>
+        <div class="buttons">{picker}</div>
+      </section>
+
+      {!pending && summary.warnings.length ? (
+        <section aria-labelledby="verify-warnings">
+          <h3 id="verify-warnings">{t("verify.section.warnings")}</h3>
+          <ul class="verify-warnings">
+            {summary.warnings.map((w, i) => (
+              <li key={i}>
+                <strong>{warningTitle(w)}</strong>
+                <p>{warningDetail(w, entries)}</p>
+              </li>
+            ))}
+          </ul>
+        </section>
       ) : null}
 
       <section aria-labelledby="verify-files">
         <h3 id="verify-files">{t("verify.section.files")}</h3>
-        <ul class="verify-files">
-          {files.map((f, i) => {
-            const r = results.get(f.id);
-            return (
-              <li key={f.id}>
-                <strong>
-                  {fileLabel(i + 1)}：{f.name}
-                </strong>
-                <span>
-                  {EXTENSION[f.versions[0]!.format].toUpperCase()} · {formatSize(f.versions[0]!.blob.size)} · {t("verify.addedAt")} {localTime(f.addedAt)}
-                </span>
-                {failed.has(f.id) ? <span class="error">{t("verify.failed")}</span> : null}
-                {r ? (
-                  <span class="verify-hash">
-                    <code data-testid="verify-hash">SHA-256 {r.hash}</code>
-                    <CopyButton text={r.hash} primary={false} label={t("verify.copyHash")} />
-                  </span>
-                ) : null}
-              </li>
-            );
-          })}
-        </ul>
+        <div class="verify-cards">
+          {files.map((f, i) => (
+            <FileCard
+              key={f.id}
+              file={f}
+              entry={results.has(f.id) ? entries[i] : undefined}
+              failed={failed.has(f.id)}
+              warnings={pending ? [] : summary.warnings.filter((w) => w.files.includes(i + 1))}
+              onRevision={(end, n) => void extractRevision(f, end, n)}
+            />
+          ))}
+        </div>
       </section>
 
-      <section aria-labelledby="verify-warnings">
-        <h3 id="verify-warnings">{t("verify.section.warnings")}</h3>
-        <p class="hint">{t("verify.warningsNote")}</p>
-        {summary.warnings.length ? (
-          <ul class="verify-warnings">
-            {summary.warnings.map((w, i) => (
-              <li key={i}>{warningText(w)}</li>
-            ))}
-          </ul>
-        ) : (
-          none
-        )}
-      </section>
-
-      <section aria-labelledby="verify-timeline">
-        <h3 id="verify-timeline">{t("verify.section.timeline")}</h3>
-        <p class="hint">{t("verify.timelineNote")}</p>
-        {summary.timeline.length ? (
-          <ol class="verify-timeline">
-            {summary.timeline.map((e, i) => (
-              <li key={i}>
-                <time>{timeText(e)}</time>
-                <span>
-                  {fileLabel(e.file)}，{timeLabel(e)}
-                </span>
-              </li>
-            ))}
-          </ol>
-        ) : (
-          none
-        )}
-      </section>
-
-      <section aria-labelledby="verify-devices">
-        <h3 id="verify-devices">{t("verify.section.devices")}</h3>
-        {summary.devices.length + summary.serials.length + summary.software.length ? (
-          <ul class="verify-groups">
-            {(
-              [
-                ["verify.devices", summary.devices],
-                ["verify.serials", summary.serials],
-                ["verify.software", summary.software],
-              ] as const
-            ).flatMap(([label, items]) =>
-              items.map((g) => (
-                <li key={`${label}-${g.value}`}>
-                  {t(label)}：{g.value}
-                  <small>{filesLabel(g.files)}</small>
-                </li>
-              )),
-            )}
-          </ul>
-        ) : (
-          none
-        )}
-      </section>
-
-      <section aria-labelledby="verify-people">
-        <h3 id="verify-people">{t("verify.section.people")}</h3>
-        {summary.people.length ? (
-          <ul class="verify-groups">
-            {summary.people.map((p) => (
-              <li key={`${p.role}-${p.value}`}>
-                {t(`verify.role.${p.role}` as never)}：{p.value}
-                <small>{filesLabel(p.files)}</small>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          none
-        )}
-      </section>
-
-      <section aria-labelledby="verify-locations">
-        <h3 id="verify-locations">{t("verify.section.locations")}</h3>
-        {summary.locations.length ? (
-          <ul class="verify-groups">
-            {summary.locations.map((l, i) => {
-              const text = `${l.lat.toFixed(5)}, ${l.lon.toFixed(5)}`;
-              return (
+      {!pending && files.length > 1 ? (
+        <section aria-labelledby="verify-relations">
+          <h3 id="verify-relations">{t("verify.section.relations")}</h3>
+          {rel.length ? (
+            <ul class="verify-relations">
+              {rel.map((r, i) => (
                 <li key={i}>
-                  <code>{text}</code>
-                  <small>{fileLabel(l.file)}</small>
-                  <CopyButton text={text} primary={false} />
+                  {r.label}：{r.group.value}
+                  <span class="verify-warn-files">{names(entries, r.group.files)}</span>
                 </li>
-              );
-            })}
-          </ul>
-        ) : (
-          none
-        )}
-      </section>
-
-      <section aria-labelledby="verify-traces">
-        <h3 id="verify-traces">{t("verify.section.traces")}</h3>
-        {entries.some((e) => traceLines(e).length || e.evidence.thumbnail) ? (
-          entries.map((e) => {
-            const lines = traceLines(e);
-            if (!lines.length && !e.evidence.thumbnail) return null;
-            const file = byIndex(e.index);
-            return (
-              <div class="verify-trace" key={e.index}>
-                <h4>
-                  {fileLabel(e.index)}：{e.name}
-                </h4>
-                <ul>
-                  {lines.map((line, i) => (
-                    <li key={i}>{line}</li>
-                  ))}
-                </ul>
-                {e.evidence.thumbnail ? <ThumbCompare file={file} thumbnail={e.evidence.thumbnail} /> : null}
-                {e.evidence.revisions.length ? (
-                  <div class="buttons">
-                    {e.evidence.revisions.map((end, i) => (
-                      <button type="button" key={end} onClick={() => void extractRevision(file, end, i + 1)}>
-                        {t("verify.extractRevision", { n: i + 1 })}
-                      </button>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-            );
-          })
-        ) : (
-          none
-        )}
-      </section>
+              ))}
+            </ul>
+          ) : (
+            <p class="hint">{t("verify.noRelations")}</p>
+          )}
+          {summary.timeline.length ? (
+            <details class="verify-details">
+              <summary>{t("verify.timelineToggle", { n: summary.timeline.length })}</summary>
+              <p class="hint">{t("verify.timelineNote")}</p>
+              <ol class="verify-timeline">
+                {summary.timeline.map((e, i) => (
+                  <li key={i}>
+                    <time>{timeText(e)}</time>
+                    <span>
+                      {files[e.file - 1]!.name}，{kindText(e)}（{sourceText(e)}）
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            </details>
+          ) : null}
+        </section>
+      ) : null}
 
       <section aria-labelledby="verify-export">
         <h3 id="verify-export">{t("verify.section.export")}</h3>
