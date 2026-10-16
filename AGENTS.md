@@ -233,7 +233,7 @@ PDF 的版本紀錄：每一個 `%%EOF` 是一次存檔的結尾，切到那裡�
 - Whisper small、base 與 CAM++ 不進 `build` 分支（單一檔案超過 GitHub 的 100 MB）。m6 照清單下載到 `/srv/anoni-net-gears/models/`，比對 SHA-256，nginx 的 `/gears/models/whisper/`、`/gears/models/speaker/` 讀那裡。路徑帶著模型的版本，換版本時舊的目錄不會自動刪除
 - `assets/` 的檔名帶雜湊，上一版的檔案多留一輪：已經開著舊頁面的讀者，之後才載入的工具還會要舊的檔案
 - m6：`/srv/anoni-net-gears/build` 是 `build` 分支的 clone，ubuntu 的 crontab `*/5 * * * * /home/ubuntu/gears-pull.sh`（原始檔 `tools/m6-pull.sh`，改了要再複製一次），log 在 `/home/ubuntu/gears-pull.log`。新版本上線前先把模型下載齊、把標頭換上（`/etc/nginx/snippets/gears-headers.conf`，`nginx -t` 通過才 reload），service worker 預先存的檔案連當時的標頭一起存，順序反過來的話，讀者的 Worker 會一直帶著舊的 CSP
-- nginx 的 location 與快取標頭的範本在 `tools/nginx-gears.conf`，實際設定在 m6 的 `/etc/nginx/conf.d/anoninet.conf`，改了要手動同步。全部帶 `no-transform`，Cloudflare 不在頁面注入 Web Analytics 與 JS Detections 的 script，也不改動檔案，壓縮由 nginx 做（`.wasm` 用 `application/wasm` 送出，onnxruntime 的 WebAssembly 壓縮後約小四分之三）。pdf.js 的 `.mjs` 另外指定 JavaScript 的 MIME
+- nginx 的 location 與快取標頭的範本在 `tools/nginx-gears.conf`，實際設定在 m6 的 `/etc/nginx/conf.d/anoninet.conf`，改了要手動同步。頁面與圖片帶 `no-transform`，Cloudflare 不在頁面注入 Web Analytics 與 JS Detections 的 script，也不用 Polish 重新壓縮圖片。其他檔案不能帶：帶了 `no-transform` 的回應 Cloudflare 完全不壓縮，連 nginx 送出的 gzip 也會解開，讀者拿到的是原始大小（`.wasm` 用 `application/wasm` 送出，onnxruntime 的 WebAssembly 壓縮後約小四分之三）。pdf.js 的 `.mjs` 另外指定 JavaScript 的 MIME
 - Cloudflare：Cache Rule「gears respect origin」讓 `/gears/` 的邊緣與瀏覽器都照 nginx 的快取標頭，頁面、manifest 與 165 清單是 `no-cache`，每次回來確認，`sw.js` 另由「docs sw.js no-cache」整個不快取。Transform Rule `onion-anoni.net` 排除 `/gears`，onion 版還沒有規劃（Tor Browser 不在支援範圍），不送 `Onion-Location`
 - 自己建置時（例如本機預覽）先執行 `node scripts/fetch-165.mjs` 與 `node scripts/fetch-whisper.mjs`
 
