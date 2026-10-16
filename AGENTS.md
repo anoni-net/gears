@@ -1,6 +1,6 @@
 # AGENTS.md
 
-給參與開發的人與 AI 工具的說明。隱私工作台是匿名網路社群 anoni.net 的產品，網址是 `anoni.net/gears/`，在瀏覽器裡處理讀者要交出去的檔案，也替收到檔案的人整理可以查證的線索。文件站的小工具區（`anoni-net/docs` 的 `utils/`）是另一套，兩邊各自開發，不共用程式。
+給參與開發的人與 AI 工具的說明。anoni.net Gears 隱私工作台是匿名網路社群 anoni.net 的產品，產品名稱是 Gears，每個語系都一樣，後面接該語系的「隱私工作台」（简体「隐私工作台」、英文 Privacy Workbench），頁首、網頁標題與主畫面圖示的名稱都照這個寫法，網址是 `anoni.net/gears/`，在瀏覽器裡處理讀者要交出去的檔案，也替收到檔案的人整理可以查證的線索。文件站的小工具區（`anoni-net/docs` 的 `utils/`）是另一套，兩邊各自開發，不共用程式。
 
 ## 原則
 
@@ -365,7 +365,7 @@ iPhone 預設拍出來的是 HEIC，在網頁上選照片時交出來的也是�
 
 照社群的[品牌素材](https://anoni.net/brand/)，配色與社群首頁的 `static/css/site.css` 用同一組數值：
 
-- 頁首跟新聞導讀同一種做法（2026-10-16 起）：`cyan-900` 的一列，白色的 anoni.net 字標（`public/logo-wordmark-white.svg`，跟 `anoni-net/news` 的 `static/logo-wordmark-white.svg` 同一份）、分隔線、產品名稱，右邊是回到桌面、清空暫存區與語系切換（只列其他語系的簡稱，完整名稱放在 `aria-label`）。深色模式用同一個顏色，高對比模式保留品牌色（`forced-color-adjust: none`），不然白色字標會看不見。標語移到桌面最上面
+- 頁首的排版跟新聞導讀一致（2026-10-16 起）：anoni.net 字標、分隔線、產品名稱，右邊是回到桌面、清空暫存區與語系切換（只列其他語系的簡稱，完整名稱放在 `aria-label`）。底色維持工作台的 `--brand-cyan-50` 淡藍，讀者換到工作台時看得出換了網站，深色模式改用比背景亮一階的藍灰。字標照品牌素材頁的用法，淺色底用 tonal 版（`public/logo-wordmark-tonal.svg`），深色模式用 `<picture>` 換成白色版（`public/logo-wordmark-white.svg`），兩份都跟社群首頁的 `static/brand/` 同一份。標語放在桌面最上面
 - 網站圖示是 `public/favicon.svg`（V3 cyan tonal，三個六角形），跟社群首頁的 `static/favicon.svg` 同一份
 - 主色只用 `--brand-cyan-*`，灰階用品牌的中性色，深色模式的背景是 `#00202d`
 - 工具的圖示用 Material Design Icons，跟文件站小工具區的同一個工具一致，路徑內嵌在 `src/ui/icon-paths.ts`，授權全文在 `licenses/material-design-icons.txt`

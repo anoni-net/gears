@@ -4,7 +4,7 @@
 
 **正體中文** | [English](#en)
 
-隱私工作台，在瀏覽器裡處理要交出去的檔案：清除照片與文件的中繼資料、遮蔽畫面上的個資、加密之後再傳送。收到檔案時，也能整理出可以查證的線索。由[匿名網路社群 anoni.net](https://anoni.net/) 維護，網址是 <https://anoni.net/gears/>。
+anoni.net Gears 隱私工作台，在瀏覽器裡處理要交出去的檔案：清除照片與文件的中繼資料、遮蔽畫面上的個資、加密之後再傳送。收到檔案時，也能整理出可以查證的線索。由[匿名網路社群 anoni.net](https://anoni.net/) 維護，網址是 <https://anoni.net/gears/>。
 
 目前在開發中，還沒有部署。第一版的工具：
 
@@ -57,7 +57,7 @@ npm test
 
 [正體中文](#zh-tw) | **English**
 
-anoni.net Gears is a privacy workbench for the files you are about to hand over. It strips metadata from photos and documents, redacts personal details on screen, and encrypts files before they are sent. For files you receive, it lays out leads you can verify. Maintained by the [anoni.net community](https://anoni.net/) at <https://anoni.net/gears/>.
+anoni.net Gears Privacy Workbench handles the files you are about to hand over. It strips metadata from photos and documents, redacts personal details on screen, and encrypts files before they are sent. For files you receive, it lays out leads you can verify. Maintained by the [anoni.net community](https://anoni.net/) at <https://anoni.net/gears/>.
 
 Gears is under development and not deployed yet. Tools in the first version:
 
