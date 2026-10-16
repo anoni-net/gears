@@ -87,6 +87,7 @@
     "engine": "transformers",
     "languages": [
       "zh",
+      "yue",
       "en",
       "ja",
       "ko",

@@ -11,7 +11,7 @@ import { REMOTE_ERROR, assetsUrl, hfUrl, readVerified } from "../tools/transcrib
 import { MODELS, type ModelId, type RawChunk, SAMPLE_RATE, type Segment, cleanSegments, maxTokens, speechPieces } from "../tools/transcribe/segments.ts";
 import { MIN_EMBED_SECONDS, assignSpeakers, normalize } from "../tools/transcribe/speakers.ts";
 import type { Device } from "../tools/transcribe/device.ts";
-import { type Language, isChinese, whisperLanguage } from "../tools/transcribe/languages.ts";
+import { type Language, chineseVariant, isChinese, whisperLanguage } from "../tools/transcribe/languages.ts";
 import speakerModel from "../tools/transcribe/speaker-model.json" with { type: "json" };
 import type { Embedder } from "./speaker-embed.ts";
 
@@ -44,7 +44,8 @@ const post = (reply: Reply) => (self as unknown as DedicatedWorkerGlobalScope).p
 
 type Pipeline = ((audio: Float32Array, options: Record<string, unknown>) => Promise<{ chunks?: RawChunk[] }>) & { dispose(): Promise<void> };
 let loaded: { model: ModelId; device: Device; asr: Pipeline } | null = null;
-let convert: ((text: string) => string) | null = null;
+// OpenCC 的轉換器，台灣與香港的字形各一個
+const converters = new Map<string, (text: string) => string>();
 // 每個檔案下載了多少位元組，加總之後回報給畫面
 let files: Record<string, number> = {};
 let downloadTotal = 0;
@@ -188,11 +189,14 @@ async function load(model: ModelId, base: string, threads: number, device: Devic
   return asr;
 }
 
-// Whisper 的中文常輸出簡體，轉成台灣正體與台灣慣用詞
-async function toTaiwan(text: string): Promise<string> {
+// Whisper 的中文常輸出簡體，轉成正體字：華語、台語用台灣的字形與慣用詞，粵語用香港的字形
+async function toTraditional(text: string, language: Language): Promise<string> {
+  const to = chineseVariant(language);
+  let convert = converters.get(to);
   if (!convert) {
     const OpenCC = await import("opencc-js/cn2t");
-    convert = OpenCC.Converter({ from: "cn", to: "twp" });
+    convert = OpenCC.Converter({ from: "cn", to });
+    converters.set(to, convert);
   }
   return convert(text);
 }
@@ -237,7 +241,7 @@ async function recognize(chunk: Float32Array, at: number, last: boolean) {
     for (const c of out.chunks ?? []) {
       const [s, e] = c.timestamp;
       // Breeze 本來就輸出正體字，不再轉一次（models.json 的 traditional）
-      raw.push({ text: isChinese(language) && !traditional ? await toTaiwan(c.text) : c.text, timestamp: [s + start, e === null ? offset + piece.end / SAMPLE_RATE : e + start] });
+      raw.push({ text: isChinese(language) && !traditional ? await toTraditional(c.text, language) : c.text, timestamp: [s + start, e === null ? offset + piece.end / SAMPLE_RATE : e + start] });
     }
     post({ type: "progress", at: offset + piece.end / SAMPLE_RATE });
   }
