@@ -17,4 +17,5 @@ export const TOOL_META: Record<string, { icon: IconName; cat: Category }> = {
   passphrase: { icon: "dice-multiple-outline", cat: "secure" },
   "age-keygen": { icon: "key-plus", cat: "secure" },
   "text-crypt": { icon: "message-lock-outline", cat: "secure" },
+  verify: { icon: "file-search-outline", cat: "secure" },
 };

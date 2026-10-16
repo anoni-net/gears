@@ -19,6 +19,8 @@ export interface Version {
 export interface TrayFile {
   id: number;
   name: string;
+  addedAt: number; // 加入暫存區的時間（裝置的時鐘），查證紀錄裡記下來
+
   versions: Version[];
 }
 
@@ -108,7 +110,7 @@ export function createTray(tools: Tool[], verify?: Verifier) {
         for (const file of files) {
           try {
             const { format, findings, large } = await read(file);
-            added.push({ id: nextId++, name: file.name, versions: [{ id: nextId++, tool: origin, blob: file, format, findings, large }] });
+            added.push({ id: nextId++, name: file.name, addedAt: Date.now(), versions: [{ id: nextId++, tool: origin, blob: file, format, findings, large }] });
           } catch {
             failed.push(file.name);
           }

@@ -20,6 +20,17 @@ export interface ExifInfo {
   latitude?: number;
   longitude?: number;
   thumbnail: boolean;
+  // 以下給查證用（src/tools/verify/）：各種時間分開、時區、GPS 的 UTC 時間、縮圖的位置
+  dateOriginal?: string;
+  dateDigitized?: string;
+  dateModified?: string;
+  offsetOriginal?: string;
+  offsetDigitized?: string;
+  offsetModified?: string;
+  gpsDate?: string; // 2024:06:01
+  gpsTime?: [number, number, number];
+  thumbnailAt?: number; // 縮圖 JPEG 相對於 TIFF 開頭的位置與長度
+  thumbnailLength?: number;
 }
 
 const TYPE_SIZE: Record<number, number> = { 1: 1, 2: 1, 3: 2, 4: 4, 5: 8, 7: 1, 9: 4, 10: 8 };
@@ -95,12 +106,18 @@ export function parseExif(tiff: Uint8Array): ExifInfo {
   info.model = text(e0.get(0x0110));
   info.software = text(e0.get(0x0131));
   info.dateTime = text(e0.get(0x0132));
+  info.dateModified = info.dateTime;
   info.owner = text(e0.get(0x013b)) ?? text(e0.get(0x8298));
 
   const exifIfd = readIfd(pointer(e0.get(0x8769)) ?? 0);
   if (exifIfd) {
     const ex = exifIfd.entries;
-    info.dateTime = text(ex.get(0x9003)) ?? info.dateTime;
+    info.dateOriginal = text(ex.get(0x9003));
+    info.dateDigitized = text(ex.get(0x9004));
+    info.offsetModified = text(ex.get(0x9010));
+    info.offsetOriginal = text(ex.get(0x9011));
+    info.offsetDigitized = text(ex.get(0x9012));
+    info.dateTime = info.dateOriginal ?? info.dateTime;
     info.owner = text(ex.get(0xa430)) ?? info.owner;
     info.serial = text(ex.get(0xa431));
     info.lens = text(ex.get(0xa434));
@@ -118,12 +135,21 @@ export function parseExif(tiff: Uint8Array): ExifInfo {
         info.latitude = text(g.get(1)) === "S" ? -lat : lat;
         info.longitude = text(g.get(3)) === "W" ? -lon : lon;
       }
+      info.gpsDate = text(g.get(0x1d));
+      const time = rationals(g.get(0x07));
+      if (time && time.length >= 3) info.gpsTime = [time[0]!, time[1]!, time[2]!];
     }
   }
 
   // IFD0 之後還有 IFD1 就是縮圖。縮圖常常是裁切之前的原圖。
   const ifd1 = readIfd(ifd0.next);
   if (ifd1 && (ifd1.entries.has(0x0201) || ifd1.entries.has(0x0111))) info.thumbnail = true;
+  const thumbAt = pointer(ifd1?.entries.get(0x0201));
+  const thumbLength = pointer(ifd1?.entries.get(0x0202));
+  if (thumbAt && thumbLength && thumbAt + thumbLength <= tiff.length) {
+    info.thumbnailAt = thumbAt;
+    info.thumbnailLength = thumbLength;
+  }
 
   return info;
 }

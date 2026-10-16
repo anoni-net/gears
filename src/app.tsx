@@ -63,11 +63,12 @@ export function App() {
   const [preset, setPreset] = useState<string>();
   const offline = useOffline();
 
-  // 加入檔案之後顯示那個檔案。正在用從空白開始的工具時，先回到桌面
+  // 加入檔案之後顯示那個檔案。正在用從空白開始的工具時，先回到桌面。
+  // 查證例外：它整理的就是暫存區裡的檔案，加入之後留在查證的畫面
   const addFiles = async (files: File[], origin: string | null = null) => {
     if (!files.length) return;
     await tray.add(files, origin);
-    if (isCreateTool(route)) navigate("");
+    if (isCreateTool(route) && route !== "verify") navigate("");
   };
   const dragging = useDropAnywhere((files) => void addFiles(files));
 

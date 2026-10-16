@@ -12,7 +12,7 @@ async function audit(page: Page) {
   return result.violations.map((v) => `${v.id}: ${v.help} (${v.nodes.map((n) => n.target.join(" ")).slice(0, 3).join(" | ")})`);
 }
 
-for (const path of ["./", "./en/", "./qrcode/", "./url-check/", "./passphrase/", "./age-keygen/", "./text-crypt/", "./qr-read/", "./redact/", "./pdf-pages/", "./strip-metadata/"]) {
+for (const path of ["./", "./en/", "./qrcode/", "./url-check/", "./passphrase/", "./age-keygen/", "./text-crypt/", "./qr-read/", "./redact/", "./pdf-pages/", "./strip-metadata/", "./verify/"]) {
   test(`${path} 沒有無障礙問題`, async ({ page }) => {
     await page.goto(path);
     await page.waitForLoadState("networkidle");
@@ -62,6 +62,16 @@ test("選擇 PDF 頁面的畫面沒有無障礙問題", async ({ page }) => {
   // 放大檢視的對話框
   await page.getByRole("button", { name: "放大第 1 頁" }).click();
   await expect(page.getByTestId("page-zoom-canvas")).not.toHaveClass(/waiting/, { timeout: 15000 });
+  expect(await audit(page)).toEqual([]);
+});
+
+test("查證的畫面沒有無障礙問題", async ({ page }) => {
+  await page.goto("./verify/");
+  await page.getByTestId("verify-input").setInputFiles([
+    { name: "a.pdf", mimeType: "application/pdf", buffer: Buffer.from(await syntheticPdf()) },
+    { name: "b.docx", mimeType: "application/octet-stream", buffer: Buffer.from(await syntheticDocx()) },
+  ]);
+  await expect(page.getByTestId("verify-hash")).toHaveCount(2, { timeout: 15000 });
   expect(await audit(page)).toEqual([]);
 });
 
