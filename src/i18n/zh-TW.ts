@@ -9,6 +9,7 @@ export const zhTW = {
   "app.tagline": "檔案交出去之前，先在你的瀏覽器裡處理好。",
   "app.memoryNote": "檔案只放在這個分頁的記憶體裡，不會上傳，關掉分頁就會消失。",
   "app.clear": "清空暫存區",
+  "app.clearConfirm": "再按一次清空",
   "app.home": "回到桌面",
   "app.loading": "載入中…",
   "app.footer.source": "原始碼",

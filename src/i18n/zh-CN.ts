@@ -10,6 +10,7 @@ export const zhCN: Record<MessageKey, string> = {
   "app.tagline": "文件交出去之前，先在你的浏览器里处理好。",
   "app.memoryNote": "文件只放在这个分页的内存里，不会上传，关掉分页就会消失。",
   "app.clear": "清空暂存区",
+  "app.clearConfirm": "再按一次清空",
   "app.home": "回到桌面",
   "app.loading": "加载中…",
   "app.footer.source": "源代码",

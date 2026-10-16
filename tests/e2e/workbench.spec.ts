@@ -88,10 +88,24 @@ test("退回上一步，再清空暫存區", async ({ page }) => {
   await expect(page.getByText("拍攝位置", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "退回上一步" })).toHaveCount(0);
 
+  // 第一次按下只是確認，檔案還在
   await page.getByRole("button", { name: "清空暫存區" }).click();
+  await expect(page.locator(".tray .item")).toHaveCount(1);
+  await page.getByRole("button", { name: "再按一次清空" }).click();
   await expect(page.getByRole("button", { name: /分享照片與影片前，拿掉拍攝位置/ })).toBeVisible();
   await expect(page.locator(".tray .item")).toHaveCount(0);
   await expect(page.getByText("把檔案拖進來，或")).toBeVisible();
+});
+
+test("清空暫存區的確認幾秒內沒有再按就恢復，檔案留著", async ({ page }) => {
+  await page.clock.install();
+  await page.goto("./");
+  await page.getByTestId("file-input").setInputFiles({ name: "notes.txt", mimeType: "text/plain", buffer: Buffer.from("hello") });
+  await page.getByRole("button", { name: "清空暫存區" }).click();
+  await expect(page.getByRole("button", { name: "再按一次清空" })).toBeVisible();
+  await page.clock.runFor(5000);
+  await expect(page.getByRole("button", { name: "清空暫存區" })).toBeVisible();
+  await expect(page.getByText("notes.txt").first()).toBeVisible();
 });
 
 test("PNG：文字欄位與 eXIf 一起拿掉", async ({ page }) => {
