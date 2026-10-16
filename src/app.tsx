@@ -11,7 +11,6 @@ import { useOffline } from "./ui/offline.ts";
 import { useTray } from "./ui/hooks.ts";
 import { CreateToolView } from "./ui/registry.tsx";
 import { IconCircle } from "./ui/Icon.tsx";
-import { Logo } from "./ui/Logo.tsx";
 import { TOOL_META } from "./ui/tool-meta.ts";
 
 const isCreateTool = (id: string) => createTools.some((tool) => tool.id === id);
@@ -141,28 +140,44 @@ export function App() {
 
   return (
     <div class={dragging ? "app dragging" : "app"}>
+      {/* 頁首的排版跟新聞導讀一致：anoni.net 字標、分隔線、產品名稱，右邊是操作與語系切換。
+          底色維持工作台的淡藍，字標用 tonal 版，深色模式換成白色版（品牌素材頁的用法）。
+          產品名稱是 Gears，華語版後面接「隱私工作台」，英文版就叫 Gears（app.title）。
+          名稱右上角掛著 Beta，正式上線之後再拿掉。標語放在桌面最上面 */}
       <header class="site-header">
-        <div class="frame">
-          <div class="brand">
-            <h1>
-              <a href={routeUrl("")} onClick={home}>
-                <Logo />
+        <div class="frame site-header__inner">
+          <h1 class="site-header__title">
+            <a class="site-header__home" href={routeUrl("")} onClick={home}>
+              <picture>
+                <source srcset={`${import.meta.env.BASE_URL}logo-wordmark-white.svg`} media="(prefers-color-scheme: dark)" />
+                <img class="site-header__logo" src={`${import.meta.env.BASE_URL}logo-wordmark-tonal.svg`} alt="anoni.net" width="116" height="28" />
+              </picture>
+              <span class="site-header__product">
                 {t("app.title")}
-              </a>
-            </h1>
-            <p class="tagline">{t("app.tagline")}</p>
-          </div>
-          <div class="header-actions">
+                <span class="site-header__beta" lang="en">
+                  Beta
+                </span>
+              </span>
+            </a>
+          </h1>
+          <div class="site-header__actions">
             {!atHome ? (
               <button type="button" onClick={home}>
                 {t("app.home")}
               </button>
             ) : null}
             {state.files.length ? (
-              <button type="button" class="danger" onClick={() => tray.clear()}>
+              <button type="button" onClick={() => tray.clear()}>
                 {t("app.clear")}
               </button>
             ) : null}
+            <nav class="site-header__langs" aria-label={t("app.language")}>
+              {LOCALES.filter((l) => l.id !== getLocale()).map((l) => (
+                <button key={l.id} type="button" lang={l.lang} aria-label={l.label} onClick={() => switchLocale(l.id)}>
+                  {l.short}
+                </button>
+              ))}
+            </nav>
           </div>
         </div>
       </header>
