@@ -11,6 +11,7 @@ import { THREAD_OPTIONS, defaultThreads } from "../tools/transcribe/threads.ts";
 import { type AudioStream, TooLargeError, openAudio } from "./audio-stream.ts";
 import { detectGpu } from "./gpu.ts";
 import type { Reply, Request } from "./transcribe.worker.ts";
+import sherpaWorkerUrl from "./sherpa.worker.ts?worker&url";
 import workerUrl from "./transcribe.worker.ts?worker&url";
 import type { FileEditorProps } from "./types.ts";
 
@@ -28,7 +29,11 @@ let workers = 0;
 const STALL_MS = 180_000;
 const STALLED = "stalled";
 
-const newWorker = () => new Worker(`${workerUrl}?n=${++workers}`, { type: "module" });
+// Whisper 等 Transformers.js 的模型用 transcribe.worker，Omnilingual 用 sherpa.worker
+// （models.json 的 engine），兩個 Worker 的訊息格式相同
+type Engine = "transformers" | "sherpa";
+const engineOf = (id: ModelId) => MODELS[id].engine as Engine;
+const newWorker = (engine: Engine) => new Worker(`${engine === "sherpa" ? sherpaWorkerUrl : workerUrl}?n=${++workers}`, { type: "module" });
 const MODEL_CACHE = "gears-models";
 // 超過 1 GB 的寫成 1.6 GB，比 1561 MB 好讀
 const mb = (bytes: number) => (bytes >= 1e9 ? `${(bytes / 1e9).toFixed(1)} GB` : `${Math.round(bytes / 1e6)} MB`);
@@ -100,11 +105,14 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
   const [segments, setSegments] = useState<Segment[]>([]);
   const [downloaded, setDownloaded] = useState<Partial<Record<ModelId, boolean>>>({});
   const [note, setNote] = useState<string>("");
-  const worker = useRef<{ instance: Worker; threads: number; device: Device } | null>(null);
+  const worker = useRef<{ instance: Worker; threads: number; device: Device; engine: Engine } | null>(null);
   // 每次開始轉換加一，按下停止之後，舊的那一次收到的回覆不再處理
   const run = useRef(0);
 
-  const deviceFor = (id: ModelId): Device => (useGpu && gpuUsable(gpu ?? null, MODELS[id].webgpu.buffer) ? "webgpu" : "wasm");
+  // sherpa-onnx 的模型只能用 CPU 的 1 個核心，不出現顯示卡、分辨說話者與核心數的選項
+  const sherpa = engineOf(model) === "sherpa";
+  const gpuChoice = (id: ModelId) => engineOf(id) === "transformers" && gpuUsable(gpu ?? null, MODELS[id].webgpu.buffer);
+  const deviceFor = (id: ModelId): Device => (useGpu && gpuChoice(id) ? "webgpu" : "wasm");
   const device = deviceFor(model);
   const refresh = () => {
     for (const id of MODEL_IDS) void isDownloaded(id, deviceFor(id)).then((yes) => setDownloaded((d) => ({ ...d, [id]: yes })));
@@ -180,11 +188,12 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
     };
     // 同一個 Worker 留著用，換模型時由 Worker 放掉舊的。換核心數或裝置要換新的 Worker
     const boot = async () => {
-      if (worker.current && (worker.current.threads !== threads || worker.current.device !== current)) {
+      const engine = engineOf(model);
+      if (worker.current && (worker.current.threads !== threads || worker.current.device !== current || worker.current.engine !== engine)) {
         worker.current.instance.terminate();
         worker.current = null;
       }
-      worker.current ??= { instance: newWorker(), threads, device: current };
+      worker.current ??= { instance: newWorker(engine), threads, device: current, engine };
       instance = worker.current.instance;
       instance.onmessage = onReply;
       instance.onerror = (event) => {
@@ -192,7 +201,7 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
         waiting?.reject(new Error(event.message));
       };
       setRunning({ requested: device, actual: current });
-      await send({ type: "start", model, language, base: BASE, threads, speakers, device: current }, "ready");
+      await send({ type: "start", model, language, base: BASE, threads, speakers: speakers && !sherpa, device: current }, "ready");
     };
     // 顯示卡建立推論環境或辨識失敗時，換一個新的 Worker 改用 CPU：onnxruntime 在一個 Worker 裡
     // 只初始化一次，WebGPU 初始化失敗之後，改要 CPU 也拿到同一個失敗。辨識到一半才失敗時，從失敗
@@ -321,7 +330,7 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
         <p class="hint">{t("transcribe.firstTime")}</p>
       ) : null}
 
-      {gpuUsable(gpu ?? null, MODELS[model].webgpu.buffer) ? (
+      {gpuChoice(model) ? (
         <label class="check">
           <input type="checkbox" checked={useGpu} disabled={busy} onChange={(e) => setUseGpu(e.currentTarget.checked)} />
           <span>
@@ -330,25 +339,33 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
           </span>
         </label>
       ) : null}
-      <label class="check">
-        <input type="checkbox" checked={speakers} disabled={busy} onChange={(e) => setSpeakers(e.currentTarget.checked)} />
-        <span>
-          {t("transcribe.speakers")}
-          <small>{t("transcribe.speakers.desc", { size: mb(speakerModel.bytes) })}</small>
-        </span>
-      </label>
-
-      <fieldset class="segmented" disabled={busy || !ISOLATED}>
-        <legend>{t("transcribe.threads")}</legend>
-        {THREADS.map((n) => (
-          <label key={n}>
-            <input type="radio" name="transcribe-threads" checked={threads === n} onChange={() => setThreads(n)} />
-            <span>{n}</span>
+      {sherpa ? (
+        <p class="hint" data-testid="transcribe-sherpa">
+          {t("transcribe.sherpa.note")}
+        </p>
+      ) : (
+        <>
+          <label class="check">
+            <input type="checkbox" checked={speakers} disabled={busy} onChange={(e) => setSpeakers(e.currentTarget.checked)} />
+            <span>
+              {t("transcribe.speakers")}
+              <small>{t("transcribe.speakers.desc", { size: mb(speakerModel.bytes) })}</small>
+            </span>
           </label>
-        ))}
-      </fieldset>
-      <p class="hint">{ISOLATED ? t("transcribe.threads.note") : t("transcribe.threads.single")}</p>
-      {ISOLATED && FIREFOX ? <p class="hint">{t("transcribe.threads.firefox")}</p> : null}
+
+          <fieldset class="segmented" disabled={busy || !ISOLATED}>
+            <legend>{t("transcribe.threads")}</legend>
+            {THREADS.map((n) => (
+              <label key={n}>
+                <input type="radio" name="transcribe-threads" checked={threads === n} onChange={() => setThreads(n)} />
+                <span>{n}</span>
+              </label>
+            ))}
+          </fieldset>
+          <p class="hint">{ISOLATED ? t("transcribe.threads.note") : t("transcribe.threads.single")}</p>
+          {ISOLATED && FIREFOX ? <p class="hint">{t("transcribe.threads.firefox")}</p> : null}
+        </>
+      )}
 
       <div class="buttons">
         {busy ? (

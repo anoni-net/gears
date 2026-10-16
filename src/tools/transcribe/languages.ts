@@ -6,7 +6,7 @@ import { MODELS, MODEL_IDS, type ModelId } from "./segments.ts";
 //
 // 粵語在 Transformers.js 沒有語言代碼，指定成粵語的 token 反而變差，等另外的模型。各語言的模型
 // 調查記錄在社群的工作區
-export const LANGUAGES = ["zh", "nan", "en", "ja", "ko", "vi", "th", "id", "ms", "tl"] as const;
+export const LANGUAGES = ["zh", "nan", "en", "ja", "ko", "vi", "th", "id", "ms", "tl", "my", "km", "lo", "bn", "ne", "mn"] as const;
 export type Language = (typeof LANGUAGES)[number];
 
 // 傳給 Whisper 的語言代碼。台語用 Breeze-ASR-26，它把台語轉成華語文字，語言代碼是 zh

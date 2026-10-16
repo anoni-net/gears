@@ -170,6 +170,11 @@ test("先選語言，再列出能用的模型：泰語、台語預設用專門�
   expect(preferredModel("zh")).toBe("small");
   expect(preferredModel("th")).toBe("thai");
   expect(preferredModel("nan")).toBe("breeze26");
+  // Whisper 在緬甸語這些語言幾乎不能用，只有 Omnilingual
+  for (const language of ["my", "km", "lo", "bn", "ne", "mn"] as const) {
+    expect(modelsFor(language)).toEqual(["omni"]);
+    expect(preferredModel(language)).toBe("omni");
+  }
   // 台語用 Breeze-ASR-26，它輸出華語文字，傳給 Whisper 的是 zh
   expect(whisperLanguage("nan")).toBe("zh");
   expect(whisperLanguage("th")).toBe("th");
@@ -189,6 +194,9 @@ test("models.json：切段的檔案都在清單裡，大小加總一致，每段
     }
     // 別的網域的模型由 Worker 下載與比對，其他的在自己的網域
     expect(["self", "hf", "assets"]).toContain(info.host);
+    // sherpa-onnx 的模型只從 assets.anoni.net 下載（src/ui/sherpa.worker.ts）
+    expect(["transformers", "sherpa"]).toContain(info.engine);
+    if (info.engine === "sherpa") expect(info.host).toBe("assets");
     if (info.host !== "assets") expect(Object.keys(info.parts)).toEqual([]);
   }
 });

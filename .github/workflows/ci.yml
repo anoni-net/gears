@@ -22,14 +22,15 @@ jobs:
       # 瀏覽器測試用 pillow-heif 產生真的 HEIC（tests/global-setup.ts）
       - uses: astral-sh/setup-uv@v10.3.0
       - run: npm run typecheck
-      # 逐字稿的瀏覽器測試要 Whisper base 與分辨說話者的 CAM++（約 80 MB 與 28 MB，不進 repo），依模型清單快取
+      # 逐字稿的瀏覽器測試要 Whisper base、分辨說話者的 CAM++ 與 sherpa-onnx 的 WebAssembly（約 80、28、14 MB，不進 repo），依清單快取
       - uses: actions/cache@v6.1.0
         with:
           path: |
             public/models/whisper
             public/models/speaker
-          key: whisper-base-speaker-${{ hashFiles('src/tools/transcribe/models.json', 'src/tools/transcribe/speaker-model.json') }}
-      - run: node scripts/fetch-whisper.mjs base speaker --no-webgpu
+            public/vendor/sherpa
+          key: whisper-base-speaker-sherpa-${{ hashFiles('src/tools/transcribe/models.json', 'src/tools/transcribe/speaker-model.json', 'src/tools/transcribe/sherpa-runtime.json') }}
+      - run: node scripts/fetch-whisper.mjs base speaker sherpa --no-webgpu
       - run: npx playwright install --with-deps chromium webkit firefox
       - run: npm test
       - uses: actions/upload-artifact@v7
