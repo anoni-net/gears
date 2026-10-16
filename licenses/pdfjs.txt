@@ -1,7 +1,7 @@
 PDF 遮蔽：pdf.js（pdfjs-dist 6.4.299）
 ====================================
 
-隱私工作台遮蔽 PDF 時載入 npm 套件 pdfjs-dist 6.4.299（Mozilla 的 pdf.js），把每一頁
+檔案工作台遮蔽 PDF 時載入 npm 套件 pdfjs-dist 6.4.299（Mozilla 的 pdf.js），把每一頁
 畫成圖片。主程式與 worker 打包成獨立的檔案（pdf-pages-*.js、pdf.worker.min-*.mjs），
 打開 PDF 時才載入。以下資料由 scripts/copy-vendor.mjs 原封不動複製到 vendor/pdfjs/：
 

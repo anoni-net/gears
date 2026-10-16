@@ -4,7 +4,7 @@ test("密語預設 6 個字，可以重新產生，也可以換成隨機密碼",
   await page.goto("./");
   await page.getByRole("button", { name: /密語與密碼產生器/ }).click();
   await expect(page).toHaveURL(/\/gears\/passphrase\/$/);
-  await expect(page).toHaveTitle("密語與密碼產生器 | Gears 隱私工作台");
+  await expect(page).toHaveTitle("密語與密碼產生器 | Gears 檔案工作台");
 
   const secret = page.getByTestId("secret");
   await expect(secret).toHaveText(/^[a-z]+( [a-z]+){5}$/);

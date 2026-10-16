@@ -2,7 +2,7 @@
   "name": "gears",
   "private": true,
   "version": "0.0.0",
-  "description": "隱私工作台 anoni.net Gears",
+  "description": "檔案工作台 anoni.net Gears",
   "license": "MIT",
   "type": "module",
   "engines": {
