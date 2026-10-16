@@ -1,32 +1,11 @@
-import { useEffect, useState } from "preact/hooks";
+import { useState } from "preact/hooks";
 import { list as joinList, t, tDynamic } from "../i18n/index.ts";
 import { cleanUrl, isShortener, parseUrl } from "../tools/url-check/clean.ts";
 import { type HostWarning, hostFacts } from "../tools/url-check/host.ts";
-import { type ScamList, findScam, parseScamList } from "../tools/url-check/scam-list.ts";
+import { type ScamList, findScam } from "../tools/url-check/scam-list.ts";
+import { useScamList } from "./scam-list-loader.ts";
 import { CopyButton } from "./CopyButton.tsx";
 import type { CreateToolProps } from "./types.ts";
-
-// 165 清單約 1.5 MB，打開工具時下載一次，整份留在這個分頁裡比對
-let listPromise: Promise<ScamList | null> | null = null;
-function loadScamList(): Promise<ScamList | null> {
-  listPromise ??= fetch(`${import.meta.env.BASE_URL}data/165.txt`)
-    .then((res) => (res.ok ? res.text() : Promise.reject(new Error(String(res.status)))))
-    .then(parseScamList)
-    .catch(() => null);
-  return listPromise;
-}
-
-function useScamList() {
-  const [list, setList] = useState<ScamList | null | undefined>(undefined);
-  useEffect(() => {
-    let alive = true;
-    void loadScamList().then((l) => alive && setList(l));
-    return () => {
-      alive = false;
-    };
-  }, []);
-  return list;
-}
 
 function warningText(w: HostWarning) {
   return tDynamic(`url.warn.${w.kind}`, { detail: "detail" in w ? w.detail : "" });

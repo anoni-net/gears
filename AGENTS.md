@@ -52,7 +52,7 @@ npm run test:unit    # 只執行單元測試，不需要瀏覽器
 
 | | 處理檔案的工具（`fileTools`） | 需要編輯畫面的工具（`editorTools`） | 從空白開始的工具（`createTools`） |
 |---|---|---|---|
-| 例子 | 清除中繼資料 | 遮蔽、轉成 JPEG、選擇 PDF 的頁面、加密、解密、逐字稿 | QR code 產生器與讀取、網址檢查、密語與密碼產生器、age 金鑰產生器、加密文字、查證 |
+| 例子 | 清除中繼資料 | 遮蔽、轉成 JPEG、選擇 PDF 的頁面、加密、解密、逐字稿 | QR code 產生器與讀取、網址檢查、密語與密碼產生器、age 金鑰產生器、加密文字、查證、看懂這封信 |
 | 介面 | `src/core/tool.ts` 的 `Tool` | `EditorTool`，編輯畫面登記在 `src/ui/registry.tsx` | `CreateTool`，元件登記在 `src/ui/registry.tsx` |
 | 結果 | 暫存區裡那個檔案的新版本 | 同左，由 `tray.addVersion` 加入 | 產出檔案的放進暫存區，產出文字的只顯示在畫面上 |
 
@@ -158,6 +158,20 @@ PDF 的版本紀錄：每一個 `%%EOF` 是一次存檔的結尾，切到那裡�
 在查證的畫面加入檔案時留在查證的畫面（`src/app.tsx` 的 `addFiles`），其他從空白開始的工具加入檔案時回到桌面。
 
 照片讀 EXIF（`extractExif` 支援的格式，`parseExif` 補上了拍攝、數位化、修改三種時間與各自的時區、GPS 的 UTC 時間與縮圖的位置），PDF 用 pdf-lib 讀文件資訊、XMP、簽章與舊版本，Office 讀 `docProps/core.xml` 與 `app.xml`，LibreOffice 讀 `meta.xml`，XMP 在其他格式裡用 `<x:xmpmeta` 搜尋。其他格式用加入暫存區時清除中繼資料的檢查結果，MP4、MOV、M4A 的時間是 UTC。單元測試在 `tests/unit/verify.spec.ts`。本機另外用 Pillow 寫入 EXIF 的照片、python-docx 產生的 Word 與 Chromium 列印的 PDF 驗證過。
+
+## 看懂這封信與信件的查證
+
+收到可疑的信時，讀者貼上原始郵件（Gmail 的「顯示原始郵件」、Outlook 的「檢視郵件來源」）或開啟 .eml 檔，看這封信實際上從哪裡寄來（`src/ui/EmailTool.tsx`）。查證也讀 .eml，兩邊共用 `src/tools/email/` 的解析與判斷。一般讀者只想知道這封信是不是真的，查證要的是時間線、附件與紀錄，所以做成兩個入口。
+
+- 解析（`parse.ts`）：標頭展開折行、解開 `=?UTF-8?B?…?=` 與直接寫 UTF-8 的標頭、地址、Date 與每一站 Received 的時間與 IP、Authentication-Results 與 ARC 的結果、DKIM 簽章的網域，內文的 MIME 一層一層拆開，取出附件（RFC 2231 的檔名）與連結。mbox 開頭的 `From ` 行略過。暫存區用 `src/core/email-sniff.ts` 從開頭的標頭判斷格式（`eml`）
+- 寄件驗證（`assess.ts`）只看收件伺服器記在信裡的 SPF、DKIM、DMARC，不自己查 DNS，頁面不連網。只採信最上面那一筆 Authentication-Results（收件的伺服器寫的），下面自稱通過的可能是寄件的人自己寫的。DMARC 有結果就照它，沒有時看 SPF 或 DKIM 有沒有跟寄件網域對齊（同一個註冊網域）地通過
+- 驗證通過只代表信確實來自那個網域，畫面上提醒看看網域是不是預期的那一個，並沿用網址檢查的相似品牌判斷與 165 清單（`src/ui/scam-list-loader.ts`，兩個工具共用）
+- 需要留意的地方：回覆地址換成別的網域、顯示名稱裡藏著另一個信箱、寄出時間跟第一站收到的時間差一天以上、會執行程式或常拿來釣魚的附件（.exe、.html、.docm 這類）。退信地址是別的網域只當成說明，電子報常這樣做
+- 信裡的連結列出實際的網址，按「檢查這個網址」用預設值打開網址檢查。附件可以加入暫存區（當成讀者的原檔，查證時算進同一批），只讀取，不開啟、不執行
+- 時區寫成 `CST` 的不當成美國中部時間：台灣與中國的伺服器常用它表示 +08:00，有歧義，當成沒有時區
+- 查證裡的 .eml：寄出與每一站收到的時間進時間線，寄件人、回覆地址、收件人進人名，寄件驗證沒有通過與上面的提醒併進需要留意的地方，附件可以「一起查證」
+
+測試用的信在 `tests/helpers/emails.ts`，網域用 `example.*`、IP 用保留給文件的位址。本機另外用 Python 的 `email` 套件產生的信驗證過折行的中文主旨、兩層 multipart、直接寫 UTF-8 的內文與中文附件檔名。
 
 ## 逐字稿
 
@@ -369,7 +383,7 @@ iPhone 預設拍出來的是 HEIC，在網頁上選照片時交出來的也是�
 
 ## 規劃
 
-產品規劃記錄在社群的工作區，還沒有公開。目前完成第一階段：桌面、檔案暫存區，以及清除中繼資料（JPEG、PNG、HEIC、AVIF、WebP、GIF、TIFF、SVG、BMP、PNM、JPEG XL，Word、Excel、PowerPoint、LibreOffice 文件與 PDF，MP3、M4A、MP4、MOV、WAV、AVI、FLAC、Ogg、Opus、MKV、WebM，ZIP、TAR、gzip、EPUB、種子檔、HTML）、遮蔽（圖片與 PDF，可以自動找人臉與個資）、選擇 PDF 的頁面、查證收到的檔案、逐字稿、加密與解密（檔案與一段文字）、age 金鑰產生器、QR code 產生器與讀取、網址檢查、密語與密碼產生器，可以下載與系統分享，一次處理多個檔案，也可以離線使用。部署到 `anoni.net/gears/` 是下一步。
+產品規劃記錄在社群的工作區，還沒有公開。目前完成第一階段：桌面、檔案暫存區，以及清除中繼資料（JPEG、PNG、HEIC、AVIF、WebP、GIF、TIFF、SVG、BMP、PNM、JPEG XL，Word、Excel、PowerPoint、LibreOffice 文件與 PDF，MP3、M4A、MP4、MOV、WAV、AVI、FLAC、Ogg、Opus、MKV、WebM，ZIP、TAR、gzip、EPUB、種子檔、HTML）、遮蔽（圖片與 PDF，可以自動找人臉與個資）、選擇 PDF 的頁面、查證收到的檔案、看懂這封信、逐字稿、加密與解密（檔案與一段文字）、age 金鑰產生器、QR code 產生器與讀取、網址檢查、密語與密碼產生器，可以下載與系統分享，一次處理多個檔案，也可以離線使用。部署到 `anoni.net/gears/` 是下一步。
 
 ## 第三方資料
 

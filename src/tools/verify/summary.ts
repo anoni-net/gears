@@ -27,12 +27,18 @@ export type WarningCode =
   | "gps-time-mismatch"
   | "editing-software"
   | "signed-then-modified"
-  | "pdf-revisions";
+  | "pdf-revisions"
+  | "email-auth-failed"
+  | "email-reply-to"
+  | "email-display-name"
+  | "email-date-skew"
+  | "email-attachment";
 
 export interface Warning {
   code: WarningCode;
   files: number[];
   value?: string;
+  other?: string;
   times?: [TimeValue, TimeValue]; // 互相矛盾的兩個時間，畫面上依語系寫出
 }
 
@@ -117,6 +123,15 @@ function fileWarnings(f: CaseFile): Warning[] {
   if (editor) out.push({ code: "editing-software", files: [f.index], value: editor });
   if (ev.signatures.length && !ev.signatures.some((s) => s.coversWhole)) out.push({ code: "signed-then-modified", files: [f.index] });
   if (ev.revisions.length) out.push({ code: "pdf-revisions", files: [f.index], value: String(ev.revisions.length + 1) });
+  if (ev.email) {
+    if (ev.email.verdict === "fail") out.push({ code: "email-auth-failed", files: [f.index], value: ev.email.domain });
+    for (const n of ev.email.notes) {
+      if (n.code === "reply-to") out.push({ code: "email-reply-to", files: [f.index], value: n.value, other: n.other });
+      else if (n.code === "display-name") out.push({ code: "email-display-name", files: [f.index], value: n.value, other: n.other });
+      else if (n.code === "date-skew") out.push({ code: "email-date-skew", files: [f.index], times: n.times });
+      else if (n.code === "dangerous-attachment") out.push({ code: "email-attachment", files: [f.index], value: n.value });
+    }
+  }
   return out;
 }
 
@@ -125,7 +140,7 @@ export function summarize(files: CaseFile[]): Summary {
   for (const g of group(files, (f) => (f.hash ? [f.hash] : []))) if (g.files.length > 1) warnings.push({ code: "duplicate", files: g.files });
   for (const f of files) warnings.push(...fileWarnings(f));
 
-  const roles: PersonRole[] = ["author", "last-modified-by", "owner", "company", "printed-by"];
+  const roles: PersonRole[] = ["author", "last-modified-by", "owner", "company", "printed-by", "sender", "reply-to", "recipient"];
   return {
     timeline: files.flatMap((f) => f.evidence.times.map((t) => ({ ...t, file: f.index }))).sort((a, b) => a.sort - b.sort || a.file - b.file),
     devices: group(files, (f) => f.evidence.devices),

@@ -64,3 +64,23 @@ export function anyTime(text: string | undefined): TimeValue | undefined {
   if (!text) return undefined;
   return isoTime(text) ?? exifTime(text) ?? (/^D:/.test(text.trim()) ? pdfTime(text) : undefined);
 }
+
+// 電子郵件的 Date 與 Received：Thu, 16 Oct 2026 10:02:46 +0800，時區也可能寫成 GMT、UT、PST 這類縮寫。
+// CST 在 RFC 822 是美國中部時間，台灣與中國的伺服器卻常用來表示 +08:00，有歧義，當成沒有時區
+const MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+const ZONE_NAMES: Record<string, string> = {
+  UT: "+00:00", UTC: "+00:00", GMT: "+00:00", Z: "+00:00",
+  EST: "-05:00", EDT: "-04:00", CDT: "-05:00", MST: "-07:00", MDT: "-06:00", PST: "-08:00", PDT: "-07:00",
+};
+
+export function emailTime(text: string | undefined): TimeValue | undefined {
+  const m = text && /(\d{1,2})\s+([A-Za-z]{3})[a-z]*\s+(\d{2,4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*([+-]\d{4}|[A-Za-z]{1,3})?/.exec(text);
+  if (!m) return undefined;
+  const month = MONTHS.indexOf(m[2]!.toLowerCase()) + 1;
+  let year = +m[3]!;
+  if (year < 100) year += year < 50 ? 2000 : 1900;
+  const zone = m[7] ? (/^[+-]\d{4}$/.test(m[7]) ? `${m[7].slice(0, 3)}:${m[7].slice(3)}` : ZONE_NAMES[m[7].toUpperCase()]) : undefined;
+  // -0000 是「時區不明」，當成沒有時區
+  return build(year, month, +m[1]!, +m[4]!, +m[5]!, +(m[6] ?? 0), m[7] === "-0000" ? undefined : zone);
+}
+

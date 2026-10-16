@@ -40,7 +40,7 @@ export const kindText = (e: TimeEntry) => (e.note ? t("verify.kindNote", { kind:
 export const sourceText = (e: TimeEntry) => tDynamic(`verify.source.${e.source}`);
 
 export function typeText(format: Format): string {
-  const kind = format === "pdf" ? "pdf" : isPhoto(format) ? "photo" : VIDEO_FORMATS.includes(format) ? "video" : AUDIO_FORMATS.includes(format) ? "audio" : ["docx", "xlsx", "pptx", "odt", "ods", "odp", "odg"].includes(format) ? "document" : "other";
+  const kind = format === "eml" ? "email" : format === "pdf" ? "pdf" : isPhoto(format) ? "photo" : VIDEO_FORMATS.includes(format) ? "video" : AUDIO_FORMATS.includes(format) ? "audio" : ["docx", "xlsx", "pptx", "odt", "ods", "odp", "odg"].includes(format) ? "document" : "other";
   return tDynamic(`verify.type.${kind}`);
 }
 
@@ -54,7 +54,7 @@ export function typeLine(format: Format): string {
 // 卡片上的兩個重點時間：開始（拍攝、建立或檔案記錄的時間）與最後一次修改
 export function keyTimes(ev: Evidence): { start?: TimeEntry; modified?: TimeEntry } {
   const pick = (kind: TimeEntry["kind"]) => ev.times.find((x) => x.kind === kind);
-  const start = pick("taken") ?? ev.times.find((x) => x.kind === "created" && x.source !== "xmp") ?? pick("created") ?? pick("recorded");
+  const start = pick("taken") ?? ev.times.find((x) => x.kind === "created" && x.source !== "xmp") ?? pick("created") ?? pick("sent") ?? pick("recorded");
   const modified = ev.times.filter((x) => x.kind === "modified").at(-1);
   return { start, modified: modified && start && modified.text === start.text && modified.offset === start.offset ? undefined : modified };
 }
@@ -66,7 +66,7 @@ export function warningTitle(w: Warning): string {
 }
 
 export function warningDetail(w: Warning, files: CaseFile[]): string {
-  const [value, other] = w.times ? w.times.map(timeText) : [w.value ?? "", ""];
+  const [value, other] = w.times ? w.times.map(timeText) : [w.value ?? "", w.other ?? ""];
   return tDynamic(`verify.warn.${w.code}.detail`, { files: names(files, w.files), value: value!, other: other! });
 }
 
@@ -133,6 +133,9 @@ export function buildReport(files: CaseEntry[], summary: Summary, now: number, c
     if (ev.software.length) lines.push(`- ${t("verify.software")}：${list(ev.software)}`);
     if (ev.people.length) lines.push(`- ${t("verify.fact.people")}：${peopleText(ev)}`);
     for (const l of ev.locations) lines.push(`- ${t("verify.fact.location")}：${l.lat.toFixed(5)}, ${l.lon.toFixed(5)}`);
+    if (ev.email?.subject) lines.push(`- ${t("verify.fact.subject")}：${ev.email.subject}`);
+    if (ev.email) lines.push(`- ${tDynamic(`email.verdict.${ev.email.verdict}.title`)}`);
+    if (ev.email?.attachments.length) lines.push(`- ${t("verify.email.attachments", { n: ev.email.attachments.length })}${list(ev.email.attachments.map((a) => a.name))}`);
     if (ev.thumbnail) lines.push(`- ${t("verify.thumbNote")}`);
     if (ev.revisions.length) lines.push(`- ${t("verify.revisions", { n: ev.revisions.length + 1 })}`);
     for (const line of traceLines(ev)) lines.push(`- ${line}`);

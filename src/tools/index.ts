@@ -35,6 +35,7 @@ export const createTools: CreateTool[] = [
   { id: "age-keygen", output: "text" },
   { id: "text-crypt", output: "text" },
   { id: "verify", output: "file" },
+  { id: "email-check", output: "text" },
 ];
 
 export const toolIds = [...fileTools, ...editorTools, ...createTools].map((t) => t.id);
