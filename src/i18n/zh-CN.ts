@@ -115,7 +115,7 @@ export const zhCN: Record<MessageKey, string> = {
   "tool.decrypt.action": "开始解密",
   "tool.decrypt.again": "再解密一次",
   "tool.transcribe": "逐字稿",
-  "tool.transcribe.desc": "把录音或视频的声音转成带时间的逐字稿，以华语为主。",
+  "tool.transcribe.desc": "把录音或视频的声音转成带时间的逐字稿，支持华语、台语、粤语与多种亚洲语言。",
   "tool.transcribe.action": "转成逐字稿",
   "tool.transcribe.again": "再转一次",
   "meta.transcribe.title": "录音转逐字稿 | Gears 文件工作台",

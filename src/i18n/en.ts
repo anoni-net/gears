@@ -114,7 +114,7 @@ export const en: Record<MessageKey, string> = {
   "tool.decrypt.action": "Decrypt",
   "tool.decrypt.again": "Decrypt again",
   "tool.transcribe": "Transcript",
-  "tool.transcribe.desc": "Turn the audio of a recording or video into a timestamped transcript, mainly for Mandarin.",
+  "tool.transcribe.desc": "Turn the audio of a recording or video into a timestamped transcript, for Mandarin, Taiwanese Hokkien, Cantonese and many other Asian languages.",
   "tool.transcribe.action": "Transcribe",
   "tool.transcribe.again": "Transcribe again",
   "meta.transcribe.title": "Transcribe recordings | Gears",
