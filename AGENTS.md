@@ -226,10 +226,16 @@ PDF 的版本紀錄：每一個 `%%EOF` 是一次存檔的結尾，切到那裡�
 
 ## 部署
 
-- 部署前執行 `node scripts/fetch-165.mjs` 與 `node scripts/fetch-whisper.mjs`（Whisper small、base、分辨說話者的 CAM++ 與 sherpa-onnx 的 WebAssembly），再建置
-- 伺服器要送 `Cross-Origin-Opener-Policy: same-origin` 與 `Cross-Origin-Embedder-Policy: require-corp`（逐字稿的多執行緒），以及 `vite.config.ts` 的 `HEADER_CSP`（`npx vite preview` 送出的就是它，Web Worker 吃標頭的 CSP，不吃頁面的 meta 標籤）。換大模型的版本時 CSP 裡的 commit 跟著變，nginx 的設定要一起改。service worker 預先存的檔案連當時的標頭一起存，所以先改 nginx 再部署新版本，順序反過來的話，讀者的 Worker 會一直帶著舊的 CSP，直到下一次換版本
-- `.wasm` 要用 `application/wasm` 送出並開壓縮，onnxruntime 的 WebAssembly 壓縮後約小四分之三
-- `sw.js` 不快取（見上方「離線使用」）
+網址是 `https://anoni.net/gears/`，做法跟新聞導讀一樣：GitHub Actions 建置、推到 `build` 分支，m6 每 5 分鐘拉一次。
+
+- `.github/workflows/deploy.yml`：main 的 CI 通過之後執行（`workflow_run`），每週一另外重建一次更新 165 清單，也可以手動觸發。產物沒變時不推
+- `build` 分支的 `site/` 是網站，`deploy/models.txt` 是逐字稿的模型清單（`node scripts/fetch-whisper.mjs --manifest`），`deploy/nginx-headers.conf` 是 nginx 送的標頭（`vite.config.ts` 的 `nginxHeaders`，跟預覽伺服器送的同一組 CSP 與 cross-origin isolation）
+- Whisper small、base 與 CAM++ 不進 `build` 分支（單一檔案超過 GitHub 的 100 MB）。m6 照清單下載到 `/srv/anoni-net-gears/models/`，比對 SHA-256，nginx 的 `/gears/models/whisper/`、`/gears/models/speaker/` 讀那裡。路徑帶著模型的版本，換版本時舊的目錄不會自動刪除
+- `assets/` 的檔名帶雜湊，上一版的檔案多留一輪：Cloudflare 邊緣快取的舊頁面最多 5 分鐘，那段時間裡還會要舊的檔案
+- m6：`/srv/anoni-net-gears/build` 是 `build` 分支的 clone，ubuntu 的 crontab `*/5 * * * * /home/ubuntu/gears-pull.sh`（原始檔 `tools/m6-pull.sh`，改了要再複製一次），log 在 `/home/ubuntu/gears-pull.log`。新版本上線前先把模型下載齊、把標頭換上（`/etc/nginx/snippets/gears-headers.conf`，`nginx -t` 通過才 reload），service worker 預先存的檔案連當時的標頭一起存，順序反過來的話，讀者的 Worker 會一直帶著舊的 CSP
+- nginx 的 location 與快取標頭的範本在 `tools/nginx-gears.conf`，實際設定在 m6 的 `/etc/nginx/conf.d/anoninet.conf`，改了要手動同步。全部帶 `no-transform`，Cloudflare 不在頁面注入 Web Analytics 與 JS Detections 的 script，也不改動檔案，壓縮由 nginx 做（`.wasm` 用 `application/wasm` 送出，onnxruntime 的 WebAssembly 壓縮後約小四分之三）。pdf.js 的 `.mjs` 另外指定 JavaScript 的 MIME
+- Cloudflare：Cache Rule「gears short ttl」讓頁面、`sw.js`、manifest 與 165 清單在邊緣只留 5 分鐘、瀏覽器照 nginx 的 `no-cache`。Transform Rule `onion-anoni.net` 排除 `/gears`，onion 版還沒有規劃（Tor Browser 不在支援範圍），不送 `Onion-Location`
+- 自己建置時（例如本機預覽）先執行 `node scripts/fetch-165.mjs` 與 `node scripts/fetch-whisper.mjs`
 
 ## 165 反詐騙清單
 
@@ -391,7 +397,7 @@ iPhone 預設拍出來的是 HEIC，在網頁上選照片時交出來的也是�
 
 ## 規劃
 
-產品規劃記錄在社群的工作區，還沒有公開。目前完成第一階段：桌面、檔案暫存區，以及清除中繼資料（JPEG、PNG、HEIC、AVIF、WebP、GIF、TIFF、SVG、BMP、PNM、JPEG XL，Word、Excel、PowerPoint、LibreOffice 文件與 PDF，MP3、M4A、MP4、MOV、WAV、AVI、FLAC、Ogg、Opus、MKV、WebM，ZIP、TAR、gzip、EPUB、種子檔、HTML）、遮蔽（圖片與 PDF，可以自動找人臉與個資）、選擇 PDF 的頁面、查證收到的檔案、看懂這封信、逐字稿、加密與解密（檔案與一段文字）、age 金鑰產生器、QR code 產生器與讀取、網址檢查、密語與密碼產生器，可以下載與系統分享，一次處理多個檔案，也可以離線使用。部署到 `anoni.net/gears/` 是下一步。
+產品規劃記錄在社群的工作區，還沒有公開。目前完成第一階段：桌面、檔案暫存區，以及清除中繼資料（JPEG、PNG、HEIC、AVIF、WebP、GIF、TIFF、SVG、BMP、PNM、JPEG XL，Word、Excel、PowerPoint、LibreOffice 文件與 PDF，MP3、M4A、MP4、MOV、WAV、AVI、FLAC、Ogg、Opus、MKV、WebM，ZIP、TAR、gzip、EPUB、種子檔、HTML）、遮蔽（圖片與 PDF，可以自動找人臉與個資）、選擇 PDF 的頁面、查證收到的檔案、看懂這封信、逐字稿、加密與解密（檔案與一段文字）、age 金鑰產生器、QR code 產生器與讀取、網址檢查、密語與密碼產生器，可以下載與系統分享，一次處理多個檔案，也可以離線使用。2026-10 起部署在 `anoni.net/gears/`（見上方「部署」）。
 
 ## 第三方資料
 

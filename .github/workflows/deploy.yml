@@ -1,0 +1,101 @@
+name: deploy
+
+# main 的 CI 通過之後建置，推到 build 分支，m6 每 5 分鐘拉一次（tools/m6-pull.sh）。
+# build 分支保留歷史，出問題時可以退回上一個 commit。
+#
+# - site/：網站本身，nginx 的 /gears/ 讀這裡
+# - deploy/models.txt：逐字稿的模型清單。Whisper small 的單一檔案超過 GitHub 的 100 MB，
+#   模型不進 build 分支，由 m6 照清單下載
+# - deploy/nginx-headers.conf：nginx 送的 CSP 與其他標頭，m6 比對有變才換上
+#
+# 每週重建一次，更新 165 反詐騙清單（每月更新）。清單只有下載日期不同時沿用上一份，
+# 不必讓讀者為此換一次版本。下載失敗時也沿用上一份。
+# 產物沒變時不推，m6 那一側也就沒有東西要拉。
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  schedule:
+    - cron: "17 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      # sherpa-onnx 的 WebAssembly（約 14 MB）跟著網站部署，依清單快取
+      - uses: actions/cache@v6.1.0
+        with:
+          path: public/vendor/sherpa
+          key: sherpa-${{ hashFiles('src/tools/transcribe/sherpa-runtime.json') }}
+      - run: node scripts/fetch-whisper.mjs sherpa
+
+      - name: 165 反詐騙清單
+        run: |
+          git fetch -q --depth=1 origin build:build 2>/dev/null || true
+          prev=$(mktemp)
+          git show build:site/data/165.txt >"$prev" 2>/dev/null || : >"$prev"
+          strip() { sed 's/ fetched=[0-9-]*//' "$1"; }
+          if node scripts/fetch-165.mjs; then
+            if [ -s "$prev" ] && [ "$(strip public/data/165.txt)" = "$(strip "$prev")" ]; then
+              cp "$prev" public/data/165.txt
+            fi
+          elif [ -s "$prev" ]; then
+            echo "::warning::165 清單下載失敗，沿用上一份"
+            cp "$prev" public/data/165.txt
+          else
+            echo "::warning::165 清單下載失敗，這一版沒有清單"
+          fi
+
+      - run: npm run build
+      - run: node scripts/fetch-whisper.mjs --manifest deploy/models.txt
+
+      # assets/ 的檔名帶雜湊。上一版的檔案多留一輪：Cloudflare 邊緣快取的舊頁面最多 5 分鐘，
+      # 那段時間裡還會要舊的檔案，刪掉的話讀者會拿到 404
+      - name: 推到 build 分支
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git rev-parse -q --verify build >/dev/null; then
+            git worktree add ../out build
+          else
+            git worktree add --orphan -b build ../out
+          fi
+          mkdir -p ../out/site/assets ../out/deploy
+          keep=$(mktemp)
+          { ls dist/assets; cat ../out/deploy/assets.txt 2>/dev/null || true; } | sort -u >"$keep"
+          rsync -a --delete --exclude assets/ dist/ ../out/site/
+          rsync -a dist/assets/ ../out/site/assets/
+          for f in ../out/site/assets/*; do
+            grep -qxF "$(basename "$f")" "$keep" || rm "$f"
+          done
+          ls dist/assets >../out/deploy/assets.txt
+          cp deploy/models.txt deploy/nginx-headers.conf ../out/deploy/
+          cd ../out
+          git add -A
+          if git diff --cached --quiet; then
+            echo "產物沒有變動"
+            exit 0
+          fi
+          git commit -q -m "build: ${{ github.event.workflow_run.head_sha || github.sha }} (${{ github.event_name }})"
+          git push origin build

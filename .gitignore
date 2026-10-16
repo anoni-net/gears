@@ -7,3 +7,4 @@ tests/.generated/
 public/vendor/
 public/models/whisper/
 public/models/speaker/
+deploy/
