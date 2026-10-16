@@ -120,7 +120,7 @@ export const zhTW = {
   "tool.decrypt.action": "開始解密",
   "tool.decrypt.again": "再解密一次",
   "tool.transcribe": "逐字稿",
-  "tool.transcribe.desc": "把錄音或影片的聲音轉成帶時間的逐字稿，以華語為主。",
+  "tool.transcribe.desc": "把錄音或影片的聲音轉成帶時間的逐字稿，支援華語、台語、粵語與多種亞洲語言。",
   "tool.transcribe.action": "轉成逐字稿",
   "tool.transcribe.again": "再轉一次",
   "meta.transcribe.title": "錄音轉逐字稿 | Gears 檔案工作台",
