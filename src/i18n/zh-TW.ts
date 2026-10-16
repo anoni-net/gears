@@ -154,6 +154,7 @@ export const zhTW = {
   "transcribe.threads": "同時使用的 CPU 核心",
   "transcribe.threads.note": "核心越多轉得越快，但轉檔時電腦會比較忙，風扇可能變大聲。想一邊做其他事時可以選少一點。選超過電腦實際的核心數不會更快，反而可能變慢。",
   "transcribe.threads.single": "這個網站目前只能用 1 個核心。",
+  "transcribe.threads.firefox": "Firefox 用多個核心時，偶爾會停在「下載模型中」不動，所以預設用 1 個核心，速度比較慢。想快一點可以選多一些，停住時重新整理頁面，改回 1 個核心再試。",
   "transcribe.start": "開始轉逐字稿",
   "transcribe.stop": "停止",
   "transcribe.decoding": "讀取錄音中…",

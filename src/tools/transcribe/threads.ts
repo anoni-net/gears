@@ -8,6 +8,8 @@
 // - 會回報真實數字的瀏覽器（Chrome、Edge、一般設定的 Firefox），用不超過回報數字的最大選項
 // - 數字不可信的（Brave、Safari、回報 2 以下），用 8，現在的電腦大多有 8 個以上
 // - iPhone、iPad 用 4，手機的記憶體與散熱比較吃緊
+// - Firefox 用 1：多個核心時推論環境偶爾建不起來、也不報錯，畫面停在「下載模型中」（2 個核心
+//   也會），1 個核心從沒停過。原因還沒找到，讀者可以自己選更多核心
 
 export const THREAD_OPTIONS = [1, 2, 4, 8, 12, 16];
 
@@ -16,9 +18,11 @@ export interface ThreadHints {
   brave: boolean;
   safari: boolean;
   mobileApple: boolean; // iPhone、iPad
+  firefox: boolean;
 }
 
-export function defaultThreads({ reported, brave, safari, mobileApple }: ThreadHints): number {
+export function defaultThreads({ reported, brave, safari, mobileApple, firefox }: ThreadHints): number {
+  if (firefox) return 1;
   if (mobileApple) return 4;
   if (reported >= 12) return 12;
   const cores = brave || safari || reported <= 2 ? 8 : reported;

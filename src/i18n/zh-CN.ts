@@ -149,6 +149,7 @@ export const zhCN: Record<MessageKey, string> = {
   "transcribe.threads": "同时使用的 CPU 核心",
   "transcribe.threads.note": "核心越多转得越快，但转换时电脑会比较忙，风扇可能变大声。想一边做其他事时可以选少一点。选超过电脑实际的核心数不会更快，反而可能变慢。",
   "transcribe.threads.single": "这个网站目前只能用 1 个核心。",
+  "transcribe.threads.firefox": "Firefox 用多个核心时，偶尔会停在「下载模型中」不动，所以默认用 1 个核心，速度比较慢。想快一点可以选多一些，卡住时刷新页面，改回 1 个核心再试。",
   "transcribe.start": "开始转逐字稿",
   "transcribe.stop": "停止",
   "transcribe.decoding": "读取录音中…",

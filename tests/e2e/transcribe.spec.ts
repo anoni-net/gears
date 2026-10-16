@@ -19,7 +19,7 @@ async function open(page: Page, name: string, data: Uint8Array) {
   await expect(page.getByRole("button", { name: "開始轉逐字稿" })).toBeVisible();
 }
 
-test("選了錄音之後列出模型與下載大小，可以選核心數", async ({ page }) => {
+test("選了錄音之後列出模型與下載大小，可以選核心數", async ({ page, browserName }) => {
   await open(page, "talk.wav", wav(2));
   await expect(page.getByLabel(/^small：準確度較好/)).toBeChecked();
   await expect(page.getByText(`下載約 ${Math.round(models.small.bytes / 1e6)} MB`)).toBeVisible();
@@ -33,6 +33,11 @@ test("選了錄音之後列出模型與下載大小，可以選核心數", async
   expect(await page.evaluate(() => crossOriginIsolated)).toBe(true);
   // 預設值依瀏覽器回報的核心數決定（src/tools/transcribe/threads.ts），測試的機器上至少勾了一個
   await expect(page.locator('input[name="transcribe-threads"]:checked')).toHaveCount(1);
+  // Firefox 用多個核心偶爾會停住，預設 1 個並說明（src/tools/transcribe/threads.ts）
+  if (browserName === "firefox") {
+    await expect(page.getByLabel("1", { exact: true })).toBeChecked();
+    await expect(page.getByText(/^Firefox 用多個核心時/)).toBeVisible();
+  } else await expect(page.getByText(/^Firefox 用多個核心時/)).toHaveCount(0);
   await page.getByLabel("2", { exact: true }).check();
   await expect(page.getByLabel("2", { exact: true })).toBeChecked();
 });

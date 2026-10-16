@@ -40,8 +40,10 @@ const modelBytes = (id: ModelId, device: Device) => (device === "webgpu" ? MODEL
 // 多執行緒要頁面在 cross-origin isolation 底下，沒有時只能用 1 個
 const THREADS = THREAD_OPTIONS;
 const ISOLATED = typeof crossOriginIsolated !== "undefined" && crossOriginIsolated;
+const FIREFOX = /Firefox\//.test(navigator.userAgent);
 const DEFAULT_THREADS = ISOLATED
   ? defaultThreads({
+      firefox: FIREFOX,
       reported: navigator.hardwareConcurrency || 0,
       brave: "brave" in navigator,
       // Safari 的 UA 有 Safari 沒有 Chrome；iPad 的 Safari 偽裝成 Mac，用觸控點數分辨
@@ -338,6 +340,7 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
         ))}
       </fieldset>
       <p class="hint">{ISOLATED ? t("transcribe.threads.note") : t("transcribe.threads.single")}</p>
+      {ISOLATED && FIREFOX ? <p class="hint">{t("transcribe.threads.firefox")}</p> : null}
 
       <div class="buttons">
         {busy ? (
