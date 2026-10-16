@@ -48,8 +48,9 @@ test("桌面有暫存區、任務捷徑與兩組工具，沒有檔案時不顯�
   await expect(page.getByRole("heading", { name: "暫存區" })).toBeVisible();
   await expect(page.getByRole("button", { name: /分享照片與影片前，拿掉拍攝位置/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /把 Wi-Fi 密碼傳給朋友/ })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "處理檔案" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "從空白開始" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "交出去之前" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "安全地傳送" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "檢查收到的" })).toBeVisible();
   await expect(page.getByRole("button", { name: "清空暫存區" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "回到桌面" })).toHaveCount(0);
 });

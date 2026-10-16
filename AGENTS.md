@@ -66,8 +66,9 @@ npm run test:unit    # 只執行單元測試，不需要瀏覽器
 
 1. 純邏輯放 `src/tools/<工具>/`，在 `src/tools/index.ts` 加進其中一份清單
 2. 編輯畫面或從空白開始的元件登記在 `src/ui/registry.tsx`
-3. 在三個語系檔加上 `tool.<id>`、`tool.<id>.desc`、`meta.<id>.title` 與 `meta.<id>.description`，會在暫存區留下版本的工具另外加 `file.version.<id>`，用到新的 `FindingCode` 或 `SegmentCode` 時也要加，`tests/unit/i18n.spec.ts` 會檢查
-4. 單元測試放 `tests/unit/`，流程測試放 `tests/e2e/`
+3. 在 `src/ui/tool-meta.ts` 的 `TOOL_GROUPS` 放進桌面的其中一組。桌面依讀者的目的分成「交出去之前」、「安全地傳送」、「檢查收到的」三組（2026-10-16 起，原本依操作方式分成處理檔案與從空白開始），`tests/unit/tool-meta.spec.ts` 會檢查每個工具剛好在一組
+4. 在三個語系檔加上 `tool.<id>`、`tool.<id>.desc`、`meta.<id>.title` 與 `meta.<id>.description`，會在暫存區留下版本的工具另外加 `file.version.<id>`，用到新的 `FindingCode` 或 `SegmentCode` 時也要加，`tests/unit/i18n.spec.ts` 會檢查
+5. 單元測試放 `tests/unit/`，流程測試放 `tests/e2e/`
 
 暫存區有兩個以上的檔案時，下方可以一次清除全部的中繼資料（`tray.applyAll`，逐一處理，一個失敗不影響其他的），也可以把每個檔案的最新版本下載成一個壓縮檔（`src/ui/BatchActions.tsx`）。壓縮檔裡的檔名跟單檔下載一樣用 `gears-第幾個`（`src/ui/output-name.ts`），在記憶體裡組成，超過 512 MB 的部分請讀者個別下載。
 

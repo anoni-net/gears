@@ -48,8 +48,12 @@ export const zhTW = {
   "meta.passphrase.description": "產生好記又夠強的 Diceware 密語，或隨機密碼，用瀏覽器的密碼學亂數，不會送出也不會存起來。",
 
   "desk.tools": "工具",
-  "desk.group.file": "處理檔案",
-  "desk.group.create": "從空白開始",
+  "desk.group.handover": "交出去之前",
+  "desk.group.handover.desc": "拿掉檔案裡會透露身分的資訊，或只交出需要的部分。",
+  "desk.group.send": "安全地傳送",
+  "desk.group.send.desc": "加密之後再傳送，只有對方打得開。",
+  "desk.group.check": "檢查收到的",
+  "desk.group.check.desc": "收到檔案、信件或連結時，先看看它是不是真的。",
   "desk.tasks": "想做什麼",
   "desk.dragging": "放開就會加入暫存區",
 
