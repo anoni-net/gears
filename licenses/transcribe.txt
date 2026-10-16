@@ -30,6 +30,17 @@ SHA-256 寫在 src/tools/transcribe/speaker-model.json）
   3D-Speaker：https://github.com/modelscope/3D-Speaker（Apache-2.0）
   ONNX 檔：https://github.com/k2-fsa/sherpa-onnx/releases/tag/speaker-recongition-models（sherpa-onnx 本身 Apache-2.0）
 
+緬甸語、高棉語、寮語、孟加拉語、尼泊爾語、蒙古語的模型（從 https://assets.anoni.net/gears/models/ 載入）
+- Meta Omnilingual ASR CTC 300M（Apache-2.0，Copyright Meta Platforms, Inc. and affiliates）的 sherpa-onnx 轉檔版
+  原始模型：https://huggingface.co/facebook/omniASR-CTC-300M
+  轉檔版：https://huggingface.co/csukuangfj/sherpa-onnx-omnilingual-asr-1600-languages-300M-ctc-int8-2025-11-12
+  （commit 6abf1ece20cd2308bdb7d13cd78ec1c44fa4c094，檔案沒有修改）
+- sherpa-onnx 1.13.8（Apache-2.0，https://github.com/k2-fsa/sherpa-onnx），社群自己建置的 WebAssembly 版，
+  建置方式與 patch 見 https://assets.anoni.net/gears/vendor/sherpa-onnx-1.13.8-es6/README.txt。
+  WebAssembly 裡編譯進去的第三方元件：onnxruntime（MIT）、Eigen（MPL-2.0，原始碼
+  https://gitlab.com/libeigen/eigen）、nlohmann/json（MIT）、kaldi-native-fbank、kaldi-decoder、kaldifst、
+  OpenFst、simple-sentencepiece（Apache-2.0）、KISS FFT（BSD-3-Clause）
+
 執行
 - @huggingface/transformers 4.3.1（Apache-2.0，Copyright Hugging Face）
   原始碼：https://github.com/huggingface/transformers.js

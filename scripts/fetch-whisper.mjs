@@ -4,6 +4,7 @@
 //   node scripts/fetch-whisper.mjs          下載 small、base 與分辨說話者的 CAM++
 //   node scripts/fetch-whisper.mjs base     只下載 base（瀏覽器測試用）
 //   node scripts/fetch-whisper.mjs speaker  只下載 CAM++
+//   node scripts/fetch-whisper.mjs sherpa   只下載 sherpa-onnx 的 WebAssembly（Omnilingual 用）
 //   --no-webgpu                             不下載 WebGPU 用的 4 位元版（瀏覽器測試用，CI 沒有 GPU）
 //   node scripts/fetch-whisper.mjs --hash turbo
 //                                           只印出每個檔案的 SHA-256，不存檔（更新 models.json 用）
@@ -25,6 +26,9 @@ const noWebgpu = process.argv.includes("--no-webgpu");
 const wanted = process.argv.slice(2).filter((arg) => !arg.startsWith("--"));
 const sha256 = (data) => createHash("sha256").update(data).digest("hex");
 const speaker = JSON.parse(readFileSync(join(root, "src/tools/transcribe/speaker-model.json"), "utf8"));
+// sherpa-onnx 的 WebAssembly 是社群自己建置的 ES module 版，放在 assets.anoni.net，建置方式寫在那個目錄的
+// README.txt。下載到 public/vendor/sherpa/，網頁從自己的網域載入
+const sherpa = JSON.parse(readFileSync(join(root, "src/tools/transcribe/sherpa-runtime.json"), "utf8"));
 
 async function download(url, hash, target, label) {
   if (!hashOnly && existsSync(target) && sha256(readFileSync(target)) === hash) return;
@@ -44,6 +48,12 @@ async function download(url, hash, target, label) {
   mkdirSync(dirname(target), { recursive: true });
   writeFileSync(target, data);
   console.log(`${label}（${(data.length / 1e6).toFixed(1)} MB）`);
+}
+
+if (!wanted.length || wanted.includes("sherpa")) {
+  for (const [file, hash] of Object.entries(sherpa.files)) {
+    await download(`https://assets.anoni.net/gears/vendor/${sherpa.dir}/${file}`, hash, join(root, "public/vendor/sherpa", file), `sherpa ${file}`);
+  }
 }
 
 if (!wanted.length || wanted.includes("speaker")) {

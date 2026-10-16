@@ -1,0 +1,10 @@
+{
+  "version": "1.13.8",
+  "dir": "sherpa-onnx-1.13.8-es6",
+  "files": {
+    "sherpa-onnx-wasm-web.js": "474c04ab7cf4db0695a89b978f30ba824b9d6a5522d1abfaa503ac6aae62882b",
+    "sherpa-onnx-wasm-web.wasm": "be46d4ca547f43460cb084430569df09614840091d0023744d24cb3edec18476",
+    "sherpa-onnx-asr.mjs": "4f3720eafd6e25ee0f9602dae1981c08bd08747f91a047f37570316f49f5f8e8"
+  },
+  "bytes": 13883245
+}

@@ -11,6 +11,7 @@ import { expect, test } from "./guard.ts";
 // 模型很大，不進 repo，要先執行 node scripts/fetch-whisper.mjs base（CI 會先下載 base）
 const BASE_MODEL = join(import.meta.dirname, "../../public/models/whisper", models.base.dir, "onnx/decoder_model_merged_quantized.onnx");
 const hasModel = existsSync(BASE_MODEL);
+const hasSherpa = existsSync(join(import.meta.dirname, "../../public/vendor/sherpa/sherpa-onnx-wasm-web.wasm"));
 const hasSpeakerModel = existsSync(join(import.meta.dirname, "../../public/models/speaker", speakerModel.dir, speakerModel.file));
 
 async function open(page: Page, name: string, data: Uint8Array) {
@@ -105,6 +106,29 @@ test("社群轉檔的模型從 assets.anoni.net 下載，SHA-256 對不上就不
     return (await cache.keys()).filter((r) => r.url.includes(dir)).length;
   }, models.thai.dir);
   expect(stored).toBe(0);
+  guard.requests = guard.requests.filter((url) => !url.startsWith("https://assets.anoni.net/"));
+});
+
+test("緬甸語用 sherpa-onnx 的 Omnilingual：只能用 1 個核心，模型從 assets.anoni.net 下載", async ({ page, guard }) => {
+  test.skip(!hasSherpa, "沒有下載 sherpa-onnx 的 WebAssembly");
+  test.setTimeout(120_000);
+  const served: string[] = [];
+  await page.context().route("https://assets.anoni.net/**", (route) => {
+    served.push(route.request().url());
+    return route.fulfill({ status: 200, body: "{}", headers: { "access-control-allow-origin": "*" } });
+  });
+  await open(page, "talk.wav", wav(2));
+  await page.getByLabel("緬甸語", { exact: true }).check();
+  await expect(page.getByLabel(/^Omnilingual/)).toBeChecked();
+  await expect(page.getByRole("group", { name: "模型" }).getByRole("radio")).toHaveCount(1);
+  // 沒有核心數、顯示卡與分辨說話者的選項，改成說明
+  await expect(page.getByTestId("transcribe-sherpa")).toBeVisible();
+  await expect(page.getByRole("group", { name: "同時使用的 CPU 核心" })).toHaveCount(0);
+  await expect(page.getByLabel(/^分辨說話者/)).toHaveCount(0);
+  await page.getByRole("button", { name: "開始轉逐字稿" }).click();
+  // sherpa-onnx 的 WebAssembly 從自己的網域載入，模型的內容不對就停下來
+  await expect(page.getByTestId("transcribe-status")).toHaveText(/^下載模型失敗/, { timeout: 90_000 });
+  expect(served[0]).toBe(`https://assets.anoni.net/gears/models/${models.omni.dir}/tokens.txt`);
   guard.requests = guard.requests.filter((url) => !url.startsWith("https://assets.anoni.net/"));
 });
 
