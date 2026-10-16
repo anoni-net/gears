@@ -2,6 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
 import { wav } from "../helpers/audio.ts";
 import { syntheticDocx, syntheticPdf } from "../helpers/documents.ts";
+import { PHISH_EML } from "../helpers/emails.ts";
 import { incrementalPdf } from "../helpers/pdf-incremental.ts";
 import { expect, test } from "./guard.ts";
 
@@ -13,7 +14,7 @@ async function audit(page: Page) {
   return result.violations.map((v) => `${v.id}: ${v.help} (${v.nodes.map((n) => n.target.join(" ")).slice(0, 3).join(" | ")})`);
 }
 
-for (const path of ["./", "./en/", "./qrcode/", "./url-check/", "./passphrase/", "./age-keygen/", "./text-crypt/", "./qr-read/", "./redact/", "./pdf-pages/", "./strip-metadata/", "./verify/"]) {
+for (const path of ["./", "./en/", "./qrcode/", "./url-check/", "./passphrase/", "./age-keygen/", "./text-crypt/", "./qr-read/", "./redact/", "./pdf-pages/", "./strip-metadata/", "./verify/", "./email-check/"]) {
   test(`${path} 沒有無障礙問題`, async ({ page }) => {
     await page.goto(path);
     await page.waitForLoadState("networkidle");
@@ -78,6 +79,17 @@ test("查證的畫面沒有無障礙問題", async ({ page }) => {
   await page.getByTestId("verify-input").setInputFiles({ name: "c.pdf", mimeType: "application/pdf", buffer: Buffer.from((await incrementalPdf()).bytes) });
   await page.getByRole("button", { name: "跟第 2 版比對" }).click({ timeout: 15000 });
   await expect(page.getByText("第 1 頁：有變動")).toBeVisible({ timeout: 15000 });
+  expect(await audit(page)).toEqual([]);
+});
+
+test("看懂這封信的結果畫面沒有無障礙問題", async ({ page }) => {
+  await page.route("**/gears/data/165.txt", (route) => route.fulfill({ body: "secure-login.example.com\n", contentType: "text/plain" }));
+  await page.goto("./email-check/");
+  await page.getByTestId("email-input").fill(PHISH_EML);
+  await expect(page.getByTestId("email-verdict")).toBeVisible();
+  await expect(page.getByText("在 165 清單上")).toBeVisible();
+  expect(await audit(page)).toEqual([]);
+  await page.emulateMedia({ colorScheme: "dark" });
   expect(await audit(page)).toEqual([]);
 });
 

@@ -13,6 +13,7 @@ const loaders: Record<string, () => Promise<ComponentType<CreateToolProps>>> = {
   "age-keygen": () => import("./KeygenTool.tsx").then((m) => m.KeygenTool),
   "text-crypt": () => import("./TextCryptTool.tsx").then((m) => m.TextCryptTool),
   verify: () => import("./VerifyTool.tsx").then((m) => m.VerifyTool),
+  "email-check": () => import("./EmailTool.tsx").then((m) => m.EmailTool),
 };
 
 export function CreateToolView({ id, ...props }: CreateToolProps & { id: string }) {

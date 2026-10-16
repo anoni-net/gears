@@ -3,6 +3,8 @@ import type { Format } from "../../core/bytes.ts";
 import type { Finding } from "../../core/tool.ts";
 import { decodeUtf8, walkXml } from "../../core/xml.ts";
 import { entryData, readZip } from "../../core/zip.ts";
+import { type Note, type Verdict, assess } from "../email/assess.ts";
+import { parseEmail } from "../email/parse.ts";
 import { extractExif } from "../redact/keep-exif.ts";
 import { parseExif } from "../strip-metadata/exif.ts";
 import { type TimeValue, anyTime, exifTime, gpsTime, isoTime, pdfTime } from "./times.ts";
@@ -10,8 +12,8 @@ import { type TimeValue, anyTime, exifTime, gpsTime, isoTime, pdfTime } from "./
 // 查證：讀出檔案裡可以用來驗證的資訊。跟清除中繼資料讀的是同一批欄位，清除時當成風險，
 // 這裡當成線索，所以保留來源與原本的寫法，不做任何判斷。判斷（矛盾、重複）在 summary.ts。
 
-export type TimeKind = "taken" | "digitized" | "modified" | "gps" | "created" | "printed" | "metadata" | "history" | "recorded";
-export type TimeSource = "exif" | "xmp" | "pdf" | "office" | "odf" | "file";
+export type TimeKind = "taken" | "digitized" | "modified" | "gps" | "created" | "printed" | "metadata" | "history" | "recorded" | "sent" | "received";
+export type TimeSource = "exif" | "xmp" | "pdf" | "office" | "odf" | "email" | "file";
 
 export interface TimeEntry extends TimeValue {
   kind: TimeKind;
@@ -19,7 +21,7 @@ export interface TimeEntry extends TimeValue {
   note?: string; // 編輯紀錄的動作與軟體
 }
 
-export type PersonRole = "author" | "last-modified-by" | "owner" | "company" | "printed-by";
+export type PersonRole = "author" | "last-modified-by" | "owner" | "company" | "printed-by" | "sender" | "reply-to" | "recipient";
 
 export type TraceCode = "xmp-history" | "pdf-revisions" | "office-revision" | "office-editing-time" | "office-template" | "thumbnail";
 
@@ -47,6 +49,16 @@ export interface Evidence {
   revisions: number[]; // PDF：較早版本的結尾位置，不含最後一版
   signatures: Signature[];
   pages?: number; // PDF 的頁數
+  email?: EmailEvidence;
+}
+
+// 信件（.eml）：寄件驗證的結果、主旨與附件。解析與判斷跟「看懂這封信」共用（src/tools/email/）
+export interface EmailEvidence {
+  subject?: string;
+  verdict: Verdict;
+  domain?: string;
+  notes: Note[];
+  attachments: { name: string; type: string; data: Uint8Array }[];
 }
 
 const empty = (): Evidence => ({ times: [], devices: [], serials: [], software: [], people: [], locations: [], traces: [], revisions: [], signatures: [] });
@@ -314,6 +326,21 @@ async function examineOdf(ev: Evidence, bytes: Uint8Array) {
   });
 }
 
+// --- 信件 ---
+
+function examineEmail(ev: Evidence, bytes: Uint8Array) {
+  const msg = parseEmail(bytes);
+  const a = assess(msg);
+  addTime(ev, "sent", "email", msg.date);
+  for (const hop of msg.received) addTime(ev, "received", "email", hop.time, hop.by);
+  const who = (x: { name?: string; address: string }) => (x.name ? `${x.name} <${x.address}>` : x.address);
+  if (msg.from) addPerson(ev, "sender", who(msg.from));
+  for (const r of msg.replyTo) addPerson(ev, "reply-to", who(r));
+  for (const r of msg.to) addPerson(ev, "recipient", who(r));
+  addUnique(ev.software, msg.mailer);
+  ev.email = { subject: msg.subject, verdict: a.verdict, domain: a.domain, notes: a.notes, attachments: msg.attachments };
+}
+
 // --- 其他格式：清除中繼資料的檢查結果 ---
 
 const UTC_FORMATS: Format[] = ["mp4", "mov", "m4a"]; // mvhd 的時間是 UTC
@@ -348,11 +375,12 @@ export async function examine(bytes: Uint8Array, format: Format, findings: Findi
     else if (format === "pdf") await examinePdf(ev, bytes);
     else if (OOXML.includes(format)) await examineOoxml(ev, bytes);
     else if (ODF.includes(format)) await examineOdf(ev, bytes);
+    else if (format === "eml") examineEmail(ev, bytes);
   } catch {
     // 結構有問題的檔案，讀到哪裡算哪裡
   }
-  if (format !== "pdf") for (const packet of xmpPackets(bytes)) readXmp(ev, packet);
-  if (!PHOTO.includes(format) && format !== "pdf" && !OOXML.includes(format) && !ODF.includes(format)) fromFindings(ev, findings, format);
+  if (format !== "pdf" && format !== "eml") for (const packet of xmpPackets(bytes)) readXmp(ev, packet);
+  if (!PHOTO.includes(format) && format !== "pdf" && format !== "eml" && !OOXML.includes(format) && !ODF.includes(format)) fromFindings(ev, findings, format);
   ev.times.sort((a, b) => a.sort - b.sort);
   return ev;
 }

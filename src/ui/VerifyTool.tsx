@@ -7,6 +7,7 @@ import { type MetaChange, metaChanges } from "../tools/verify/diff.ts";
 import { sha256Blob } from "../tools/verify/hash.ts";
 import { type Warning, summarize } from "../tools/verify/summary.ts";
 import { CopyButton } from "./CopyButton.tsx";
+import { verdictDetail, verdictTitle } from "./EmailTool.tsx";
 import type { Comparison } from "./pdf-compare.ts";
 import { useObjectUrl, useTray } from "./hooks.ts";
 import { saveBlob } from "./save.ts";
@@ -246,6 +247,39 @@ function VersionHistory({ file, revisions }: { file: TrayFile; revisions: number
   );
 }
 
+// 信件：寄件驗證的結果、主旨與附件。附件可以加進這一批一起查證
+function EmailBlock({ email }: { email: NonNullable<Evidence["email"]> }) {
+  const [added, setAdded] = useState<Set<number>>(new Set());
+  const add = async (i: number) => {
+    const att = email.attachments[i]!;
+    await tray.add([new File([att.data as Uint8Array<ArrayBuffer>], att.name, { type: att.type })]);
+    setAdded((prev) => new Set(prev).add(i));
+  };
+  return (
+    <div class="verify-block">
+      <div class={`email-verdict ${email.verdict}`}>
+        <strong>{verdictTitle(email)}</strong>
+        <p>{verdictDetail(email)}</p>
+      </div>
+      {email.attachments.length ? (
+        <>
+          <p>{t("verify.email.attachments", { n: email.attachments.length })}</p>
+          <ul class="email-attachments">
+            {email.attachments.map((att, i) => (
+              <li key={i}>
+                <strong>{att.name}</strong> <span class="hint">{formatSize(att.data.length)}</span>{" "}
+                <button type="button" disabled={added.has(i)} onClick={() => void add(i)}>
+                  {t(added.has(i) ? "verify.email.added" : "verify.email.add")}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
 function FileCard(props: { file: TrayFile; entry?: CaseEntry; failed: boolean; warnings: Warning[] }) {
   const { file, entry } = props;
   const original = file.versions[0]!;
@@ -266,6 +300,7 @@ function FileCard(props: { file: TrayFile; entry?: CaseEntry; failed: boolean; w
       {ev ? (
         <>
           <dl class="verify-facts">
+            {ev.email?.subject ? <Fact label={t("verify.fact.subject")}>{ev.email.subject}</Fact> : null}
             {start ? <Fact label={kindText(start)}>{timeText(start)}</Fact> : null}
             {modified ? <Fact label={t("verify.fact.modified")}>{timeText(modified)}</Fact> : null}
             {ev.devices.length ? <Fact label={t("verify.device")}>{list(ev.devices)}</Fact> : null}
@@ -299,6 +334,7 @@ function FileCard(props: { file: TrayFile; entry?: CaseEntry; failed: boolean; w
             </div>
           ) : null}
           {ev.revisions.length ? <VersionHistory file={file} revisions={ev.revisions} /> : null}
+          {ev.email ? <EmailBlock email={ev.email} /> : null}
           <details class="verify-details">
             <summary>{t("verify.details")}</summary>
             <dl class="verify-facts">

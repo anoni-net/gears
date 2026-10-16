@@ -1,6 +1,7 @@
 import { mimetypeKind, ooxmlKind } from "./documents.ts";
 import { type ArchiveFormat, archiveKind } from "./archive.ts";
 import { type MediaFormat, mediaKind } from "./media.ts";
+import { looksLikeEmail } from "./email-sniff.ts";
 import { zipNames } from "./zip.ts";
 
 // 處理位元組的小工具。工具模組只依賴這裡與 tool.ts，不碰 DOM，
@@ -76,6 +77,7 @@ export type Format =
   | "zip"
   | ArchiveFormat
   | "age"
+  | "eml"
   | "unknown";
 
 const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
@@ -104,6 +106,7 @@ export function sniff(bytes: Uint8Array): Format {
   }
   const media = mediaKind(bytes);
   if (media) return media;
+  if (looksLikeEmail(bytes)) return "eml";
   const archive = archiveKind(bytes);
   if (archive) return archive;
   // age 的二進位格式與 ASCII armor 文字格式
@@ -191,6 +194,7 @@ export const MIME: Record<Format, string> = {
   torrent: "application/x-bittorrent",
   html: "text/html",
   age: "application/octet-stream",
+  eml: "message/rfc822",
   unknown: "application/octet-stream",
 };
 
@@ -232,5 +236,6 @@ export const EXTENSION: Record<Format, string> = {
   torrent: "torrent",
   html: "html",
   age: "age",
+  eml: "eml",
   unknown: "bin",
 };

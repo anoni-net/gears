@@ -1789,3 +1789,104 @@ button.link {
   max-height: none;
   height: auto;
 }
+
+/* 看懂這封信：寄件驗證的結果放在最上面，通過、沒有通過、不明確各一種顏色 */
+.email-check .field textarea {
+  width: 100%;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.85rem;
+}
+
+.email-result section {
+  margin-top: 1.25rem;
+}
+
+.email-result h3 {
+  margin: 0 0 0.5rem;
+}
+
+.email-verdict {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  border-left: 4px solid var(--muted);
+  border-radius: 4px;
+  background: var(--fill);
+}
+
+.email-verdict p {
+  margin: 0.3rem 0 0;
+}
+
+.email-verdict.pass {
+  border-left-color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 10%, var(--bg));
+}
+
+.email-verdict.fail {
+  border-left-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 10%, var(--bg));
+}
+
+.email-verdict.unclear {
+  border-left-color: var(--warn);
+  background: var(--warn-bg);
+}
+
+.email-links,
+.email-attachments {
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+}
+
+.email-links li {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  margin-bottom: 0.6rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+.email-links code {
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
+  color: var(--muted);
+}
+
+.email-link-host {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  overflow-wrap: anywhere;
+}
+
+.email-badge {
+  padding: 0 0.4rem;
+  border-radius: 3px;
+  font-size: 0.8rem;
+  color: var(--warn);
+  background: var(--warn-bg);
+}
+
+.email-badge.danger {
+  color: var(--bg);
+  background: var(--danger);
+}
+
+.email-attachments li {
+  margin-bottom: 0.4rem;
+}
+
+.email-headers {
+  max-height: 20rem;
+  overflow: auto;
+  padding: 0.5rem;
+  font-size: 0.8rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: var(--fill);
+}

@@ -15,7 +15,8 @@
 - 把 iPhone 的 HEIC 照片轉成 JPEG
 - 遮蔽截圖與 PDF 上的名字、頭像與電話，可以自動找人臉與電話、Email 這類個資，也可以選擇保留拍攝資訊。PDF 遮蔽後每一頁轉成圖片，框起來的文字不會留在檔案裡
 - 只交出 PDF 的其中幾頁，其他頁連同連到它們的連結、書籤與文件資訊一起拿掉
-- 查證收到的檔案：雜湊值、時間線、裝置、作者與編輯痕跡，比對檔案之間的矛盾，匯出查證紀錄
+- 查證收到的檔案：雜湊值、時間線、裝置、作者與編輯痕跡，比對檔案之間的矛盾，PDF 的舊版本可以比對差異，匯出查證紀錄
+- 看懂這封信：貼上原始郵件，看寄件驗證有沒有通過、實際的寄件網域、回覆地址有沒有被換掉，信裡的連結交給網址檢查
 - 把錄音或影片的聲音轉成帶時間的逐字稿（以華語為主），可以下載 TXT 與 SRT 字幕
 - 用密語或 age 公鑰加密任何檔案或一段文字，以及解密
 - 網址檢查：比對 165 反詐騙的停止解析清單、標出真正的網域、清除追蹤碼
@@ -67,7 +68,8 @@ Gears is under development and not deployed yet. Tools in the first version:
 - Convert iPhone HEIC photos to JPEG
 - Redact names, avatars and phone numbers in screenshots and PDFs, with automatic detection of faces and personal details such as phone numbers and emails, and an option to keep capture details. A redacted PDF has every page turned into an image, so the covered text does not stay in the file
 - Hand over only some pages of a PDF. Other pages are removed, along with links to them, bookmarks and document info
-- Verify files you received: hashes, a timeline, devices, authors and editing traces, with contradictions between files flagged and a verification record to export
+- Verify files you received: hashes, a timeline, devices, authors and editing traces, with contradictions between files flagged, earlier PDF versions compared, and a verification record to export
+- Read an email: paste the original message to see whether it passed sender authentication, the real sending domain, and whether the reply address was swapped, with links handed to the link checker
 - Turn the audio of a recording or video into a timestamped transcript (mainly Mandarin), downloadable as TXT or SRT subtitles
 - Encrypt any file or a piece of text with a passphrase or an age public key, and decrypt
 - Check a link against Taiwan's 165 anti-fraud blocklist, show the real domain, and remove tracking parameters

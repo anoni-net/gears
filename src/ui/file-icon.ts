@@ -11,6 +11,7 @@ const ICONS: Partial<Record<Format, IconName>> = {
   odp: "file-presentation-box",
   odg: "file-image-outline",
   pdf: "file-pdf-box",
+  eml: "email-outline",
   epub: "book-open-page-variant-outline",
   html: "language-html5",
   zip: "folder-zip-outline",
