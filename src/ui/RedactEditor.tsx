@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import { Icon } from "./Icon.tsx";
+import { pdfFailReason, trackFail } from "./analytics.ts";
 import type { Format } from "../core/bytes.ts";
 import type { Report } from "../core/tool.ts";
 import { t } from "../i18n/index.ts";
@@ -141,7 +142,10 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
     let opened: PdfPages | null = null;
     void (async () => {
       const { openPdf } = await import("./pdf-pages.ts");
-      opened = await openPdf(new Uint8Array(await blob.arrayBuffer()));
+      opened = await openPdf(new Uint8Array(await blob.arrayBuffer())).catch((error: unknown) => {
+        trackFail("redact", pdfFailReason(error));
+        throw error;
+      });
       if (!alive) return opened.close();
       setPdf(opened);
     })().catch(() => alive && setStatus("decodeFailed"));
@@ -405,6 +409,7 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
       };
       onDone(out, report);
     } catch {
+      trackFail("redact", "broken");
       setBuilding(null);
       setStatus("failed");
     }

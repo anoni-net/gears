@@ -187,7 +187,8 @@ test("做了第二個工具之後，前面處理過的仍標示已處理", async
   await expect(strip.getByText("已處理")).toBeVisible();
   await expect(strip.getByRole("button")).toHaveCount(0);
   await redact.getByRole("button", { name: "開始框選" }).click();
-  await page.getByTestId("redact-canvas").scrollIntoViewIfNeeded();
+  // 捲到畫布的頂端：拖拉的範圍不能落在底部固定的完成列底下
+  await page.getByTestId("redact-canvas").evaluate((el) => el.scrollIntoView({ block: "start" }));
   const b = (await page.getByTestId("redact-canvas").boundingBox())!;
   await page.mouse.move(b.x + b.width * 0.1, b.y + b.height * 0.1);
   await page.mouse.down();
@@ -213,7 +214,8 @@ test("先遮蔽：說明中繼資料是重新產生整張圖時一起拿掉的",
   await addFile(page, "photo.jpg", "image/jpeg", jpeg);
   await page.getByRole("button", { name: "開始框選" }).click();
   const canvas = page.getByTestId("redact-canvas");
-  await canvas.scrollIntoViewIfNeeded();
+  // 捲到畫布的頂端：拖拉的範圍不能落在底部固定的完成列底下
+  await canvas.evaluate((el) => el.scrollIntoView({ block: "start" }));
   const b = (await canvas.boundingBox())!;
   await page.mouse.move(b.x + b.width * 0.1, b.y + b.height * 0.1);
   await page.mouse.down();

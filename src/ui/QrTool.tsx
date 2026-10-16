@@ -2,6 +2,7 @@ import { useMemo, useState } from "preact/hooks";
 import { t } from "../i18n/index.ts";
 import { type Ecc, MARGIN, QrTooLong, type WifiSecurity, encodeQr, qrPath, qrPng, qrSvg, wifiPayload } from "../tools/qrcode/index.ts";
 import { saveBlob } from "./save.ts";
+import { track } from "./analytics.ts";
 import type { CreateToolProps } from "./types.ts";
 
 const ECC: Ecc[] = ["L", "M", "Q", "H"];
@@ -121,10 +122,10 @@ export function QrTool({ preset, onCreate }: CreateToolProps) {
               <button type="button" class="primary" onClick={() => onCreate(png())}>
                 {t("qr.toTray")}
               </button>
-              <button type="button" onClick={() => saveBlob(png(), `${name}.png`)}>
+              <button type="button" onClick={() => (track("tool-done", { tool: "qrcode" }), saveBlob(png(), `${name}.png`))}>
                 {t("qr.downloadPng")}
               </button>
-              <button type="button" onClick={() => saveBlob(new Blob([qrSvg(matrix)], { type: "image/svg+xml" }), `${name}.svg`)}>
+              <button type="button" onClick={() => (track("tool-done", { tool: "qrcode" }), saveBlob(new Blob([qrSvg(matrix)], { type: "image/svg+xml" }), `${name}.svg`))}>
                 {t("qr.downloadSvg")}
               </button>
             </div>

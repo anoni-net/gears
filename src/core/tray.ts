@@ -36,7 +36,16 @@ export type Verifier = (blob: Blob, format: Format) => Promise<void>;
 
 type Listener = () => void;
 
-export function createTray(tools: Tool[], verify?: Verifier) {
+// 暫存區發生的事，介面層用來記錄使用統計（src/ui/analytics.ts）。只有工具 id、格式與失敗的原因，
+// 不含檔名與內容
+export interface TrayHooks {
+  added?(formats: Format[], origin: string | null): void; // 加入暫存區的檔案，origin 同 add()
+  unreadable?(count: number): void; // 加入時就讀不了的檔案
+  versioned?(toolId: string): void; // 處理完成，產生了新版本
+  failed?(toolId: string, error: unknown, large: boolean): void; // 處理失敗
+}
+
+export function createTray(tools: Tool[], verify?: Verifier, hooks: TrayHooks = {}) {
   let state: TrayState = { files: [], selected: null, busy: false, failed: [] };
   const listeners = new Set<Listener>();
   let nextId = 1;
@@ -118,8 +127,13 @@ export function createTray(tools: Tool[], verify?: Verifier) {
       } finally {
         set({ busy: false, failed });
       }
+      if (failed.length) hooks.unreadable?.(failed.length);
       if (!added.length) return;
       set({ files: [...state.files, ...added], selected: added[0]!.id });
+      hooks.added?.(
+        added.map((f) => f.versions[0]!.format),
+        origin,
+      );
     },
 
     select(id: number | null) {
@@ -139,17 +153,25 @@ export function createTray(tools: Tool[], verify?: Verifier) {
       const current = state.files.find((f) => f.id === fileId)?.versions.at(-1);
       if (!current) return;
       const large = current.large;
-      if (large ? !tool.acceptsLarge?.(current.format) || !tool.runLarge : !tool.accepts(current.format)) throw new ToolError("unsupported");
+      if (large ? !tool.acceptsLarge?.(current.format) || !tool.runLarge : !tool.accepts(current.format)) {
+        const error = new ToolError("unsupported");
+        hooks.failed?.(tool.id, error, large);
+        throw error;
+      }
       set({ busy: true });
       try {
         if (large) {
           const { blob, report } = await tool.runLarge!(current.blob, current.format);
           await addVersion(fileId, blob, tool.id, report);
-          return;
+        } else {
+          const input = new Uint8Array(await current.blob.arrayBuffer());
+          const { data, report } = await tool.run(input, current.format, options);
+          await addVersion(fileId, new Blob([data as Uint8Array<ArrayBuffer>]), tool.id, report);
         }
-        const input = new Uint8Array(await current.blob.arrayBuffer());
-        const { data, report } = await tool.run(input, current.format, options);
-        await addVersion(fileId, new Blob([data as Uint8Array<ArrayBuffer>]), tool.id, report);
+        hooks.versioned?.(tool.id);
+      } catch (error) {
+        hooks.failed?.(tool.id, error, large);
+        throw error;
       } finally {
         set({ busy: false });
       }
@@ -180,7 +202,15 @@ export function createTray(tools: Tool[], verify?: Verifier) {
     },
 
     // 編輯畫面產生的結果也走這裡：先實際解碼一次，再當成新版本加在檔案底下
-    addVersion: (fileId: number, blob: Blob, toolId: string, report?: Report) => addVersion(fileId, blob, toolId, report),
+    async addVersion(fileId: number, blob: Blob, toolId: string, report?: Report) {
+      try {
+        await addVersion(fileId, blob, toolId, report);
+      } catch (error) {
+        hooks.failed?.(toolId, error, false);
+        throw error;
+      }
+      hooks.versioned?.(toolId);
+    },
 
     undo(fileId: number) {
       updateFile(fileId, (f) => (f.versions.length > 1 ? { ...f, versions: f.versions.slice(0, -1) } : f));

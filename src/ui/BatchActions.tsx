@@ -5,6 +5,7 @@ import { list, t } from "../i18n/index.ts";
 import { tray } from "../state.ts";
 import { fileTools } from "../tools/index.ts";
 import { outputName } from "./output-name.ts";
+import { track } from "./analytics.ts";
 
 // 暫存區有兩個以上的檔案時，一次清除全部的中繼資料、一次下載成一個壓縮檔。
 // 壓縮檔裡的檔名跟單檔下載一樣不沿用原檔名，時間由 src/core/zip.ts 統一成 1980-01-01。
@@ -15,6 +16,7 @@ const MAX_ZIP = 512 * 1024 * 1024;
 const strip = fileTools.find((tool) => tool.id === "strip-metadata")!;
 
 function save(blob: Blob, name: string) {
+  track("save", { how: "zip" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;

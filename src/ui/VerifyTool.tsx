@@ -7,6 +7,7 @@ import { type MetaChange, metaChanges } from "../tools/verify/diff.ts";
 import { sha256Blob } from "../tools/verify/hash.ts";
 import { type Warning, summarize } from "../tools/verify/summary.ts";
 import { CopyButton } from "./CopyButton.tsx";
+import { trackFail, useDoneOnce } from "./analytics.ts";
 import { verdictDetail, verdictTitle } from "./EmailTool.tsx";
 import type { Comparison } from "./pdf-compare.ts";
 import { useObjectUrl, useTray } from "./hooks.ts";
@@ -369,6 +370,7 @@ export function VerifyTool(_: CreateToolProps) {
   const [failed, setFailed] = useState<Set<number>>(new Set());
   const input = useRef<HTMLInputElement>(null);
   const key = files.map((f) => f.id).join(",");
+  useDoneOnce("verify", results.size > 0);
 
   useEffect(() => {
     let alive = true;
@@ -376,7 +378,10 @@ export function VerifyTool(_: CreateToolProps) {
       if (results.has(file.id)) continue;
       analyze(file)
         .then((r) => alive && setResults((prev) => new Map(prev).set(file.id, r)))
-        .catch(() => alive && setFailed((prev) => new Set(prev).add(file.id)));
+        .catch(() => {
+          trackFail("verify", "broken");
+          if (alive) setFailed((prev) => new Set(prev).add(file.id));
+        });
     }
     return () => {
       alive = false;

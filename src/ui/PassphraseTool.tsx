@@ -12,6 +12,7 @@ import {
 } from "../tools/passphrase/index.ts";
 import wordlistText from "../tools/passphrase/asian-diceware-7776.txt?raw";
 import { CopyButton } from "./CopyButton.tsx";
+import { track } from "./analytics.ts";
 import type { CreateToolProps } from "./types.ts";
 
 const WORDS = parseWordlist(wordlistText);
@@ -55,7 +56,7 @@ export function PassphraseTool(_: CreateToolProps) {
         {value || t("pw.noCharset")}
       </output>
       <div class="buttons">
-        <CopyButton text={value} />
+        <CopyButton text={value} onCopied={() => track("tool-done", { tool: "passphrase" })} />
         <button type="button" onClick={() => setSeed((n) => n + 1)}>
           {t("pw.again")}
         </button>

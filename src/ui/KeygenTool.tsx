@@ -3,6 +3,7 @@ import { t } from "../i18n/index.ts";
 import { generateKeyPair, keyFileText, keysAvailable } from "../tools/age/index.ts";
 import { MARGIN, encodeQr, qrPath, qrPng, qrSvg } from "../tools/qrcode/index.ts";
 import { CopyButton } from "./CopyButton.tsx";
+import { track, trackFail } from "./analytics.ts";
 import { type KeyPair, keygenSession } from "./keygen-session.ts";
 import { saveBlob } from "./save.ts";
 import type { CreateToolProps } from "./types.ts";
@@ -51,7 +52,9 @@ export function KeygenTool({ onCreate }: CreateToolProps) {
       setPairState(next);
       setShown(false);
       setQr(false);
+      track("tool-done", { tool: "age-keygen" });
     } catch {
+      trackFail("age-keygen", "other");
       setFailed(true);
     } finally {
       setBusy(false);

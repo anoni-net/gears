@@ -6,7 +6,7 @@
 
 - 預設在瀏覽器裡處理。之後若提供上傳到社群伺服器的選項，上傳前要在畫面上寫清楚檔案送到哪裡、誰看得到、保留多久、伺服器會不會留下紀錄，由讀者決定
 - 上傳端點不經過 Cloudflare。Cloudflare 在邊緣解開 TLS，經過的檔案對它是明文
-- 頁面能連線的對象寫死在 CSP 裡（`vite.config.ts`），新增任何對外連線都要改那裡，並在畫面上標示。目前唯一的例外是逐字稿的大模型從 Hugging Face 下載（見下方「逐字稿」），只開在伺服器送的 CSP 標頭，頁面的 meta 標籤仍然只有自己的網域
+- 頁面能連線的對象寫死在 CSP 裡（`vite.config.ts`），新增任何對外連線都要改那裡，並在畫面上標示。頁面的 meta 標籤只有自己的網域與使用統計的送出網址（`https://aa.anoni.net/api/send`，見下方「使用統計」）。逐字稿的大模型從 Hugging Face 下載（見下方「逐字稿」），只開在伺服器送的 CSP 標頭 <!-- docs-style-lint: disable-line -->
 - 執行期的相依套件只有 `preact`、`qrcode-generator`（QR code 產生）、`jsqr`（QR code 讀取）、`age-encryption`（加密，連同它相依的 noble 系列）、`libheif-js`（HEIC 解碼，LGPL-3.0，見下方「HEIC」）、`pdf-lib`（PDF 的解析與寫出，見下方「文件」）、`pdfjs-dist`（PDF 的遮蔽，見下方「PDF 的遮蔽」），以及遮蔽的自動尋找用的 `onnxruntime-web` 與 `tesseract.js`（見下方「遮蔽的自動尋找」）、逐字稿用的 `@huggingface/transformers` 與 `opencc-js`（見下方「逐字稿」，分辨說話者用的 onnxruntime 是 Transformers.js 帶的那一份），以及查證計算 SHA-256 用的 `@noble/hashes`（age 加密原本就相依它，鎖定同一個版本，見下方「查證」）。新增套件前先想能不能自己寫，必要時鎖定確切的版本。工具用到的套件在打開工具時才載入
 - 結構有問題的檔案就停下來，不交出一份沒處理乾淨的檔案
 
@@ -209,6 +209,26 @@ PDF 的版本紀錄：每一個 `%%EOF` 是一次存檔的結尾，切到那裡�
 - CAM++ 的 ONNX 檔取自 sherpa-onnx 的 release，來源與 SHA-256 寫在 `src/tools/transcribe/speaker-model.json`，`node scripts/fetch-whisper.mjs` 一起下載到 `public/models/speaker/`。存進跟 Whisper 同一個不隨版本清掉的快取
 - `src/ui/speaker-embed.ts` 跟 Transformers.js 共用同一份 onnxruntime（從同一個檔案路徑匯入，Vite 當成同一個模組），不另外下載 WebAssembly。這個檔案只能匯入 Transformers.js 與 onnxruntime，跟 Worker 共用的程式（模型清單、分群）由參數傳進來：打包時共用的程式會放進 Worker 的進入點，這裡再匯入它的話，WebKit 會把 Worker 的進入點當成另一份模組再執行一次，蓋掉 `onmessage`。瀏覽器測試會檢查建置產物裡沒有其他檔案匯入 Worker 的進入點
 - 失敗時在主控台印出錯誤訊息（不含錄音的內容），讀者回報問題時用
+
+## 使用統計
+
+讀者打開哪些工具、有沒有處理完、在哪裡失敗，送到社群自架的 Umami（`aa.anoni.net`，網站 `anoni-net-gears`），程式在 `src/ui/analytics.ts`。不載入 Umami 的 script，由這裡直接送到 `/api/send`，CSP 只開這個網址，網站 id 與網址寫在 `src/ui/analytics-endpoint.ts`（`vite.config.ts` 也讀它）。 <!-- docs-style-lint: disable-line -->
+
+| 事件 | 欄位 | 記在哪裡 |
+|---|---|---|
+| 頁面瀏覽 | 只有路徑，不含查詢字串與 `#`。第一次的 referrer 只留網域 | `src/app.tsx`，換工具或語系時 |
+| `task` | `task`：桌面任務的 id | `src/app.tsx` 的 `onTask` |
+| `file-add` | `kind`：image、document、pdf、media、archive、email、other | 暫存區的 `added`（`src/state.ts`），只算讀者加入的檔案 |
+| `tool-done` | `tool`：工具 id | 暫存區產生新版本時，從空白開始的工具在結果第一次出現時（`useDoneOnce`），逐字稿在轉完時 |
+| `tool-fail` | `tool`：工具 id 或 `tray`（加入時就讀不了），`reason`：unsupported、broken、too-large、encrypted、not-found、network、stalled、other | 暫存區的 `failed` 與各編輯畫面失敗的地方 |
+| `save` | `how`：download、share、zip | 下載連結、`saveBlob`、系統分享、批次的壓縮檔 |
+| `transcribe` | `model`、`device`（cpu、gpu）、`fallback`（顯示卡失敗退回 CPU 時是 1） | 逐字稿轉完時 |
+
+- 每個事件只能帶上表的欄位，值也要在 `EVENTS` 的清單裡，對不上整筆不送（`scrub`）。新增事件或欄位時改 `EVENTS`，`tests/unit/analytics.spec.ts` 會檢查工具、任務與模型的清單跟程式一致
+- 不送檔名、檔案大小、檔案內容、讀者輸入的文字、網址檢查的網址、信件的寄件人與網域、雜湊值、查證的結果。螢幕尺寸取到百位數
+- 只在 `anoni.net` 上送，本機預覽與測試都不送。瀏覽器開了 Do Not Track 或 Global Privacy Control 不送。頁尾說明記錄什麼、送到哪裡，讀者可以選「不要記錄」，選擇存在這個瀏覽器的 localStorage（`gears-analytics-off`）
+- `tests/e2e/analytics.spec.ts` 在 Chromium 把 `anoni.net` 指到預覽伺服器（`vite.config.ts` 的 `preview.allowedHosts`），攔下送到 Umami 的請求，確認內容與頁尾的開關。其他測試都在 localhost，`tests/e2e/guard.ts` 擋下任何對外連線
+- 看數字用工作區的 `python3 umami/report.py --website gears events --funnel task file-add tool-done save`
 
 ## 離線使用
 

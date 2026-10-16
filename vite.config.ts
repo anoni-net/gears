@@ -9,6 +9,7 @@ import { toolIds } from "./src/tools/index.ts";
 import whisper from "./src/tools/transcribe/models.json" with { type: "json" };
 import { ASSETS_MODELS } from "./src/tools/transcribe/remote.ts";
 import speakerModel from "./src/tools/transcribe/speaker-model.json" with { type: "json" };
+import { ANALYTICS_ENDPOINT } from "./src/ui/analytics-endpoint.ts";
 
 // 頁面能連線的對象寫死在 CSP 裡。就算某個相依套件被植入程式，檔案也送不出去，
 // 讀者也能從頁面原始碼自行確認。connect-src 只有自己的網域，之後的伺服器處理與
@@ -30,8 +31,8 @@ const policy = (connect: string) => [
   "form-action 'none'",
 ].join("; ");
 
-// 頁面的 meta 標籤只允許自己的網域
-const CSP = policy("'self'");
+// 頁面的 meta 標籤只允許自己的網域，加上使用統計的送出網址（社群自架的 Umami，見 src/ui/analytics.ts）
+const CSP = policy(`'self' ${ANALYTICS_ENDPOINT}`);
 
 // 伺服器用標頭送的 CSP 多開兩個地方，給逐字稿的 Worker 下載別的網域的模型（見
 // src/tools/transcribe/remote.ts）。Worker 只吃標頭的 CSP。頁面同時有標頭與 meta 標籤時兩者
@@ -42,6 +43,7 @@ const CSP = policy("'self'");
 const HEADER_CSP = policy(
   [
     "'self'",
+    ANALYTICS_ENDPOINT,
     ...Object.values(whisper)
       .filter((m) => m.host === "hf")
       .map((m) => `https://huggingface.co/${m.repo}/resolve/${m.revision}/`),
@@ -176,7 +178,8 @@ export default defineConfig({
   server: { headers: isolation },
   // 預覽伺服器另外用標頭送 CSP：Web Worker 不受頁面 meta 標籤的 CSP 約束，要靠標頭。
   // 部署時 nginx 也要送一樣的 CSP 標頭（開發伺服器需要內嵌腳本，不加）
-  preview: { headers: { ...isolation, "Content-Security-Policy": HEADER_CSP } },
+  // anoni.net：使用統計的測試把這個主機名指到預覽伺服器（tests/e2e/analytics.spec.ts）
+  preview: { headers: { ...isolation, "Content-Security-Policy": HEADER_CSP }, allowedHosts: ["anoni.net"] },
   // Worker 裡用 import() 延後載入 Transformers.js 與 OpenCC，要輸出成 ES 模組
   worker: { format: "es" },
   define: { __GEARS_COMMIT__: JSON.stringify(commit()) },

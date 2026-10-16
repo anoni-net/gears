@@ -7,6 +7,7 @@ import { hostFacts, registrableDomain } from "../tools/url-check/host.ts";
 import { findScam } from "../tools/url-check/scam-list.ts";
 import type { TimeValue } from "../tools/verify/times.ts";
 import type { CreateToolProps } from "./types.ts";
+import { useDoneOnce } from "./analytics.ts";
 import { useScamList } from "./scam-list-loader.ts";
 import { formatSize, timeText } from "./verify-report.ts";
 
@@ -212,6 +213,7 @@ export function EmailTool({ onOpenTool }: CreateToolProps) {
   const [file, setFile] = useState<{ name: string; bytes: Uint8Array } | null>(null);
   const input = useRef<HTMLInputElement>(null);
   const msg = useMemo(() => (file ? parseEmail(file.bytes) : text.trim() ? parseEmail(text) : null), [file, text]);
+  useDoneOnce("email-check", !!msg?.from);
 
   const open = async (e: Event) => {
     const el = e.currentTarget as HTMLInputElement;

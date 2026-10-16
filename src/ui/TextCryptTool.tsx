@@ -2,6 +2,7 @@ import { useState } from "preact/hooks";
 import { t } from "../i18n/index.ts";
 import { decrypt, encrypt, keysAvailable } from "../tools/age/index.ts";
 import { useAgeKey } from "./AgeKeyFields.tsx";
+import { track } from "./analytics.ts";
 import { CopyButton } from "./CopyButton.tsx";
 import type { CreateToolProps } from "./types.ts";
 
@@ -31,6 +32,7 @@ function Encrypt({ onOpenTool }: CreateToolProps) {
       if ("passphrase" in key && dec.decode(await decrypt(cipher, key.passphrase)) !== plain) throw new Error("verify");
       setOut(new TextDecoder().decode(cipher));
       setStatus("idle");
+      track("tool-done", { tool: "text-crypt" });
     } catch {
       setStatus("failed");
     }
@@ -87,6 +89,7 @@ function Decrypt({ preset }: { preset?: string }) {
       try {
         setPlain(dec.decode(data));
         setStatus("idle");
+        track("tool-done", { tool: "text-crypt" });
       } catch {
         // 解開的是檔案，不是文字，請讀者改用解密工具
         setStatus("binary");
