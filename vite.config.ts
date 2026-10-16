@@ -1,6 +1,6 @@
 import { execSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { defineConfig, type Plugin } from "vite";
 import { LOCALES, messagesOf } from "./src/i18n/index.ts";
@@ -136,6 +136,27 @@ function serviceWorker(base: string): Plugin {
   };
 }
 
+// 部署時 nginx 送的標頭（tools/nginx-gears.conf 引用），跟預覽伺服器送的是同一組。CSP 會跟著
+// 大模型的 commit 變，所以每次建置都產生一份，m6 的拉取腳本（tools/m6-pull.sh）比對有變才換上、
+// 檢查設定之後 reload。快取標頭的對照在 tools/nginx-gears.conf 的 map $gears_cache_control
+function nginxHeaders(): Plugin {
+  return {
+    name: "gears-nginx-headers",
+    apply: "build",
+    closeBundle() {
+      const lines = [
+        "# 由 anoni-net/gears 的建置產生（vite.config.ts 的 nginxHeaders），不要手改",
+        `add_header Content-Security-Policy "${HEADER_CSP}" always;`,
+        ...Object.entries(isolation).map(([name, value]) => `add_header ${name} "${value}" always;`),
+        'add_header X-Content-Type-Options "nosniff" always;',
+        "add_header Cache-Control $gears_cache_control always;",
+      ];
+      mkdirSync(join(import.meta.dirname, "deploy"), { recursive: true });
+      writeFileSync(join(import.meta.dirname, "deploy/nginx-headers.conf"), `${lines.join("\n")}\n`);
+    },
+  };
+}
+
 // 建置時的 commit，偵錯輸出用來確認讀者跑的是哪一版。不在 git 裡建置時是 unknown
 function commit(): string {
   try {
@@ -158,7 +179,7 @@ export default defineConfig({
   // Worker 裡用 import() 延後載入 Transformers.js 與 OpenCC，要輸出成 ES 模組
   worker: { format: "es" },
   define: { __GEARS_COMMIT__: JSON.stringify(commit()) },
-  plugins: [csp(), toolPages(), serviceWorker("/gears/")],
+  plugins: [csp(), toolPages(), serviceWorker("/gears/"), nginxHeaders()],
   oxc: {
     jsx: { runtime: "automatic", importSource: "preact" },
   },
