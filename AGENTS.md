@@ -365,7 +365,9 @@ iPhone 預設拍出來的是 HEIC，在網頁上選照片時交出來的也是�
 
 照社群的[品牌素材](https://anoni.net/brand/)，配色與社群首頁的 `static/css/site.css` 用同一組數值：
 
-- 頁首的排版跟新聞導讀一致（2026-10-16 起）：anoni.net 字標、分隔線、產品名稱，右邊是回到桌面、清空暫存區與語系切換（只列其他語系的簡稱，完整名稱放在 `aria-label`）。底色維持工作台的 `--brand-cyan-50` 淡藍，讀者換到工作台時看得出換了網站，深色模式改用比背景亮一階的藍灰。字標照品牌素材頁的用法，淺色底用 tonal 版（`public/logo-wordmark-tonal.svg`），深色模式用 `<picture>` 換成白色版（`public/logo-wordmark-white.svg`），兩份都跟社群首頁的 `static/brand/` 同一份。標語放在桌面最上面
+- 頁首的排版跟新聞導讀一致（2026-10-16 起）：anoni.net 字標、分隔線、產品名稱，右邊是回到桌面與清空暫存區。語系切換只放在頁尾，工具不常換語系，手機上的第二列也少一個可能按錯的按鈕。底色維持工作台的 `--brand-cyan-50` 淡藍，讀者換到工作台時看得出換了網站，深色模式改用比背景亮一階的藍灰。字標照品牌素材頁的用法，淺色底用 tonal 版（`public/logo-wordmark-tonal.svg`），深色模式用 `<picture>` 換成白色版（`public/logo-wordmark-white.svg`），兩份都跟社群首頁的 `static/brand/` 同一份。標語放在桌面最上面
+- 回到桌面與清空暫存區並排很容易按錯，清空又會一次放掉所有檔案、沒有辦法復原：清空用紅色（`--danger-text`，在淡藍底上也有 4.5:1）、跟回到桌面隔開一段距離，第一次按下只變成紅底的「再按一次清空」，4 秒內再按才清空。確認時拿掉圖示，按鈕的寬度跟原本相近，版面不會跳動。窄螢幕時操作換到第二列並靠右
+- 頁首下方的提示（有新版本、已換上新版本）外層用 `frame` 留白，提示框本身才有邊框，窄螢幕上不會貼齊螢幕邊緣
 - 網站圖示是 `public/favicon.svg`（V3 cyan tonal，三個六角形），跟社群首頁的 `static/favicon.svg` 同一份
 - 主色只用 `--brand-cyan-*`，灰階用品牌的中性色，深色模式的背景是 `#00202d`
 - 工具的圖示用 Material Design Icons，跟文件站小工具區的同一個工具一致，路徑內嵌在 `src/ui/icon-paths.ts`，授權全文在 `licenses/material-design-icons.txt`

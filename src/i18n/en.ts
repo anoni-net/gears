@@ -9,6 +9,7 @@ export const en: Record<MessageKey, string> = {
   "app.tagline": "Prepare your files in your own browser before you hand them over.",
   "app.memoryNote": "Files stay in this tab's memory. Nothing is uploaded, and closing the tab clears everything.",
   "app.clear": "Clear the tray",
+  "app.clearConfirm": "Press again to clear",
   "app.home": "Back to desktop",
   "app.loading": "Loading…",
   "app.footer.source": "Source code",

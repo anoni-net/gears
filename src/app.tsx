@@ -10,7 +10,7 @@ import { TrayList } from "./ui/TrayList.tsx";
 import { useOffline } from "./ui/offline.ts";
 import { useTray } from "./ui/hooks.ts";
 import { CreateToolView } from "./ui/registry.tsx";
-import { IconCircle } from "./ui/Icon.tsx";
+import { Icon, IconCircle } from "./ui/Icon.tsx";
 import { TOOL_META } from "./ui/tool-meta.ts";
 
 const isCreateTool = (id: string) => createTools.some((tool) => tool.id === id);
@@ -53,6 +53,33 @@ function useDropAnywhere(onFiles: (files: File[]) => void) {
     };
   }, []);
   return dragging;
+}
+
+// 清空暫存區會一次放掉所有檔案，沒有辦法復原，跟「回到桌面」並排又很容易按錯。
+// 第一次按下只是確認，按鈕變成紅底的「再按一次清空」，4 秒內再按一次才清空。
+// 確認的文字跟原本差不多長，手機上不會把語系擠到下一列
+function ClearButton() {
+  const [armed, setArmed] = useState(false);
+  useEffect(() => {
+    if (!armed) return;
+    const id = setTimeout(() => setArmed(false), 4000);
+    return () => clearTimeout(id);
+  }, [armed]);
+  return (
+    <button
+      type="button"
+      class={armed ? "site-header__clear armed" : "site-header__clear"}
+      onClick={() => {
+        if (!armed) return setArmed(true);
+        setArmed(false);
+        tray.clear();
+      }}
+      onBlur={() => setArmed(false)}
+    >
+      <Icon name="delete-sweep-outline" />
+      <span aria-live="polite">{armed ? t("app.clearConfirm") : t("app.clear")}</span>
+    </button>
+  );
 }
 
 export function App() {
@@ -140,7 +167,8 @@ export function App() {
 
   return (
     <div class={dragging ? "app dragging" : "app"}>
-      {/* 頁首的排版跟新聞導讀一致：anoni.net 字標、分隔線、產品名稱，右邊是操作與語系切換。
+      {/* 頁首的排版跟新聞導讀一致：anoni.net 字標、分隔線、產品名稱，右邊是回到桌面與清空暫存區。
+          語系切換只放在頁尾：工具不常換語系，手機上的第二列也少一個可能按錯的按鈕。
           底色維持工作台的淡藍，字標用 tonal 版，深色模式換成白色版（品牌素材頁的用法）。
           產品名稱是 Gears，華語版後面接「隱私工作台」，英文版就叫 Gears（app.title）。
           名稱右上角掛著 Beta，正式上線之後再拿掉。標語放在桌面最上面 */}
@@ -162,41 +190,36 @@ export function App() {
           </h1>
           <div class="site-header__actions">
             {!atHome ? (
-              <button type="button" onClick={home}>
+              <button type="button" class="site-header__home-button" onClick={home}>
+                <Icon name="home-outline" />
                 {t("app.home")}
               </button>
             ) : null}
-            {state.files.length ? (
-              <button type="button" onClick={() => tray.clear()}>
-                {t("app.clear")}
-              </button>
-            ) : null}
-            <nav class="site-header__langs" aria-label={t("app.language")}>
-              {LOCALES.filter((l) => l.id !== getLocale()).map((l) => (
-                <button key={l.id} type="button" lang={l.lang} aria-label={l.label} onClick={() => switchLocale(l.id)}>
-                  {l.short}
-                </button>
-              ))}
-            </nav>
+            {state.files.length ? <ClearButton /> : null}
           </div>
         </div>
       </header>
 
       <input ref={input} type="file" multiple hidden onChange={onChange} data-testid="file-input" />
 
+      {/* 外層的 frame 負責左右留白，提示框本身才有邊框，窄螢幕上不會貼齊螢幕邊緣 */}
       {offline.update ? (
-        <div class="update-bar frame" role="status">
-          <span>{t("app.update")}</span>
-          <button type="button" class="primary" onClick={offline.update} disabled={offline.updating}>
-            {t(offline.updating ? "app.updating" : "app.updateReload")}
-          </button>
+        <div class="frame">
+          <div class="update-bar" role="status">
+            <span>{t("app.update")}</span>
+            <button type="button" class="primary" onClick={offline.update} disabled={offline.updating}>
+              {t(offline.updating ? "app.updating" : "app.updateReload")}
+            </button>
+          </div>
         </div>
       ) : offline.updated ? (
-        <div class="update-bar frame" role="status">
-          <span>{t("app.updated")}</span>
-          <button type="button" onClick={offline.dismissUpdated}>
-            {t("app.updatedClose")}
-          </button>
+        <div class="frame">
+          <div class="update-bar" role="status">
+            <span>{t("app.updated")}</span>
+            <button type="button" onClick={offline.dismissUpdated}>
+              {t("app.updatedClose")}
+            </button>
+          </div>
         </div>
       ) : null}
 
