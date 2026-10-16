@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import models from "../../src/tools/transcribe/models.json" with { type: "json" };
 import { wav } from "../helpers/audio.ts";
@@ -23,6 +23,15 @@ test("從頁尾打開授權與來源，每份授權全文都下載得到、內�
   // 工作台自己的授權直接展開在頁面上
   await page.getByTestId("licenses").locator("summary").click();
   await expect(page.getByText(/^MIT License/)).toBeVisible();
+});
+
+test("建置產物裡每個語系都有授權頁的 HTML", ({ browserName }) => {
+  // 預覽伺服器遇到不存在的路徑會回首頁，正式站的 nginx 不會，直接開網址的測試抓不到漏產的頁面。
+  // 只看建置產物，一種瀏覽器檢查一次就夠
+  test.skip(browserName !== "chromium");
+  for (const prefix of ["", "zh-cn/", "en/"]) {
+    expect(existsSync(join(import.meta.dirname, "../../dist", prefix, "licenses/index.html")), prefix || "zh-TW").toBe(true);
+  }
 });
 
 test("直接打開英文版的授權頁", async ({ page }) => {
