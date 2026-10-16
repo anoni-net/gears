@@ -57,6 +57,7 @@ export const SEGMENT_CODES = [
   "adobe",
   "orientation",
   "redaction",
+  "pdf-pages",
   "reencode",
   "exif-kept",
   "age-passphrase",

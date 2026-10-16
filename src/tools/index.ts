@@ -15,8 +15,8 @@ export const editorTools: EditorTool[] = [
   {
     id: "redact",
     resolves: [],
-    // 瀏覽器解碼得了的格式，HEIC 由 libheif 解碼
-    accepts: (format) => ["jpeg", "png", "heic", "avif", "webp", "gif", "bmp"].includes(format),
+    // 瀏覽器解碼得了的格式，HEIC 由 libheif 解碼，PDF 由 pdf.js 一頁一頁畫成圖片
+    accepts: (format) => ["jpeg", "png", "heic", "avif", "webp", "gif", "bmp", "pdf"].includes(format),
   },
   { id: "heic-to-jpeg", resolves: [], accepts: (format) => format === "heic" },
   { id: "encrypt", resolves: [], accepts: (format) => format !== "age" },

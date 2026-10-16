@@ -1,7 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import type { Page } from "@playwright/test";
 import { wav } from "../helpers/audio.ts";
-import { syntheticDocx } from "../helpers/documents.ts";
+import { syntheticDocx, syntheticPdf } from "../helpers/documents.ts";
 import { expect, test } from "./guard.ts";
 
 // 用 axe-core 檢查 WCAG 2.1 AA。只在 Chromium 跑，結果跟瀏覽器無關
@@ -43,6 +43,14 @@ test("逐字稿的編輯畫面沒有無障礙問題", async ({ page }) => {
   await expect(page.getByTestId("transcribe-remote")).toBeVisible();
   expect(await audit(page)).toEqual([]);
   await page.emulateMedia({ colorScheme: "dark" });
+  expect(await audit(page)).toEqual([]);
+});
+
+test("PDF 的遮蔽畫面（換頁列）沒有無障礙問題", async ({ page }) => {
+  await page.goto("./redact/");
+  await page.getByTestId("file-input").setInputFiles({ name: "a.pdf", mimeType: "application/pdf", buffer: Buffer.from(await syntheticPdf()) });
+  await expect(page.getByTestId("redact-auto-status")).toContainText("自動尋找在你的瀏覽器裡執行", { timeout: 15000 });
+  await expect(page.getByText(/第 1 頁，共 \d+ 頁/)).toBeVisible();
   expect(await audit(page)).toEqual([]);
 });
 

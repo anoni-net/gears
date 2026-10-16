@@ -7,7 +7,7 @@
 - 預設在瀏覽器裡處理。之後若提供上傳到社群伺服器的選項，上傳前要在畫面上寫清楚檔案送到哪裡、誰看得到、保留多久、伺服器會不會留下紀錄，由讀者決定
 - 上傳端點不經過 Cloudflare。Cloudflare 在邊緣解開 TLS，經過的檔案對它是明文
 - 頁面能連線的對象寫死在 CSP 裡（`vite.config.ts`），新增任何對外連線都要改那裡，並在畫面上標示。目前唯一的例外是逐字稿的大模型從 Hugging Face 下載（見下方「逐字稿」），只開在伺服器送的 CSP 標頭，頁面的 meta 標籤仍然只有自己的網域
-- 執行期的相依套件只有 `preact`、`qrcode-generator`（QR code 產生）、`jsqr`（QR code 讀取）、`age-encryption`（加密，連同它相依的 noble 系列）、`libheif-js`（HEIC 解碼，LGPL-3.0，見下方「HEIC」）、`pdf-lib`（PDF 的解析與寫出，見下方「文件」），以及遮蔽的自動尋找用的 `onnxruntime-web` 與 `tesseract.js`（見下方「遮蔽的自動尋找」）、逐字稿用的 `@huggingface/transformers` 與 `opencc-js`（見下方「逐字稿」，分辨說話者用的 onnxruntime 是 Transformers.js 帶的那一份）。新增套件前先想能不能自己寫，必要時鎖定確切的版本。工具用到的套件在打開工具時才載入
+- 執行期的相依套件只有 `preact`、`qrcode-generator`（QR code 產生）、`jsqr`（QR code 讀取）、`age-encryption`（加密，連同它相依的 noble 系列）、`libheif-js`（HEIC 解碼，LGPL-3.0，見下方「HEIC」）、`pdf-lib`（PDF 的解析與寫出，見下方「文件」）、`pdfjs-dist`（PDF 的遮蔽，見下方「PDF 的遮蔽」），以及遮蔽的自動尋找用的 `onnxruntime-web` 與 `tesseract.js`（見下方「遮蔽的自動尋找」）、逐字稿用的 `@huggingface/transformers` 與 `opencc-js`（見下方「逐字稿」，分辨說話者用的 onnxruntime 是 Transformers.js 帶的那一份）。新增套件前先想能不能自己寫，必要時鎖定確切的版本。工具用到的套件在打開工具時才載入
 - 結構有問題的檔案就停下來，不交出一份沒處理乾淨的檔案
 
 ## 支援的瀏覽器
@@ -44,7 +44,7 @@ npm run test:unit    # 只執行單元測試，不需要瀏覽器
 | `tests/e2e/` | 在 Chromium、WebKit、Firefox 與 iPhone 尺寸上測整個流程 |
 | `tests/helpers/` | 產生測試檔案的程式 |
 | `public/` | 網站圖示、主畫面圖示與 manifest |
-| `licenses/` | 第三方圖示、HEIC 解碼器、pdf-lib 與自動尋找的授權全文 |
+| `licenses/` | 第三方圖示、HEIC 解碼器、pdf-lib、pdf.js、自動尋找與逐字稿的授權全文 |
 
 ## 工具模組
 
@@ -94,6 +94,22 @@ npm run test:unit    # 只執行單元測試，不需要瀏覽器
 - 授權與來源寫在 `licenses/redact-detect.txt`
 - 網址帶 `?debug-faces`（例如 `/gears/redact/?debug-faces`）時，找人臉會在主控台印出建置的 commit 與每次偵測的尺寸、分數、位置與有沒有採用，讀者回報漏判、誤判時請對方整段貼回來。只有數字與座標，不含圖片的內容。不同的瀏覽器與照片的原始解析度會讓分數略有不同，本機重現不出來時靠它
 
+## PDF 的遮蔽
+
+遮蔽也接受 PDF（`src/ui/pdf-pages.ts`）。pdf.js 把每一頁畫成圖片，讀者一頁一頁框選，自動尋找也是對目前這一頁執行。套用時每一頁重新畫一次、塗黑、編碼成 JPEG，抽查框起來的點是黑的，再用 pdf-lib 組成一份新的 PDF，每一頁維持原本的大小。
+
+- 輸出只有圖片，原檔的文字層、字型、文件資訊、XMP、附件、表單、註解與 JavaScript 都不帶過去。只在畫面上蓋一個黑框、文字還留在底下的 PDF 遮蔽很常見，複製或用 `pdftotext` 就讀得出來，這種做法不提供。代價是文字不能再選取與搜尋，檔案通常也會變大，畫面上寫明
+- 沒有框的頁面也轉成圖片，隱藏的文字與其他頁的中繼資料一樣不會留下
+- 編輯與輸出用同一個解析度（150 DPI，長邊最多 2400 像素），框的座標直接沿用。輸出時一次只畫一頁，長的文件也不會把每一頁的圖片同時放在記憶體裡
+- `PDFDocument.create({ updateMetadata: false })`，不寫入 pdf-lib 預設的 Producer、Creator 與時間。寫完重新載入一次，頁數不對就放棄這次的結果
+- pdf.js 的設定：`disableFontFace` 讓字形直接畫成路徑，CSP 的 `font-src` 不必放寬。`isImageDecoderSupported: false` 讓圖片一律用 pdf.js 自己的解碼器，Firefox 原本會先交給瀏覽器的 `ImageDecoder`，解不開的圖片在主控台留下 `Metadata decoding failed` 才退回。有開啟密碼的 PDF 直接失敗，畫面上請讀者先解除密碼。XFA 表單不處理
+- pdf.js 會把傳入的陣列轉交給 worker、原本的陣列被清空，開檔時交一份複本
+- CMap（中日韓字型的字碼對應，約 1.8 MB）、標準字型、JPEG 2000 與 JBIG2 的 WebAssembly 解碼器、CMYK 色彩描述檔由 `scripts/copy-vendor.mjs` 複製到 `public/vendor/pdfjs/`，只從自己的網域載入，用到時才下載。升級前一樣先在套件裡搜尋對外的網址，6.4.299 的 `pdf.min.mjs` 與 `pdf.worker.min.mjs` 裡只有命名空間與授權的網址。`wasm/quickjs-eval.*` 是執行 PDF 裡 JavaScript 用的，沒有開啟，不複製
+- 換頁時，前一頁的圖片等新的一頁畫好、畫布換過去之後才釋放，先釋放的話，畫布重畫時用的是已經關閉的圖片，主控台會出現錯誤
+- 授權全文在 `licenses/pdfjs.txt`
+
+測試（`tests/e2e/redact-pdf.spec.ts`）用 pdf-lib 組出兩頁、有文字與作者的 PDF，遮蔽之後確認檔案裡沒有原本的文字、作者與字型，每一頁都是 JPEG，框起來的地方是黑的。中文字型在本機另外驗證過兩種：LibreOffice 轉出、內嵌 Noto Serif CJK 的 PDF，以及引用未內嵌字型 `MSung-Light`、編碼 `UniCNS-UCS2-H` 的 PDF（要靠 CMap），Chromium、WebKit、Firefox 都畫得出字，自動找個資也找得到電話與 Email。
+
 Tesseract 的 WebAssembly 會把執行紀錄寫到標準錯誤輸出，瀏覽器當成 `console.error`。瀏覽器測試的守門程式（`tests/e2e/guard.ts`）把這種已知的訊息列為例外。
 
 ## 逐字稿
@@ -123,7 +139,7 @@ Tesseract 的 WebAssembly 會把執行紀錄寫到標準錯誤輸出，瀏覽器
 
 第一次開啟之後，沒有網路也能使用。service worker 的範本在 `src/sw/sw-template.js`，建置時 `vite.config.ts` 的 `serviceWorker()` 列出 `dist/` 的檔案、算出版本（所有檔案內容的雜湊），輸出成 `/gears/sw.js`。
 
-- 安裝時先存頁面、程式、圖示與 165 清單，約 4 MB。人臉與文字辨識的模型與 WebAssembly（`vendor/`、`models/`、`assets/ort-wasm-*`）用到時才存
+- 安裝時先存頁面、程式、圖示與 165 清單，約 6 MB，其中 PDF 遮蔽的 pdf.js 約 1.7 MB（壓縮後約 500 KB）。人臉與文字辨識的模型與 WebAssembly、pdf.js 的 CMap 與字型（`vendor/`、`models/`、`assets/ort-wasm-*`）用到時才存
 - 逐字稿的 Whisper 模型存在另一個不隨版本清掉的快取（`gears-models`），換新版本時不必重新下載 80 到 250 MB。網址帶著模型的版本，清單以外的在新版本接手時刪掉。畫面上標出已下載的模型，可以刪除
 - 只存工作台自己的檔案。讀者放進暫存區的檔案只在記憶體裡，不經過 service worker，也不寫進快取
 - 有新版本時畫面上方提示，讀者按「重新載入」才換上，避免同一個分頁混用新舊程式。重新載入會清空暫存區，提示裡寫明
@@ -296,7 +312,7 @@ iPhone 預設拍出來的是 HEIC，在網頁上選照片時交出來的也是�
 
 ## 規劃
 
-產品規劃記錄在社群的工作區，還沒有公開。目前完成第一階段：桌面、檔案暫存區，以及清除中繼資料（JPEG、PNG、HEIC、AVIF、WebP、GIF、TIFF、SVG、BMP、PNM、JPEG XL，Word、Excel、PowerPoint、LibreOffice 文件與 PDF，MP3、M4A、MP4、MOV、WAV、AVI、FLAC、Ogg、Opus、MKV、WebM，ZIP、TAR、gzip、EPUB、種子檔、HTML）、遮蔽（可以自動找人臉與個資）、逐字稿、加密與解密（檔案與一段文字）、age 金鑰產生器、QR code 產生器與讀取、網址檢查、密語與密碼產生器，可以下載與系統分享，一次處理多個檔案，也可以離線使用。部署到 `anoni.net/gears/` 是下一步。
+產品規劃記錄在社群的工作區，還沒有公開。目前完成第一階段：桌面、檔案暫存區，以及清除中繼資料（JPEG、PNG、HEIC、AVIF、WebP、GIF、TIFF、SVG、BMP、PNM、JPEG XL，Word、Excel、PowerPoint、LibreOffice 文件與 PDF，MP3、M4A、MP4、MOV、WAV、AVI、FLAC、Ogg、Opus、MKV、WebM，ZIP、TAR、gzip、EPUB、種子檔、HTML）、遮蔽（圖片與 PDF，可以自動找人臉與個資）、逐字稿、加密與解密（檔案與一段文字）、age 金鑰產生器、QR code 產生器與讀取、網址檢查、密語與密碼產生器，可以下載與系統分享，一次處理多個檔案，也可以離線使用。部署到 `anoni.net/gears/` 是下一步。
 
 ## 第三方資料
 
@@ -304,6 +320,7 @@ iPhone 預設拍出來的是 HEIC，在網頁上選照片時交出來的也是�
 - 工具的圖示來自 [Material Design Icons](https://pictogrammers.com/library/mdi/)，Pictogrammers Free License
 - HEIC 解碼器來自 [libheif-js](https://github.com/catdad-experiments/libheif-js) 1.23.5（libheif 與 libde265，LGPL-3.0），見 `licenses/libheif.txt`
 - PDF 的解析與寫出用 [pdf-lib](https://github.com/Hopding/pdf-lib) 1.17.1（MIT），見 `licenses/pdf-lib.txt`
+- PDF 的遮蔽用 [pdf.js](https://github.com/mozilla/pdf.js)（pdfjs-dist 6.4.299，Apache-2.0）與它附帶的 CMap、標準字型與解碼器，見 `licenses/pdfjs.txt`
 - 遮蔽的自動尋找用 [YuNet](https://github.com/opencv/opencv_zoo/tree/main/models/face_detection_yunet) 模型（MIT）與 [onnxruntime-web](https://github.com/microsoft/onnxruntime) 1.30.0（MIT）、[Tesseract.js](https://github.com/naptha/tesseract.js) 7.0.0 與 tessdata_best 的語言資料（Apache-2.0），見 `licenses/redact-detect.txt`
 - 逐字稿用 [Transformers.js](https://github.com/huggingface/transformers.js) 4.3.1（Apache-2.0）、Whisper small 與 base 的 ONNX 檔（onnx-community，原始模型的模型卡標示 Apache-2.0）、讀者選擇之後從 Hugging Face 下載的 large-v3-turbo（模型卡標示 MIT）、分辨說話者用的 3D-Speaker CAM++（Apache-2.0，ONNX 檔取自 sherpa-onnx）、[opencc-js](https://github.com/nk2028/opencc-js) 1.4.2（MIT，字典 Apache-2.0），見 `licenses/transcribe.txt`
 - 165 反詐騙清單見上方，部署時下載，不進版控

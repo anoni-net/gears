@@ -28,6 +28,7 @@
     "onnxruntime-web": "1.30.0",
     "opencc-js": "1.4.2",
     "pdf-lib": "1.17.1",
+    "pdfjs-dist": "6.4.299",
     "preact": "11.0.1",
     "qrcode-generator": "2.0.4",
     "tesseract.js": "7.0.0"

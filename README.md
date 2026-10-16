@@ -13,7 +13,7 @@
 - 清除手機影片的拍攝位置與手機型號，以及音樂與錄音的標籤與封面（MP4、MOV、MP3、WAV、FLAC、Ogg、MKV 等）
 - 清除壓縮檔裡每個檔案的時間與擁有者、macOS 與 Windows 留下的系統檔，裡面的照片與文件一起清（ZIP、TAR、tar.gz），以及電子書、種子檔與另存的網頁
 - 把 iPhone 的 HEIC 照片轉成 JPEG
-- 遮蔽截圖上的名字、頭像與電話，可以自動找人臉與電話、Email 這類個資，也可以選擇保留拍攝資訊
+- 遮蔽截圖與 PDF 上的名字、頭像與電話，可以自動找人臉與電話、Email 這類個資，也可以選擇保留拍攝資訊。PDF 遮蔽後每一頁轉成圖片，框起來的文字不會留在檔案裡
 - 把錄音或影片的聲音轉成帶時間的逐字稿（以華語為主），可以下載 TXT 與 SRT 字幕
 - 用密語或 age 公鑰加密任何檔案或一段文字，以及解密
 - 網址檢查：比對 165 反詐騙的停止解析清單、標出真正的網域、清除追蹤碼
@@ -44,7 +44,7 @@ npm test
 
 ## 授權
 
-程式碼以 [MIT](./LICENSE) 授權。密語的字詞表來自 [asian-diceware](https://github.com/anoni-net/asian-diceware)，以 CC BY 4.0 授權。工具的圖示來自 [Material Design Icons](https://pictogrammers.com/library/mdi/)。HEIC 的解碼器來自 [libheif-js](https://github.com/catdad-experiments/libheif-js)（libheif 與 libde265，LGPL-3.0），原封不動使用。PDF 的解析與寫出用 [pdf-lib](https://github.com/Hopding/pdf-lib)（MIT）。遮蔽的自動尋找用 [YuNet](https://github.com/opencv/opencv_zoo/tree/main/models/face_detection_yunet) 與 [onnxruntime-web](https://github.com/microsoft/onnxruntime)（MIT），以及 [Tesseract.js](https://github.com/naptha/tesseract.js)（Apache-2.0）。逐字稿用 [Transformers.js](https://github.com/huggingface/transformers.js)（Apache-2.0）、Whisper 模型與 [opencc-js](https://github.com/nk2028/opencc-js)（MIT）。授權全文在 [licenses/](./licenses/)。
+程式碼以 [MIT](./LICENSE) 授權。密語的字詞表來自 [asian-diceware](https://github.com/anoni-net/asian-diceware)，以 CC BY 4.0 授權。工具的圖示來自 [Material Design Icons](https://pictogrammers.com/library/mdi/)。HEIC 的解碼器來自 [libheif-js](https://github.com/catdad-experiments/libheif-js)（libheif 與 libde265，LGPL-3.0），原封不動使用。PDF 的解析與寫出用 [pdf-lib](https://github.com/Hopding/pdf-lib)（MIT），PDF 遮蔽時用 [pdf.js](https://github.com/mozilla/pdf.js)（Apache-2.0）把每一頁畫成圖片。遮蔽的自動尋找用 [YuNet](https://github.com/opencv/opencv_zoo/tree/main/models/face_detection_yunet) 與 [onnxruntime-web](https://github.com/microsoft/onnxruntime)（MIT），以及 [Tesseract.js](https://github.com/naptha/tesseract.js)（Apache-2.0）。逐字稿用 [Transformers.js](https://github.com/huggingface/transformers.js)（Apache-2.0）、Whisper 模型與 [opencc-js](https://github.com/nk2028/opencc-js)（MIT）。授權全文在 [licenses/](./licenses/)。
 
 ---
 
@@ -63,7 +63,7 @@ Gears is under development and not deployed yet. Tools in the first version:
 - Strip location and device model from phone videos, and tags and cover art from music and recordings (MP4, MOV, MP3, WAV, FLAC, Ogg, MKV and more)
 - Strip timestamps, owners and macOS/Windows system files from archives (ZIP, TAR, tar.gz), cleaning the photos and documents inside, plus e-books, torrent files and saved web pages
 - Convert iPhone HEIC photos to JPEG
-- Redact names, avatars and phone numbers in screenshots, with automatic detection of faces and personal details such as phone numbers and emails, and an option to keep capture details
+- Redact names, avatars and phone numbers in screenshots and PDFs, with automatic detection of faces and personal details such as phone numbers and emails, and an option to keep capture details. A redacted PDF has every page turned into an image, so the covered text does not stay in the file
 - Turn the audio of a recording or video into a timestamped transcript (mainly Mandarin), downloadable as TXT or SRT subtitles
 - Encrypt any file or a piece of text with a passphrase or an age public key, and decrypt
 - Check a link against Taiwan's 165 anti-fraud blocklist, show the real domain, and remove tracking parameters
@@ -94,4 +94,4 @@ See [AGENTS.md](./AGENTS.md) (in Chinese) for details on development and testing
 
 ## License
 
-The code is released under the [MIT License](./LICENSE). The passphrase wordlist comes from [asian-diceware](https://github.com/anoni-net/asian-diceware) under CC BY 4.0. Tool icons come from [Material Design Icons](https://pictogrammers.com/library/mdi/). The HEIC decoder is [libheif-js](https://github.com/catdad-experiments/libheif-js) (libheif and libde265, LGPL-3.0), used unmodified. PDF parsing and writing uses [pdf-lib](https://github.com/Hopding/pdf-lib) (MIT). Automatic detection in redaction uses [YuNet](https://github.com/opencv/opencv_zoo/tree/main/models/face_detection_yunet) and [onnxruntime-web](https://github.com/microsoft/onnxruntime) (MIT), and [Tesseract.js](https://github.com/naptha/tesseract.js) (Apache-2.0). Transcripts use [Transformers.js](https://github.com/huggingface/transformers.js) (Apache-2.0), Whisper models and [opencc-js](https://github.com/nk2028/opencc-js) (MIT). See [licenses/](./licenses/).
+The code is released under the [MIT License](./LICENSE). The passphrase wordlist comes from [asian-diceware](https://github.com/anoni-net/asian-diceware) under CC BY 4.0. Tool icons come from [Material Design Icons](https://pictogrammers.com/library/mdi/). The HEIC decoder is [libheif-js](https://github.com/catdad-experiments/libheif-js) (libheif and libde265, LGPL-3.0), used unmodified. PDF parsing and writing uses [pdf-lib](https://github.com/Hopding/pdf-lib) (MIT), and PDF redaction renders each page with [pdf.js](https://github.com/mozilla/pdf.js) (Apache-2.0). Automatic detection in redaction uses [YuNet](https://github.com/opencv/opencv_zoo/tree/main/models/face_detection_yunet) and [onnxruntime-web](https://github.com/microsoft/onnxruntime) (MIT), and [Tesseract.js](https://github.com/naptha/tesseract.js) (Apache-2.0). Transcripts use [Transformers.js](https://github.com/huggingface/transformers.js) (Apache-2.0), Whisper models and [opencc-js](https://github.com/nk2028/opencc-js) (MIT). See [licenses/](./licenses/).
