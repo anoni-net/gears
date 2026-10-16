@@ -10,6 +10,7 @@ import { REMOTE_ERROR, hfUrl, readVerified } from "../tools/transcribe/remote.ts
 import { MODELS, type ModelId, type RawChunk, SAMPLE_RATE, type Segment, cleanSegments, maxTokens, speechPieces } from "../tools/transcribe/segments.ts";
 import { MIN_EMBED_SECONDS, assignSpeakers, normalize } from "../tools/transcribe/speakers.ts";
 import type { Device } from "../tools/transcribe/device.ts";
+import { type Language, isChinese } from "../tools/transcribe/languages.ts";
 import speakerModel from "../tools/transcribe/speaker-model.json" with { type: "json" };
 import type { Embedder } from "./speaker-embed.ts";
 
@@ -25,7 +26,7 @@ import type { Embedder } from "./speaker-embed.ts";
 // threads 是同時使用的 CPU 核心數。onnxruntime 在第一次載入時就決定了執行緒數，
 // 換核心數要換一個新的 Worker（src/ui/TranscribeEditor.tsx）
 export type Request =
-  | { type: "start"; model: ModelId; language: "zh" | null; base: string; threads: number; speakers: boolean; device: Device }
+  | { type: "start"; model: ModelId; language: Language; base: string; threads: number; speakers: boolean; device: Device }
   | { type: "chunk"; audio: Float32Array; offset: number; last: boolean };
 
 export type Reply =
@@ -176,7 +177,7 @@ let embedder: Embedder | null = null;
 // 每段的聲紋，最後一段處理完一起分群。太短的段落是 null
 let voices: { start: number; seconds: number; embedding: Float32Array | null }[] = [];
 
-let job: { asr: Pipeline; language: "zh" | null; speakers: boolean } | null = null;
+let job: { asr: Pipeline; language: Language; speakers: boolean } | null = null;
 
 const message = (error: unknown) => (error instanceof Error ? error.message : String(error));
 const gpuAdapter = () =>
@@ -201,18 +202,19 @@ async function recognize(chunk: Float32Array, at: number, last: boolean) {
   for (const piece of pieces) {
     const start = offset + piece.start / SAMPLE_RATE;
     const out = await asr(audio.subarray(piece.start, piece.end), {
-      language: language ?? undefined,
+      // 一定要指定語言：Transformers.js 沒有語言偵測，不指定時一律當成英文（src/tools/transcribe/languages.ts）
+      language,
       task: "transcribe",
       return_timestamps: true,
       max_new_tokens: maxTokens(piece.end - piece.start),
     });
     for (const c of out.chunks ?? []) {
       const [s, e] = c.timestamp;
-      raw.push({ text: await toTaiwan(c.text), timestamp: [s + start, e === null ? offset + piece.end / SAMPLE_RATE : e + start] });
+      raw.push({ text: isChinese(language) ? await toTaiwan(c.text) : c.text, timestamp: [s + start, e === null ? offset + piece.end / SAMPLE_RATE : e + start] });
     }
     post({ type: "progress", at: offset + piece.end / SAMPLE_RATE });
   }
-  const segments = cleanSegments(raw, audio, offset);
+  const segments = cleanSegments(raw, audio, offset, isChinese(language));
   post({ type: "segments", segments });
   if (job!.speakers) {
     for (const seg of segments) {
