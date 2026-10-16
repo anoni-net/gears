@@ -4,6 +4,7 @@ import { tray } from "../state.ts";
 import { MODELS, MODEL_IDS, type ModelId, SAMPLE_RATE, type Segment, clock, mergeSegments, toSrt, toTxt } from "../tools/transcribe/segments.ts";
 import { type Device, type GpuInfo, gpuUsable } from "../tools/transcribe/device.ts";
 import { LANGUAGES, type Language } from "../tools/transcribe/languages.ts";
+import { type Part, partName } from "../tools/transcribe/parts.ts";
 import { REMOTE_ERROR } from "../tools/transcribe/remote.ts";
 import speakerModel from "../tools/transcribe/speaker-model.json" with { type: "json" };
 import { THREAD_OPTIONS, defaultThreads } from "../tools/transcribe/threads.ts";
@@ -54,7 +55,10 @@ const DEFAULT_THREADS = ISOLATED
 async function isDownloaded(id: ModelId, device: Device): Promise<boolean> {
   if (!("caches" in self)) return false;
   const cache = await caches.open(MODEL_CACHE).catch(() => null);
-  return !!(await cache?.match(`${modelUrl(id)}${Object.keys(modelFiles(id, device)).at(-1)}`));
+  const file = Object.keys(modelFiles(id, device)).at(-1)!;
+  // 切成好幾段的檔案看最後一段（src/tools/transcribe/parts.ts）
+  const parts = (MODELS[id] as { parts?: Record<string, Part[]> }).parts?.[file];
+  return !!(await cache?.match(`${modelUrl(id)}${parts ? partName(file, parts.length - 1) : file}`));
 }
 
 async function removeModel(id: ModelId) {
