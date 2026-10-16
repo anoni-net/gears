@@ -82,6 +82,11 @@ test("先選語言，再列出能用的模型：泰語、台語預設用專門�
   await page.getByLabel("台語", { exact: true }).check();
   await expect(page.getByLabel(/^Breeze-ASR-26/)).toBeChecked();
   await expect(page.getByRole("group", { name: "模型" }).getByRole("radio")).toHaveCount(1);
+  // 粵語只有 large-v3-turbo，說明輸出的是書面中文
+  await page.getByLabel("粵語", { exact: true }).check();
+  await expect(page.getByLabel(/^large-v3-turbo/)).toBeChecked();
+  await expect(page.getByRole("group", { name: "模型" }).getByRole("radio")).toHaveCount(1);
+  await expect(page.getByTestId("transcribe-yue")).toBeVisible();
   // 回到華語時用 small
   await page.getByLabel("華語", { exact: true }).check();
   await expect(page.getByLabel(/^small/)).toBeChecked();

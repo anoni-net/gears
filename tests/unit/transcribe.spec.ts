@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { defaultThreads } from "../../src/tools/transcribe/threads.ts";
 import { gpuUsable } from "../../src/tools/transcribe/device.ts";
-import { LANGUAGES, modelsFor, preferredModel, whisperLanguage } from "../../src/tools/transcribe/languages.ts";
+import { LANGUAGES, chineseVariant, modelsFor, preferredModel, whisperLanguage } from "../../src/tools/transcribe/languages.ts";
 import { MODELS, MODEL_IDS, SAMPLE_RATE, cleanSegments, clock, collapseRepeats, fullWidthPunctuation, maxTokens, speechPieces, toSrt, toTxt } from "../../src/tools/transcribe/segments.ts";
 
 // 指定秒數的錄音：有聲音的範圍填 0.1 的方波，其他是靜音
@@ -175,6 +175,12 @@ test("先選語言，再列出能用的模型：泰語、台語預設用專門�
     expect(modelsFor(language)).toEqual(["omni"]);
     expect(preferredModel(language)).toBe("omni");
   }
+  // 粵語只有 large-v3-turbo，傳 zh，字形用香港的
+  expect(modelsFor("yue")).toEqual(["turbo"]);
+  expect(preferredModel("yue")).toBe("turbo");
+  expect(whisperLanguage("yue")).toBe("zh");
+  expect(chineseVariant("yue")).toBe("hk");
+  expect(chineseVariant("zh")).toBe("twp");
   // 台語用 Breeze-ASR-26，它輸出華語文字，傳給 Whisper 的是 zh
   expect(whisperLanguage("nan")).toBe("zh");
   expect(whisperLanguage("th")).toBe("th");

@@ -289,11 +289,11 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
   // 從 Hugging Face 下載的模型，還沒下載時先說明會連到哪裡、送出什麼，按鈕上也寫明。
   // assets.anoni.net 是社群自己的網域，不另外說明
   const remote = MODELS[model].host === "hf" && !downloaded[model];
-  // 先選語言，再列出這個語言能用的模型（src/tools/transcribe/languages.ts）
+  // 先選語言，再列出這個語言能用的模型（src/tools/transcribe/languages.ts），換語言時回到
+  // 這個語言預設的模型
   const chooseLanguage = (id: Language) => {
     setLanguage(id);
-    if (!modelsFor(id).includes(model)) setModel(preferredModel(id));
-    else if (preferredModel(id) !== "small") setModel(preferredModel(id));
+    setModel(preferredModel(id));
   };
 
   return (
@@ -309,6 +309,11 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
         ))}
       </fieldset>
       <p class="hint">{t("transcribe.language.note")}</p>
+      {language === "yue" ? (
+        <p class="hint" data-testid="transcribe-yue">
+          {t("transcribe.language.yue.note")}
+        </p>
+      ) : null}
       <fieldset class="choices" disabled={busy}>
         <legend>{t("transcribe.model")}</legend>
         {modelsFor(language).map((id) => (
