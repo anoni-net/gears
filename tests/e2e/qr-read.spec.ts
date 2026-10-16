@@ -1,4 +1,4 @@
-import { encodeQr, qrPng } from "../../src/tools/qrcode/index.ts";
+import { encodeQr, MARGIN, qrPng } from "../../src/tools/qrcode/index.ts";
 import { expect, test } from "./guard.ts";
 
 const png = (text: string) => Buffer.from(qrPng(encodeQr(text, "M"), 6));
@@ -26,6 +26,35 @@ test("Wi-Fi 的 QR code 拆成網路名稱與密碼", async ({ page }) => {
   await expect(page.locator(".wifi dd").first()).toHaveText("anoni-cafe");
   await expect(page.getByText("secret pass", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "複製密碼" })).toBeVisible();
+});
+
+test("翻拍螢幕的照片，白底上有子像素的直紋也讀得出來", async ({ page }) => {
+  await page.goto("./qr-read/");
+  // 模擬翻拍螢幕：每三個像素一條灰色直紋，原尺寸 jsQR 讀不出來，縮小之後才讀得到
+  const m = encodeQr("4493932457", "M");
+  const photo = await page.evaluate(async ({ size, dark, margin }) => {
+    const mod = 30;
+    const side = (size + 2 * margin) * mod;
+    const c = document.createElement("canvas");
+    c.width = side;
+    c.height = side;
+    const ctx = c.getContext("2d")!;
+    const img = ctx.createImageData(side, side);
+    for (let y = 0; y < side; y++) {
+      for (let x = 0; x < side; x++) {
+        const mx = Math.floor(x / mod) - margin;
+        const my = Math.floor(y / mod) - margin;
+        const isDark = mx >= 0 && my >= 0 && mx < size && my < size && dark[my * size + mx];
+        const v = isDark ? 20 : x % 3 === 0 ? 170 : 235;
+        img.data.set([v, v, v, 255], (y * side + x) * 4);
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+    const b = await new Promise<Blob>((r) => c.toBlob((x) => r(x!), "image/png"));
+    return Array.from(new Uint8Array(await b.arrayBuffer()));
+  }, { ...m, margin: MARGIN });
+  await page.getByTestId("qr-input").setInputFiles({ name: "screen.png", mimeType: "image/png", buffer: Buffer.from(photo) });
+  await expect(page.getByTestId("qr-text")).toHaveText("4493932457");
 });
 
 test("找不到 QR code 時說明", async ({ page }) => {

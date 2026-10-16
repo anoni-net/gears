@@ -271,6 +271,8 @@ HEIC 有兩種測試檔。單元測試在測試裡組出結構完整、不能解
 
 QR code 的測試把產生的 PNG 解碼回像素，用 `jsQR` 讀出文字，跟輸入比對，中文與 Wi-Fi 的特殊字元都要測。編碼寫錯的典型後果是掃得出來、內容卻錯。
 
+QR code 讀取（`src/ui/qr-scan.ts`）要能讀翻拍螢幕的照片。白底上拍到的子像素直紋會讓 jsQR 讀不出來，所以讀不到時逐級減半再讀，縮小由程式自己平均像素：WebKit 用 canvas 縮圖時只取樣部分像素，紋路一直留著，iPhone 上讀不出來的就是這種照片。瀏覽器測試用 canvas 畫一張帶直紋的 QR code 重現。
+
 ## 清除中繼資料支援的格式
 
 格式的範圍參考 mat2（Tails 的 Metadata Cleaner 背後的工具），每種格式一個檔案，在 `src/tools/strip-metadata/index.ts` 登記。原則跟 JPEG 一樣：用白名單保留影像需要的部分，其他一律拿掉，不重新編碼。
