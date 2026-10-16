@@ -52,7 +52,7 @@ npm run test:unit    # 只執行單元測試，不需要瀏覽器
 
 | | 處理檔案的工具（`fileTools`） | 需要編輯畫面的工具（`editorTools`） | 從空白開始的工具（`createTools`） |
 |---|---|---|---|
-| 例子 | 清除中繼資料 | 遮蔽、轉成 JPEG、加密、解密、逐字稿 | QR code 產生器與讀取、網址檢查、密語與密碼產生器、age 金鑰產生器、加密文字 |
+| 例子 | 清除中繼資料 | 遮蔽、轉成 JPEG、選擇 PDF 的頁面、加密、解密、逐字稿 | QR code 產生器與讀取、網址檢查、密語與密碼產生器、age 金鑰產生器、加密文字 |
 | 介面 | `src/core/tool.ts` 的 `Tool` | `EditorTool`，編輯畫面登記在 `src/ui/registry.tsx` | `CreateTool`，元件登記在 `src/ui/registry.tsx` |
 | 結果 | 暫存區裡那個檔案的新版本 | 同左，由 `tray.addVersion` 加入 | 產出檔案的放進暫存區，產出文字的只顯示在畫面上 |
 
@@ -109,6 +109,23 @@ npm run test:unit    # 只執行單元測試，不需要瀏覽器
 - 授權全文在 `licenses/pdfjs.txt`
 
 測試（`tests/e2e/redact-pdf.spec.ts`）用 pdf-lib 組出兩頁、有文字與作者的 PDF，遮蔽之後確認檔案裡沒有原本的文字、作者與字型，每一頁都是 JPEG，框起來的地方是黑的。中文字型在本機另外驗證過兩種：LibreOffice 轉出、內嵌 Noto Serif CJK 的 PDF，以及引用未內嵌字型 `MSung-Light`、編碼 `UniCNS-UCS2-H` 的 PDF（要靠 CMap），Chromium、WebKit、Firefox 都畫得出字，自動找個資也找得到電話與 Email。
+
+## 選擇 PDF 的頁面
+
+只留下讀者勾選的頁面（`src/tools/pdf-pages/`，畫面在 `src/ui/PdfPagesEditor.tsx`）。用 pdf-lib 把選中的頁面複製到一份新的 PDF，頁面上的文字、圖片與註解保留原樣，文件資訊、XMP、書籤、附件、表單設定與結構標記掛在文件目錄上，不會帶過去。
+
+pdf-lib 複製頁面時，頁面引用到的東西會一路複製過去，直接複製會把沒選的頁面帶進新檔：
+
+- 連到其他頁的連結、跳頁動作、註解的 `/P` 與 `/IRT`、表單元件的 `/Parent`（欄位底下掛著其他頁的元件，外觀裡有填好的值），都會把另一頁整頁帶過來。複製之前在原檔裡拿掉這些參照：連結只留網址（`URI`），其他動作與頁面的 `/AA`、`/B` 一律拿掉，表單元件跟欄位脫鉤，不能再填寫，畫面上的內容照樣顯示
+- 很多產生器讓所有頁面共用一份 `Resources`，裡面有只在別頁用到的圖片與字型。每一頁換成一份新的 `Resources`，只留這一頁的內容串流用到的名稱，沿用頁面資源的表單 XObject 裡用到的也算。內容串流解不開時停下來（`ToolError("unsupported")`），判斷不了用到哪些資源，就不交出可能帶著其他頁內容的檔案
+
+複製之後從新檔的文件目錄走一遍，出現頁面樹以外的頁面就放棄這次的結果。還有一種擋不掉：Chromium、LibreOffice 這類產生器讓整份文件共用一組子集字型，字型裡的字形與字碼對照表（ToUnicode）含有每一頁用到的字，複製頁面時整組帶過去，其他頁用過哪些字（沒有順序與位置）就留在新檔裡。重新產生子集字型需要另外的函式庫，所以只偵測選中與拿掉的頁面有沒有共用字型，有的話在處理報告裡提醒，並提供「轉成圖片」的選項：沿用 PDF 遮蔽的 `buildRedactedPdf`，只畫選中的頁面，字型與文字層都不帶過去。
+
+- 縮圖用 pdf.js 畫（長邊 240 像素），捲進畫面才畫，長的文件不會一打開就把每一頁都畫一次
+- 處理報告的字串裡有 `{n}` 時（例如「沒有選的 {n} 頁」），`ReportView` 直接帶入數量，不另外附上「N 個範圍」
+- 頁面上的作者這類中繼資料（頁面的 XMP、PieceInfo）跟著頁面過去，處理完再用清除中繼資料，畫面上寫明
+
+單元測試（`tests/unit/pdf-pages.spec.ts`）組出三頁共用 `Resources`、各頁有自己的圖片、第一頁有各種連到第二頁的參照的 PDF，確認只留一頁時其他頁的字、圖片、表單的值、作者與書籤都不在新檔裡，也確認有其他沒清掉的參照時檢查會擋下。本機另外用 Chromium 列印的 PDF（頁內連結、書籤、結構標記、只在第二頁的圖片）驗證過，圖片沒有跟過去，共用字型的提醒也正確出現。
 
 Tesseract 的 WebAssembly 會把執行紀錄寫到標準錯誤輸出，瀏覽器當成 `console.error`。瀏覽器測試的守門程式（`tests/e2e/guard.ts`）把這種已知的訊息列為例外。
 
@@ -312,7 +329,7 @@ iPhone 預設拍出來的是 HEIC，在網頁上選照片時交出來的也是�
 
 ## 規劃
 
-產品規劃記錄在社群的工作區，還沒有公開。目前完成第一階段：桌面、檔案暫存區，以及清除中繼資料（JPEG、PNG、HEIC、AVIF、WebP、GIF、TIFF、SVG、BMP、PNM、JPEG XL，Word、Excel、PowerPoint、LibreOffice 文件與 PDF，MP3、M4A、MP4、MOV、WAV、AVI、FLAC、Ogg、Opus、MKV、WebM，ZIP、TAR、gzip、EPUB、種子檔、HTML）、遮蔽（圖片與 PDF，可以自動找人臉與個資）、逐字稿、加密與解密（檔案與一段文字）、age 金鑰產生器、QR code 產生器與讀取、網址檢查、密語與密碼產生器，可以下載與系統分享，一次處理多個檔案，也可以離線使用。部署到 `anoni.net/gears/` 是下一步。
+產品規劃記錄在社群的工作區，還沒有公開。目前完成第一階段：桌面、檔案暫存區，以及清除中繼資料（JPEG、PNG、HEIC、AVIF、WebP、GIF、TIFF、SVG、BMP、PNM、JPEG XL，Word、Excel、PowerPoint、LibreOffice 文件與 PDF，MP3、M4A、MP4、MOV、WAV、AVI、FLAC、Ogg、Opus、MKV、WebM，ZIP、TAR、gzip、EPUB、種子檔、HTML）、遮蔽（圖片與 PDF，可以自動找人臉與個資）、選擇 PDF 的頁面、逐字稿、加密與解密（檔案與一段文字）、age 金鑰產生器、QR code 產生器與讀取、網址檢查、密語與密碼產生器，可以下載與系統分享，一次處理多個檔案，也可以離線使用。部署到 `anoni.net/gears/` 是下一步。
 
 ## 第三方資料
 

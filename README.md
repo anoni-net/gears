@@ -14,6 +14,7 @@
 - 清除壓縮檔裡每個檔案的時間與擁有者、macOS 與 Windows 留下的系統檔，裡面的照片與文件一起清（ZIP、TAR、tar.gz），以及電子書、種子檔與另存的網頁
 - 把 iPhone 的 HEIC 照片轉成 JPEG
 - 遮蔽截圖與 PDF 上的名字、頭像與電話，可以自動找人臉與電話、Email 這類個資，也可以選擇保留拍攝資訊。PDF 遮蔽後每一頁轉成圖片，框起來的文字不會留在檔案裡
+- 只交出 PDF 的其中幾頁，其他頁連同連到它們的連結、書籤與文件資訊一起拿掉
 - 把錄音或影片的聲音轉成帶時間的逐字稿（以華語為主），可以下載 TXT 與 SRT 字幕
 - 用密語或 age 公鑰加密任何檔案或一段文字，以及解密
 - 網址檢查：比對 165 反詐騙的停止解析清單、標出真正的網域、清除追蹤碼
@@ -64,6 +65,7 @@ Gears is under development and not deployed yet. Tools in the first version:
 - Strip timestamps, owners and macOS/Windows system files from archives (ZIP, TAR, tar.gz), cleaning the photos and documents inside, plus e-books, torrent files and saved web pages
 - Convert iPhone HEIC photos to JPEG
 - Redact names, avatars and phone numbers in screenshots and PDFs, with automatic detection of faces and personal details such as phone numbers and emails, and an option to keep capture details. A redacted PDF has every page turned into an image, so the covered text does not stay in the file
+- Hand over only some pages of a PDF. Other pages are removed, along with links to them, bookmarks and document info
 - Turn the audio of a recording or video into a timestamped transcript (mainly Mandarin), downloadable as TXT or SRT subtitles
 - Encrypt any file or a piece of text with a passphrase or an age public key, and decrypt
 - Check a link against Taiwan's 165 anti-fraud blocklist, show the real domain, and remove tracking parameters

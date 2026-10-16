@@ -1066,6 +1066,67 @@ footer .languages button[aria-current] {
   margin-bottom: 0.5rem;
 }
 
+/* 選擇 PDF 的頁面：縮圖格，勾選的頁面加上主色的外框 */
+.pdf-pages-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.page-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
+  gap: 0.75rem;
+  margin: 0 0 1rem;
+  padding: 0;
+  list-style: none;
+}
+
+.page-pick {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem;
+  border: 2px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.page-pick.checked {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+}
+
+.page-pick:focus-within {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.page-pick span {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 還沒畫好的縮圖先用 A4 比例的灰色方塊佔位 */
+.page-thumb {
+  width: 100%;
+  max-width: 8rem;
+  height: auto;
+  background: #fff;
+  box-shadow: 0 0 0 1px var(--hair);
+}
+
+.page-thumb.waiting,
+.page-thumb.failed {
+  aspect-ratio: 1 / 1.414;
+  background: var(--fill);
+}
+
 /* PDF 的換頁列，在圖片正上方 */
 .redact-pages {
   display: flex;
