@@ -2,11 +2,14 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import { t } from "../i18n/index.ts";
 import { tray } from "../state.ts";
 import { MODELS, MODEL_IDS, type ModelId, SAMPLE_RATE, type Segment, clock, mergeSegments, toSrt, toTxt } from "../tools/transcribe/segments.ts";
+import { type Device, type GpuInfo, gpuUsable } from "../tools/transcribe/device.ts";
 import { REMOTE_ERROR } from "../tools/transcribe/remote.ts";
 import speakerModel from "../tools/transcribe/speaker-model.json" with { type: "json" };
 import { THREAD_OPTIONS, defaultThreads } from "../tools/transcribe/threads.ts";
 import { type AudioStream, TooLargeError, openAudio } from "./audio-stream.ts";
+import { detectGpu } from "./gpu.ts";
 import type { Reply, Request } from "./transcribe.worker.ts";
+import workerUrl from "./transcribe.worker.ts?worker&url";
 import type { FileEditorProps } from "./types.ts";
 
 // 逐字稿：把錄音或影片的聲音轉成帶時間的段落。解碼在這裡（Web Audio 只能在主執行緒用），
@@ -15,9 +18,21 @@ import type { FileEditorProps } from "./types.ts";
 // 放進暫存區或直接下載。
 
 const BASE = new URL(import.meta.env.BASE_URL, location.href).href;
+// 每次建立 Worker 都加上不同的查詢字串：WebKit 第二次用同一個網址建立 Worker 時，會被
+// Cross-Origin-Embedder-Policy 擋下（換核心數、顯示卡失敗改用 CPU 都要換 Worker）
+let workers = 0;
+// 模型下載完之後，推論環境多久沒建好就停下來。Firefox 在記憶體很緊時（例如收掉舊的 Worker 之後
+// 共享記憶體還沒釋放）會停在這裡，不會報錯
+const STALL_MS = 180_000;
+const STALLED = "stalled";
+
+const newWorker = () => new Worker(`${workerUrl}?n=${++workers}`, { type: "module" });
 const MODEL_CACHE = "gears-models";
 const mb = (bytes: number) => `${Math.round(bytes / 1e6)} MB`;
 const modelUrl = (id: ModelId) => `${BASE}models/whisper/${MODELS[id].dir}/`;
+// 每種裝置用的模型檔與大小（src/tools/transcribe/device.ts）
+const modelFiles = (id: ModelId, device: Device) => (device === "webgpu" ? MODELS[id].webgpu.files : MODELS[id].files);
+const modelBytes = (id: ModelId, device: Device) => (device === "webgpu" ? MODELS[id].webgpu.bytes : MODELS[id].bytes);
 
 // 同時使用的 CPU 核心數，讀者自己選，預設值的判斷見 src/tools/transcribe/threads.ts。
 // 多執行緒要頁面在 cross-origin isolation 底下，沒有時只能用 1 個
@@ -34,11 +49,11 @@ const DEFAULT_THREADS = ISOLATED
   : 1;
 
 // 模型有沒有存在這台裝置的瀏覽器裡（service worker 的快取，大模型由 Worker 存進同一個快取）。
-// 看最後一個檔案，解碼器最後才下載
-async function isDownloaded(id: ModelId): Promise<boolean> {
+// 看那個裝置用的最後一個檔案，解碼器最後才下載
+async function isDownloaded(id: ModelId, device: Device): Promise<boolean> {
   if (!("caches" in self)) return false;
   const cache = await caches.open(MODEL_CACHE).catch(() => null);
-  return !!(await cache?.match(`${modelUrl(id)}${Object.keys(MODELS[id].files).at(-1)}`));
+  return !!(await cache?.match(`${modelUrl(id)}${Object.keys(modelFiles(id, device)).at(-1)}`));
 }
 
 async function removeModel(id: ModelId) {
@@ -52,7 +67,7 @@ type Phase =
   | { kind: "download"; loaded: number; total: number }
   | { kind: "recognize"; at: number; duration: number; since: number }
   | { kind: "done" }
-  | { kind: "failed" | "remoteFailed" | "decodeFailed" | "tooLong" };
+  | { kind: "failed" | "remoteFailed" | "stalled" | "decodeFailed" | "tooLong" };
 
 function download(text: string, name: string) {
   const url = URL.createObjectURL(new Blob([text], { type: "text/plain;charset=utf-8" }));
@@ -67,22 +82,31 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
   const [model, setModel] = useState<ModelId>("small");
   const [language, setLanguage] = useState<"zh" | "auto">("zh");
   const [speakers, setSpeakers] = useState(false);
+  // 顯示卡：undefined 是還在問瀏覽器，null 是不能用
+  const [gpu, setGpu] = useState<GpuInfo | null | undefined>(undefined);
+  const [useGpu, setUseGpu] = useState(true);
+  // 這次實際用的裝置，WebGPU 失敗改用 CPU 時畫面上說明
+  const [running, setRunning] = useState<{ requested: Device; actual: Device } | null>(null);
   const [threads, setThreads] = useState(DEFAULT_THREADS);
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
   const [segments, setSegments] = useState<Segment[]>([]);
   const [downloaded, setDownloaded] = useState<Partial<Record<ModelId, boolean>>>({});
   const [note, setNote] = useState<string>("");
-  const worker = useRef<{ instance: Worker; threads: number } | null>(null);
+  const worker = useRef<{ instance: Worker; threads: number; device: Device } | null>(null);
   // 每次開始轉換加一，按下停止之後，舊的那一次收到的回覆不再處理
   const run = useRef(0);
 
+  const deviceFor = (id: ModelId): Device => (useGpu && gpuUsable(gpu ?? null, MODELS[id].webgpu.buffer) ? "webgpu" : "wasm");
+  const device = deviceFor(model);
   const refresh = () => {
-    for (const id of MODEL_IDS) void isDownloaded(id).then((yes) => setDownloaded((d) => ({ ...d, [id]: yes })));
+    for (const id of MODEL_IDS) void isDownloaded(id, deviceFor(id)).then((yes) => setDownloaded((d) => ({ ...d, [id]: yes })));
   };
   useEffect(() => {
-    refresh();
+    void detectGpu().then(setGpu);
     return () => worker.current?.instance.terminate();
   }, []);
+  // 換裝置時要下載的檔案不同，重新看哪些已經下載
+  useEffect(refresh, [gpu, useGpu]);
 
   const busy = phase.kind === "decoding" || phase.kind === "download" || phase.kind === "recognize";
 
@@ -95,6 +119,7 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
 
   const start = async () => {
     const id = ++run.current;
+    setRunning(null);
     setSegments([]);
     setNote("");
     setPhase({ kind: "decoding" });
@@ -107,24 +132,31 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
       setPhase({ kind: error instanceof TooLargeError ? "tooLong" : "decodeFailed" });
       return;
     }
-    // 同一個 Worker 留著用，換模型時由 Worker 放掉舊的。換核心數要換新的 Worker
-    if (worker.current && worker.current.threads !== threads) {
-      worker.current.instance.terminate();
-      worker.current = null;
-    }
-    worker.current ??= { instance: new Worker(new URL("./transcribe.worker.ts", import.meta.url), { type: "module" }), threads };
-    const instance = worker.current.instance;
+    // 這次用的裝置，Worker 拿不到顯示卡或顯示卡失敗時改成 wasm
+    let current: Device = device;
+    let stall: ReturnType<typeof setTimeout> | undefined;
     // 送出一個要求，等到指定的回覆
+    let instance!: Worker;
     let waiting: { type: Reply["type"]; resolve(): void; reject(error: Error): void } | null = null;
     const send = (request: Request, until: Reply["type"], transfer: Transferable[] = []) =>
       new Promise<void>((resolve, reject) => {
         waiting = { type: until, resolve, reject };
         instance.postMessage(request, transfer);
       });
-    instance.onmessage = (event: MessageEvent<Reply>) => {
+    const onReply = (event: MessageEvent<Reply>) => {
       const reply = event.data;
       if (run.current !== id) return;
-      if (reply.type === "download") setPhase({ kind: "download", loaded: reply.loaded, total: reply.total });
+      if (reply.type === "download" && reply.loaded >= reply.total && !stall)
+        stall = setTimeout(() => {
+          worker.current?.instance.terminate();
+          worker.current = null;
+          waiting?.reject(new Error(STALLED));
+        }, STALL_MS);
+      if (reply.type === "ready") clearTimeout(stall);
+      if (reply.type === "device") {
+        current = reply.device;
+        setRunning({ requested: device, actual: reply.device });
+      } else if (reply.type === "download") setPhase({ kind: "download", loaded: reply.loaded, total: reply.total });
       else if (reply.type === "progress")
         setPhase((p) => ({ kind: "recognize", at: reply.at, duration: stream.duration, since: p.kind === "recognize" ? p.since : Date.now() }));
       else if (reply.type === "segments") setSegments((list) => mergeSegments([...list, ...reply.segments]));
@@ -132,24 +164,60 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
         // 接縫上合併的段落留著第一段的開始時間，用它對回去
         const byStart = new Map(reply.speakers.map((s) => [s.start, s.speaker]));
         setSegments((list) => list.map((seg) => ({ ...seg, speaker: byStart.get(seg.start) })));
-      }
-      else if (reply.type === "error") {
+      } else if (reply.type === "error") {
         // 只有錯誤訊息，不含錄音的內容，讀者回報問題時用得到
         console.warn("[gears] 逐字稿失敗：", reply.message);
         waiting?.reject(new Error(reply.message));
       } else if (waiting?.type === reply.type) waiting.resolve();
     };
-    instance.onerror = (event) => {
-      console.warn("[gears] 逐字稿失敗：", event.message);
-      waiting?.reject(new Error(event.message));
+    // 同一個 Worker 留著用，換模型時由 Worker 放掉舊的。換核心數或裝置要換新的 Worker
+    const boot = async () => {
+      if (worker.current && (worker.current.threads !== threads || worker.current.device !== current)) {
+        worker.current.instance.terminate();
+        worker.current = null;
+      }
+      worker.current ??= { instance: newWorker(), threads, device: current };
+      instance = worker.current.instance;
+      instance.onmessage = onReply;
+      instance.onerror = (event) => {
+        console.warn("[gears] 逐字稿失敗：", event.message);
+        waiting?.reject(new Error(event.message));
+      };
+      setRunning({ requested: device, actual: current });
+      await send({ type: "start", model, language: language === "zh" ? "zh" : null, base: BASE, threads, speakers, device: current }, "ready");
+    };
+    // 顯示卡建立推論環境或辨識失敗時，換一個新的 Worker 改用 CPU：onnxruntime 在一個 Worker 裡
+    // 只初始化一次，WebGPU 初始化失敗之後，改要 CPU 也拿到同一個失敗。辨識到一半才失敗時，從失敗
+    // 的那一段重新送，上一段留著接下來的那句話、分辨說話者已經算好的聲紋會遺失
+    const gpuFailed = (error: unknown) => current === "webgpu" && !String(error).includes(REMOTE_ERROR);
+    const fallback = async (error: unknown) => {
+      console.warn("[gears] 顯示卡失敗，改用 CPU：", String(error));
+      current = "wasm";
+      // CPU 用的模型重新下載，逾時從下載完重新算
+      clearTimeout(stall);
+      stall = undefined;
+      worker.current?.instance.terminate();
+      worker.current = null;
+      await boot();
     };
     try {
-      await send({ type: "start", model, language: language === "zh" ? "zh" : null, base: BASE, threads, speakers }, "ready");
+      await boot().catch(async (error: unknown) => {
+        if (!gpuFailed(error)) throw error;
+        await fallback(error);
+      });
       setPhase({ kind: "recognize", at: 0, duration: stream.duration, since: Date.now() });
       let offset = 0;
       while (chunk) {
         const seconds = chunk.length / SAMPLE_RATE;
-        await send({ type: "chunk", audio: chunk, offset, last: false }, "done", [chunk.buffer]);
+        // 用顯示卡時送一份複本，失敗時才有原本的那段可以重送
+        const audio = current === "webgpu" ? chunk.slice() : chunk;
+        try {
+          await send({ type: "chunk", audio, offset, last: false }, "done", [audio.buffer]);
+        } catch (error) {
+          if (!gpuFailed(error)) throw error;
+          await fallback(error);
+          await send({ type: "chunk", audio: chunk, offset, last: false }, "done", [chunk.buffer]);
+        }
         if (run.current !== id) return;
         offset += seconds;
         chunk = await stream.next();
@@ -160,7 +228,9 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
       setPhase({ kind: "done" });
       refresh();
     } catch (error) {
-      if (run.current === id) setPhase({ kind: String(error).includes(REMOTE_ERROR) ? "remoteFailed" : "failed" });
+      clearTimeout(stall);
+      if (run.current === id)
+        setPhase({ kind: String(error).includes(REMOTE_ERROR) ? "remoteFailed" : String(error).includes(STALLED) ? "stalled" : "failed" });
     }
   };
 
@@ -186,6 +256,8 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
         return t("transcribe.failed");
       case "remoteFailed":
         return t("transcribe.remoteFailed");
+      case "stalled":
+        return t("transcribe.stalled");
       case "decodeFailed":
         return t("transcribe.decodeFailed");
       case "tooLong":
@@ -196,7 +268,7 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
   })();
   const progress = phase.kind === "download" ? phase.loaded / phase.total : phase.kind === "recognize" ? Math.min(1, phase.at / phase.duration) : null;
   const speakerName = (n: number) => t("transcribe.speakerPrefix", { n: n + 1 });
-  const error = phase.kind === "failed" || phase.kind === "remoteFailed" || phase.kind === "decodeFailed" || phase.kind === "tooLong";
+  const error = phase.kind === "failed" || phase.kind === "remoteFailed" || phase.kind === "stalled" || phase.kind === "decodeFailed" || phase.kind === "tooLong";
   // 從 Hugging Face 下載的模型，還沒下載時先說明會連到哪裡、送出什麼，按鈕上也寫明
   const remote = MODELS[model].remote && !downloaded[model];
 
@@ -211,7 +283,7 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
             <span>
               {t(`transcribe.model.${id}`)}
               {downloaded[id] ? <em class="badge done">{t("transcribe.downloaded")}</em> : null}
-              <small>{t(`transcribe.model.${id}.desc`, { size: mb(MODELS[id].bytes) })}</small>
+              <small>{t(`transcribe.model.${id}.desc`, { size: mb(modelBytes(id, deviceFor(id))) })}</small>
             </span>
           </label>
         ))}
@@ -233,6 +305,15 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
         ))}
       </fieldset>
 
+      {gpuUsable(gpu ?? null, MODELS[model].webgpu.buffer) ? (
+        <label class="check">
+          <input type="checkbox" checked={useGpu} disabled={busy} onChange={(e) => setUseGpu(e.currentTarget.checked)} />
+          <span>
+            {t("transcribe.gpu")}
+            <small>{t("transcribe.gpu.desc")}</small>
+          </span>
+        </label>
+      ) : null}
       <label class="check">
         <input type="checkbox" checked={speakers} disabled={busy} onChange={(e) => setSpeakers(e.currentTarget.checked)} />
         <span>
@@ -270,6 +351,11 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
       <p class={error ? "error" : "hint"} role="status" data-testid="transcribe-status">
         {status}
       </p>
+      {running?.requested === "webgpu" && (busy || phase.kind === "done") ? (
+        <p class="hint" data-testid="transcribe-device">
+          {running.actual === "webgpu" ? t("transcribe.device.gpu") : t("transcribe.device.fallback")}
+        </p>
+      ) : null}
       {busy ? (
         <div class="transcribe-progress">
           <div class="auto-progress-track" role="progressbar" aria-label={t("tool.transcribe")} aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress === null ? undefined : Math.round(progress * 100)}>
@@ -335,7 +421,7 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
             }}
           >
             {/* 只刪目前選取的模型，按鈕上寫出是哪一個 */}
-            {t("transcribe.removeModel", { model, size: mb(MODELS[model].bytes) })}
+            {t("transcribe.removeModel", { model, size: mb(modelBytes(model, device)) })}
           </button>
         </p>
       ) : null}

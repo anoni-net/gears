@@ -85,6 +85,43 @@ test("靜音的錄音不送進模型，說明沒有辨識到說話的內容", as
   expect(onnx.sort()).toEqual(["decoder_model_merged_quantized.onnx", "encoder_model_quantized.onnx"]);
 });
 
+test("顯示卡無法使用時改用 CPU，畫面上說明", async ({ page }) => {
+  test.skip(!hasModel, "沒有下載 base 模型");
+  test.setTimeout(240_000);
+  const onnx: string[] = [];
+  page.on("request", (r) => r.url().endsWith(".onnx") && onnx.push(new URL(r.url()).pathname.split("/").pop()!));
+  // ?gpu=force 讓畫面當成顯示卡可以用，測試的瀏覽器拿不到 adapter，Worker 會失敗（src/ui/gpu.ts）
+  await page.goto("./transcribe/?gpu=force");
+  await page.getByTestId("file-input").setInputFiles({ name: "silence.wav", mimeType: "application/octet-stream", buffer: Buffer.from(wav(5)) });
+  await page.getByLabel(/^base：比較快/).check();
+  await expect(page.getByLabel(/^用顯示卡加速/)).toBeChecked();
+  // 用顯示卡時下載的是 4 位元版
+  await expect(page.getByText(`下載約 ${Math.round(models.base.webgpu.bytes / 1e6)} MB`)).toBeVisible();
+  await page.getByLabel("1", { exact: true }).check();
+  await page.getByRole("button", { name: "開始轉逐字稿" }).click();
+  await expect(page.getByTestId("transcribe-status")).toHaveText("沒有辨識到說話的內容。", { timeout: 200_000 });
+  await expect(page.getByTestId("transcribe-device")).toHaveText("顯示卡無法使用，這次改用 CPU，另外下載 CPU 用的模型。");
+  // Worker 先確認拿不到 adapter，沒有下載 4 位元的模型
+  expect(onnx.sort()).toEqual(["decoder_model_merged_quantized.onnx", "encoder_model_quantized.onnx"]);
+});
+
+test("換核心數再轉一次，換新的 Worker", async ({ page, browserName }) => {
+  test.skip(!hasModel, "沒有下載 base 模型");
+  // Firefox 在整組測試同時執行、記憶體很緊時，第二個多執行緒的 Worker 偶爾建不起推論環境（單獨執行、
+  // 只加 CPU 負載都重現不了），畫面會在 3 分鐘後停下來說明（STALL_MS）。這個測試為 WebKit 而寫
+  test.skip(browserName === "firefox", "記憶體很緊時偶發停住，見上方說明");
+  test.setTimeout(240_000);
+  // WebKit 第二次用同一個網址建立 Worker 會被 COEP 擋下，網址每次加上不同的查詢字串
+  await open(page, "silence.wav", wav(5));
+  await page.getByLabel(/^base：比較快/).check();
+  await page.getByLabel("1", { exact: true }).check();
+  await page.getByRole("button", { name: "開始轉逐字稿" }).click();
+  await expect(page.getByTestId("transcribe-status")).toHaveText("沒有辨識到說話的內容。", { timeout: 200_000 });
+  await page.getByLabel("2", { exact: true }).check();
+  await page.getByRole("button", { name: "再轉一次" }).click();
+  await expect(page.getByTestId("transcribe-status")).toHaveText("沒有辨識到說話的內容。", { timeout: 200_000 });
+});
+
 test("建置產物裡沒有其他檔案匯入 Worker 的進入點", ({ browserName }) => {
   // WebKit 會把被匯入的 Worker 進入點當成另一份模組再執行一次，蓋掉 onmessage（src/ui/speaker-embed.ts）。
   // 只看建置產物，一種瀏覽器檢查一次就夠

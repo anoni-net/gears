@@ -134,7 +134,7 @@ Tesseract 的 WebAssembly 會把執行紀錄寫到標準錯誤輸出，瀏覽器
 把錄音或影片的聲音轉成帶時間的段落，以華語為主（`src/ui/TranscribeEditor.tsx`）。結果不是錄音的新版本，TXT 與 SRT 另外放進暫存區，也可以直接下載或複製。逐字稿是草稿，畫面上寫明要對照錄音校對。
 
 - 模型：Whisper small（252 MB，預設）與 base（80 MB），onnx-community 的 8 位元量化版，另外可以選從 Hugging Face 下載的 large-v3-turbo（見下方），讀者自己選。tiny 對華語幾乎不能用（實測字錯率 98%，會掉進英文的重複迴圈），不提供。用魯迅〈阿Q正傳〉的 LibriVox 朗讀實測字錯率：small 約 24%、base 約 56%
-- 模型不進版控，`node scripts/fetch-whisper.mjs` 從 Hugging Face 下載到 `public/models/whisper/`，版本與每個檔案的 SHA-256 寫在 `src/tools/transcribe/models.json`。部署前先執行一次，網頁只從自己的網域載入
+- 模型不進版控，`node scripts/fetch-whisper.mjs` 從 Hugging Face 下載到 `public/models/whisper/`（CPU 與 WebGPU 兩組，CI 加 `--no-webgpu` 只下載 CPU 用的），版本與每個檔案的 SHA-256 寫在 `src/tools/transcribe/models.json`。部署前先執行一次，網頁只從自己的網域載入
 - large-v3-turbo（4 位元量化版，約 760 MB）從 m6 送出的流量太重，`models.json` 標成 `remote`，讀者選擇之後由網頁直接從 Hugging Face 下載（`src/tools/transcribe/remote.ts`）。選了還沒下載的大模型時，畫面先說明 Hugging Face 看得到 IP 位址、瀏覽器與下載了哪個模型，按鈕寫成「從 Hugging Face 下載並開始」。網址鎖定 commit，每個檔案讀完比對 SHA-256，對不上就不存。請求不帶 cookie 與 Referer。下載好的檔案存進同一個 `gears-models` 快取，網址用自己網域的路徑，「已下載」與刪除跟 small、base 一樣處理。Transformers.js 會把 `env.fetch` 的錯誤換成「找不到檔案」，Worker 另外記下下載失敗的原因
 - 用同一段朗讀實測（Node），large-v3-turbo 的字錯率約 22%，small 約 28%，辨識時間約 small 的 1.7 倍。q8 版的字錯率相近、檔案大 300 多 MB，所以用 q4
 - CSP：伺服器送的標頭多開 `https://huggingface.co/<repo>/resolve/<commit>/`（只有下載的路徑，不含上傳用的 API）與 `https://*.hf.co`（下載會轉址到 CDN，轉址之後 CSP 只比對主機）。頁面同時有標頭與 meta 標籤時兩者都要符合，所以頁面本身仍然只能連自己的網域，只有 Worker 連得到 Hugging Face。瀏覽器測試攔下 Hugging Face 的請求，回一份內容不對的檔案，確認會停下來、不存進快取
@@ -143,6 +143,11 @@ Tesseract 的 WebAssembly 會把執行紀錄寫到標準錯誤輸出，瀏覽器
 - 語音偵測：Whisper 在靜音上會產生重複的幻覺文字（實測 base 對 5 秒的靜音輸出「你懂你懂……」直到長度上限）。先用音量找出說話的段落，裝成不超過 30 秒的片段（裝得下就連同停頓放在一起，Whisper 不管片段多短都補到 30 秒再算），只把這些片段送進模型。每個片段依長度限制最多產生的詞元數。整理結果時拿掉靜音段落、短短一段的字幕標語（「字幕製作」、「請不吝點讚」這類），收掉重複的迴圈（`src/tools/transcribe/segments.ts`，有單元測試）
 - 簡體轉台灣正體與台灣慣用詞：`opencc-js` 的 `cn2t`（cn → twp），在 Worker 裡用到時才載入
 - 同時使用的 CPU 核心讀者自己選（1、2、4、8、12、16），預設值依瀏覽器回報的核心數決定（`src/tools/transcribe/threads.ts`，有單元測試）。多執行緒要頁面在 cross-origin isolation 底下（COOP 與 COEP 標頭），換核心數時換一個新的 Worker（onnxruntime 第一次載入時就決定了執行緒數）。實測差距很大：15 核心的 MacBook Pro 上，同一段錄音 4 個核心要 40 分鐘、8 個 8 分鐘、12 個 4 分鐘（這台開發機在其他程式同時執行、負載很高時量到的差距小很多，不準）。`navigator.hardwareConcurrency` 只會比實際少：Brave 回報 2 到真實數字之間的隨機數，Safari 桌機最多回報 8、iPhone 一律回報 2，Firefox 防指紋時固定回報 2。所以回報 12 以上就用 12，Chrome 這類回報真實數字的用不超過它的最大選項，數字不可信的用 8，iPhone、iPad 用 4
+- 顯示卡（WebGPU）：畫面先問瀏覽器拿 adapter（`src/ui/gpu.ts`），拿得到、不是軟體模擬的（`isFallbackAdapter`，實測比 CPU 慢 15 到 29 倍）、緩衝區放得下 decoder 的詞嵌入表（`models.json` 的 `webgpu.buffer`），才出現「用顯示卡加速」的選項，預設勾選（`src/tools/transcribe/device.ts`，有單元測試）。WebGPU 用 4 位元的模型（`models.json` 的 `webgpu`）：8 位元版用到的 `MatMulInteger`、`DynamicQuantizeLinear` 在 onnxruntime 的 WebGPU 上沒有實作，大部分運算會退回 CPU。CPU 維持 8 位元版，瀏覽器裡實測 4 位元版在 CPU 上慢了約 1.7 倍（Node 上反而快約兩成）。large-v3-turbo 本來就是 4 位元版，兩邊共用
+- 顯示卡失敗時（Worker 拿不到 adapter、建立推論環境或辨識失敗），畫面換一個新的 Worker 改用 CPU，從失敗的那一段重新送，並在畫面上說明。同一個 Worker 裡 Transformers.js 第二次載入仍然走 WebGPU，所以要換 Worker。辨識到一半才失敗時，上一段留著接下來的那句話、分辨說話者已經算好的聲紋會遺失。用顯示卡時送給 Worker 的是一份複本，失敗時才有原本的那段可以重送
+- 每次建立 Worker 都在網址加上不同的查詢字串（`?worker&url` 匯入網址再自己建立）：WebKit 第二次用同一個網址建立 Worker 時，會被 Cross-Origin-Embedder-Policy 擋下，換核心數再轉一次就會失敗
+- 模型下載完之後 3 分鐘還沒建好推論環境，畫面停下來說明可能是記憶體不夠（`STALL_MS`）。Firefox 在記憶體很緊時，多執行緒的 Worker 偶爾建不起推論環境，也不會報錯（瀏覽器測試整組同時執行時遇到，單獨執行、只加 CPU 負載都重現不了）
+- 這台開發機與 CI 都沒有實體顯示卡，WebGPU 的速度要在讀者的電腦上量。網址參數 `?gpu=force` 不問瀏覽器、當成顯示卡可以用（測改用 CPU 的路徑，瀏覽器測試用它），`?gpu=any` 連軟體模擬的顯示卡也用（在沒有實體顯示卡的機器上確認 WebGPU 的辨識結果）
 - 長錄音分段處理（`src/ui/audio-stream.ts`）：每次解碼約 10 分鐘，換成 16 kHz 單聲道交給 Worker，處理完才解碼下一段，記憶體用量跟錄音長短無關，轉好的段落邊轉邊顯示。WAV 直接讀 PCM。MP3 在音訊框的邊界切開，多帶前兩框一起解碼（音訊框會借用前一框的資料）。MP4、M4A、MOV 從 moov 的索引取出 AAC 樣本，交給 WebCodecs 的 `AudioDecoder`。檔案結構的解析在 `src/tools/transcribe/sources.ts`，有單元測試
 - 這幾種格式超過 256 MB 也能處理（工具的 `acceptsLarge`），不限長度。其他格式，以及瀏覽器不支援 `AudioDecoder` 時的 AAC，整個檔案一次解碼，限制在 256 MB 與 2 小時。瀏覽器解不出聲音的檔案（例如沒有音軌的影片）畫面上說明
 - 一段話碰到分段的結尾時先留著，接到下一段一起辨識，一句話不會被切成兩半。接縫上重複的那一句合併
