@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "preact/hooks";
-import { t } from "../i18n/index.ts";
+import { t, tDynamic } from "../i18n/index.ts";
 import { tray } from "../state.ts";
 import { MODELS, MODEL_IDS, type ModelId, SAMPLE_RATE, type Segment, clock, mergeSegments, toSrt, toTxt } from "../tools/transcribe/segments.ts";
 import { type Device, type GpuInfo, gpuUsable } from "../tools/transcribe/device.ts";
@@ -7,6 +7,7 @@ import { LANGUAGES, type Language, modelsFor, preferredModel } from "../tools/tr
 import { type Part, partName } from "../tools/transcribe/parts.ts";
 import { REMOTE_ERROR } from "../tools/transcribe/remote.ts";
 import speakerModel from "../tools/transcribe/speaker-model.json" with { type: "json" };
+import { navigate } from "../router.ts";
 import { THREAD_OPTIONS, defaultThreads } from "../tools/transcribe/threads.ts";
 import { type AudioStream, TooLargeError, openAudio } from "./audio-stream.ts";
 import { detectGpu } from "./gpu.ts";
@@ -464,6 +465,40 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
           </button>
         </p>
       ) : null}
+
+      {/* 每個模型的原始來源、授權與下載的位置，從 models.json 讀，授權全文在授權頁 */}
+      <details class="transcribe-models" data-testid="transcribe-models">
+        <summary>{t("transcribe.models.title")}</summary>
+        <ul>
+          {MODEL_IDS.map((id) => (
+            <li key={id}>
+              <strong>{tDynamic(`transcribe.model.${id}`)}</strong>
+              <span>
+                {t("transcribe.models.source")}
+                <a href={MODELS[id].source} target="_blank" rel="noopener">
+                  {new URL(MODELS[id].source).pathname.slice(1)}
+                </a>
+                {t("transcribe.models.detail", { license: MODELS[id].license, host: tDynamic(`transcribe.models.host.${MODELS[id].host}`) })}
+              </span>
+            </li>
+          ))}
+          <li>
+            <strong>{t("transcribe.speakers")}</strong>
+            <span>
+              {t("transcribe.models.source")}
+              <a href={speakerModel.source} target="_blank" rel="noopener">
+                3D-Speaker CAM++
+              </a>
+              {t("transcribe.models.detail", { license: speakerModel.license, host: t("transcribe.models.host.self") })}
+            </span>
+          </li>
+        </ul>
+        <p class="hint">
+          <button type="button" class="link" onClick={() => navigate("licenses")}>
+            {t("transcribe.models.all")}
+          </button>
+        </p>
+      </details>
     </div>
   );
 }

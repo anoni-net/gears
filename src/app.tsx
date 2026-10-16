@@ -5,6 +5,7 @@ import { tray } from "./state.ts";
 import { createTools, editorTools, fileTools } from "./tools/index.ts";
 import { Desktop, type Task } from "./ui/Desktop.tsx";
 import { FileView } from "./ui/FileView.tsx";
+import { Licenses } from "./ui/Licenses.tsx";
 import { ToolIntro } from "./ui/ToolIntro.tsx";
 import { TrayList } from "./ui/TrayList.tsx";
 import { useOffline } from "./ui/offline.ts";
@@ -94,7 +95,7 @@ export function App() {
   const addFiles = async (files: File[], origin: string | null = null) => {
     if (!files.length) return;
     await tray.add(files, origin);
-    if (isCreateTool(route) && route !== "verify") navigate("");
+    if ((isCreateTool(route) && route !== "verify") || route === "licenses") navigate("");
   };
   const dragging = useDropAnywhere((files) => void addFiles(files));
 
@@ -118,7 +119,7 @@ export function App() {
 
   const selectFile = (id: number) => {
     tray.select(id);
-    if (isCreateTool(route)) navigate("");
+    if (isCreateTool(route) || route === "licenses") navigate("");
   };
 
   const openTool = (id: string, value?: string) => {
@@ -157,6 +158,8 @@ export function App() {
         />
       </section>
     );
+  } else if (route === "licenses") {
+    view = <Licenses />;
   } else if (selected) {
     view = <FileView key={selected.id} file={selected} index={selectedIndex} busy={state.busy} preferred={route} onOpenTool={openTool} />;
   } else if (isFileTool(route)) {
@@ -243,6 +246,11 @@ export function App() {
           <a href="https://anoni.net/">{t("app.footer.community")}</a>
           {" · "}
           <a href="https://github.com/anoni-net/gears">{t("app.footer.source")}</a>
+          {" · "}
+          {/* 站內的頁面不用一般的連結，避免重新載入、清空暫存區 */}
+          <button type="button" class="link" onClick={() => navigate("licenses")}>
+            {t("app.footer.licenses")}
+          </button>
         </p>
         <nav class="languages" aria-label={t("app.language")}>
           {LOCALES.map((l) => (

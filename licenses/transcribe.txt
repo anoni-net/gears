@@ -1,9 +1,10 @@
-逐字稿：Whisper、Transformers.js 與 OpenCC
-==========================================
+逐字稿：語音辨識模型、Transformers.js、sherpa-onnx 與 OpenCC
+==========================================================
 
 逐字稿在讀者按下「開始轉逐字稿」時，才從本站載入以下檔案，在瀏覽器的 Web Worker 裡
-執行，錄音不會上傳。程式與模型原封不動使用，沒有修改。large-v3-turbo 例外，讀者選擇之後
-由網頁直接從 Hugging Face 下載，本站不轉發這個模型。社群轉檔的三個模型從 assets.anoni.net 載入。
+執行，錄音不會上傳。程式與模型原封不動使用，沒有修改，只有社群轉檔的模型做過量化（見下方）。
+large-v3-turbo 例外，讀者選擇之後由網頁直接從 Hugging Face 下載，本站不轉發這個模型。社群轉檔的
+模型與 sherpa-onnx 從 assets.anoni.net 載入。
 
 語音辨識模型（scripts/fetch-whisper.mjs 下載，版本與每個檔案的 SHA-256 寫在
 src/tools/transcribe/models.json）

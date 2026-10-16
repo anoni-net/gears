@@ -1,4 +1,6 @@
 {
+  "source": "https://modelscope.cn/models/iic/speech_campplus_sv_zh-cn_16k-common",
+  "license": "Apache-2.0",
   "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-recongition-models/3dspeaker_speech_campplus_sv_zh-cn_16k-common.onnx",
   "dir": "speaker-campplus-f682b51",
   "file": "campplus.onnx",

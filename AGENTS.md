@@ -44,7 +44,7 @@ npm run test:unit    # 只執行單元測試，不需要瀏覽器
 | `tests/e2e/` | 在 Chromium、WebKit、Firefox 與 iPhone 尺寸上測整個流程 |
 | `tests/helpers/` | 產生測試檔案的程式 |
 | `public/` | 網站圖示、主畫面圖示與 manifest |
-| `licenses/` | 第三方圖示、HEIC 解碼器、pdf-lib、pdf.js、自動尋找與逐字稿的授權全文 |
+| `licenses/` | 第三方圖示、HEIC 解碼器、pdf-lib、pdf.js、自動尋找與逐字稿的授權全文，也會跟著網站部署（見下方「第三方資料」） |
 
 ## 工具模組
 
@@ -400,6 +400,10 @@ iPhone 預設拍出來的是 HEIC，在網頁上選照片時交出來的也是�
 產品規劃記錄在社群的工作區，還沒有公開。目前完成第一階段：桌面、檔案暫存區，以及清除中繼資料（JPEG、PNG、HEIC、AVIF、WebP、GIF、TIFF、SVG、BMP、PNM、JPEG XL，Word、Excel、PowerPoint、LibreOffice 文件與 PDF，MP3、M4A、MP4、MOV、WAV、AVI、FLAC、Ogg、Opus、MKV、WebM，ZIP、TAR、gzip、EPUB、種子檔、HTML）、遮蔽（圖片與 PDF，可以自動找人臉與個資）、選擇 PDF 的頁面、查證收到的檔案、看懂這封信、逐字稿、加密與解密（檔案與一段文字）、age 金鑰產生器、QR code 產生器與讀取、網址檢查、密語與密碼產生器，可以下載與系統分享，一次處理多個檔案，也可以離線使用。2026-10 起部署在 `anoni.net/gears/`（見上方「部署」）。
 
 ## 第三方資料
+
+讀者從頁尾的「授權與來源」打開授權頁（`/gears/licenses/`，`src/ui/Licenses.tsx`，頁面清單在 `src/pages.ts`）。`licenses/` 底下的授權全文用 `?url` 匯入，跟著建置一起輸出（檔名帶雜湊），service worker 也會存起來，離線也能看。工作台自己的 `LICENSE` 沒有副檔名，伺服器會當成二進位檔，所以直接展開在頁面上。新增 `licenses/` 的檔案時，在 `Licenses.tsx` 的 `ENTRIES` 加一筆，三個語系加上 `licenses.<id>` 與 `licenses.<id>.desc`，`tests/e2e/licenses.spec.ts` 會比對每份授權全文。
+
+逐字稿畫面最下面另有收起來的「使用的模型與授權」，從 `models.json` 的 `source`（原始模型）、`license` 與 `host` 讀，新增模型時填好這三欄就會出現。
 
 - 密語的字詞表來自 [asian-diceware](https://github.com/anoni-net/asian-diceware) `v0.4.0`，CC BY 4.0，畫面上標示出處
 - 工具的圖示來自 [Material Design Icons](https://pictogrammers.com/library/mdi/)，Pictogrammers Free License
