@@ -72,6 +72,47 @@ test("轉成圖片：只留下選中的頁面，字型與文字層都不帶過�
   expect((await PDFDocument.load(file.data)).getPageCount()).toBe(1);
 });
 
+test("放大檢視：畫成大圖，可以換頁、勾選，關掉之後勾選留著", async ({ page }) => {
+  // 手機的寬度，符合寬度時頁面比畫出來的像素小，再放大才有作用
+  await page.setViewportSize({ width: 390, height: 800 });
+  await page.goto("./pdf-pages/");
+  await page.getByTestId("file-input").setInputFiles({ name: "statement.pdf", mimeType: "application/pdf", buffer: await threePages() });
+  await page.getByRole("button", { name: "放大第 2 頁" }).click({ timeout: 15000 });
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByText("第 2 頁，共 3 頁")).toBeVisible();
+  // 大圖的寬度遠大於縮圖
+  await expect(page.getByTestId("page-zoom-canvas")).not.toHaveClass(/waiting/, { timeout: 15000 });
+  const width = await page.getByTestId("page-zoom-canvas").evaluate((c: HTMLCanvasElement) => c.width);
+  expect(width).toBeGreaterThan(500);
+  // 再放大：比對話框寬，可以左右捲動；不超過畫出來的像素
+  const stage = page.locator(".page-zoom-stage");
+  const fitWidth = (await page.getByTestId("page-zoom-canvas").boundingBox())!.width;
+  await dialog.getByRole("button", { name: "再放大" }).click();
+  await expect(dialog.getByRole("button", { name: "符合寬度" })).toHaveAttribute("aria-pressed", "true");
+  const enlarged = (await page.getByTestId("page-zoom-canvas").boundingBox())!.width;
+  expect(enlarged).toBeGreaterThan(fitWidth * 1.2);
+  expect(enlarged).toBeLessThanOrEqual(width + 1);
+  expect(await stage.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true);
+  await dialog.getByRole("button", { name: "符合寬度" }).click();
+
+  await dialog.getByRole("checkbox", { name: "留下這一頁" }).check();
+  await dialog.getByRole("button", { name: "下一頁" }).click();
+  await expect(dialog.getByText("第 3 頁，共 3 頁")).toBeVisible();
+  await expect(dialog.getByRole("checkbox", { name: "留下這一頁" })).not.toBeChecked();
+  await expect(dialog.getByRole("button", { name: "下一頁" })).toBeDisabled();
+  await dialog.getByRole("button", { name: "回到所有頁面" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.getByRole("checkbox", { name: "第 2 頁" })).toBeChecked();
+  await expect(page.getByText("選了 1 頁，共 3 頁")).toBeVisible();
+
+  // Escape 也能關掉
+  await page.getByRole("button", { name: "放大第 1 頁" }).click();
+  await expect(dialog).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+});
+
 test("只有一頁的 PDF 說明沒有可以拿掉的頁面", async ({ page }) => {
   const doc = await PDFDocument.create();
   doc.addPage([200, 200]);

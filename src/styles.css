@@ -1083,26 +1083,119 @@ footer .languages button[aria-current] {
   list-style: none;
 }
 
+.page-card {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.25rem;
+  padding: 0.5rem;
+  border: 2px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+}
+
+.page-card.checked {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+}
+
 .page-pick {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0.4rem;
-  padding: 0.5rem;
-  border: 2px solid var(--line);
-  border-radius: 6px;
-  background: var(--surface);
   cursor: pointer;
-}
-
-.page-pick.checked {
-  border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
 }
 
 .page-pick:focus-within {
   outline: 2px solid var(--focus);
   outline-offset: 2px;
+}
+
+/* 放大按鈕：卡片底部一列，比勾選小一號 */
+.page-zoom-open {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.85rem;
+}
+
+.page-zoom-open .icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+/* 放大檢視：對話框依視窗寬度縮放，換頁與勾選固定在上下兩端 */
+.page-zoom {
+  width: min(100% - 1rem, 60rem);
+  max-height: calc(100% - 1rem);
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.page-zoom::backdrop {
+  background: rgb(0 0 0 / 0.6);
+}
+
+.page-zoom-bar {
+  position: sticky;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  background: var(--bg);
+}
+
+.page-zoom-bar:first-child {
+  top: 0;
+  border-bottom: 1px solid var(--hair);
+}
+
+.page-zoom-bar:last-child {
+  bottom: 0;
+  border-top: 1px solid var(--hair);
+}
+
+.page-zoom-bar span {
+  font-variant-numeric: tabular-nums;
+}
+
+.page-zoom-bar .check {
+  margin: 0;
+}
+
+.page-zoom-stage {
+  padding: 0.75rem;
+  background: var(--fill);
+}
+
+.page-zoom-stage canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: #fff;
+  box-shadow: 0 0 0 1px var(--hair);
+}
+
+/* 再放大：兩倍寬，最多到畫出來的像素（行內樣式的 max-width），左右捲動 */
+.page-zoom-stage.enlarged {
+  overflow-x: auto;
+}
+
+.page-zoom-stage.enlarged canvas {
+  width: 200%;
+}
+
+.page-zoom-stage canvas.waiting {
+  aspect-ratio: 1 / 1.414;
 }
 
 .page-pick span {
