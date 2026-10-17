@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import { t } from "../i18n/index.ts";
 import { QrContentView } from "./QrContentView.tsx";
+import { track, trackFail } from "./analytics.ts";
 import { decodeQrFromBlob, decodeQrFromVideo } from "./qr-scan.ts";
 import type { CreateToolProps } from "./types.ts";
 
@@ -28,6 +29,7 @@ export function QrReadTool({ onOpenTool }: CreateToolProps) {
       if (!alive) return;
       if (found) {
         stop();
+        track("tool-done", { tool: "qr-read" });
         setText(found);
         setStatus("idle");
       } else {
@@ -72,6 +74,8 @@ export function QrReadTool({ onOpenTool }: CreateToolProps) {
     setText(null);
     setStatus("reading");
     const found = await decodeQrFromBlob(file);
+    if (found) track("tool-done", { tool: "qr-read" });
+    else trackFail("qr-read", "not-found");
     setText(found);
     setStatus(found ? "idle" : "notFound");
   };

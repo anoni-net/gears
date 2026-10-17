@@ -13,6 +13,7 @@ import { QrContentView } from "./QrContentView.tsx";
 import { decodeImage } from "./image-decode.ts";
 import { decodeQrFromBlob } from "./qr-scan.ts";
 import { outputName } from "./output-name.ts";
+import { track } from "./analytics.ts";
 
 // 預覽圖。Brave、Chrome、Firefox 不能直接顯示 HEIC，載入失敗時改用 libheif 解碼，
 // 畫成 PNG 再顯示。解碼也失敗時說明原因，中繼資料照樣能處理
@@ -210,11 +211,19 @@ function Output({ version, name }: { version: Version; name: string }) {
     <section class="output" aria-labelledby="output-title">
       <h3 id="output-title">{t("output.title")}</h3>
       <div class="buttons">
-        <a class="button primary" href={url} download={name}>
+        <a class="button primary" href={url} download={name} onClick={() => track("save", { how: "download" })}>
           {t("output.download")}
         </a>
         {canShare ? (
-          <button type="button" onClick={() => navigator.share({ files: [file] }).catch(() => {})}>
+          <button
+            type="button"
+            onClick={() =>
+              navigator
+                .share({ files: [file] })
+                .then(() => track("save", { how: "share" }))
+                .catch(() => {})
+            }
+          >
             {t("output.share")}
           </button>
         ) : null}

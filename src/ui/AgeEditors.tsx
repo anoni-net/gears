@@ -3,6 +3,7 @@ import type { Report } from "../core/tool.ts";
 import { t } from "../i18n/index.ts";
 import { decrypt, encrypt, keysAvailable } from "../tools/age/index.ts";
 import { useAgeKey } from "./AgeKeyFields.tsx";
+import { trackFail } from "./analytics.ts";
 import type { FileEditorProps } from "./types.ts";
 
 // 加密任何檔案。用密語加密時，完成後用同一組密語解密一次，確認解得回來才交出去。
@@ -27,6 +28,7 @@ export function EncryptEditor({ blob, onDone, onCancel }: FileEditorProps) {
       if (armored) notes.push({ code: "age-armor" });
       onDone(new Blob([out as Uint8Array<ArrayBuffer>]), { removed: [], kept: [], notes });
     } catch {
+      trackFail("encrypt", "other");
       setStatus("failed");
     }
   };

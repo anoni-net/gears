@@ -2,6 +2,7 @@ import { useState } from "preact/hooks";
 import type { Report } from "../core/tool.ts";
 import { t } from "../i18n/index.ts";
 import { decodeImage } from "./image-decode.ts";
+import { trackFail } from "./analytics.ts";
 import type { FileEditorProps } from "./types.ts";
 
 // 把 HEIC 轉成 JPEG。iPhone 的照片傳到 Windows 或 Android 常常打不開，轉成 JPEG 到處都能看。
@@ -29,6 +30,7 @@ export function HeicConvert({ blob, onDone, onCancel }: FileEditorProps) {
       const report: Report = { removed: [{ code: "reencode" }], kept: [], notes: [{ code: "heic-converted" }] };
       onDone(await toJpeg(blob), report);
     } catch {
+      trackFail("heic-to-jpeg", "unsupported");
       setStatus("failed");
     }
   };

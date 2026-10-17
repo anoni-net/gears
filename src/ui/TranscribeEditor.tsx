@@ -15,6 +15,7 @@ import type { Reply, Request } from "./transcribe.worker.ts";
 import sherpaWorkerUrl from "./sherpa.worker.ts?worker&url";
 import workerUrl from "./transcribe.worker.ts?worker&url";
 import type { FileEditorProps } from "./types.ts";
+import { track, trackFail } from "./analytics.ts";
 
 // 逐字稿：把錄音或影片的聲音轉成帶時間的段落。解碼在這裡（Web Audio 只能在主執行緒用），
 // 每次約 10 分鐘（src/ui/audio-stream.ts），辨識在 Web Worker（src/ui/transcribe.worker.ts），
@@ -84,6 +85,7 @@ type Phase =
   | { kind: "failed" | "remoteFailed" | "stalled" | "decodeFailed" | "tooLong" };
 
 function download(text: string, name: string) {
+  track("save", { how: "download" });
   const url = URL.createObjectURL(new Blob([text], { type: "text/plain;charset=utf-8" }));
   const a = document.createElement("a");
   a.href = url;
@@ -147,10 +149,12 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
       chunk = await stream.next();
     } catch (error) {
       setPhase({ kind: error instanceof TooLargeError ? "tooLong" : "decodeFailed" });
+      trackFail("transcribe", error instanceof TooLargeError ? "too-large" : "unsupported");
       return;
     }
     // 這次用的裝置，Worker 拿不到顯示卡或顯示卡失敗時改成 wasm
     let current: Device = device;
+    let fellBack = false;
     let stall: ReturnType<typeof setTimeout> | undefined;
     // 送出一個要求，等到指定的回覆
     let instance!: Worker;
@@ -211,6 +215,7 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
     const fallback = async (error: unknown) => {
       console.warn("[gears] 顯示卡失敗，改用 CPU：", String(error));
       current = "wasm";
+      fellBack = true;
       // CPU 用的模型重新下載，逾時從下載完重新算
       clearTimeout(stall);
       stall = undefined;
@@ -245,10 +250,16 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
       if (run.current !== id) return;
       setPhase({ kind: "done" });
       refresh();
+      // 用了哪個模型、CPU 還是顯示卡、顯示卡有沒有失敗退回 CPU
+      track("transcribe", { model, device: current === "webgpu" ? "gpu" : "cpu", fallback: fellBack ? "1" : "0" });
+      track("tool-done", { tool: "transcribe" });
     } catch (error) {
       clearTimeout(stall);
-      if (run.current === id)
-        setPhase({ kind: String(error).includes(REMOTE_ERROR) ? "remoteFailed" : String(error).includes(STALLED) ? "stalled" : "failed" });
+      if (run.current !== id) return;
+      const remote = String(error).includes(REMOTE_ERROR);
+      const stalled = String(error).includes(STALLED);
+      setPhase({ kind: remote ? "remoteFailed" : stalled ? "stalled" : "failed" });
+      trackFail("transcribe", remote ? "network" : stalled ? "stalled" : "other");
     }
   };
 

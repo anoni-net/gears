@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import { t } from "../i18n/index.ts";
 import { Icon } from "./Icon.tsx";
+import { pdfFailReason, trackFail } from "./analytics.ts";
 import type { PdfPages } from "./pdf-pages.ts";
 import type { FileEditorProps } from "./types.ts";
 
@@ -146,7 +147,10 @@ export function PdfPagesEditor({ blob, onDone, onCancel }: FileEditorProps) {
       if (!alive) return opened.close();
       setPdf(opened);
       setStatus("ready");
-    })().catch(() => alive && setStatus("openFailed"));
+    })().catch((error: unknown) => {
+      trackFail("pdf-pages", pdfFailReason(error));
+      if (alive) setStatus("openFailed");
+    });
     return () => {
       alive = false;
       opened?.close();
@@ -178,6 +182,7 @@ export function PdfPagesEditor({ blob, onDone, onCancel }: FileEditorProps) {
       onDone(new Blob([result.data as Uint8Array<ArrayBuffer>], { type: "application/pdf" }), result.report);
     } catch {
       // 解不開的內容或檢查沒有通過（新檔裡出現沒選的頁面），都不交出結果
+      trackFail("pdf-pages", "broken");
       setBuilding(null);
       setStatus("failed");
     }

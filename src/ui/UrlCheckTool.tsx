@@ -4,6 +4,7 @@ import { cleanUrl, isShortener, parseUrl } from "../tools/url-check/clean.ts";
 import { type HostWarning, hostFacts } from "../tools/url-check/host.ts";
 import { type ScamList, findScam } from "../tools/url-check/scam-list.ts";
 import { useScamList } from "./scam-list-loader.ts";
+import { useDoneOnce } from "./analytics.ts";
 import { CopyButton } from "./CopyButton.tsx";
 import type { CreateToolProps } from "./types.ts";
 
@@ -26,6 +27,7 @@ export function UrlCheckTool({ preset }: CreateToolProps) {
   const [input, setInput] = useState(preset ?? "");
   const list = useScamList();
   const parsed = parseUrl(input);
+  useDoneOnce("url-check", parsed instanceof URL);
 
   return (
     <div class="url-check">

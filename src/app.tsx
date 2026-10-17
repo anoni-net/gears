@@ -13,6 +13,7 @@ import { useTray } from "./ui/hooks.ts";
 import { CreateToolView } from "./ui/registry.tsx";
 import { Icon, IconCircle } from "./ui/Icon.tsx";
 import { TOOL_META } from "./ui/tool-meta.ts";
+import { browserDeclines, optedOut, setOptedOut, track, trackView } from "./ui/analytics.ts";
 
 const isCreateTool = (id: string) => createTools.some((tool) => tool.id === id);
 const isFileTool = (id: string) => [...fileTools, ...editorTools].some((tool) => tool.id === id);
@@ -83,6 +84,38 @@ function ClearButton() {
   );
 }
 
+// 頁尾的使用統計說明與開關。選擇存在這個瀏覽器裡，瀏覽器要求不追蹤時直接說明不記錄
+function AnalyticsChoice() {
+  const [off, setOff] = useState(optedOut);
+  // 英文的句子之間空一格，中文不空
+  const sep = getLocale() === "en" ? " " : "";
+  if (browserDeclines())
+    return (
+      <p data-testid="analytics">
+        {t("app.analytics.note")}
+        {sep}
+        {t("app.analytics.declined")}
+      </p>
+    );
+  return (
+    <p data-testid="analytics">
+      {t("app.analytics.note")}
+      {sep}
+      {off ? `${t("app.analytics.stopped")}${sep}` : null}
+      <button
+        type="button"
+        class="link"
+        onClick={() => {
+          setOptedOut(!off);
+          setOff(!off);
+        }}
+      >
+        {t(off ? "app.analytics.resume" : "app.analytics.stop")}
+      </button>
+    </p>
+  );
+}
+
 export function App() {
   const state = useTray();
   const route = useRoute();
@@ -101,6 +134,7 @@ export function App() {
 
   useEffect(() => {
     document.title = route ? tDynamic(`meta.${route}.title`) : t("meta.home.title");
+    trackView();
   }, [route, getLocale()]);
 
   const pick = () => input.current?.click();
@@ -129,6 +163,7 @@ export function App() {
   };
 
   const onTask = (task: Task) => {
+    track("task", { task: task.id });
     tray.select(null);
     setPreset(task.preset);
     navigate(task.tool);
@@ -242,6 +277,7 @@ export function App() {
       <footer class="frame">
         <p>{t("app.memoryNote")}</p>
         {offline.ready ? <p data-testid="offline-ready">{t("app.offlineReady")}</p> : null}
+        <AnalyticsChoice />
         <p>
           <a href="https://anoni.net/">{t("app.footer.community")}</a>
           {" · "}

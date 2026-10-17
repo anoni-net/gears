@@ -1,5 +1,8 @@
+import { track } from "./analytics.ts";
+
 // 把 Blob 存回讀者的裝置。用 blob: 網址觸發下載，不經過任何伺服器。
 export function saveBlob(blob: Blob, name: string) {
+  track("save", { how: "download" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;

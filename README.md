@@ -33,6 +33,7 @@ anoni.net Gears 檔案工作台，在瀏覽器裡處理要交出去的檔案：�
 - 預設在你的瀏覽器裡處理，要傳送時先加密，伺服器只取得密文
 - 影片這類比較吃重的處理，另外提供上傳到社群伺服器處理的選項。上傳前會告知檔案送到哪裡、誰看得到、保留多久，由你決定要不要上傳
 - 需要連網的功能在畫面上標示，並寫明送出了什麼
+- 使用統計只記工具的使用次數，送到社群自架的 Umami，不含檔案、檔名與你輸入的內容，可以在頁尾關掉。瀏覽器的 Do Not Track 與 Global Privacy Control 一律遵守
 - 先支援 Brave、Safari 與 Firefox
 
 ## 開發
@@ -86,6 +87,7 @@ The tools already online live in the [utilities section of the docs site](https:
 - Processing happens in your browser by default, and anything sent is encrypted first, so the server only receives ciphertext
 - For heavier jobs such as video, you can choose to upload a file to a community server instead. Before anything is uploaded, Gears tells you where the file goes, who can see it and how long it is kept, and the choice is yours
 - Features that need the network are labelled, along with what they send
+- Usage statistics only count how tools are used and go to the community's self-hosted Umami, with no files, file names or anything you type. You can turn them off in the footer, and Do Not Track and Global Privacy Control are always honoured
 - Brave, Safari and Firefox are supported first
 
 ## Development
