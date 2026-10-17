@@ -103,6 +103,8 @@ export interface PdfBuildHooks {
   // 每一頁塗黑、編碼之後交回 JPEG，由呼叫的人確認框起來的地方真的是黑的
   check(jpeg: Blob, boxes: Box[]): Promise<void>;
   onProgress(done: number, total: number): void;
+  // 畫好每一頁之後、塗黑之前處理像素，例如去掉列印的追蹤點（src/ui/PrintDotsEditor.tsx）
+  transform?(pixels: Uint8ClampedArray): void;
 }
 
 // 逐頁處理，同一時間只有一頁的圖片在記憶體裡。indices 是要輸出的頁面（從 0 開始），
@@ -123,6 +125,11 @@ export async function buildRedactedPdf(pages: PdfPages, boxes: Box[][], hooks: P
     const ctx = canvas.getContext("2d")!;
     ctx.drawImage(bitmap, 0, 0);
     bitmap.close();
+    if (hooks.transform) {
+      const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      hooks.transform(image.data);
+      ctx.putImageData(image, 0, 0);
+    }
     ctx.fillStyle = "#000";
     const pageBoxes = boxes[i] ?? [];
     for (const b of pageBoxes) ctx.fillRect(b.x, b.y, b.w, b.h);

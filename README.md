@@ -14,6 +14,7 @@ anoni.net Gears 檔案工作台，在瀏覽器裡處理要交出去的檔案：�
 - 清除壓縮檔裡每個檔案的時間與擁有者、macOS 與 Windows 留下的系統檔，裡面的照片與文件一起清（ZIP、TAR、tar.gz），以及電子書、種子檔與另存的網頁
 - 把 iPhone 的 HEIC 照片轉成 JPEG
 - 遮蔽截圖與 PDF 上的名字、頭像與電話，可以自動找人臉與電話、Email 這類個資，也可以選擇保留拍攝資訊。PDF 遮蔽後每一頁轉成圖片，框起來的文字不會留在檔案裡
+- 找出掃描或翻拍的紙本文件上，彩色雷射印表機印的淡黃色追蹤點，去掉淡黃色或轉成黑白
 - 只交出 PDF 的其中幾頁，其他頁連同連到它們的連結、書籤與文件資訊一起拿掉
 - 查證收到的檔案：雜湊值、時間線、裝置、作者與編輯痕跡，比對檔案之間的矛盾，PDF 的舊版本可以比對差異，匯出查證紀錄
 - 文件開啟前檢查：打開收到的 Word、Excel、PowerPoint、PDF 之前，列出打開時會連到外面的位址、巨集與 JavaScript，PDF 可以轉成只有圖片的安全版本
@@ -69,6 +70,7 @@ Tools in the first version:
 - Strip timestamps, owners and macOS/Windows system files from archives (ZIP, TAR, tar.gz), cleaning the photos and documents inside, plus e-books, torrent files and saved web pages
 - Convert iPhone HEIC photos to JPEG
 - Redact names, avatars and phone numbers in screenshots and PDFs, with automatic detection of faces and personal details such as phone numbers and emails, and an option to keep capture details. A redacted PDF has every page turned into an image, so the covered text does not stay in the file
+- Find the faint yellow tracking dots that colour laser printers leave on a scanned or photographed page, and remove the yellow or turn the page black and white
 - Hand over only some pages of a PDF. Other pages are removed, along with links to them, bookmarks and document info
 - Verify files you received: hashes, a timeline, devices, authors and editing traces, with contradictions between files flagged, earlier PDF versions compared, and a verification record to export
 - Check a document before opening it: list the external addresses, macros and JavaScript that a Word, Excel, PowerPoint file or PDF reaches for when opened, and turn a PDF into a safe image-only copy

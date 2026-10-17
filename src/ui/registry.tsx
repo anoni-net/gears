@@ -41,6 +41,7 @@ const editors: Record<string, () => Promise<ComponentType<FileEditorProps>>> = {
   "pdf-pages": () => import("./PdfPagesEditor.tsx").then((m) => m.PdfPagesEditor),
   transcribe: () => import("./TranscribeEditor.tsx").then((m) => m.TranscribeEditor),
   "doc-check": () => import("./DocCheckEditor.tsx").then((m) => m.DocCheckEditor),
+  "print-dots": () => import("./PrintDotsEditor.tsx").then((m) => m.PrintDotsEditor),
 };
 
 export function FileEditorView({ id, ...props }: FileEditorProps & { id: string }) {

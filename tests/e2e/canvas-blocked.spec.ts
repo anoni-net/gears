@@ -80,3 +80,20 @@ test("遮蔽：讀不到 canvas 時不產生雜訊圖，框留著，允許之後
   await page.getByRole("button", { name: "套用遮蔽" }).click();
   await expect(page.getByText("遮蔽後", { exact: true })).toBeVisible();
 });
+
+test("列印追蹤點：讀不到 canvas 時不判斷、不輸出，允許之後再套用", async ({ page }) => {
+  await page.goto("./print-dots/");
+  await page.getByTestId("file-input").setInputFiles({ name: "scan.png", mimeType: "image/png", buffer: await image(page) });
+  await expect(page.getByRole("alert")).toContainText("網址列跳出詢問");
+  await expect(page.getByTestId("print-dots-status")).toBeEmpty();
+  await page.getByRole("button", { name: "套用" }).click();
+  await expect(page.getByRole("alert")).toContainText("網址列跳出詢問");
+  await expect(page.getByText("去掉追蹤點後", { exact: true })).toHaveCount(0);
+
+  await allow(page);
+  await page.getByRole("button", { name: "只看黃色" }).click();
+  await expect(page.getByTestId("print-dots-status")).toContainText("沒有找到");
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  await page.getByRole("button", { name: "套用" }).click();
+  await expect(page.getByText("去掉追蹤點後", { exact: true })).toBeVisible();
+});
