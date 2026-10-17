@@ -18,6 +18,7 @@ anoni.net Gears 檔案工作台，在瀏覽器裡處理要交出去的檔案：�
 - 找出掃描或翻拍的紙本文件上，彩色雷射印表機印的淡黃色追蹤點，去掉淡黃色或轉成黑白
 - 只交出 PDF 的其中幾頁，其他頁連同連到它們的連結、書籤與文件資訊一起拿掉
 - 查證收到的檔案：雜湊值、時間線、裝置、作者與編輯痕跡，比對檔案之間的矛盾，PDF 的舊版本可以比對差異，匯出查證紀錄
+- 影片的關鍵影格：從收到的影片挑出畫面明顯不同的幾格，存成圖片，拿去做反向圖片搜尋，找出影片原本的出處
 - 文件開啟前檢查：打開收到的 Word、Excel、PowerPoint、PDF 之前，列出打開時會連到外面的位址、巨集與 JavaScript，PDF 可以轉成只有圖片的安全版本
 - 下載的軟體驗證：用官方的簽章確認下載的 Tor Browser 與 Tails 沒有被改過，不必安裝 GnuPG
 - 信件檢查：貼上原始郵件，看寄件驗證有沒有通過、實際的寄件網域、回覆地址有沒有被換掉，信裡的連結交給網址檢查
@@ -76,6 +77,7 @@ Tools in the first version:
 - Find the faint yellow tracking dots that colour laser printers leave on a scanned or photographed page, and remove the yellow or turn the page black and white
 - Hand over only some pages of a PDF. Other pages are removed, along with links to them, bookmarks and document info
 - Verify files you received: hashes, a timeline, devices, authors and editing traces, with contradictions between files flagged, earlier PDF versions compared, and a verification record to export
+- Video keyframes: pick out the frames that clearly differ in a video you received and save them as images for a reverse image search, to trace where the video came from
 - Check a document before opening it: list the external addresses, macros and JavaScript that a Word, Excel, PowerPoint file or PDF reaches for when opened, and turn a PDF into a safe image-only copy
 - Verify downloaded software: check a Tor Browser or Tails download against the official signature, without installing GnuPG
 - Read an email: paste the original message to see whether it passed sender authentication, the real sending domain, and whether the reply address was swapped, with links handed to the link checker

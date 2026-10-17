@@ -1,4 +1,4 @@
-import { isMedia } from "../core/bytes.ts";
+import { VIDEO_FORMATS, isMedia } from "../core/bytes.ts";
 import type { CreateTool, EditorTool, Tool } from "../core/tool.ts";
 import { stripMetadata } from "./strip-metadata/index.ts";
 import { STREAMABLE } from "./transcribe/sources.ts";
@@ -29,6 +29,9 @@ export const editorTools: EditorTool[] = [
   { id: "blend", resolves: [], accepts: (format) => ["jpeg", "heic", "avif", "webp"].includes(format) },
   // 列印文件的追蹤點：拍照或掃描的紙本，去掉淡黃色的小點或轉成黑白
   { id: "print-dots", resolves: [], accepts: (format) => ["jpeg", "png", "heic", "avif", "webp", "gif", "bmp", "pdf"].includes(format) },
+  // 影片的關鍵影格：挑出畫面明顯不同的幾格，加進暫存區拿去做反向圖片搜尋。瀏覽器從檔案
+  // 直接讀，不必整個讀進記憶體，所以不限大小。解不開的格式（AVI、Firefox 的 HEVC）畫面上說明
+  { id: "video-frames", resolves: [], accepts: (format) => VIDEO_FORMATS.includes(format), acceptsLarge: (format) => VIDEO_FORMATS.includes(format) },
   // 收到的文件打開時會不會連到外面、執行程式，PDF 可以轉成只有圖片的安全版本
   { id: "doc-check", resolves: [], accepts: (format) => CHECK_FORMATS.includes(format) },
 ];

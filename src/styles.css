@@ -2450,3 +2450,23 @@ button.link {
   color: var(--strong);
   font-weight: 600;
 }
+
+/* 影片的關鍵影格（src/ui/VideoFramesEditor.tsx），縮圖卡片沿用選擇 PDF 頁面的 .page-grid */
+.video-frames .page-pick img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 4px;
+  background: var(--line);
+}
+
+/* 擷取影格用的 <video>：放進頁面讓 Safari 解碼，但不出現在畫面上（src/ui/video-frames.ts） */
+.offscreen-video {
+  position: fixed;
+  left: -10000px;
+  top: 0;
+  width: 2px;
+  height: 2px;
+  opacity: 0;
+  pointer-events: none;
+}

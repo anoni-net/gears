@@ -1,6 +1,8 @@
 import type { Page } from "@playwright/test";
 import { encodeQr, qrPng } from "../../src/tools/qrcode/index.ts";
 import { expect, test } from "./guard.ts";
+import { existsSync, readFileSync } from "node:fs";
+import { SCENES_WEBM } from "../global-setup.ts";
 
 // Tor Browser 在讀者允許之前，讀取 canvas 的像素一律得到亂數（src/ui/canvas-access.ts）。
 // 這裡把 getImageData 換成回傳亂數，window.allowCanvas() 模擬讀者在網址列按了允許
@@ -108,4 +110,15 @@ test("縮成常見尺寸：讀不到 canvas 時不輸出，允許之後再按一
   await allow(page);
   await page.getByRole("button", { name: "縮小並重新壓縮" }).click();
   await expect(page.getByText("縮成常見尺寸後", { exact: true })).toBeVisible();
+});
+
+test("影片的關鍵影格：讀不到 canvas 時說明，允許之後按「再試一次」", async ({ page }) => {
+  test.skip(!existsSync(SCENES_WEBM), "沒有測試影片（需要 ffmpeg）");
+  test.skip(test.info().project.name !== "chromium", "影片的解碼各瀏覽器不同，擷取的流程在 video-frames.spec.ts 測");
+  await page.goto("./video-frames/");
+  await page.getByTestId("file-input").setInputFiles({ name: "clip.webm", mimeType: "video/webm", buffer: readFileSync(SCENES_WEBM) });
+  await expect(page.getByTestId("frames-status")).toContainText("網址列跳出詢問");
+  await allow(page);
+  await page.getByRole("button", { name: "再試一次" }).click();
+  await expect(page.getByTestId("frames-status")).toContainText(/挑出 \d+ 格/, { timeout: 60_000 });
 });
