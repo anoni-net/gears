@@ -718,7 +718,9 @@ footer p {
   }
 }
 
-footer a {
+/* 頁尾的連結與站內按鈕（授權與來源、語系、不要記錄）統一用文字的顏色加底線 */
+footer a,
+footer button.link {
   color: inherit;
 }
 
