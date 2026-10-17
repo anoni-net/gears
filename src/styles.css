@@ -328,12 +328,6 @@ html:lang(en) .site-header__product {
   }
 }
 
-/* 桌面最上面的標語 */
-.tagline {
-  margin: 0 0 1rem;
-  color: var(--muted);
-}
-
 /* 圖示圈：顏色代表類別，跟社群首頁的圖示圈同一種樣式 */
 .icon {
   width: 1.4rem;
@@ -757,6 +751,31 @@ footer .languages button[aria-current] {
 
 .tray .drop p {
   margin: 0.25rem 0;
+}
+
+/* 選擇檔案：獨立一行的主要按鈕，拖放的說明在下方 */
+.tray .drop .pick {
+  gap: 0.4rem;
+  width: 100%;
+  max-width: 16rem;
+  min-height: 2.75rem;
+  margin-bottom: 0.25rem;
+}
+
+.tray .drop .pick .icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.tray .drop .drag-note {
+  font-size: 0.9rem;
+}
+
+/* 觸控裝置不能把檔案拖進網頁 */
+@media (hover: none) and (pointer: coarse) {
+  .tray .drop .drag-note {
+    display: none;
+  }
 }
 
 @media (max-width: 51.99rem) {

@@ -110,7 +110,7 @@ test("退回上一步，再清空暫存區", async ({ page }) => {
   await page.getByRole("button", { name: "再按一次清空" }).click();
   await expect(page.getByRole("button", { name: /照片與影片的拍攝位置/ })).toBeVisible();
   await expect(page.locator(".tray .item")).toHaveCount(0);
-  await expect(page.getByText("把檔案拖進來，或")).toBeVisible();
+  await expect(page.getByRole("button", { name: "選擇檔案" })).toBeVisible();
 });
 
 test("清空暫存區的確認幾秒內沒有再按就恢復，檔案留著", async ({ page }) => {

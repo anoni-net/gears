@@ -92,13 +92,13 @@ export function TrayList({ files, selected, onSelect, onPick, busy, failed, comp
           <BatchActions files={files} busy={busy} />
         </>
       ) : (
+        // 選擇檔案是主要的動作，獨立一行。拖放的說明放在按鈕下方，觸控裝置不能拖放檔案，不顯示
         <div class="drop">
-          <p>
-            {t("tray.empty")}{" "}
-            <button type="button" class="primary" onClick={onPick}>
-              {t("tray.pick")}
-            </button>
-          </p>
+          <button type="button" class="primary pick" onClick={onPick}>
+            <Icon name="file-upload-outline" />
+            {t("tray.pick")}
+          </button>
+          <p class="drag-note">{t("tray.empty")}</p>
           <p class="hint">{t("tray.hint")}</p>
         </div>
       )}
