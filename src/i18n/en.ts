@@ -19,7 +19,7 @@ export const en: Record<MessageKey, string> = {
   "app.analytics.stop": "Don't record",
   "app.analytics.resume": "Resume recording",
   "app.analytics.stopped": "Recording is off in this browser.",
-  "app.analytics.declined": "Your browser asks not to be tracked, so nothing is recorded.",
+  "app.analytics.declined": "Your browser asks not to be tracked, so no usage statistics are recorded.",
   "app.offlineReady": "The workbench is stored in this device's browser and opens without a network connection.",
   "app.update": "A new version of Gears is available. Reloading clears the files in the tray.",
   "app.updateReload": "Reload",

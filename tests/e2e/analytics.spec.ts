@@ -76,6 +76,16 @@ test("頁面瀏覽、任務、加入檔案、處理完成與下載，不含檔�
   expect(errors).toEqual([]);
 });
 
+test("瀏覽器要求不追蹤時不送，頁尾只說明不記錄，不提 Umami", async ({ page, baseURL }) => {
+  await page.addInitScript(() => Object.defineProperty(Navigator.prototype, "doNotTrack", { get: () => "1" }));
+  const { sent } = await open(page, baseURL!);
+  await expect(page.getByTestId("analytics")).toHaveText("你的瀏覽器要求不追蹤，這裡不記錄使用統計。");
+  await expect(page.getByTestId("analytics").getByRole("button")).toHaveCount(0);
+  await page.getByRole("button", { name: /可疑的通知信/ }).click();
+  await page.waitForTimeout(500);
+  expect(sent).toEqual([]);
+});
+
 test("頁尾選了不要記錄之後就不送，重新整理也一樣", async ({ page, baseURL }) => {
   const { sent, home } = await open(page, baseURL!);
   await expect.poll(() => sent.length).toBe(1);

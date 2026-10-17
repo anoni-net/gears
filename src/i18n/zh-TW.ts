@@ -19,7 +19,7 @@ export const zhTW = {
   "app.analytics.stop": "不要記錄",
   "app.analytics.resume": "恢復記錄",
   "app.analytics.stopped": "這個瀏覽器已經停止記錄。",
-  "app.analytics.declined": "你的瀏覽器要求不追蹤，所以不記錄。",
+  "app.analytics.declined": "你的瀏覽器要求不追蹤，這裡不記錄使用統計。",
   "app.offlineReady": "工作台已經存在這台裝置的瀏覽器裡，沒有網路也能開啟。",
   "app.update": "檔案工作台有新版本。重新載入之後，暫存區裡的檔案會清空。",
   "app.updateReload": "重新載入",
