@@ -21,6 +21,10 @@
   /* 圖示的分類色，工作台用到個人隱私與機敏與安全兩類 */
   --cat-privacy: #2e7d32;
   --cat-secure: #a53453;
+  /* 桌面圖示標籤的代表色（src/ui/tool-tags.ts），取自品牌素材頁「圖示的分類色」裡工作台的圖示圈
+     沒用到的兩色：本機模型用開發與技術的靛藍，用到相機用匿名支付的橘色 */
+  --tag-model: #4d57b7;
+  --tag-camera: #c25400;
 
   --action: #c25400;
   --danger: #d32f2f;
@@ -60,6 +64,8 @@
     --n-300: #3c6070;
     --cat-privacy: #81c784;
     --cat-secure: #f996a9;
+    --tag-model: #a3b2fe;
+    --tag-camera: #ffa040;
     --action: #ffa040;
     --danger: #e57373;
     --danger-text: #e57373;
@@ -2547,14 +2553,35 @@ button.link {
   gap: 0.25rem;
 }
 
+/* 每個標籤一個代表色，卡片與圖示說明用同一個樣式：淡底色、外框與同色的圖示 */
 .tool-tag {
+  --tag-color: var(--link);
   display: inline-flex;
-  color: var(--link);
+  align-items: center;
+  justify-content: center;
+  padding: 0.18rem;
+  border: 1px solid color-mix(in srgb, var(--tag-color) 45%, transparent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--tag-color) 14%, var(--surface));
+  color: var(--tag-color);
+}
+
+/* 卡片的 .card-text span 把文字設成灰色，標籤也是 span，要用比它高的優先順序蓋回代表色 */
+.card-text .tool-tags .tool-tag {
+  color: var(--tag-color);
+}
+
+.tool-tag.tag-model {
+  --tag-color: var(--tag-model);
+}
+
+.tool-tag.tag-camera {
+  --tag-color: var(--tag-camera);
 }
 
 .tool-tag .icon {
-  width: 1.05rem;
-  height: 1.05rem;
+  width: 1.1rem;
+  height: 1.1rem;
 }
 
 /* 桌面最下方的圖示說明 */
@@ -2575,13 +2602,13 @@ button.link {
 .tag-legend dt {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.55rem;
   font-weight: 600;
   color: var(--strong);
 }
 
 .tag-legend dd {
-  margin: 0.2rem 0 0 1.45rem;
+  margin: 0.25rem 0 0 2.1rem;
   color: var(--muted);
   font-size: 0.9rem;
 }

@@ -21,7 +21,7 @@ function ToolTags({ id }: { id: string }) {
       {tags.map((tag) => {
         const label = tDynamic(`tag.${tag}.${id}`);
         return (
-          <span key={tag} class="tool-tag" role="img" aria-label={label} title={label}>
+          <span key={tag} class={`tool-tag tag-${tag}`} role="img" aria-label={label} title={label}>
             <Icon name={TAGS[tag].icon} />
           </span>
         );
@@ -99,7 +99,7 @@ export function Desktop({ onTask }: Props) {
             {used.map((tag: TagId) => (
               <div key={tag}>
                 <dt>
-                  <span class="tool-tag" aria-hidden="true">
+                  <span class={`tool-tag tag-${tag}`} aria-hidden="true">
                     <Icon name={TAGS[tag].icon} />
                   </span>
                   {tDynamic(`tag.${tag}`)}

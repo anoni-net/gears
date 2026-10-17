@@ -34,7 +34,13 @@ test("暫存區每種格式都有存在的檔案類型圖示", async () => {
 test("每個標籤都有圖示與三個語系的說明，每個工具最多兩個標籤，每個工具的標籤都有補充說明", async () => {
   const { TAGS, TAG_ORDER, MAX_TAGS } = await import("../../src/ui/tool-tags.ts");
   const { LOCALES, messagesOf } = await import("../../src/i18n/index.ts");
-  for (const tag of TAG_ORDER) expect(Object.hasOwn(ICON_PATHS, TAGS[tag].icon), tag).toBe(true);
+  const css = readFileSync(join(import.meta.dirname, "../../src/styles.css"), "utf8");
+  for (const tag of TAG_ORDER) {
+    expect(Object.hasOwn(ICON_PATHS, TAGS[tag].icon), tag).toBe(true);
+    // 代表色：淺色與深色模式各一，卡片與圖示說明共用 .tag-<id>
+    expect(css.match(new RegExp(`--tag-${tag}: #`, "g"))?.length, `--tag-${tag}`).toBe(2);
+    expect(css, `.tag-${tag}`).toContain(`.tool-tag.tag-${tag} {`);
+  }
   for (const id of toolIds) {
     const tags = TOOL_META[id]!.tags ?? [];
     expect(tags.length, id).toBeLessThanOrEqual(MAX_TAGS);

@@ -84,6 +84,13 @@ test("桌面的圖示標籤：卡片上的圖示帶著補充說明，最下方�
   await expect(legend.locator("dt")).toHaveText(["本機模型", "用到相機"]);
   await expect(legend).toContainText("模型第一次使用時才下載");
   await expect(legend).toContainText("瀏覽器會先詢問是否允許");
+  // 每個標籤一個代表色，卡片與圖示說明一致，也不會被卡片的灰色文字蓋掉
+  const color = (selector: string) => page.locator(selector).first().evaluate((el) => getComputedStyle(el).color);
+  const muted = await color(".card-text > span");
+  for (const tag of ["model", "camera"]) {
+    expect(await color(`.cards .tag-${tag}`), tag).toBe(await color(`#tag-legend .tag-${tag}`));
+    expect(await color(`.cards .tag-${tag}`), tag).not.toBe(muted);
+  }
   // 工具標題下方的連結捲到圖示說明
   await page.getByRole("link", { name: "圖示說明" }).click();
   await expect(page.getByRole("heading", { name: "圖示說明" })).toBeInViewport();
