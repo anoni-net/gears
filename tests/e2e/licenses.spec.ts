@@ -58,3 +58,10 @@ test("逐字稿列出每個模型的原始來源、授權與下載的位置", as
   await details.getByRole("button", { name: "所有授權全文" }).click();
   await expect(page).toHaveURL(/\/gears\/licenses\/$/);
 });
+
+test("頁尾顯示版本號，commit 連到原始碼的那一次修改", async ({ page }) => {
+  await page.goto("./");
+  const version = page.getByTestId("version");
+  await expect(version).toHaveText(/^版本 \d{4}\.\d{2}\.\d{2} [0-9a-f]{7,}$/);
+  await expect(version.getByRole("link")).toHaveAttribute("href", /^https:\/\/github\.com\/anoni-net\/gears\/commit\/[0-9a-f]{7,}$/);
+});

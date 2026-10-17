@@ -371,6 +371,14 @@ Tor Browser 15.0（Firefox 140 ESR）一般安全等級的實測結果：
 
 在本機用無頭的 Tor Browser 測試：用 `TOR_PROVIDER=none` 啟動、不連 Tor，profile 的 `user.js` 讓本機網址不走代理（`network.proxy.allow_hijacking_localhost` 與 `no_proxies_on`），加上 `--marionette -remote-allow-system-access` 就能用 Marionette 操作頁面與瀏覽器本身。Tor Browser 一直是私密瀏覽、又有 first-party 隔離，允許 canvas 的權限要用分頁的 `contentPrincipal` 加（`Services.perms.addFromPrincipal(p, "canvas", ALLOW_ACTION)`），不能預先寫進 profile。Marionette 與 WebDriver BiDi 不能同時開 session，安全等級改過之後會留在 profile（NoScript 自己也存了一份），換回來要重建 profile。
 
+## 版本號
+
+版本號是 commit 的日期（台灣時間），寫成「年.月.日」，例如 `2026.10.17`，旁邊附上 commit（`src/core/version.ts`，有單元測試）。不必手動調整，同一個 commit 每次建置都得到同一個版本號，每週一重建 165 清單時也不會變。同一天合併好幾次時，靠 commit 區分。
+
+- `vite.config.ts` 在建置時用 `git log -1 --format=%ct` 算好，透過 `define` 寫進 `__GEARS_VERSION__`，頁面上從 `src/version.ts` 讀。沒有 git 時用建置當下的日期
+- 顯示在頁尾的最後一行，commit 連到 GitHub 上的那一次修改，讀者回報問題時照這裡抄
+- 換上新版本之後的提示（「已換上新版本（2026.10.17）」）與查證紀錄也記下版本號
+
 ## 165 反詐騙清單
 
 網址檢查比對 165 反詐騙諮詢專線公開的「遭停止解析涉詐網站」清單（政府資料開放平台資料集 176455，內政部警政署，政府資料開放授權條款第 1 版），每月更新。

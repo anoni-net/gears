@@ -13,6 +13,7 @@ import speakerModel from "./src/tools/transcribe/speaker-model.json" with { type
 import { ANALYTICS_ENDPOINT } from "./src/ui/analytics-endpoint.ts";
 import ogImages from "./src/og-images.json" with { type: "json" };
 import { ONION_HOST } from "./src/site.ts";
+import { calver } from "./src/core/version.ts";
 
 // onion 版（GEARS_TARGET=onion）：給 gears.<onion> 的建置，網站放在子網域的根目錄，輸出到 dist-onion/。
 // 頁面只連自己的網域：不送使用統計，社群轉檔的模型也由同一個 onion 網站提供（src/site.ts）。
@@ -243,13 +244,18 @@ function nginxHeaders(): Plugin {
 }
 
 // 建置時的 commit，偵錯輸出用來確認讀者跑的是哪一版。不在 git 裡建置時是 unknown
-function commit(): string {
+function git(args: string): string | null {
   try {
-    return execSync("git rev-parse --short HEAD", { stdio: ["ignore", "pipe", "ignore"] }).toString().trim();
+    return execSync(`git ${args}`, { stdio: ["ignore", "pipe", "ignore"] }).toString().trim();
   } catch {
-    return "unknown";
+    return null;
   }
 }
+
+const commit = () => git("rev-parse --short HEAD") ?? "unknown";
+
+// 版本號是 commit 的日期（src/core/version.ts）。沒有 git 時用建置當下的日期
+const version = () => calver(Number(git("log -1 --format=%ct") ?? Date.now() / 1000));
 
 // cross-origin isolation：逐字稿的 WebAssembly 要用多執行緒，頁面要在這兩個標頭底下。
 // 工作台所有的資源都來自自己的網域，加上之後不影響其他功能。部署時 nginx 也要送一樣的標頭
@@ -264,7 +270,7 @@ export default defineConfig({
   preview: { headers: { ...isolation, "Content-Security-Policy": HEADER_CSP }, allowedHosts: ["anoni.net"] },
   // Worker 裡用 import() 延後載入 Transformers.js 與 OpenCC，要輸出成 ES 模組
   worker: { format: "es" },
-  define: { __GEARS_COMMIT__: JSON.stringify(commit()), __GEARS_ONION__: JSON.stringify(ONION) },
+  define: { __GEARS_COMMIT__: JSON.stringify(commit()), __GEARS_VERSION__: JSON.stringify(version()), __GEARS_ONION__: JSON.stringify(ONION) },
   plugins: [csp(), toolPages(), serviceWorker(BASE), nginxHeaders()],
   oxc: {
     jsx: { runtime: "automatic", importSource: "preact" },

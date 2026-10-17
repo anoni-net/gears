@@ -34,6 +34,7 @@ import {
   warningTitle,
 } from "./verify-report.ts";
 import { useWorking } from "./working.ts";
+import { COMMIT, VERSION } from "../version.ts";
 
 // 查證：把暫存區裡讀者加入的檔案當成一批，整理出每個檔案的重點與檔案之間的關聯，
 // 比對出需要留意的地方，可以匯出成查證紀錄。一律讀原檔（第一個版本），不看處理過的版本。
@@ -456,7 +457,7 @@ export function VerifyTool(_: CreateToolProps) {
 
   const exportReport = (toTray: boolean) => {
     const now = Date.now();
-    const text = buildReport(ready, summary, now, __GEARS_COMMIT__);
+    const text = buildReport(ready, summary, now, `${VERSION} ${COMMIT}`);
     const stamp = localTime(now).slice(0, 16).replace(/[-: ]/g, "");
     const name = `gears-verify-${stamp}.md`;
     if (toTray) void tray.add([new File([text], name, { type: "text/markdown" })], "verify");

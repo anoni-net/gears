@@ -120,7 +120,7 @@ test.describe("換上新版本", () => {
     await expect(page.getByText("重新載入之後，暫存區的檔案會留著，還沒套用或下載的結果會消失。")).toBeVisible({ timeout: 30_000 });
     const reload = page.getByRole("button", { name: "重新載入" });
     await reload.click();
-    await expect(page.getByText("已換上新版本，暫存區的檔案都還在。")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/^已換上新版本（\d{4}\.\d{2}\.\d{2}），暫存區的檔案都還在。$/)).toBeVisible({ timeout: 10_000 });
     await expect(reload).toBeHidden();
     // 兩個檔案都在，選取的還是 first.txt，內容沒變
     await expect(page.locator(".tray li")).toHaveCount(2);
@@ -140,7 +140,7 @@ test.describe("換上新版本", () => {
     await expect(page.locator(".tray li")).toHaveCount(3);
     // 提示只出現在換版本的那一次，關掉之後不再出現
     await page.getByRole("button", { name: "關閉" }).click();
-    await expect(page.getByText("已換上新版本，暫存區的檔案都還在。")).toBeHidden();
+    await expect(page.getByText(/^已換上新版本（\d{4}\.\d{2}\.\d{2}），暫存區的檔案都還在。$/)).toBeHidden();
     await page.reload();
     await expect(page.getByTestId("offline-ready")).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText(/已換上新版本/)).toBeHidden();
@@ -207,7 +207,7 @@ test.describe("換上新版本", () => {
     const loaded = page.waitForEvent("load", { timeout: 15_000 });
     await page.getByRole("button", { name: "重新載入" }).click();
     await loaded;
-    await expect(page.getByText("已換上新版本。")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/^已換上新版本（\d{4}\.\d{2}\.\d{2}）。$/)).toBeVisible({ timeout: 10_000 });
     await expect(page.getByText("keep.txt")).toHaveCount(0);
   });
 
@@ -224,7 +224,7 @@ test.describe("換上新版本", () => {
     await addFile(page);
     await serveNewVersion(page, "e2e-models");
     await page.getByRole("button", { name: "重新載入" }).click();
-    await expect(page.getByText("已換上新版本，暫存區的檔案都還在。")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/^已換上新版本（\d{4}\.\d{2}\.\d{2}），暫存區的檔案都還在。$/)).toBeVisible({ timeout: 10_000 });
     const kept = () => page.evaluate(async () => (await (await caches.open("gears-models")).keys()).map((r) => new URL(r.url).pathname));
     await expect.poll(kept).toEqual([current]);
     expect(await page.evaluate(() => caches.keys())).toEqual(expect.arrayContaining(["gears-e2e-models", "gears-models"]));
