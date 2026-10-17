@@ -1,7 +1,8 @@
 /// <reference types="vite/client" />
 
-// 建置時的 commit（vite.config.ts）
+// 建置時的 commit 與版本號（vite.config.ts，見 src/version.ts）
 declare const __GEARS_COMMIT__: string;
+declare const __GEARS_VERSION__: string;
 
 // onion 版的建置（vite.config.ts，見 src/site.ts）
 declare const __GEARS_ONION__: boolean;

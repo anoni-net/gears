@@ -18,6 +18,7 @@ import { CreateToolView } from "./ui/registry.tsx";
 import { Icon, IconCircle } from "./ui/Icon.tsx";
 import { TOOL_META, groupOf } from "./ui/tool-meta.ts";
 import { browserDeclines, optedOut, setOptedOut, track, trackView } from "./ui/analytics.ts";
+import { COMMIT, COMMIT_URL, VERSION } from "./version.ts";
 
 const isCreateTool = (id: string) => createTools.some((tool) => tool.id === id);
 const isPage = (id: string) => pageIds.includes(id);
@@ -315,7 +316,7 @@ export function App() {
       ) : offline.updated ? (
         <div class="frame">
           <div class="update-bar" role="status">
-            <span>{t(offline.updated === "kept" ? "app.updatedKept" : offline.updated === "lost" ? "app.updatedLost" : "app.updated")}</span>
+            <span>{t(offline.updated === "kept" ? "app.updatedKept" : offline.updated === "lost" ? "app.updatedLost" : "app.updated", { version: VERSION })}</span>
             <button type="button" onClick={offline.dismissUpdated}>
               {t("app.updatedClose")}
             </button>
@@ -375,6 +376,13 @@ export function App() {
               </button>
             ))}
           </nav>
+          {/* 版本號：讀者回報問題時照這裡抄，commit 連到原始碼的那一次修改 */}
+          <p class="version" data-testid="version">
+            {t("app.version", { version: VERSION })}{" "}
+            <a href={COMMIT_URL}>
+              <code>{COMMIT}</code>
+            </a>
+          </p>
         </div>
       </footer>
 

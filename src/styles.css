@@ -775,6 +775,15 @@ footer p {
   }
 }
 
+/* 版本號：比其他文字小一級，commit 用等寬字 */
+footer .version {
+  font-size: 0.8rem;
+}
+
+footer .version code {
+  font-size: inherit;
+}
+
 /* 頁尾的連結與站內按鈕（授權與來源、語系、不要記錄）統一用文字的顏色加底線 */
 footer a,
 footer button.link {

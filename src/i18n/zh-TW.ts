@@ -13,6 +13,7 @@ export const zhTW = {
   "app.home": "回到桌面",
   "app.loading": "載入中…",
   "app.footer.source": "原始碼",
+  "app.version": "版本 {version}",
   "app.footer.licenses": "授權與來源",
   "app.footer.llmBench": "語言模型速度量測（實驗）",
   "app.analytics.note": "使用統計只記錄工具的使用次數，不含檔案與你輸入的內容，存放在社群自架的 Umami。",
@@ -25,11 +26,11 @@ export const zhTW = {
   "app.update": "檔案工作台有新版本。重新載入之後，暫存區的檔案會留著，還沒套用或下載的結果會消失。",
   "app.updateReload": "重新載入",
   "app.updating": "更新中…",
-  "app.updated": "已換上新版本。",
+  "app.updated": "已換上新版本（{version}）。",
   "app.updatedClose": "關閉",
   "app.updateCarryFailed": "沒辦法把暫存區的檔案帶到新版本。先下載需要的檔案，再按重新載入，暫存區會清空。",
-  "app.updatedKept": "已換上新版本，暫存區的檔案都還在。",
-  "app.updatedLost": "已換上新版本，但沒能把暫存區的檔案帶過來。",
+  "app.updatedKept": "已換上新版本（{version}），暫存區的檔案都還在。",
+  "app.updatedLost": "已換上新版本（{version}），但沒能把暫存區的檔案帶過來。",
   "app.footer.community": "匿名網路社群 anoni.net",
 
   // 每個網址的標題與描述，建置時寫進各自的 HTML（vite.config.ts）
