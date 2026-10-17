@@ -12,7 +12,7 @@ export interface Guard {
 // - WebAssembly 寫到標準錯誤輸出的訊息，瀏覽器一律當成 console.error。這是正常的執行紀錄：
 //   Tesseract 讀只含 LSTM 的語言資料時，舊引擎的參數找不到
 // - Firefox 在 WebRTC 連不上時自己印的建議（面對面傳送不設 STUN，連不上時畫面上另有說明）
-const BENIGN = [/^Warning: Parameter not found: /, /^WebRTC: ICE failed, add a STUN server/];
+const BENIGN = [/^Warning: Parameter not found: /, /WebRTC: ICE failed, add a STUN server/];
 
 // 錄 trace 時，Playwright 在 Chromium 會從頁面讀 blob: 的圖片做快照，被 connect-src 擋下。
 // CI 只在重試時錄 trace（playwright.config.ts），重試時才忽略這一種，第一次執行照樣嚴格檢查
