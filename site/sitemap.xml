@@ -211,6 +211,27 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/print-dots/" />
   </url>
   <url>
+    <loc>https://anoni.net/gears/video-frames/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/video-frames/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/video-frames/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/video-frames/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/video-frames/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/zh-cn/video-frames/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/video-frames/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/video-frames/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/video-frames/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/video-frames/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/en/video-frames/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/video-frames/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/video-frames/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/video-frames/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/video-frames/" />
+  </url>
+  <url>
     <loc>https://anoni.net/gears/doc-check/</loc>
     <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/doc-check/" />
     <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/doc-check/" />
