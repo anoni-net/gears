@@ -11,12 +11,17 @@ interface Props {
 }
 
 function ToolCard({ id }: { id: string }) {
+  const model = TOOL_META[id]!.model;
   return (
     <li>
       <button type="button" class="card" onClick={() => navigate(id)}>
         <IconCircle name={TOOL_META[id]!.icon} cat={TOOL_META[id]!.cat} />
         <span class="card-text">
-          <strong>{tDynamic(`tool.${id}`)}</strong>
+          <strong>
+            {tDynamic(`tool.${id}`)}
+            {/* 會在瀏覽器裡執行模型的工具標出來，說明在工具列表的上方 */}
+            {model ? <span class="model-badge">{tDynamic(`desk.model.${model}`)}</span> : null}
+          </strong>
           <span>{tDynamic(`tool.${id}.desc`)}</span>
         </span>
       </button>
@@ -47,6 +52,9 @@ export function Desktop({ onTask }: Props) {
 
       <section aria-labelledby="tools-title">
         <h2 id="tools-title">{t("desk.tools")}</h2>
+        <p class="hint" data-testid="model-note">
+          {t("desk.model.note")}
+        </p>
         {TOOL_GROUPS.map((group) => (
           <div class="tool-group" key={group.id}>
             <h3>{tDynamic(`desk.group.${group.id}`)}</h3>

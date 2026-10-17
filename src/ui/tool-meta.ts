@@ -3,17 +3,21 @@ import type { IconName } from "./icon-paths.ts";
 
 // 每個工具的圖示與類別。圖示跟文件站小工具區的同一個工具一致，類別照品牌素材頁的
 // 圖示分類色：跟個人隱私有關的用綠色，處理機敏資料與密碼的用玫瑰紅。
-export const TOOL_META: Record<string, { icon: IconName; cat: Category }> = {
+// model：這個工具會在讀者的瀏覽器裡執行模型，桌面的卡片標出來。core 是工具本身就靠模型（逐字稿），
+// assist 是選用的輔助（遮蔽的自動尋找人臉與個資），不按就不會下載模型。新增用到模型的工具時記得填
+export type ModelUse = "core" | "assist";
+
+export const TOOL_META: Record<string, { icon: IconName; cat: Category; model?: ModelUse }> = {
   "strip-metadata": { icon: "image-off-outline", cat: "privacy" },
   "url-check": { icon: "shield-link-variant-outline", cat: "privacy" },
   "qr-read": { icon: "qrcode-scan", cat: "privacy" },
   qrcode: { icon: "qrcode", cat: "privacy" },
-  redact: { icon: "selection-remove", cat: "secure" },
+  redact: { icon: "selection-remove", cat: "secure", model: "assist" },
   "heic-to-jpeg": { icon: "file-jpg-box", cat: "privacy" },
   "pdf-pages": { icon: "file-document-multiple-outline", cat: "privacy" },
   encrypt: { icon: "lock-outline", cat: "secure" },
   decrypt: { icon: "lock-open-variant-outline", cat: "secure" },
-  transcribe: { icon: "subtitles-outline", cat: "secure" },
+  transcribe: { icon: "subtitles-outline", cat: "secure", model: "core" },
   passphrase: { icon: "dice-multiple-outline", cat: "secure" },
   "age-keygen": { icon: "key-plus", cat: "secure" },
   "text-crypt": { icon: "message-lock-outline", cat: "secure" },

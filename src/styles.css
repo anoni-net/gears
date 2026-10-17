@@ -2533,3 +2533,26 @@ button.link {
   margin: 0.5rem 0;
   padding-left: 1.25rem;
 }
+
+/* 桌面工具卡片上的「本機模型」標記（src/ui/tool-meta.ts 的 model） */
+/* 標記換到下一行時靠左對齊，不留前面的間距 */
+.card-text strong:has(.model-badge) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.2rem 0.4rem;
+}
+
+.card-text .model-badge {
+  display: inline-block;
+  padding: 0 0.45rem;
+  /* 文字用 --strong，框線用比較亮的 --focus：深色模式下 --accent 的字在深底上看不清楚 */
+  border: 1px solid var(--focus);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--focus) 12%, var(--surface));
+  color: var(--strong);
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+}

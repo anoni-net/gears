@@ -72,6 +72,13 @@ test("桌面有暫存區、任務捷徑與兩組工具，沒有檔案時不顯�
   await expect(page.getByRole("button", { name: "回到桌面" })).toHaveCount(0);
 });
 
+test("桌面標出會在瀏覽器裡執行模型的工具，並說明標記的意思", async ({ page }) => {
+  await expect(page.getByTestId("model-note")).toContainText("模型第一次使用時才下載，檔案不會上傳");
+  await expect(page.getByRole("button", { name: /^逐字稿 本機模型/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^遮蔽 本機模型輔助/ })).toBeVisible();
+  await expect(page.locator(".model-badge")).toHaveCount(2);
+});
+
 test("JPEG：找出位置、清除、下載，旋轉方向保留", async ({ page }) => {
   const jpeg = insertIntoJpeg(await canvasImage(page, "image/jpeg"), exifSegment(sampleTiff(6)));
   const withTrailer = concat([jpeg, text("MOTION-PHOTO-SECRET")]);

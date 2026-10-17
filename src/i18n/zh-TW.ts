@@ -60,6 +60,9 @@ export const zhTW = {
   "meta.passphrase.description": "產生好記又夠強的 Diceware 密語，或隨機密碼，用瀏覽器的密碼學亂數，不會送出也不會存起來。",
 
   "desk.tools": "工具",
+  "desk.model.core": "本機模型",
+  "desk.model.assist": "本機模型輔助",
+  "desk.model.note": "標「本機模型」的工具在你的瀏覽器裡執行模型，標「本機模型輔助」的是選用的功能用到模型，例如遮蔽的自動尋找人臉。模型第一次使用時才下載，檔案不會上傳。",
   "desk.group.handover": "交出去之前",
   "desk.group.handover.desc": "拿掉檔案裡會透露身分的資訊，或只交出需要的部分。",
   "desk.group.send": "安全地傳送",

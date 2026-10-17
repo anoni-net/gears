@@ -81,7 +81,7 @@ CI（`.github/workflows/ci.yml`）依瀏覽器拆成四台機器同時執行：C
 
 1. 純邏輯放 `src/tools/<工具>/`，在 `src/tools/index.ts` 加進其中一份清單
 2. 編輯畫面或從空白開始的元件登記在 `src/ui/registry.tsx`
-3. 在 `src/ui/tool-meta.ts` 的 `TOOL_GROUPS` 放進桌面的其中一組。桌面依讀者的目的分成「交出去之前」、「安全地傳送」、「檢查收到的」三組（2026-10-16 起，原本依操作方式分成處理檔案與從空白開始），`tests/unit/tool-meta.spec.ts` 會檢查每個工具剛好在一組
+3. 在 `src/ui/tool-meta.ts` 的 `TOOL_GROUPS` 放進桌面的其中一組。桌面依讀者的目的分成「交出去之前」、「安全地傳送」、「檢查收到的」三組（2026-10-16 起，原本依操作方式分成處理檔案與從空白開始），`tests/unit/tool-meta.spec.ts` 會檢查每個工具剛好在一組。會在瀏覽器裡執行模型的工具在 `TOOL_META` 填 `model`：工具本身就靠模型的填 `core`（逐字稿），選用的輔助填 `assist`（遮蔽的自動尋找），桌面的卡片標出「本機模型」、「本機模型輔助」。同一份測試掃描每個工具的畫面元件，直接引用了模型的模組（`MODEL_MODULES`）卻沒填，或填了卻沒引用，都會失敗
 4. 在三個語系檔加上 `tool.<id>`、`tool.<id>.desc`、`meta.<id>.title` 與 `meta.<id>.description`，會在暫存區留下版本的工具另外加 `file.version.<id>`，用到新的 `FindingCode` 或 `SegmentCode` 時也要加，`tests/unit/i18n.spec.ts` 會檢查
 5. 單元測試放 `tests/unit/`，流程測試放 `tests/e2e/`
 
