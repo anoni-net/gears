@@ -42,6 +42,7 @@ export interface CheckItem {
   code: CheckCode;
   url?: string; // 連到哪裡，從 JavaScript 裡找到的網址也放這裡
   name?: string; // 內嵌檔案的名稱、巨集的位置
+  count?: number; // 同一項在文件裡出現幾次，沒有寫就是 1
 }
 
 export interface DocCheck {
@@ -62,6 +63,41 @@ export function remoteTarget(target: string): string | null {
 // Windows 的網路芳鄰路徑（\\主機\分享），打開時 Windows 會自動送出帳號的驗證資訊
 export const isUnc = (url: string) => url.startsWith("\\\\") || /^file:\/\/[^/]/i.test(url);
 
+// 網址的主機，網路芳鄰路徑取伺服器的名稱
+export function hostOf(url: string): string {
+  if (isUnc(url)) return url.replace(/^file:\/\//i, "\\\\").split(/[\\/]/).filter(Boolean)[0] ?? url;
+  try {
+    return new URL(url).host || url;
+  } catch {
+    return url;
+  }
+}
+
+export interface HostGroup {
+  host: string; // 小寫、拿掉開頭的 www.
+  count: number; // 這個網域的連結在文件裡一共出現幾次
+  urls: { url: string; count: number }[]; // 依出現次數排序
+}
+
+// 連結依網域分組：一份文件常有幾十個連結，多半連到同一兩個網域，逐一列出看不出重點。
+// 網域依連結的出現次數排序，次數相同依網域名稱
+export function groupByHost(items: CheckItem[]): HostGroup[] {
+  const groups = new Map<string, HostGroup>();
+  for (const item of items) {
+    if (!item.url) continue;
+    const host = hostOf(item.url).toLowerCase().replace(/^www\./, "");
+    const count = item.count ?? 1;
+    const group = groups.get(host) ?? { host, count: 0, urls: [] };
+    group.count += count;
+    const same = group.urls.find((u) => u.url === item.url);
+    if (same) same.count += count;
+    else group.urls.push({ url: item.url, count });
+    groups.set(host, group);
+  }
+  for (const g of groups.values()) g.urls.sort((a, b) => b.count - a.count);
+  return [...groups.values()].sort((a, b) => b.count - a.count || a.host.localeCompare(b.host));
+}
+
 // 從程式碼與欄位指令裡找出網址與網路芳鄰路徑。Word 的欄位指令裡反斜線寫成兩個
 // （\\\\主機\\分享），開頭是四個反斜線的就把每兩個收成一個
 export function urlsIn(text: string): string[] {
@@ -76,11 +112,16 @@ export function urlsIn(text: string): string[] {
 
 class Collector {
   readonly items: CheckItem[] = [];
-  private seen = new Set<string>();
+  private byKey = new Map<string, CheckItem>();
+  // 同一項只列一次，記下出現幾次（同一個連結在文件裡常出現好幾次）
   add(item: CheckItem) {
     const key = `${item.kind}|${item.code}|${item.url ?? ""}|${item.name ?? ""}`;
-    if (this.seen.has(key)) return;
-    this.seen.add(key);
+    const existing = this.byKey.get(key);
+    if (existing) {
+      existing.count = (existing.count ?? 1) + 1;
+      return;
+    }
+    this.byKey.set(key, item);
     this.items.push(item);
   }
 }

@@ -16,7 +16,7 @@ test("從任務選有巨集的 Word：列出打開時會連到的位址、網路
   await expect(page.getByText("網路芳鄰位址")).toBeVisible();
   await expect(page.getByRole("heading", { name: "會執行的程式" })).toBeVisible();
   await expect(page.getByText("巨集", { exact: true })).toBeVisible();
-  await page.getByText("點了才會連的連結（1 個）").click();
+  await page.getByText("點了才會連的連結（1 個，1 個網域）").click();
   await expect(page.getByText("news.example.org", { exact: true })).toBeVisible();
   // Office 文件沒有轉成安全版本的按鈕，只有說明
   await expect(page.getByRole("button", { name: "轉成安全的 PDF" })).toHaveCount(0);
@@ -72,4 +72,30 @@ test("查證：文件打開時會連線的列在需要留意的地方，從檔�
   await page.locator(".verify-card").getByRole("button", { name: "開啟前檢查" }).click();
   await expect(page).toHaveURL(/\/doc-check\/$/);
   await expect(page.getByTestId("doc-check-verdict")).toContainText("打開時會連到外面");
+});
+
+test("點了才會連的連結依網域分組，標出次數，展開看完整網址", async ({ page }) => {
+  // 一份新聞稿：同一個網域的連結出現好幾次，另有幾個只出現一次的網域
+  const links = [
+    ...Array(4).fill("https://www.news.example.org/story"),
+    "https://news.example.org/about",
+    "https://news.example.org/contact",
+    ...Array(2).fill("https://shop.example.com/sale"),
+    "https://example.net/",
+  ];
+  const html = `<html><body>${links.map((url, i) => `<p><a href="${url}">連結 ${i}</a></p>`).join("")}</body></html>`;
+  await page.goto("./doc-check/");
+  await page.getByTestId("file-input").setInputFiles({ name: "press.html", mimeType: "text/html", buffer: Buffer.from(html) });
+  await page.getByText("點了才會連的連結（9 個，3 個網域）").click();
+  const hosts = page.getByTestId("doc-check-hosts").locator(":scope > li");
+  await expect(hosts).toHaveCount(3);
+  // 依次數排序：news.example.org 6 次（www. 算同一個網域），shop.example.com 2 次，example.net 1 次
+  await expect(hosts.nth(0)).toContainText("news.example.org");
+  await expect(hosts.nth(0)).toContainText("3 個網址，共 6 次");
+  await expect(hosts.nth(1)).toContainText("shop.example.com");
+  await expect(hosts.nth(1)).toContainText("2 次");
+  await expect(hosts.nth(2)).toContainText("https://example.net/");
+  await hosts.nth(0).locator("summary").click();
+  await expect(hosts.nth(0).getByText("https://www.news.example.org/story")).toBeVisible();
+  await expect(hosts.nth(0).locator("li").first()).toContainText("4 次");
 });

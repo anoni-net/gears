@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { sniff } from "../../src/core/bytes.ts";
-import { type CheckItem, checkDocument, remoteTarget, urlsIn } from "../../src/tools/doc-check/index.ts";
+import { type CheckItem, checkDocument, groupByHost, remoteTarget, urlsIn } from "../../src/tools/doc-check/index.ts";
 import { TRACKED_HTML, cleanPdf, trackedDocx, trackedEmail, trackedOdt, trackedPdf, trackedXlsx } from "../helpers/tracked-docs.ts";
 
 const summary = (items: CheckItem[]) => items.map((i) => `${i.kind} ${i.code}${i.url ? ` ${i.url}` : ""}${i.name ? ` [${i.name}]` : ""}`).sort();
@@ -109,4 +109,34 @@ test("查證：文件打開時會連線的列在需要留意的地方", async ()
     { index: 1, name: "plain.pdf", format: "pdf", size: 1, hash: "b", evidence: clean },
   ] as never);
   expect(summary.warnings.filter((w) => w.code.startsWith("doc-"))).toEqual([{ code: "doc-connects", files: [0], value: "4" }]);
+});
+
+test("同一個連結出現好幾次只列一次，記下次數", async () => {
+  const html = `<html><body>${'<a href="https://shop.example.com/sale">買</a>'.repeat(3)}<a href="https://example.org/">首頁</a></body></html>`;
+  const result = await checkDocument(new TextEncoder().encode(html), "html");
+  const links = result.items.filter((i) => i.kind === "link");
+  expect(links).toHaveLength(2);
+  expect(links.find((i) => i.url === "https://shop.example.com/sale")?.count).toBe(3);
+  expect(links.find((i) => i.url === "https://example.org/")?.count ?? 1).toBe(1);
+});
+
+test("連結依網域分組：www. 與大小寫算同一個，依次數排序", () => {
+  const groups = groupByHost([
+    { kind: "link", code: "hyperlink", url: "https://example.org/a", count: 2 },
+    { kind: "link", code: "hyperlink", url: "https://www.Example.org/b" },
+    { kind: "link", code: "hyperlink", url: "https://other.example.net/x", count: 5 },
+    { kind: "link", code: "hyperlink", url: "https://a.example.com/" },
+    { kind: "link", code: "hyperlink", url: "\\\\fileserver\\share\\doc.docx" },
+    { kind: "link", code: "hyperlink" },
+  ]);
+  expect(groups.map((g) => [g.host, g.count])).toEqual([
+    ["other.example.net", 5],
+    ["example.org", 3],
+    ["a.example.com", 1],
+    ["fileserver", 1],
+  ]);
+  expect(groups[1]!.urls).toEqual([
+    { url: "https://example.org/a", count: 2 },
+    { url: "https://www.Example.org/b", count: 1 },
+  ]);
 });
