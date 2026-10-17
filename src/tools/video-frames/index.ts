@@ -54,9 +54,10 @@ export function isBlank(luma: Uint8Array): boolean {
 // 3. 太多時留差距最大的幾格（第一格一定留）
 // 4. 只找到一格時（畫面幾乎不動）在剩下的取樣裡平均補上。找到兩格以上就不補，補進來的會是
 //    同一個場景的重複畫面
-export function pickFrames(samples: Sample[], options: PickOptions = DEFAULT_PICK): number[] {
+// evenly 表示沒有找到換場景的地方、這幾格是平均挑的，畫面上另外說明
+export function pickFrames(samples: Sample[], options: PickOptions = DEFAULT_PICK): { times: number[]; evenly: boolean } {
   const usable = samples.filter((s) => !isBlank(s.luma));
-  if (!usable.length) return samples.length ? [samples[Math.floor(samples.length / 2)]!.time] : [];
+  if (!usable.length) return { times: samples.length ? [samples[Math.floor(samples.length / 2)]!.time] : [], evenly: false };
 
   const kept: { time: number; score: number; luma: Uint8Array }[] = [{ time: usable[0]!.time, score: Infinity, luma: usable[0]!.luma }];
   for (const s of usable.slice(1)) {
@@ -69,7 +70,8 @@ export function pickFrames(samples: Sample[], options: PickOptions = DEFAULT_PIC
     : kept.map((k) => k.time);
 
   const want = Math.min(options.min, usable.length);
-  if (times.length <= 1 && times.length < want) {
+  const evenly = times.length <= 1 && times.length < want;
+  if (evenly) {
     const taken = new Set(times);
     for (let i = 0; i < want && times.length < want; i++) {
       const s = usable[Math.round(((i + 0.5) * usable.length) / want - 0.5)]!;
@@ -79,7 +81,7 @@ export function pickFrames(samples: Sample[], options: PickOptions = DEFAULT_PIC
       }
     }
   }
-  return times.sort((a, b) => a - b);
+  return { times: times.sort((a, b) => a - b), evenly };
 }
 
 // 檔名與畫面上的時間：1:05.3，超過一小時 1:02:05.3

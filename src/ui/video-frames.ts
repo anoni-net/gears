@@ -200,7 +200,12 @@ async function playThrough(video: HTMLVideoElement, times: number[], onTime: (ti
 // 先用跳轉取樣，快，長片也只要跳 240 次。MediaRecorder 錄的 WebM（瀏覽器的螢幕錄影常是這種）
 // 沒有索引，Firefox 跳轉之後畫面不會更新，取樣到的全是第一格。取樣的畫面幾乎都一樣時，改成
 // 從頭播放、依序取樣。畫面真的不動的影片也會走到這裡，所以只在 30 分鐘以內的影片這樣做
-export async function extractFrames(video: HTMLVideoElement, duration: number, onProgress: (p: Progress) => void, signal?: AbortSignal): Promise<Frame[]> {
+export async function extractFrames(
+  video: HTMLVideoElement,
+  duration: number,
+  onProgress: (p: Progress) => void,
+  signal?: AbortSignal,
+): Promise<{ frames: Frame[]; evenly: boolean }> {
   const canvas = document.createElement("canvas");
   canvas.width = SIZE;
   canvas.height = SIZE;
@@ -225,7 +230,7 @@ export async function extractFrames(video: HTMLVideoElement, duration: number, o
     }, signal);
   }
 
-  const picked = pickFrames(samples);
+  const { times: picked, evenly } = pickFrames(samples);
   const frames: Frame[] = [];
   if (playback) {
     const drawn: { time: number; canvas: HTMLCanvasElement }[] = [];
@@ -242,5 +247,5 @@ export async function extractFrames(video: HTMLVideoElement, duration: number, o
       frames.push(await toFrame(time, drawFrame(video)));
     }
   }
-  return frames;
+  return { frames, evenly };
 }
