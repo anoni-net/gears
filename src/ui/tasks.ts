@@ -1,5 +1,5 @@
 export interface Task {
-  id: "photo" | "document" | "heic" | "redact" | "pages" | "verify" | "doc" | "email" | "encrypt" | "wifi";
+  id: "photo" | "document" | "heic" | "redact" | "style" | "pages" | "verify" | "doc" | "email" | "encrypt" | "wifi";
   tool: string;
   preset?: string;
   pick?: boolean; // 處理檔案的任務，點了直接請讀者選檔案
@@ -12,6 +12,7 @@ export const TASKS: Task[] = [
   { id: "document", tool: "strip-metadata", pick: true },
   { id: "heic", tool: "heic-to-jpeg", pick: true },
   { id: "redact", tool: "redact", pick: true },
+  { id: "style", tool: "writing-style" },
   { id: "pages", tool: "pdf-pages", pick: true },
   { id: "verify", tool: "verify", pick: true },
   { id: "doc", tool: "doc-check", pick: true },

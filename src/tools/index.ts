@@ -39,6 +39,7 @@ export const createTools: CreateTool[] = [
   { id: "text-crypt", output: "text" },
   { id: "verify", output: "file" },
   { id: "email-check", output: "text" },
+  { id: "writing-style", output: "text" },
 ];
 
 export const toolIds = [...fileTools, ...editorTools, ...createTools].map((t) => t.id);
