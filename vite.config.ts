@@ -254,8 +254,13 @@ function git(args: string): string | null {
 
 const commit = () => git("rev-parse --short HEAD") ?? "unknown";
 
-// 版本號是 commit 的日期（src/core/version.ts）。沒有 git 時用建置當下的日期
-const version = () => calver(Number(git("log -1 --format=%ct") ?? Date.now() / 1000));
+// 版本號是 commit 的時間（src/core/version.ts）。本機預覽有還沒 commit 的修改時，每次建置都是同一個
+// commit，改用建置當下的時間，換版本的提示才分得出來。沒有 git 時也用建置當下的時間
+const version = () => {
+  const dirty = !!git("status --porcelain");
+  const committed = dirty ? null : git("log -1 --format=%ct");
+  return calver(Number(committed ?? Date.now() / 1000));
+};
 
 // cross-origin isolation：逐字稿的 WebAssembly 要用多執行緒，頁面要在這兩個標頭底下。
 // 工作台所有的資源都來自自己的網域，加上之後不影響其他功能。部署時 nginx 也要送一樣的標頭
