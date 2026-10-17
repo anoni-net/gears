@@ -205,8 +205,7 @@ export function App() {
       {/* 頁首的排版跟新聞導讀一致：anoni.net 字標、分隔線、產品名稱，右邊是回到桌面與清空暫存區。
           語系切換只放在頁尾：工具不常換語系，手機上的第二列也少一個可能按錯的按鈕。
           底色維持工作台的淡藍，字標用 tonal 版，深色模式換成白色版（品牌素材頁的用法）。
-          名稱寫「檔案工作台」（英文版 File Workbench），右上角的標記寫產品名稱 Gears（app.badge）。
-          標語放在桌面最上面 */}
+          名稱寫「檔案工作台」（英文版 File Workbench），右上角的標記寫產品名稱 Gears（app.badge） */}
       <header class="site-header">
         <div class="frame site-header__inner">
           <h1 class="site-header__title">

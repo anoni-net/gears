@@ -28,7 +28,6 @@ function ToolCard({ id }: { id: string }) {
 export function Desktop({ onTask }: Props) {
   return (
     <div class="desktop">
-      <p class="tagline">{t("app.tagline")}</p>
       <section aria-labelledby="tasks-title">
         <h2 id="tasks-title">{t("desk.tasks")}</h2>
         <ul class="cards">

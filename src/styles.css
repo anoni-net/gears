@@ -328,12 +328,6 @@ html:lang(en) .site-header__product {
   }
 }
 
-/* 桌面最上面的標語 */
-.tagline {
-  margin: 0 0 1rem;
-  color: var(--muted);
-}
-
 /* 圖示圈：顏色代表類別，跟社群首頁的圖示圈同一種樣式 */
 .icon {
   width: 1.4rem;
