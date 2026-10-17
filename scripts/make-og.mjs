@@ -17,24 +17,25 @@ if (!out) throw new Error("用法：node scripts/make-og.mjs <輸出目錄>");
 const root = new URL("..", import.meta.url).pathname;
 const wordmark = readFileSync(join(root, "public/logo-wordmark-tonal.svg"), "utf8");
 
+// line 裡的 \n 是換行的位置，中文在逗號處斷開，「逐字稿」這類關鍵字不會被拆到兩行
 const CARDS = {
   "zh-TW": {
     lang: "zh-Hant-TW",
     font: '"Noto Sans CJK TC", "Noto Sans TC"',
     name: "檔案工作台",
-    line: "清除中繼資料、遮蔽個資、加密檔案，也替收到的檔案整理查證線索。全部在你的瀏覽器裡處理，檔案不上傳。",
+    line: "清除中繼資料、遮蔽個資、加密檔案，\n用本機的 AI 模型把錄音檔轉成逐字稿，也能查證收到的檔案。\n全部在你的瀏覽器裡處理，檔案不上傳。",
   },
   "zh-CN": {
     lang: "zh-Hans",
     font: '"Noto Sans CJK SC", "Noto Sans SC"',
     name: "文件工作台",
-    line: "清除元数据、遮蔽个资、加密文件，也替收到的文件整理查证线索。全部在你的浏览器里处理，文件不上传。",
+    line: "清除元数据、遮蔽个资、加密文件，\n用本地的 AI 模型把录音文件转成逐字稿，也能查证收到的文件。\n全部在你的浏览器里处理，文件不上传。",
   },
   en: {
     lang: "en",
     font: '"Noto Sans", "Noto Sans CJK TC"',
     name: "File Workbench",
-    line: "Strip metadata, redact and encrypt files, and lay out leads to verify in the files you receive. Everything runs in your browser and nothing is uploaded.",
+    line: "Strip metadata, redact and encrypt files, transcribe recordings with on-device AI models, and verify the files you receive. Everything runs in your browser and nothing is uploaded.",
   },
 };
 
@@ -52,7 +53,7 @@ const page = (card) => `<!doctype html>
 </style></head><body>
   <div class="mark">${wordmark}</div>
   <h1>${card.name}<span class="badge">Gears</span></h1>
-  <p>${card.line}</p>
+  <p>${card.line.replace(/\n/g, "<br>")}</p>
   <div class="url">anoni.net/gears</div>
 </body></html>`;
 
