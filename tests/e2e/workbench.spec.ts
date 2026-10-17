@@ -6,19 +6,19 @@ import { stripMetadata } from "../../src/tools/strip-metadata/index.ts";
 import { exifSegment, insertIntoJpeg, insertIntoPng, metadataChunks, sampleTiff, bytes as text } from "../helpers/fixtures.ts";
 import { concat } from "../../src/core/bytes.ts";
 
-// 在遮蔽的畫布上拖出一個框。畫布底下可能被固定在畫面底部的完成列蓋住，頁面不夠長時也捲不上去
-// （CI 沒有中文字型，版面高度跟本機不同），所以只在完成列上方看得到的那一段拖拉
+// 在遮蔽的畫布上框出一個範圍。用鍵盤操作，跟版面的高度無關：用滑鼠拖拉時，畫布底下可能被
+// 固定在畫面底部的完成列蓋住，CI 沒有中文字型、版面高度跟本機不同，拖拉的位置會落在完成列底下
 async function drawBox(page: Page) {
-  const canvas = page.getByTestId("redact-canvas");
-  await canvas.evaluate((el) => el.scrollIntoView({ block: "start" }));
-  const b = (await canvas.boundingBox())!;
-  const bar = (await page.locator(".redact-actions").boundingBox())!;
-  const top = Math.max(b.y, 0);
-  const bottom = Math.min(b.y + b.height, bar.y);
-  await page.mouse.move(b.x + b.width * 0.1, top + (bottom - top) * 0.1);
-  await page.mouse.down();
-  await page.mouse.move(b.x + b.width * 0.4, top + (bottom - top) * 0.6);
-  await page.mouse.up();
+  await page.getByRole("application", { name: "要遮蔽的圖片" }).focus();
+  await page.keyboard.press("Enter"); // 出現游標
+  await page.keyboard.press("Shift+ArrowLeft");
+  await page.keyboard.press("Shift+ArrowUp");
+  await page.keyboard.press("Enter"); // 第一個角
+  await page.keyboard.press("Shift+ArrowRight");
+  await page.keyboard.press("Shift+ArrowRight");
+  await page.keyboard.press("Shift+ArrowDown");
+  await page.keyboard.press("Enter");
+  await expect(page.getByText("已經框了 1 個範圍")).toBeVisible();
 }
 
 test.beforeEach(async ({ page }) => {
