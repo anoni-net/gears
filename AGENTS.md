@@ -54,7 +54,7 @@ CI（`.github/workflows/ci.yml`）依瀏覽器拆成四台機器同時執行：C
 
 | | 處理檔案的工具（`fileTools`） | 需要編輯畫面的工具（`editorTools`） | 從空白開始的工具（`createTools`） |
 |---|---|---|---|
-| 例子 | 清除中繼資料 | 遮蔽、縮成常見尺寸、列印追蹤點、HEIC 轉 JPEG、PDF 頁面選取、加密、解密、逐字稿、影片的關鍵影格、文件開啟前檢查 | QR code 產生器與讀取、網址檢查、密語與密碼產生器、age 金鑰產生器、加密文字、查證、信件檢查、寫作習慣檢查、下載的軟體驗證 |
+| 例子 | 清除中繼資料 | 遮蔽、縮成常見尺寸、列印追蹤點、HEIC 轉 JPEG、PDF 頁面選取、加密、解密、逐字稿、影片的關鍵影格、文件開啟前檢查 | QR code 產生器與讀取、網址檢查、密語與密碼產生器、age 金鑰產生器、加密文字、查證、信件檢查、寫作習慣檢查、下載的軟體驗證、面對面傳送 |
 | 介面 | `src/core/tool.ts` 的 `Tool` | `EditorTool`，編輯畫面登記在 `src/ui/registry.tsx` | `CreateTool`，元件登記在 `src/ui/registry.tsx` |
 | 結果 | 暫存區裡那個檔案的新版本 | 同左，由 `tray.addVersion` 加入 | 產出檔案的放進暫存區，產出文字的只顯示在畫面上 |
 
@@ -195,6 +195,19 @@ PDF 的版本紀錄：每一個 `%%EOF` 是一次存檔的結尾，切到那裡�
 在查證的畫面加入檔案時留在查證的畫面（`src/app.tsx` 的 `addFiles`），其他從空白開始的工具加入檔案時回到桌面。
 
 照片讀 EXIF（`extractExif` 支援的格式，`parseExif` 補上了拍攝、數位化、修改三種時間與各自的時區、GPS 的 UTC 時間與縮圖的位置），PDF 用 pdf-lib 讀文件資訊、XMP、簽章與舊版本，Office 讀 `docProps/core.xml` 與 `app.xml`，LibreOffice 讀 `meta.xml`，XMP 在其他格式裡用 `<x:xmpmeta` 搜尋。其他格式用加入暫存區時清除中繼資料的檢查結果，MP4、MOV、M4A 的時間是 UTC。單元測試在 `tests/unit/verify.spec.ts`。本機另外用 Pillow 寫入 EXIF 的照片、python-docx 產生的 Word 與 Chromium 列印的 PDF 驗證過。
+
+## 面對面傳送
+
+兩台裝置在同一個網路裡，用 WebRTC 直接傳暫存區的檔案，不經過任何伺服器（`src/ui/NearbyTool.tsx`）。規格與實測參考文件站的技術驗證（anoni-net/docs#553），程式是在 Gears 重寫的，沒有搬文件站實驗頁的程式碼（授權不同）。
+
+- 連線描述（`src/tools/nearby/codec.ts`，有單元測試）：只開資料通道的 SDP 每次會變的只有 ICE 帳密、DTLS 指紋、候選與 setup 角色，只編這幾個欄位，約 90 到 110 位元組，接收端照固定樣板組回完整的 SDP。Chromium、Firefox、WebKit 互相接受彼此組回的描述（2026-10-17 兩兩互傳實測）。封包以 `GR` 開頭、版本 1，回應帶著對應的發起描述的標記，對不上的不套
+- 候選只留 UDP 的 host，丟掉 loopback、link-local、CGNAT（`100.64.0.0/10`）與 Tailscale（`fd7a:115c:a1e0::/48`）。`iceServers` 是空的，不用 STUN 與 TURN，連線不會走到網際網路
+- 配對：送出端的 QR code 是工作台的網址，連線描述放在 `#` 後面（不會送到伺服器），手機用系統相機掃就直接打開、自動回應，讀完就用 `history.replaceState` 從網址清掉。接收端的回應由送出端頁面裡的相機掃。沒有相機時複製貼上同一段代碼
+- 確認碼：兩邊的 DTLS 指紋排序後取 SHA-256，換成 6 位數字（`src/tools/nearby/protocol.ts`）。鏡頭對螢幕換不掉指紋，複製貼上可能經過別人的伺服器，要靠確認碼核對
+- 傳輸（`src/ui/nearby.ts`）：一條有序、可靠的資料通道，先送檔案清單與每個檔案的 SHA-256，接收端的讀者按「接收」才開始傳，別人不能把檔案直接塞過來。64 KB 一塊，`bufferedAmount` 超過 4 MB 就等。接收端邊收邊算 SHA-256，對不上的不放進暫存區。檔名跟下載一樣改成 `gears-第幾個`。接收端的檔案放在記憶體裡，合計上限先抓 1 GB
+- 15 秒內連不上時說明公共 Wi-Fi 與訪客網路常擋裝置互連，建議開手機熱點。Tor Browser 把 WebRTC 整個關掉，onion 版說明並建議改用 OnionShare。傳送時用 Wake Lock 不讓螢幕關掉
+- 瀏覽器測試（`tests/e2e/nearby.spec.ts`）在同一個瀏覽器開兩個分頁互傳，走複製貼上與「打開送出端的網址」兩條路。Firefox 不處理背景分頁的輸入，操作哪個分頁之前先 `bringToFront()`。鏡頭掃 QR code 那一條跟 QR code 讀取共用解碼，沒有自動測試
+- 還沒做的：文件站實測過多條並行連線能讓 iPhone 送出從每秒約 5 MB 提高到 37 MB，第一版只用一條連線。接收大檔案時 iPhone 的記憶體上限、切到背景與鎖屏之後連線是否還在，都要在實機上量
 
 ## 影片的關鍵影格
 
@@ -566,7 +579,7 @@ iPhone 預設拍出來的是 HEIC，在網頁上選照片時交出來的也是�
 
 ## 規劃
 
-產品規劃記錄在社群的工作區，還沒有公開。目前完成第一階段：桌面、檔案暫存區，以及清除中繼資料（JPEG、PNG、HEIC、AVIF、WebP、GIF、TIFF、SVG、BMP、PNM、JPEG XL，Word、Excel、PowerPoint、LibreOffice 文件與 PDF，MP3、M4A、MP4、MOV、WAV、AVI、FLAC、Ogg、Opus、MKV、WebM，ZIP、TAR、gzip、EPUB、種子檔、HTML）、遮蔽（圖片與 PDF，可以自動找人臉與個資）、縮成常見尺寸、列印追蹤點、PDF 頁面選取、查證收到的檔案、影片的關鍵影格、文件開啟前檢查、信件檢查、下載的軟體驗證、寫作習慣檢查、逐字稿、加密與解密（檔案與一段文字）、age 金鑰產生器、QR code 產生器與讀取、網址檢查、密語與密碼產生器，可以下載與系統分享，一次處理多個檔案，也可以離線使用。2026-10 起部署在 `anoni.net/gears/`（見上方「部署」）。
+產品規劃記錄在社群的工作區，還沒有公開。目前完成第一階段：桌面、檔案暫存區，以及清除中繼資料（JPEG、PNG、HEIC、AVIF、WebP、GIF、TIFF、SVG、BMP、PNM、JPEG XL，Word、Excel、PowerPoint、LibreOffice 文件與 PDF，MP3、M4A、MP4、MOV、WAV、AVI、FLAC、Ogg、Opus、MKV、WebM，ZIP、TAR、gzip、EPUB、種子檔、HTML）、遮蔽（圖片與 PDF，可以自動找人臉與個資）、縮成常見尺寸、列印追蹤點、PDF 頁面選取、查證收到的檔案、影片的關鍵影格、文件開啟前檢查、信件檢查、下載的軟體驗證、寫作習慣檢查、逐字稿、加密與解密（檔案與一段文字）、面對面傳送、age 金鑰產生器、QR code 產生器與讀取、網址檢查、密語與密碼產生器，可以下載與系統分享，一次處理多個檔案，也可以離線使用。2026-10 起部署在 `anoni.net/gears/`（見上方「部署」）。
 
 ## 第三方資料
 

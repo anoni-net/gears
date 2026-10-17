@@ -48,6 +48,8 @@ export const createTools: CreateTool[] = [
   { id: "email-check", output: "text" },
   { id: "writing-style", output: "text" },
   { id: "software-verify", output: "text" },
+  // 面對面傳送：兩台裝置在同一個網路裡用 WebRTC 直接傳暫存區的檔案，收到的檔案放進暫存區
+  { id: "nearby", output: "file" },
 ];
 
 export const toolIds = [...fileTools, ...editorTools, ...createTools].map((t) => t.id);

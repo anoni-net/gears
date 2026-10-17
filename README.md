@@ -24,6 +24,7 @@ anoni.net Gears 檔案工作台，在瀏覽器裡處理要交出去的檔案：�
 - 信件檢查：貼上原始郵件，看寄件驗證有沒有通過、實際的寄件網域、回覆地址有沒有被換掉，信裡的連結交給網址檢查
 - 把錄音或影片的聲音轉成帶時間的逐字稿，支援華語、台語、粵語、英語、日語、韓語，以及東南亞與南亞的多種語言，可以分辨說話者，下載 TXT 與 SRT 字幕
 - 用密語或 age 公鑰加密任何檔案或一段文字，以及解密
+- 面對面傳送：兩台裝置連上同一個 Wi-Fi 或手機熱點，互掃 QR code 配對，用 WebRTC 直接傳暫存區的檔案，不經過任何伺服器
 - 網址檢查：比對 165 反詐騙的停止解析清單、標出真正的網域、清除追蹤碼
 - QR code 的產生與讀取
 - 密語與密碼產生器
@@ -83,6 +84,7 @@ Tools in the first version:
 - Read an email: paste the original message to see whether it passed sender authentication, the real sending domain, and whether the reply address was swapped, with links handed to the link checker
 - Turn the audio of a recording or video into a timestamped transcript in Mandarin, Taiwanese Hokkien, Cantonese, English, Japanese, Korean and many Southeast and South Asian languages, telling speakers apart, downloadable as TXT or SRT subtitles
 - Encrypt any file or a piece of text with a passphrase or an age public key, and decrypt
+- Nearby transfer: pair two devices on the same Wi-Fi or phone hotspot by scanning each other's QR code, and send files from the tray directly over WebRTC, without going through any server
 - Check a link against Taiwan's 165 anti-fraud blocklist, show the real domain, and remove tracking parameters
 - Generate and read QR codes
 - Generate passphrases and passwords
