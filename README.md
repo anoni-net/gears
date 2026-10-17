@@ -19,6 +19,7 @@ anoni.net Gears 檔案工作台，在瀏覽器裡處理要交出去的檔案：�
 - 只交出 PDF 的其中幾頁，其他頁連同連到它們的連結、書籤與文件資訊一起拿掉
 - 查證收到的檔案：雜湊值、時間線、裝置、作者與編輯痕跡，比對檔案之間的矛盾，PDF 的舊版本可以比對差異，匯出查證紀錄
 - 文件開啟前檢查：打開收到的 Word、Excel、PowerPoint、PDF 之前，列出打開時會連到外面的位址、巨集與 JavaScript，PDF 可以轉成只有圖片的安全版本
+- 下載的軟體驗證：用官方的簽章確認下載的 Tor Browser 與 Tails 沒有被改過，不必安裝 GnuPG
 - 信件檢查：貼上原始郵件，看寄件驗證有沒有通過、實際的寄件網域、回覆地址有沒有被換掉，信裡的連結交給網址檢查
 - 把錄音或影片的聲音轉成帶時間的逐字稿，支援華語、台語、粵語、英語、日語、韓語，以及東南亞與南亞的多種語言，可以分辨說話者，下載 TXT 與 SRT 字幕
 - 用密語或 age 公鑰加密任何檔案或一段文字，以及解密
@@ -76,6 +77,7 @@ Tools in the first version:
 - Hand over only some pages of a PDF. Other pages are removed, along with links to them, bookmarks and document info
 - Verify files you received: hashes, a timeline, devices, authors and editing traces, with contradictions between files flagged, earlier PDF versions compared, and a verification record to export
 - Check a document before opening it: list the external addresses, macros and JavaScript that a Word, Excel, PowerPoint file or PDF reaches for when opened, and turn a PDF into a safe image-only copy
+- Verify downloaded software: check a Tor Browser or Tails download against the official signature, without installing GnuPG
 - Read an email: paste the original message to see whether it passed sender authentication, the real sending domain, and whether the reply address was swapped, with links handed to the link checker
 - Turn the audio of a recording or video into a timestamped transcript in Mandarin, Taiwanese Hokkien, Cantonese, English, Japanese, Korean and many Southeast and South Asian languages, telling speakers apart, downloadable as TXT or SRT subtitles
 - Encrypt any file or a piece of text with a passphrase or an age public key, and decrypt
