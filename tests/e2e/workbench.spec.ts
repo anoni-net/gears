@@ -241,3 +241,91 @@ test("手機點過頁首的 logo 之後，名稱底下不會留著底線", async
   await expect(page.getByRole("heading", { name: "常見的情況" })).toBeVisible();
   await expect(page.locator(".site-header__product")).toHaveCSS("text-decoration-line", "none");
 });
+
+test("暫存區有檔案時，不會因為往下拉而重新整理，離開前要確認；清空之後恢復", async ({ page, browserName }) => {
+  const overscroll = () => page.evaluate(() => getComputedStyle(document.documentElement).overscrollBehaviorY);
+  expect(await overscroll()).toBe("auto");
+  const jpeg = insertIntoJpeg(await canvasImage(page, "image/jpeg"), exifSegment(sampleTiff()));
+  await addFile(page, "photo.jpg", "image/jpeg", jpeg);
+  await expect(page.locator(".tray .item")).toHaveCount(1);
+  await expect.poll(overscroll).toBe("none");
+
+  // 離開前的確認要有讀者的操作過才會出現，Chromium 才測得到
+  if (browserName === "chromium") {
+    await page.getByRole("button", { name: "清除", exact: true }).click();
+    const dialog = page.waitForEvent("dialog");
+    void page.close({ runBeforeUnload: true });
+    const d = await dialog;
+    expect(d.type()).toBe("beforeunload");
+    await d.dismiss();
+    expect(page.isClosed()).toBe(false);
+  }
+
+  await page.getByRole("button", { name: "清空暫存區" }).click();
+  await page.getByRole("button", { name: "再按一次清空" }).click();
+  await expect(page.locator(".tray .item")).toHaveCount(0);
+  await expect.poll(overscroll).toBe("auto");
+});
+
+test("暫存區有檔案、頁面在最上面時，手指往下拉的手勢被攔下", async ({ page }) => {
+  const supported = await page.evaluate(() => "ontouchstart" in window);
+  test.skip(!supported, "這個瀏覽器不能自己產生觸控事件");
+  // 從 y1 拉到 y2，回傳 touchmove 有沒有被攔下
+  const pull = (y1: number, y2: number) =>
+    page.evaluate(
+      ([a, b]) => {
+        const target = document.querySelector("main") ?? document.body;
+        // Chromium 用 Touch 建構子，WebKit 只有舊的 document.createTouch
+        const doc = document as Document & { createTouch?: (...args: unknown[]) => Touch; createTouchList?: (...t: Touch[]) => TouchList };
+        const touch = (y: number): Touch => {
+          try {
+            return new Touch({ identifier: 1, target, clientX: 100, clientY: y });
+          } catch {
+            return doc.createTouch!(window, target, 1, 100, y, 100, y);
+          }
+        };
+        const list = (t: Touch) => (doc.createTouchList ? doc.createTouchList(t) : [t]) as unknown as Touch[];
+        const event = (type: string, t: Touch) => {
+          try {
+            return new TouchEvent(type, { touches: list(t), bubbles: true, cancelable: true });
+          } catch {
+            const e = document.createEvent("TouchEvent") as TouchEvent & { initTouchEvent: (...args: unknown[]) => void };
+            e.initTouchEvent(type, true, true, window, 0, 0, 0, 0, 0, false, false, false, false, list(t), list(t), list(t), 1, 0);
+            return e;
+          }
+        };
+        target.dispatchEvent(event("touchstart", touch(a)));
+        const move = event("touchmove", touch(b));
+        target.dispatchEvent(move);
+        target.dispatchEvent(new TouchEvent("touchend", { bubbles: true, cancelable: true }));
+        return move.defaultPrevented;
+      },
+      [y1, y2],
+    );
+  expect(await pull(100, 200)).toBe(false); // 暫存區是空的
+  const jpeg = insertIntoJpeg(await canvasImage(page, "image/jpeg"), exifSegment(sampleTiff()));
+  await addFile(page, "photo.jpg", "image/jpeg", jpeg);
+  await expect(page.locator(".tray .item")).toHaveCount(1);
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await expect.poll(() => pull(100, 200)).toBe(true); // 在最上面往下拉
+  expect(await pull(200, 100)).toBe(false); // 往上捲
+  await page.evaluate(() => window.scrollTo(0, 200));
+  if (await page.evaluate(() => window.scrollY > 0)) expect(await pull(100, 200)).toBe(false); // 頁面不在最上面
+});
+
+test("首頁按清空變成紅底確認時，按鈕不會貼到頁首的底線", async ({ page }) => {
+  const jpeg = insertIntoJpeg(await canvasImage(page, "image/jpeg"), exifSegment(sampleTiff()));
+  await addFile(page, "photo.jpg", "image/jpeg", jpeg);
+  await page.locator(".site-header__home").click();
+  await page.getByRole("button", { name: "清空暫存區" }).click();
+  const armed = (await page.getByRole("button", { name: "再按一次清空" }).boundingBox())!;
+  const header = (await page.locator(".site-header").boundingBox())!;
+  expect(header.y + header.height - (armed.y + armed.height)).toBeGreaterThanOrEqual(4);
+});
+
+test("首頁沒有檔案時，頁首沒有空白的操作列", async ({ page }) => {
+  await expect(page.locator(".site-header__actions")).toBeHidden();
+  const header = (await page.locator(".site-header").boundingBox())!;
+  const title = (await page.locator(".site-header__title").boundingBox())!;
+  expect(header.height - title.height).toBeLessThan(8);
+});

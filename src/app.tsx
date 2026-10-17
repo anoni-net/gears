@@ -8,7 +8,7 @@ import { FileView } from "./ui/FileView.tsx";
 import { Licenses } from "./ui/Licenses.tsx";
 import { ToolIntro } from "./ui/ToolIntro.tsx";
 import { TrayList } from "./ui/TrayList.tsx";
-import { useOffline } from "./ui/offline.ts";
+import { isReloading, useOffline } from "./ui/offline.ts";
 import { useAnyWorking } from "./ui/working.ts";
 import { useTray } from "./ui/hooks.ts";
 import { CreateToolView } from "./ui/registry.tsx";
@@ -114,8 +114,49 @@ function AnalyticsChoice() {
   );
 }
 
+// 暫存區只在記憶體裡，重新整理就清空。手機上很容易一滑就觸發下拉重新整理，所以暫存區有檔案時：
+// - 頁面加上 overscroll-behavior-y: none（html.has-files），Android 的 Chrome、Firefox 與 iOS 16 以後的
+//   Safari 不會觸發下拉重新整理
+// - iOS 的 Safari 下拉重新整理是瀏覽器自己的手勢，CSS 不一定擋得住：頁面已經在最上面、手指往下拉時
+//   直接攔下 touchmove。往上捲、兩指縮放、在自己能捲動的區塊裡捲動都不受影響
+// - 重新整理或關閉分頁之前請瀏覽器先確認（beforeunload）。iOS 的 Safari 不支援，靠上兩項
+// 讀者按重新載入換新版本時暫存區會帶過去，不必確認
+function useKeepTray(hasFiles: boolean) {
+  useEffect(() => {
+    document.documentElement.classList.toggle("has-files", hasFiles);
+    if (!hasFiles) return;
+    const confirm = (e: BeforeUnloadEvent) => {
+      if (isReloading()) return;
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    let startY: number | null = null;
+    const start = (e: TouchEvent) => {
+      startY = e.touches.length === 1 && window.scrollY <= 0 ? e.touches[0]!.clientY : null;
+    };
+    const move = (e: TouchEvent) => {
+      if (startY === null || e.touches.length !== 1 || window.scrollY > 0) return;
+      if (e.touches[0]!.clientY <= startY) return;
+      // 手指所在的區塊自己還能往上捲，就讓它捲
+      for (let el = e.target as Element | null; el && el !== document.body; el = el.parentElement) {
+        if (el.scrollTop > 0) return;
+      }
+      if (e.cancelable) e.preventDefault();
+    };
+    window.addEventListener("beforeunload", confirm);
+    document.addEventListener("touchstart", start, { passive: true });
+    document.addEventListener("touchmove", move, { passive: false });
+    return () => {
+      window.removeEventListener("beforeunload", confirm);
+      document.removeEventListener("touchstart", start);
+      document.removeEventListener("touchmove", move);
+    };
+  }, [hasFiles]);
+}
+
 export function App() {
   const state = useTray();
+  useKeepTray(state.files.length > 0);
   const route = useRoute();
   const input = useRef<HTMLInputElement>(null);
   const [preset, setPreset] = useState<string>();

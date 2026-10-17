@@ -88,6 +88,12 @@ body {
   margin: 0;
 }
 
+/* 暫存區有檔案時，手機上不會因為往下拉而重新整理、清空暫存區（src/app.tsx 的 useKeepTray） */
+html.has-files,
+html.has-files body {
+  overscroll-behavior-y: none;
+}
+
 a {
   color: var(--link);
 }
@@ -229,6 +235,13 @@ html:lang(en) .site-header__product {
   align-items: center;
   gap: 0 0.25rem;
   margin-left: auto;
+  /* 跟一般狀態的按鈕一樣高。首頁只有清空這一顆時，變成比較矮的紅底確認也不會貼到頁首的底線 */
+  min-height: 3rem;
+}
+
+/* 首頁、暫存區是空的時候沒有任何操作，不佔位置（手機上不會多出空白的第二列） */
+.site-header__actions:empty {
+  display: none;
 }
 
 .site-header__actions button {
