@@ -63,6 +63,7 @@ test("遮蔽 HEIC：解碼之後框選塗黑，輸出 JPEG", async ({ page }) =>
   await page.getByTestId("file-input").setInputFiles(heic(PHOTO));
   await page.getByRole("button", { name: "開始框選" }).click();
   const canvas = page.getByTestId("redact-canvas");
+  await expect(canvas).toHaveAttribute("aria-busy", "false");
   await expect(canvas).toBeVisible({ timeout: 30_000 });
   await canvas.scrollIntoViewIfNeeded();
   const b = (await canvas.boundingBox())!;

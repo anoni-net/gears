@@ -503,6 +503,8 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
           role="application"
           aria-label={t("redact.canvasLabel")}
           aria-describedby="redact-keys"
+          // 圖片還在解碼、換頁或套用中時不接受輸入（down、keyDown 開頭就返回），讀螢幕軟體與測試從這裡知道
+          aria-busy={status !== "ready"}
           onKeyDown={keyDown}
           onBlur={() => setCorner(null)}
           onPointerDown={down}

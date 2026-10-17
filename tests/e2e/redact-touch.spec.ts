@@ -22,6 +22,7 @@ test("長截圖的畫布最高只佔畫面的 70%，下方的按鈕捲得到", a
   await page.goto("./redact/");
   await page.getByTestId("file-input").setInputFiles({ name: "long.png", mimeType: "image/png", buffer: await tallScreenshot(page) });
   const canvas = page.getByTestId("redact-canvas");
+  await expect(canvas).toHaveAttribute("aria-busy", "false");
   await expect(canvas).toBeVisible();
   const box = (await canvas.boundingBox())!;
   const viewport = page.viewportSize()!;
@@ -38,6 +39,7 @@ test("畫布上兩根手指捲動頁面，不會留下框", async ({ browser, br
   await page.goto("./redact/");
   await page.getByTestId("file-input").setInputFiles({ name: "long.png", mimeType: "image/png", buffer: await tallScreenshot(page) });
   const canvas = page.getByTestId("redact-canvas");
+  await expect(canvas).toHaveAttribute("aria-busy", "false");
   await canvas.scrollIntoViewIfNeeded();
   const box = (await canvas.boundingBox())!;
   const before = await page.evaluate(() => window.scrollY);
