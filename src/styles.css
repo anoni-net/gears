@@ -732,6 +732,13 @@ footer .languages {
   margin: 0.25rem 0;
 }
 
+footer .languages .icon {
+  width: 1rem;
+  height: 1rem;
+  align-self: center;
+  margin-right: -0.5rem;
+}
+
 footer .languages button[aria-current] {
   color: inherit;
   font-weight: 600;

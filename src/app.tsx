@@ -290,6 +290,8 @@ export function App() {
             </button>
           </p>
           <nav class="languages" aria-label={t("app.language")}>
+            {/* 不懂中文的讀者也認得出這裡是切換語言 */}
+            <Icon name="translate" />
             {LOCALES.map((l) => (
               <button
                 key={l.id}
