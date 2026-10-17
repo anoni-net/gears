@@ -119,7 +119,18 @@ export function NearbyTool(_props: CreateToolProps) {
   const state = useTray();
   const [mode, setMode] = useState<"choose" | "send" | "receive">("choose");
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
+  // 要送出的檔案：預設全選，打開工具之後才加入暫存區的檔案也勾上（seen 記著已經處理過的檔案）
   const [picked, setPicked] = useState<Set<number>>(() => new Set(state.files.map((f) => f.id)));
+  const seen = useRef(new Set(state.files.map((f) => f.id)));
+  useEffect(() => {
+    const added = state.files.filter((f) => !seen.current.has(f.id)).map((f) => f.id);
+    if (!added.length) return;
+    for (const id of added) seen.current.add(id);
+    setPicked((s) => new Set([...s, ...added]));
+  }, [state.files]);
+  // 檔名預設跟下載一樣改成 gears 加編號，原本的檔名常帶著日期或人名。傳給自己的其他裝置時可以保留
+  const [keepNames, setKeepNames] = useState(false);
+  const nameOf = (f: (typeof state.files)[number]) => (keepNames ? f.name : outputName(f, state.files.indexOf(f)));
   const [code, setCode] = useState(""); // 自己這一側要給對方的代碼
   const [confirm, setConfirm] = useState("");
   const [pasted, setPasted] = useState("");
@@ -149,13 +160,23 @@ export function NearbyTool(_props: CreateToolProps) {
     [],
   );
 
-  // 從送出端的 QR code 打開時，網址的 # 後面是連線描述。讀完就從網址清掉，不留在瀏覽紀錄裡
-  useEffect(() => {
+  // 從送出端的 QR code 打開時，網址的 # 後面是連線描述。讀完就從網址清掉，不留在瀏覽紀錄裡。
+  // 頁面已經開著、只有 # 後面換了的時候瀏覽器不會重新載入，另外聽 hashchange
+  const fromHash = useRef<() => void>(() => {});
+  fromHash.current = () => {
     const hash = location.hash.slice(1);
     if (!hash || !rtcAvailable()) return;
     history.replaceState(history.state, "", location.pathname + location.search);
+    if (phase.kind !== "idle" && phase.kind !== "scanning") return; // 正在配對或傳送時不打斷
+    close(pending.current);
     setMode("receive");
     void receive(hash);
+  };
+  useEffect(() => {
+    fromHash.current();
+    const onHash = () => fromHash.current();
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
   }, []);
 
   const fail = (error: unknown) => {
@@ -203,7 +224,7 @@ export function NearbyTool(_props: CreateToolProps) {
       const link = await opened(p);
       setConfirm(confirmOf(p));
       setPhase({ kind: "awaiting" });
-      const outgoing = files.map((f) => ({ name: outputName(f, state.files.indexOf(f)), blob: f.versions.at(-1)!.blob }));
+      const outgoing = files.map((f) => ({ name: nameOf(f), blob: f.versions.at(-1)!.blob }));
       const result = await sendFiles(link, outgoing, (done, total) => setPhase({ kind: "transfer", done, total }));
       if (result.declined) return setPhase({ kind: "declined" });
       track("tool-done", { tool: "nearby" });
@@ -289,7 +310,14 @@ export function NearbyTool(_props: CreateToolProps) {
     );
   }
 
-  const copy = () => void navigator.clipboard.writeText(code).catch(() => {});
+  const [copied, setCopied] = useState(false);
+  const copy = () =>
+    void navigator.clipboard.writeText(code).then(
+      () => setCopied(true),
+      () => {},
+    );
+
+  // 貼上對方代碼的欄位，沒有相機時用
   const pasteBox = (onSubmit: (text: string) => void, label: string) => (
     <form
       class="nearby-paste"
@@ -298,13 +326,15 @@ export function NearbyTool(_props: CreateToolProps) {
         if (pasted.trim()) onSubmit(pasted.trim());
       }}
     >
-      <label>
-        {label}
-        <textarea rows={2} value={pasted} onInput={(e) => setPasted(e.currentTarget.value)} spellcheck={false} autocomplete="off" data-testid="nearby-paste" />
-      </label>
-      <button type="submit">{t("nearby.pasteApply")}</button>
+      <label for="nearby-paste">{label}</label>
+      <textarea id="nearby-paste" rows={2} value={pasted} onInput={(e) => setPasted(e.currentTarget.value)} spellcheck={false} autocomplete="off" data-testid="nearby-paste" />
+      <div class="buttons">
+        <button type="submit">{t("nearby.pasteApply")}</button>
+      </div>
     </form>
   );
+
+  // 自己這一側的 QR code，沒有相機時展開複製代碼
   const myCode = (label: string) =>
     code ? (
       <div class="nearby-code">
@@ -312,13 +342,16 @@ export function NearbyTool(_props: CreateToolProps) {
         <details>
           <summary>{t("nearby.noCamera")}</summary>
           <p class="hint">{t("nearby.copyNote")}</p>
-          <textarea readOnly rows={3} value={code} data-testid="nearby-code" />
-          <button type="button" onClick={copy}>
-            {t("nearby.copy")}
-          </button>
+          <textarea readOnly rows={3} value={code} aria-label={label} data-testid="nearby-code" />
+          <div class="buttons">
+            <button type="button" onClick={copy}>
+              {copied ? t("nearby.copied") : t("nearby.copy")}
+            </button>
+          </div>
         </details>
       </div>
     ) : null;
+
   const camera = scanning ? (
     <>
       {stream ? <video ref={scanner} class="camera" playsInline muted aria-label={t("nearby.camera")} /> : null}
@@ -354,123 +387,146 @@ export function NearbyTool(_props: CreateToolProps) {
     }
   })();
 
+  // 每個畫面最下面只有一列按鈕：主要的動作在前，取消或重新開始在後
+  const cancel = (
+    <button type="button" onClick={restart}>
+      {["sent", "received", "declined", "error"].includes(phase.kind) ? t("nearby.again") : t("redact.cancel")}
+    </button>
+  );
+
+  let body = null;
+  let actions = null;
+  if (mode === "choose") {
+    body = !state.files.length ? <p class="hint">{t("nearby.emptyTray")}</p> : null;
+    actions = (
+      <>
+        <button type="button" class="primary" disabled={!state.files.length} onClick={() => setMode("send")}>
+          {t("nearby.send")}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setMode("receive");
+            setPhase({ kind: "preparing" });
+            void startCamera().then(() => setPhase({ kind: "scanning" }));
+          }}
+        >
+          {t("nearby.receive")}
+        </button>
+      </>
+    );
+  } else if (mode === "send" && phase.kind === "idle") {
+    body = (
+      <>
+        <fieldset class="choices">
+          <legend>{t("nearby.pick")}</legend>
+          {state.files.map((f) => (
+            <label key={f.id} class="check">
+              <input
+                type="checkbox"
+                checked={picked.has(f.id)}
+                onChange={() => setPicked((s) => (s.has(f.id) ? new Set([...s].filter((x) => x !== f.id)) : new Set([...s, f.id])))}
+              />
+              <span>
+                {nameOf(f)}
+                <small class="hint">{size(f.versions.at(-1)!.blob.size)}</small>
+              </span>
+            </label>
+          ))}
+        </fieldset>
+        <label class="check">
+          <input type="checkbox" checked={keepNames} onChange={(e) => setKeepNames(e.currentTarget.checked)} data-testid="nearby-keep-names" />
+          <span>
+            {t("nearby.keepNames")}
+            <small class="hint">{t("nearby.keepNamesNote")}</small>
+          </span>
+        </label>
+      </>
+    );
+    actions = (
+      <>
+        <button type="button" class="primary" disabled={!files.length} onClick={() => void startSend()}>
+          {t("nearby.start", { n: files.length })}
+        </button>
+        {cancel}
+      </>
+    );
+  } else if (mode === "send" && phase.kind === "offering") {
+    body = (
+      <div class="nearby-pair">
+        {myCode(t("nearby.qrOffer"))}
+        <div>
+          <p>{t("nearby.scanAnswer")}</p>
+          {camera}
+          {pasteBox((text) => void gotAnswer(text), t("nearby.pasteAnswer"))}
+        </div>
+      </div>
+    );
+    actions = cancel;
+  } else if (mode === "receive" && phase.kind === "scanning") {
+    body = (
+      <>
+        <p>{t("nearby.scanOffer")}</p>
+        {camera}
+        {pasteBox((text) => void gotOffer(text), t("nearby.pasteOffer"))}
+      </>
+    );
+    actions = cancel;
+  } else if (mode === "receive" && phase.kind === "answering") {
+    body = myCode(t("nearby.qrAnswer"));
+    actions = cancel;
+  } else if (phase.kind === "review") {
+    const total = phase.incoming.files.reduce((sum, f: FileMeta) => sum + f.size, 0);
+    body = (
+      <div class="nearby-review">
+        <p>{t("nearby.incoming", { n: phase.incoming.files.length, total: size(total) })}</p>
+        <ul data-testid="nearby-incoming">
+          {phase.incoming.files.map((f, i) => (
+            <li key={i}>
+              {f.name} <small class="hint">{size(f.size)}</small>
+            </li>
+          ))}
+        </ul>
+        {total > MAX_TOTAL ? <p class="error">{t("nearby.error.tooLarge")}</p> : null}
+        <p class="hint">{t("nearby.confirmNote")}</p>
+      </div>
+    );
+    actions = (
+      <>
+        <button type="button" class="primary" onClick={() => void accept(phase.incoming)}>
+          {t("nearby.accept")}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            phase.incoming.decline();
+            setPhase({ kind: "declined" });
+          }}
+        >
+          {t("nearby.decline")}
+        </button>
+      </>
+    );
+  } else if (phase.kind === "transfer") {
+    body = <progress max={phase.total} value={phase.done} />;
+  } else if (!busy) {
+    actions = cancel;
+  }
+
   return (
     <div class="nearby">
-      {mode === "choose" ? (
-        <div class="buttons">
-          <button type="button" class="primary" disabled={!state.files.length} onClick={() => setMode("send")}>
-            {t("nearby.send")}
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setMode("receive");
-              setPhase({ kind: "preparing" });
-              void startCamera().then(() => setPhase({ kind: "scanning" }));
-            }}
-          >
-            {t("nearby.receive")}
-          </button>
-        </div>
-      ) : null}
-      {mode === "choose" && !state.files.length ? <p class="hint">{t("nearby.emptyTray")}</p> : null}
-
-      {mode === "send" && phase.kind === "idle" ? (
-        <>
-          <fieldset class="choices">
-            <legend>{t("nearby.pick")}</legend>
-            {state.files.map((f, i) => (
-              <label key={f.id} class="check">
-                <input type="checkbox" checked={picked.has(f.id)} onChange={() => setPicked((s) => (s.has(f.id) ? new Set([...s].filter((x) => x !== f.id)) : new Set([...s, f.id])))} />
-                <span>
-                  {outputName(f, i)}
-                  <small class="hint">{size(f.versions.at(-1)!.blob.size)}</small>
-                </span>
-              </label>
-            ))}
-          </fieldset>
-          <p class="hint">{t("nearby.nameNote")}</p>
-          <div class="buttons">
-            <button type="button" class="primary" disabled={!files.length} onClick={() => void startSend()}>
-              {t("nearby.start", { n: files.length })}
-            </button>
-            <button type="button" onClick={restart}>
-              {t("redact.cancel")}
-            </button>
-          </div>
-        </>
-      ) : null}
-
       {status ? (
         <p class={phase.kind === "error" ? "error" : "hint"} role="status" data-testid="nearby-status">
           {status}
         </p>
       ) : null}
-      {phase.kind === "transfer" ? <progress max={phase.total} value={phase.done} /> : null}
       {confirm && phase.kind !== "error" ? (
         <p data-testid="nearby-confirm">
           {t("nearby.confirm")} <strong>{confirm}</strong>
         </p>
       ) : null}
-
-      {mode === "send" && phase.kind === "offering" ? (
-        <div class="nearby-pair">
-          {myCode(t("nearby.qrOffer"))}
-          <div>
-            <p>{t("nearby.scanAnswer")}</p>
-            {camera}
-            {pasteBox((text) => void gotAnswer(text), t("nearby.pasteAnswer"))}
-          </div>
-        </div>
-      ) : null}
-
-      {mode === "receive" && phase.kind === "scanning" ? (
-        <>
-          <p>{t("nearby.scanOffer")}</p>
-          {camera}
-          {pasteBox((text) => void gotOffer(text), t("nearby.pasteOffer"))}
-        </>
-      ) : null}
-
-      {mode === "receive" && phase.kind === "answering" ? myCode(t("nearby.qrAnswer")) : null}
-
-      {phase.kind === "review" ? (
-        <div class="nearby-review">
-          <p>{t("nearby.incoming", { n: phase.incoming.files.length, total: size(phase.incoming.files.reduce((s, f: FileMeta) => s + f.size, 0)) })}</p>
-          <ul data-testid="nearby-incoming">
-            {phase.incoming.files.map((f, i) => (
-              <li key={i}>
-                {f.name} <small class="hint">{size(f.size)}</small>
-              </li>
-            ))}
-          </ul>
-          {phase.incoming.files.reduce((s, f) => s + f.size, 0) > MAX_TOTAL ? <p class="error">{t("nearby.error.tooLarge")}</p> : null}
-          <p class="hint">{t("nearby.confirmNote")}</p>
-          <div class="buttons">
-            <button type="button" class="primary" onClick={() => void accept(phase.incoming)}>
-              {t("nearby.accept")}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                phase.incoming.decline();
-                setPhase({ kind: "declined" });
-              }}
-            >
-              {t("nearby.decline")}
-            </button>
-          </div>
-        </div>
-      ) : null}
-
-      {/* 決定接不接收的畫面已經有「拒絕」，不再放取消 */}
-      {mode !== "choose" && !busy && phase.kind !== "review" ? (
-        <div class="buttons">
-          <button type="button" onClick={restart}>
-            {["sent", "received", "declined", "error"].includes(phase.kind) ? t("nearby.again") : t("redact.cancel")}
-          </button>
-        </div>
-      ) : null}
+      {body}
+      {actions ? <div class="buttons nearby-actions">{actions}</div> : null}
     </div>
   );
 }

@@ -2499,6 +2499,21 @@ button.link {
   margin-top: 0.75rem;
 }
 
+/* 按鈕列跟上面的內容、按鈕列之間都要隔開（.buttons 本身沒有上下間距） */
+.nearby-actions {
+  margin-top: 1.25rem;
+}
+
+.nearby-code details,
+.nearby-paste .buttons,
+.nearby-code .buttons {
+  margin-top: 0.5rem;
+}
+
+.nearby-paste label {
+  display: block;
+}
+
 .nearby progress {
   width: 100%;
   max-width: 28rem;

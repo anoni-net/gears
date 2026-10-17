@@ -149,3 +149,38 @@ test("找不到區網位址時說明要先連上 Wi-Fi 或熱點", async ({ page
   await page.getByRole("button", { name: "開始配對（1 個檔案）" }).click();
   await expect(page.getByTestId("nearby-status")).toContainText("找不到這台裝置的區網位址");
 });
+
+test("在面對面傳送的畫面加入檔案，留在原畫面並預設勾選；可以保留原本的檔名", async ({ browser, baseURL }) => {
+  const { sender, receiver, context } = await pair(browser, baseURL!);
+  await sender.goto("./nearby/");
+  await sender.getByTestId("file-input").setInputFiles({ name: "2026-10-17 訪談.txt", mimeType: "text/plain", buffer: Buffer.from("hello") });
+  // 處理整個暫存區的工具：加入檔案之後不跳到單一檔案的畫面
+  await expect(sender).toHaveURL(/\/nearby\/$/);
+  await sender.getByRole("button", { name: "送出暫存區的檔案" }).click();
+  await expect(sender.getByText("gears-1.txt")).toBeVisible();
+  await sender.getByTestId("nearby-keep-names").check();
+  await expect(sender.getByText("2026-10-17 訪談.txt").last()).toBeVisible();
+  await sender.getByRole("button", { name: "開始配對（1 個檔案）" }).click();
+  await sender.getByText("沒有相機時").click();
+  const offer = await sender.getByTestId("nearby-code").inputValue();
+  await receiver.bringToFront();
+  await receiver.goto(offer);
+  await receiver.getByText("沒有相機時").click();
+  const answer = await receiver.getByTestId("nearby-code").inputValue();
+  await sender.bringToFront();
+  await sender.getByTestId("nearby-paste").fill(answer);
+  await sender.getByRole("button", { name: "套用" }).click();
+  await receiver.bringToFront();
+  await expect(receiver.getByTestId("nearby-incoming")).toContainText("2026-10-17 訪談.txt", { timeout: 20_000 });
+  await context.close();
+});
+
+test("接收端的頁面已經開著，打開送出端的網址（只有 # 後面不同）也會讀到", async ({ browser, baseURL }) => {
+  const { sender, receiver, context } = await pair(browser, baseURL!);
+  const offer = await startSender(sender);
+  await receiver.bringToFront();
+  await receiver.goto("./nearby/");
+  await receiver.goto(offer);
+  await expect(receiver.getByTestId("nearby-status")).toContainText("讓送出端的鏡頭掃這個 QR code");
+  await context.close();
+});
