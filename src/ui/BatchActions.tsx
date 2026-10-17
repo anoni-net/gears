@@ -6,6 +6,7 @@ import { tray } from "../state.ts";
 import { fileTools } from "../tools/index.ts";
 import { outputName } from "./output-name.ts";
 import { track } from "./analytics.ts";
+import { useWorking } from "./working.ts";
 
 // 暫存區有兩個以上的檔案時，一次清除全部的中繼資料、一次下載成一個壓縮檔。
 // 壓縮檔裡的檔名跟單檔下載一樣不沿用原檔名，時間由 src/core/zip.ts 統一成 1980-01-01。
@@ -30,6 +31,7 @@ export function BatchActions({ files, busy }: { files: TrayFile[]; busy: boolean
   const [result, setResult] = useState<{ done: number; failed: string[] } | null>(null);
   const [skipped, setSkipped] = useState<string[]>([]);
   const [zipping, setZipping] = useState(false);
+  useWorking(!!progress || zipping);
   if (files.length < 2) return null;
 
   const pending = files.filter((f) => tray.needs(strip, f.versions.at(-1)!)).length;

@@ -277,6 +277,10 @@ export function FileView({ file, index, busy, preferred, onOpenTool }: Props) {
   const [editing, setEditing] = useState<string | null>(() =>
     editorTools.some((tool) => tool.id === preferred && tool.accepts(current.format)) && current.tool !== preferred ? preferred! : null,
   );
+  // 編輯畫面固定用打開時的那個版本。套用之後新版本先加進暫存區、編輯畫面才關掉，中間把新版本傳進去的話，
+  // 編輯畫面會用新的檔案重新開啟一次（PDF 會再建一個 pdf.js 的 Worker，WebKit 在 COEP 底下擋下）
+  const base = useRef<Version>(current);
+  if (!editing) base.current = current;
 
   const run = async (toolId: string, options?: RunOptions) => {
     const tool = fileTools.find((x) => x.id === toolId)!;
@@ -326,8 +330,8 @@ export function FileView({ file, index, busy, preferred, onOpenTool }: Props) {
           </h3>
           <FileEditorView
             id={editing}
-            blob={current.blob}
-            format={current.format}
+            blob={base.current.blob}
+            format={base.current.format}
             onCancel={() => setEditing(null)}
             onDone={(blob, report) => {
               setError(undefined);

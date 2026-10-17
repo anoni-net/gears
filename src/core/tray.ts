@@ -4,7 +4,8 @@ import { type Finding, LARGE_FILE, type Report, type RunOptions, type Tool, Tool
 // 檔案暫存區。所有工具共用，每次處理產生一個新版本、原檔保留，可以退回上一步。
 //
 // 只放在這個分頁的記憶體裡，不寫進 localStorage、IndexedDB 或任何儲存空間。
-// 關掉分頁就消失，「清空」把所有參照放掉，交給瀏覽器回收。
+// 關掉分頁就消失，「清空」把所有參照放掉，交給瀏覽器回收。換上新版本時由 service worker
+// 在記憶體裡暫放一下，重新載入之後拿回來（snapshot、restore，見 src/ui/offline.ts）。
 
 export interface Version {
   id: number;
@@ -22,6 +23,12 @@ export interface TrayFile {
   addedAt: number; // 加入暫存區的時間（裝置的時鐘），查證紀錄裡記下來
 
   versions: Version[];
+}
+
+// 換版本時交給 service worker 暫放的內容，只有資料與 Blob，可以用 postMessage 傳送
+export interface TraySnapshot {
+  files: TrayFile[];
+  selected: number | null;
 }
 
 export interface TrayState {
@@ -210,6 +217,18 @@ export function createTray(tools: Tool[], verify?: Verifier, hooks: TrayHooks = 
         throw error;
       }
       hooks.versioned?.(toolId);
+    },
+
+    // 暫存區是空的時候回傳 null，沒有東西需要帶到新版本
+    snapshot(): TraySnapshot | null {
+      return state.files.length ? { files: state.files, selected: state.selected } : null;
+    },
+
+    // 重新載入之後放回來。編號接著最大的繼續，之後加入的檔案與版本不會撞號
+    restore(snapshot: TraySnapshot) {
+      const ids = snapshot.files.flatMap((f) => [f.id, ...f.versions.map((v) => v.id)]);
+      nextId = Math.max(nextId, ...ids.map((id) => id + 1));
+      set({ files: [...snapshot.files, ...state.files], selected: snapshot.selected ?? state.selected });
     },
 
     undo(fileId: number) {

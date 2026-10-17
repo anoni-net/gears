@@ -4,6 +4,7 @@ import { t } from "../i18n/index.ts";
 import { decodeImage } from "./image-decode.ts";
 import { trackFail } from "./analytics.ts";
 import type { FileEditorProps } from "./types.ts";
+import { useWorking } from "./working.ts";
 
 // 把 HEIC 轉成 JPEG。iPhone 的照片傳到 Windows 或 Android 常常打不開，轉成 JPEG 到處都能看。
 // 重新編碼時中繼資料不會帶過去，旋轉方向由解碼器套用在像素上。
@@ -24,6 +25,7 @@ async function toJpeg(blob: Blob): Promise<Blob> {
 
 export function HeicConvert({ blob, onDone, onCancel }: FileEditorProps) {
   const [status, setStatus] = useState<"idle" | "working" | "failed">("idle");
+  useWorking(status === "working");
   const apply = async () => {
     setStatus("working");
     try {

@@ -16,6 +16,7 @@ import sherpaWorkerUrl from "./sherpa.worker.ts?worker&url";
 import workerUrl from "./transcribe.worker.ts?worker&url";
 import type { FileEditorProps } from "./types.ts";
 import { track, trackFail } from "./analytics.ts";
+import { useWorking } from "./working.ts";
 
 // 逐字稿：把錄音或影片的聲音轉成帶時間的段落。解碼在這裡（Web Audio 只能在主執行緒用），
 // 每次約 10 分鐘（src/ui/audio-stream.ts），辨識在 Web Worker（src/ui/transcribe.worker.ts），
@@ -128,6 +129,7 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
   useEffect(refresh, [gpu, useGpu]);
 
   const busy = phase.kind === "decoding" || phase.kind === "download" || phase.kind === "recognize";
+  useWorking(busy);
 
   const stop = () => {
     run.current++;

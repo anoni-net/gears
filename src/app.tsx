@@ -9,6 +9,7 @@ import { Licenses } from "./ui/Licenses.tsx";
 import { ToolIntro } from "./ui/ToolIntro.tsx";
 import { TrayList } from "./ui/TrayList.tsx";
 import { useOffline } from "./ui/offline.ts";
+import { useAnyWorking } from "./ui/working.ts";
 import { useTray } from "./ui/hooks.ts";
 import { CreateToolView } from "./ui/registry.tsx";
 import { Icon, IconCircle } from "./ui/Icon.tsx";
@@ -118,7 +119,6 @@ export function App() {
   const route = useRoute();
   const input = useRef<HTMLInputElement>(null);
   const [preset, setPreset] = useState<string>();
-  const offline = useOffline();
 
   // 加入檔案之後顯示那個檔案。正在用從空白開始的工具時，先回到桌面。
   // 查證例外：它整理的就是暫存區裡的檔案，加入之後留在查證的畫面
@@ -171,6 +171,13 @@ export function App() {
   const selectedIndex = state.files.findIndex((f) => f.id === state.selected);
   const selected = state.files[selectedIndex];
   const atHome = !route && !selected;
+
+  // 暫存區是空的，畫面上也沒有填到一半的東西（桌面、授權頁、還沒選檔案的工具說明），換版本不會遺失任何東西。
+  // 從空白開始的工具有讀者輸入的文字或產生的金鑰，不算
+  const idle = !state.files.length && !state.busy && (!route || route === "licenses" || isFileTool(route));
+  const offline = useOffline(idle, tray);
+  // 轉逐字稿這類工作進行中不出現換版本的提示，重新載入會中斷它，做完才出現
+  const working = useAnyWorking() || state.busy;
 
   let view;
   if (isCreateTool(route)) {
@@ -238,10 +245,10 @@ export function App() {
       <input ref={input} type="file" multiple hidden onChange={onChange} data-testid="file-input" />
 
       {/* 外層的 frame 負責左右留白，提示框本身才有邊框，窄螢幕上不會貼齊螢幕邊緣 */}
-      {offline.update ? (
+      {offline.update && (!working || offline.updating) ? (
         <div class="frame">
           <div class="update-bar" role="status">
-            <span>{t("app.update")}</span>
+            <span>{t(offline.carryFailed ? "app.updateCarryFailed" : "app.update")}</span>
             <button type="button" class="primary" onClick={offline.update} disabled={offline.updating}>
               {t(offline.updating ? "app.updating" : "app.updateReload")}
             </button>
@@ -250,7 +257,7 @@ export function App() {
       ) : offline.updated ? (
         <div class="frame">
           <div class="update-bar" role="status">
-            <span>{t("app.updated")}</span>
+            <span>{t(offline.updated === "kept" ? "app.updatedKept" : offline.updated === "lost" ? "app.updatedLost" : "app.updated")}</span>
             <button type="button" onClick={offline.dismissUpdated}>
               {t("app.updatedClose")}
             </button>

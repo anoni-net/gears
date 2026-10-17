@@ -21,11 +21,14 @@ export const zhTW = {
   "app.analytics.stopped": "這個瀏覽器已經停止記錄。",
   "app.analytics.declined": "你的瀏覽器要求不追蹤，這裡不記錄使用統計。",
   "app.offlineReady": "工作台已經存在這台裝置的瀏覽器裡，沒有網路也能開啟。",
-  "app.update": "檔案工作台有新版本。重新載入之後，暫存區裡的檔案會清空。",
+  "app.update": "檔案工作台有新版本。重新載入之後，暫存區的檔案會留著，還沒套用或下載的結果會消失。",
   "app.updateReload": "重新載入",
   "app.updating": "更新中…",
   "app.updated": "已換上新版本。",
   "app.updatedClose": "關閉",
+  "app.updateCarryFailed": "沒辦法把暫存區的檔案帶到新版本。先下載需要的檔案，再按重新載入，暫存區會清空。",
+  "app.updatedKept": "已換上新版本，暫存區的檔案都還在。",
+  "app.updatedLost": "已換上新版本，但沒能把暫存區的檔案帶過來。",
   "app.footer.community": "匿名網路社群 anoni.net",
 
   // 每個網址的標題與描述，建置時寫進各自的 HTML（vite.config.ts）
