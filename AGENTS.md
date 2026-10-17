@@ -292,6 +292,7 @@ PDF 的版本紀錄：每一個 `%%EOF` 是一次存檔的結尾，切到那裡�
 - 下載的檔案存在 Transformers.js 自己的快取（`transformers-cache`），頁面上可以刪掉。`useWasmCache` 關掉：存了之後 onnxruntime 的載入程式改用 `blob:` 網址載入，CSP 不允許
 - 下載進度由 `env.fetch` 自己計算，不傳 `progress_callback`（理由同逐字稿）
 - 瀏覽器裡用 CPU 只有 Qwen3 0.6B 能用（改寫品質不夠，只當 CPU 速度的參考，沒有顯示卡時預設選它）。Qwen3 1.7B 的 4 位元版是單一個 2.15 GB 的檔案，超過瀏覽器能建立的 ArrayBuffer 上限，8 位元版建立推論環境時記憶體不夠（`std::bad_alloc`，WebAssembly 最多 4 GB，還要複製一份模型）。Qwen3.5 的每一種量化版本都用到 WebAssembly 沒有實作的 `GatherBlockQuantized`（Node 的 onnxruntime 有）。Qwen3 4B 只有顯示卡版。顯示卡版的 Qwen3.5 0.8B 在 Chromium 的軟體模擬顯示卡上可以建立並完成改寫
+- 顯示卡版的 Qwen3 1.7B 也建立不了推論環境（`std::bad_alloc`，2026-10-18 在 Apple M5 Pro 的 Chromium 實測）。onnx-community 的 1.7B 把權重包在單一個 1.43 GB 的 `.onnx` 檔，其他模型都把權重放在另外的 `.onnx_data` 檔，轉成外部權重檔之後就能載入。社群轉檔、放上 assets.anoni.net 之前，有顯示卡時預設選 Qwen3 4B，1.7B 留在清單上，選了會顯示失敗的訊息。實測數字見社群工作區的 `research/gears-llm/02-browser-gpu.md`
 - 提示（`prompt.ts`）只給 Worker 用，範例文字（`samples.ts`）只給頁面用，兩邊不共用模組。提示與研究的 `eval/run.mjs` 相同，數字可以跟研究報告對照
 - 量測中不出現換版本的提示（`useWorking`）。「複製結果」把裝置資訊與每一段的時間、改寫結果寫成 JSON
 
