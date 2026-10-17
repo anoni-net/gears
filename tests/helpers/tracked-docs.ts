@@ -100,3 +100,33 @@ export async function cleanPdf(): Promise<Uint8Array> {
 export const TRACKED_HTML = `<!doctype html><html><head><link rel="stylesheet" href="https://cdn.example.com/a.css"><style>body{background:url('https://bg.example.com/x.png')}</style></head>
 <body><img src="https://pixel.example.com/t.gif?u=1" width="1" height="1"><script src="https://js.example.com/s.js"></script>
 <a href="https://site.example.org/page">VISIBLE</a><img src="local.png"></body></html>`;
+
+// 內文有追蹤圖片（1×1 的外部圖片）與外部樣式的 HTML 信，附件是有巨集的 Word
+export async function trackedEmail(): Promise<string> {
+  const docm = Buffer.from(await trackedDocx()).toString("base64").replace(/.{76}/g, "$&\r\n");
+  return [
+    "From: Events <events@news.example.org>",
+    "To: reader@example.net",
+    "Subject: Invitation",
+    "Date: Fri, 17 Oct 2026 10:00:00 +0800",
+    "MIME-Version: 1.0",
+    'Content-Type: multipart/mixed; boundary="MIX"',
+    "",
+    "--MIX",
+    "Content-Type: text/html; charset=utf-8",
+    "",
+    '<html><head><link rel="stylesheet" href="https://style.example.org/m.css"></head><body>',
+    '<p>Please see <a href="https://news.example.org/event">the event</a>.</p>',
+    '<img src="https://open.example.net/pixel.gif?r=reader" width="1" height="1" alt="">',
+    "</body></html>",
+    "",
+    "--MIX",
+    "Content-Type: application/vnd.ms-word.document.macroEnabled.12",
+    'Content-Disposition: attachment; filename="invite.docm"',
+    "Content-Transfer-Encoding: base64",
+    "",
+    docm,
+    "--MIX--",
+    "",
+  ].join("\r\n");
+}

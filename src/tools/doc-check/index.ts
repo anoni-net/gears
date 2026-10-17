@@ -218,6 +218,11 @@ async function checkOdf(bytes: Uint8Array): Promise<DocCheck> {
 
 // ── HTML 與 SVG ────────────────────────────────────────────────────────────
 
+// HTML 顯示時會去載入的外部位址（圖片、樣式、頁框）。信件檢查用來找出內文的追蹤圖片
+export function remoteResources(html: string): string[] {
+  return checkMarkup(html, "html").items.flatMap((i) => (i.kind === "connect" && i.url ? [i.url] : []));
+}
+
 const MARKUP_CONNECT: Record<string, CheckCode> = {
   img: "remote-image",
   image: "remote-image",

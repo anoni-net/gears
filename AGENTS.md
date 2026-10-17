@@ -177,7 +177,9 @@ PDF 的版本紀錄：每一個 `%%EOF` 是一次存檔的結尾，切到那裡�
 - PDF 可以轉成安全的 PDF：沿用遮蔽的 `buildRedactedPdf`，每一頁畫成圖片再組回去，做法跟 Dangerzone 相同，原檔的程式、連結、表單與內嵌的檔案都不會留下。Office 文件要轉成圖片需要 LibreOffice 的 WebAssembly 版，體積很大，先只寫說明（保護檢視、不要按啟用內容、離線打開或用 Dangerzone）
 - 有巨集的 Office 文件判斷成 `docm`、`xlsm`、`pptm`（`src/core/documents.ts`），清除中繼資料不接受，只清外殼、巨集原樣留著不妥
 - 畫面上寫明「沒有找到不等於一定安全」：實際的行為要看打開的軟體與設定，程式也可能用認不出的方式連線
-- 測試用的文件在 `tests/helpers/tracked-docs.ts`，網域用 `example.*`
+- 其他地方連過來：信件檢查與查證的附件、查證的檔案卡片遇到可以檢查的文件時，有「開啟前檢查」的按鈕（`src/ui/doc-check-link.ts`，附件先加進暫存區，再把網址換成 `/gears/doc-check/`）。查證也會執行一次檢查，打開時會連線或含有程式的文件列在需要留意的地方（`doc-connects`、`doc-code`）
+- 信件 HTML 內文顯示時會載入的外部圖片與樣式（常是追蹤用的 1×1 圖片）用同一套 HTML 的判斷找出來（`remoteResources`），信件檢查另外列一區、加上提醒，不算進信裡的連結，查證也列在需要留意的地方（`email-remote-content`）
+- 測試用的文件與信在 `tests/helpers/tracked-docs.ts`，網域用 `example.*`
 
 ## 信件檢查與信件的查證
 

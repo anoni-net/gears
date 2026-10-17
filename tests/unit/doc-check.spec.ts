@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { sniff } from "../../src/core/bytes.ts";
 import { type CheckItem, checkDocument, remoteTarget, urlsIn } from "../../src/tools/doc-check/index.ts";
-import { TRACKED_HTML, cleanPdf, trackedDocx, trackedOdt, trackedPdf, trackedXlsx } from "../helpers/tracked-docs.ts";
+import { TRACKED_HTML, cleanPdf, trackedDocx, trackedEmail, trackedOdt, trackedPdf, trackedXlsx } from "../helpers/tracked-docs.ts";
 
 const summary = (items: CheckItem[]) => items.map((i) => `${i.kind} ${i.code}${i.url ? ` ${i.url}` : ""}${i.name ? ` [${i.name}]` : ""}`).sort();
 
@@ -85,4 +85,28 @@ test("網址與網路芳鄰路徑的判斷", () => {
   // Word 欄位指令裡的反斜線是兩個
   expect(urlsIn(String.raw`INCLUDEPICTURE "\\\\evil.example\\share\\a.png" \d`)).toEqual([String.raw`\\evil.example\share\a.png`]);
   expect(urlsIn('this.submitForm("https://collect.example.com/x");')).toEqual(["https://collect.example.com/x"]);
+});
+
+test("信件：HTML 內文的外部圖片與樣式另外列出，不算進連結，加上提醒", async () => {
+  const { parseEmail } = await import("../../src/tools/email/parse.ts");
+  const { assess } = await import("../../src/tools/email/assess.ts");
+  const msg = parseEmail(await trackedEmail());
+  expect(msg.remote.sort()).toEqual(["https://open.example.net/pixel.gif?r=reader", "https://style.example.org/m.css"]);
+  expect(msg.links).toEqual(["https://news.example.org/event"]);
+  expect(assess(msg).notes).toContainEqual({ code: "remote-content", value: "2" });
+  expect(sniff(msg.attachments[0]!.data)).toBe("docm");
+});
+
+test("查證：文件打開時會連線的列在需要留意的地方", async () => {
+  const { examine } = await import("../../src/tools/verify/examine.ts");
+  const { summarize } = await import("../../src/tools/verify/summary.ts");
+  const ev = await examine(await trackedDocx(), "docm");
+  expect(ev.docCheck).toEqual({ connect: 4, code: 1 });
+  const clean = await examine(await cleanPdf(), "pdf");
+  expect(clean.docCheck).toEqual({ connect: 0, code: 0 });
+  const summary = summarize([
+    { index: 0, name: "invite.docm", format: "docm", size: 1, hash: "a", evidence: ev },
+    { index: 1, name: "plain.pdf", format: "pdf", size: 1, hash: "b", evidence: clean },
+  ] as never);
+  expect(summary.warnings.filter((w) => w.code.startsWith("doc-"))).toEqual([{ code: "doc-connects", files: [0], value: "4" }]);
 });

@@ -13,6 +13,7 @@ import { verdictDetail, verdictTitle } from "./EmailTool.tsx";
 import type { Comparison } from "./pdf-compare.ts";
 import { useObjectUrl, useTray } from "./hooks.ts";
 import { saveBlob } from "./save.ts";
+import { checkAttachment, checkTrayFile, checkableData, checkableFormat } from "./doc-check-link.ts";
 import type { CreateToolProps } from "./types.ts";
 import {
   type CaseEntry,
@@ -275,6 +276,14 @@ function EmailBlock({ email }: { email: NonNullable<Evidence["email"]> }) {
                 <button type="button" disabled={added.has(i)} onClick={() => void add(i)}>
                   {t(added.has(i) ? "verify.email.added" : "verify.email.add")}
                 </button>
+                {checkableData(att.data) ? (
+                  <>
+                    {" "}
+                    <button type="button" onClick={() => void checkAttachment(new File([att.data as Uint8Array<ArrayBuffer>], att.name, { type: att.type }))}>
+                      {t("verify.checkDocument")}
+                    </button>
+                  </>
+                ) : null}
               </li>
             ))}
           </ul>
@@ -300,6 +309,13 @@ function FileCard(props: { file: TrayFile; entry?: CaseEntry; failed: boolean; w
       {!ev && !props.failed ? <p class="hint">{t("verify.reading")}</p> : null}
       {props.warnings.length ? (
         <p class="verify-card-warn">{t("verify.cardWarnings", { list: list(props.warnings.map(warningTitle)) })}</p>
+      ) : null}
+      {checkableFormat(original.format) ? (
+        <div class="buttons">
+          <button type="button" onClick={() => checkTrayFile(file.id)}>
+            {t("verify.checkDocument")}
+          </button>
+        </div>
       ) : null}
       {ev ? (
         <>

@@ -9,6 +9,7 @@ import type { TimeValue } from "../tools/verify/times.ts";
 import type { CreateToolProps } from "./types.ts";
 import { useDoneOnce } from "./analytics.ts";
 import { useScamList } from "./scam-list-loader.ts";
+import { checkAttachment, checkableData } from "./doc-check-link.ts";
 import { formatSize, timeText } from "./verify-report.ts";
 
 // 信件檢查：貼上原始郵件或開啟 .eml 檔，用白話說明寄件人是誰、實際從哪裡寄出、
@@ -149,6 +150,23 @@ function Result({ msg, onOpenTool }: { msg: Message; onOpenTool: CreateToolProps
         </section>
       ) : null}
 
+      {msg.remote.length ? (
+        <section aria-labelledby="email-remote">
+          <h3 id="email-remote">{t("email.section.remote")}</h3>
+          <p class="hint">{t("email.remoteNote")}</p>
+          <ul class="email-links">
+            {msg.remote.map((url) => (
+              <li key={url}>
+                <span class="email-link-host">
+                  <strong>{hostOf(url) || url}</strong>
+                </span>
+                <code>{url}</code>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
       {msg.attachments.length ? (
         <section aria-labelledby="email-attachments">
           <h3 id="email-attachments">{t("email.section.attachments")}</h3>
@@ -159,6 +177,14 @@ function Result({ msg, onOpenTool }: { msg: Message; onOpenTool: CreateToolProps
                 <button type="button" disabled={added.has(i)} onClick={() => void addAttachment(i)}>
                   {t(added.has(i) ? "email.added" : "email.toTray")}
                 </button>
+                {checkableData(att.data) ? (
+                  <>
+                    {" "}
+                    <button type="button" onClick={() => void checkAttachment(new File([att.data as Uint8Array<ArrayBuffer>], att.name, { type: att.type }))}>
+                      {t("email.checkAttachment")}
+                    </button>
+                  </>
+                ) : null}
               </li>
             ))}
           </ul>
