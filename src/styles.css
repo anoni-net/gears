@@ -113,7 +113,8 @@ button,
   min-height: 2.5rem;
   padding: 0.4rem 1.1rem;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  /* 小圓角，不用膠囊形，跟 anoni.net 社群首頁的按鈕一致 */
+  border-radius: 4px;
   background: var(--surface);
   color: var(--text);
   text-decoration: none;
@@ -285,7 +286,7 @@ html:lang(en) .site-header__product {
 .site-header__actions .site-header__clear.armed {
   min-height: 2.25rem;
   padding: 0 0.6rem;
-  border-radius: 999px;
+  border-radius: 4px;
   background: var(--danger-text);
   color: var(--bg);
   font-weight: 700;
@@ -1147,7 +1148,7 @@ button.pick-files .icon {
   gap: 0.35rem;
   align-items: center;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: 4px;
   padding: 0.3rem 0.8rem;
   background: var(--surface);
   cursor: pointer;
