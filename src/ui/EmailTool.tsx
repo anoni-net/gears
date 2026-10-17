@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "preact/hooks";
+import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { t, tDynamic } from "../i18n/index.ts";
 import { tray } from "../state.ts";
 import { type Assessment, type Note, assess } from "../tools/email/assess.ts";
@@ -8,6 +8,7 @@ import { findScam } from "../tools/url-check/scam-list.ts";
 import type { TimeValue } from "../tools/verify/times.ts";
 import type { CreateToolProps } from "./types.ts";
 import { useDoneOnce } from "./analytics.ts";
+import { trayFileFromPreset } from "./tray-preset.ts";
 import { useScamList } from "./scam-list-loader.ts";
 import { checkAttachment, checkableData } from "./doc-check-link.ts";
 import { formatSize, timeText } from "./verify-report.ts";
@@ -47,7 +48,7 @@ function Result({ msg, onOpenTool }: { msg: Message; onOpenTool: CreateToolProps
   const [added, setAdded] = useState<Set<number>>(new Set());
   const addAttachment = async (i: number) => {
     const att = msg.attachments[i]!;
-    await tray.add([new File([att.data as Uint8Array<ArrayBuffer>], att.name, { type: att.type })]);
+    await tray.add([new File([att.data as Uint8Array<ArrayBuffer>], att.name, { type: att.type })], null, "check");
     setAdded((prev) => new Set(prev).add(i));
   };
   const scams = useScamList();
@@ -234,12 +235,19 @@ function Result({ msg, onOpenTool }: { msg: Message; onOpenTool: CreateToolProps
   );
 }
 
-export function EmailTool({ onOpenTool }: CreateToolProps) {
+export function EmailTool({ preset, onOpenTool }: CreateToolProps) {
   const [text, setText] = useState("");
   const [file, setFile] = useState<{ name: string; bytes: Uint8Array } | null>(null);
   const input = useRef<HTMLInputElement>(null);
   const msg = useMemo(() => (file ? parseEmail(file.bytes) : text.trim() ? parseEmail(text) : null), [file, text]);
   useDoneOnce("email-check", !!msg?.from);
+
+  // 從暫存區的 .eml 打開（檔案畫面的工具列表）
+  useEffect(() => {
+    const from = trayFileFromPreset(preset);
+    if (!from) return;
+    void from.versions.at(-1)!.blob.arrayBuffer().then((buf) => setFile({ name: from.name, bytes: new Uint8Array(buf) }));
+  }, [preset]);
 
   const open = async (e: Event) => {
     const el = e.currentTarget as HTMLInputElement;

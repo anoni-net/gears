@@ -11,7 +11,7 @@ export const checkableData = (data: Uint8Array) => checkableFormat(sniff(data));
 
 // 還不在暫存區的附件：先加進去（當成讀者自己加入的原檔）
 export async function checkAttachment(file: File) {
-  await tray.add([file]);
+  await tray.add([file], null, "check");
   navigate("doc-check");
 }
 

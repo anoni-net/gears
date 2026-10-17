@@ -17,10 +17,15 @@ export interface Version {
   large: boolean; // 太大、沒有整個讀進記憶體，只能交給支援大檔案的工具（見 LARGE_FILE）
 }
 
+export type Intent = "handover" | "send" | "check";
+
 export interface TrayFile {
   id: number;
   name: string;
   addedAt: number; // 加入暫存區的時間（裝置的時鐘），查證紀錄裡記下來
+  // 讀者加入檔案時在做的事：從哪一組的任務或工具加入（交出去之前、安全地傳送、檢查收到的），
+  // 檔案畫面的工具列表把那一組排在前面。從桌面直接加入的沒有
+  intent?: Intent;
 
   versions: Version[];
 }
@@ -117,8 +122,9 @@ export function createTray(tools: Tool[], verify?: Verifier, hooks: TrayHooks = 
       };
     },
 
-    // origin 是產生這些檔案的工具（例如 QR code 產生器），讀者自己加入的檔案不帶
-    async add(files: File[], origin: string | null = null) {
+    // origin 是產生這些檔案的工具（例如 QR code 產生器），讀者自己加入的檔案不帶。
+    // intent 見 TrayFile.intent
+    async add(files: File[], origin: string | null = null, intent?: Intent) {
       const added: TrayFile[] = [];
       const failed: string[] = [];
       set({ busy: true, failed: [] });
@@ -126,7 +132,13 @@ export function createTray(tools: Tool[], verify?: Verifier, hooks: TrayHooks = 
         for (const file of files) {
           try {
             const { format, findings, large } = await read(file);
-            added.push({ id: nextId++, name: file.name, addedAt: Date.now(), versions: [{ id: nextId++, tool: origin, blob: file, format, findings, large }] });
+            added.push({
+              id: nextId++,
+              name: file.name,
+              addedAt: Date.now(),
+              ...(intent ? { intent } : {}),
+              versions: [{ id: nextId++, tool: origin, blob: file, format, findings, large }],
+            });
           } catch {
             failed.push(file.name);
           }

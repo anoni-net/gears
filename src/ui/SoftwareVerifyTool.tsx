@@ -2,22 +2,21 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import { getLocale, t, tDynamic } from "../i18n/index.ts";
 import { type Outcome, SIGNERS, groupFingerprint, looksLikeSignature, verifyDownload } from "../tools/software-verify/index.ts";
 import { KEYS_CHECKED } from "../tools/software-verify/keys.ts";
+import { SIGNATURE_MAX, signedName } from "../tools/software-verify/signature.ts";
 import { trackFail, useDoneOnce } from "./analytics.ts";
 import type { CreateToolProps } from "./types.ts";
 import { useWorking } from "./working.ts";
+import { tray } from "../state.ts";
+import { latestAsFile, trayFileFromPreset } from "./tray-preset.ts";
 
 // 下載的軟體驗證（src/tools/software-verify/）。讀者選下載的檔案與簽章檔，選好就開始驗證。
 // 檔案不放進暫存區：安裝檔動輒幾百 MB，驗證只需要讀一次。
-
-// 簽章檔通常只有幾百位元組，大於 64 KB 的不當成簽章
-const SIGNATURE_MAX = 64 * 1024;
 
 async function isSignatureFile(file: File) {
   return file.size <= SIGNATURE_MAX && looksLikeSignature(new Uint8Array(await file.slice(0, 64).arrayBuffer()));
 }
 
-// 簽章檔的名稱通常是「檔名.asc」或「檔名.sig」
-const pairs = (file: File, signature: File) => signature.name.replace(/\.(asc|sig|gpg)$/i, "") === file.name;
+const pairs = (file: File, signature: File) => signedName(signature.name) === file.name;
 
 function Verdict({ outcome, created }: { outcome: Outcome; created?: string }) {
   const tone = outcome.kind === "good" ? "pass" : outcome.kind === "bad" ? "fail" : "unclear";
@@ -37,7 +36,7 @@ function Verdict({ outcome, created }: { outcome: Outcome; created?: string }) {
   );
 }
 
-export function SoftwareVerifyTool(_: CreateToolProps) {
+export function SoftwareVerifyTool({ preset }: CreateToolProps) {
   const [file, setFile] = useState<File | null>(null);
   const [signature, setSignature] = useState<File | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
@@ -47,6 +46,25 @@ export function SoftwareVerifyTool(_: CreateToolProps) {
   const sigInput = useRef<HTMLInputElement>(null);
   useWorking(progress !== null);
   useDoneOnce("software-verify", !!result);
+
+  // 從暫存區的檔案打開（檔案畫面的工具列表）：放進對的位置，暫存區裡有成對的檔案時一起帶過來
+  useEffect(() => {
+    const from = trayFileFromPreset(preset);
+    if (!from) return;
+    const others = tray.get().files.filter((f) => f.id !== from.id);
+    void (async () => {
+      const picked = latestAsFile(from);
+      if (await isSignatureFile(picked)) {
+        setSignature(picked);
+        const target = others.find((f) => f.name === signedName(from.name));
+        if (target) setFile(latestAsFile(target));
+      } else {
+        setFile(picked);
+        const sig = others.find((f) => f.name !== from.name && signedName(f.name) === from.name);
+        if (sig) setSignature(latestAsFile(sig));
+      }
+    })();
+  }, [preset]);
 
   // 選檔案時一次選了兩個，或把簽章檔選到檔案那一格，自動放到對的位置
   const pick = async (e: Event, slot: "file" | "signature") => {

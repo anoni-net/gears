@@ -16,7 +16,7 @@ import { useAnyWorking } from "./ui/working.ts";
 import { useTray } from "./ui/hooks.ts";
 import { CreateToolView } from "./ui/registry.tsx";
 import { Icon, IconCircle } from "./ui/Icon.tsx";
-import { TOOL_META } from "./ui/tool-meta.ts";
+import { TOOL_META, groupOf } from "./ui/tool-meta.ts";
 import { browserDeclines, optedOut, setOptedOut, track, trackView } from "./ui/analytics.ts";
 
 const isCreateTool = (id: string) => createTools.some((tool) => tool.id === id);
@@ -177,9 +177,11 @@ export function App() {
 
   // 加入檔案之後顯示那個檔案。正在用從空白開始的工具時，先回到桌面。
   // 查證例外：它整理的就是暫存區裡的檔案，加入之後留在查證的畫面
+  // 從哪一組的任務或工具加入，記在檔案上，檔案畫面的工具列表把那一組排在前面（src/ui/shelf.ts）。
+  // 工具自己產生的檔案不記
   const addFiles = async (files: File[], origin: string | null = null) => {
     if (!files.length) return;
-    await tray.add(files, origin);
+    await tray.add(files, origin, origin ? undefined : groupOf(route));
     if ((isCreateTool(route) && route !== "verify") || isPage(route)) navigate("");
   };
   const dragging = useDropAnywhere((files) => void addFiles(files));
@@ -257,7 +259,7 @@ export function App() {
   } else if (route === "llm-bench") {
     view = <LlmBenchView />;
   } else if (selected) {
-    view = <FileView key={selected.id} file={selected} index={selectedIndex} busy={state.busy} preferred={route} onOpenTool={openTool} />;
+    view = <FileView key={selected.id} file={selected} others={state.files} index={selectedIndex} busy={state.busy} preferred={route} onOpenTool={openTool} />;
   } else if (isFileTool(route)) {
     view = <ToolIntro id={route} onPick={pick} />;
   } else {

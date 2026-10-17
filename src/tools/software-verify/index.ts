@@ -53,13 +53,7 @@ export function signingKeys() {
 
 const ARMOR = "-----BEGIN PGP SIGNATURE-----";
 
-// 檔案開頭看起來是不是 OpenPGP 的簽章：ASCII armor，或二進位的簽章封包（舊格式 tag 2、新格式 0xC2）
-export function looksLikeSignature(head: Uint8Array): boolean {
-  const text = new TextDecoder("latin1").decode(head.subarray(0, 64)).trimStart();
-  if (text.startsWith(ARMOR)) return true;
-  const b = head[0] ?? 0;
-  return b === 0xc2 || (b & 0xfc) === 0x88;
-}
+export { looksLikeSignature } from "./signature.ts";
 
 async function readSignature(bytes: Uint8Array): Promise<OpenPGP.Signature | null> {
   const openpgp = await load();

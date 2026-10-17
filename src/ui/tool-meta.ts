@@ -34,3 +34,8 @@ export const TOOL_GROUPS = [
   { id: "send", tools: ["encrypt", "decrypt", "text-crypt", "age-keygen", "passphrase", "qrcode"] },
   { id: "check", tools: ["verify", "doc-check", "email-check", "software-verify", "url-check", "qr-read"] },
 ] as const;
+
+export type GroupId = (typeof TOOL_GROUPS)[number]["id"];
+
+export const groupOf = (toolId: string): GroupId | undefined =>
+  TOOL_GROUPS.find((g) => (g.tools as readonly string[]).includes(toolId))?.id;
