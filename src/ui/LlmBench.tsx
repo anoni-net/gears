@@ -72,8 +72,8 @@ let runIds = 0;
 
 export function LlmBench() {
   const [env, setEnv] = useState<Env | null>(null);
-  // 有顯示卡時預設選 Qwen3 4B：Qwen3 1.7B 的顯示卡版是單檔模型，瀏覽器裡建立不了推論環境（見 AGENTS.md）
-  const [model, setModel] = useState<ModelId>("qwen3-4b");
+  // 有顯示卡時預設選 Qwen3 1.7B（社群轉檔的版本，見 AGENTS.md）：比 4B 快、下載量小
+  const [model, setModel] = useState<ModelId>("qwen3-1.7b");
   const [device, setDevice] = useState<"webgpu" | "wasm">("webgpu");
   const [threads, setThreads] = useState(4);
   const [custom, setCustom] = useState("");
