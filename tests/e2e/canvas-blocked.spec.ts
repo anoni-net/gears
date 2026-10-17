@@ -24,8 +24,8 @@ async function blockCanvas(page: Page) {
 const allow = (page: Page) => page.evaluate(() => (window as unknown as { allowCanvas(): void }).allowCanvas());
 
 // 紅底、左上角一塊綠色的圖
-async function image(page: Page) {
-  const data = await page.evaluate(async () => {
+async function image(page: Page, type = "image/png") {
+  const data = await page.evaluate(async (type) => {
     const c = document.createElement("canvas");
     c.width = 400;
     c.height = 200;
@@ -34,9 +34,9 @@ async function image(page: Page) {
     g.fillRect(0, 0, 400, 200);
     g.fillStyle = "#2a2";
     g.fillRect(40, 40, 120, 60);
-    const b = await new Promise<Blob>((r) => c.toBlob((x) => r(x!), "image/png"));
+    const b = await new Promise<Blob>((r) => c.toBlob((x) => r(x!), type));
     return Array.from(new Uint8Array(await b.arrayBuffer()));
-  });
+  }, type);
   return Buffer.from(data);
 }
 
@@ -96,4 +96,16 @@ test("列印追蹤點：讀不到 canvas 時不判斷、不輸出，允許之後
   await expect(page.getByRole("alert")).toHaveCount(0);
   await page.getByRole("button", { name: "套用" }).click();
   await expect(page.getByText("去掉追蹤點後", { exact: true })).toBeVisible();
+});
+
+test("縮成常見尺寸：讀不到 canvas 時不輸出，允許之後再按一次", async ({ page }) => {
+  await page.goto("./blend/");
+  await page.getByTestId("file-input").setInputFiles({ name: "photo.jpg", mimeType: "image/jpeg", buffer: await image(page, "image/jpeg") });
+  await page.getByRole("button", { name: "縮小並重新壓縮" }).click();
+  await expect(page.getByRole("alert")).toContainText("網址列跳出詢問");
+  await expect(page.getByText("縮成常見尺寸後", { exact: true })).toHaveCount(0);
+
+  await allow(page);
+  await page.getByRole("button", { name: "縮小並重新壓縮" }).click();
+  await expect(page.getByText("縮成常見尺寸後", { exact: true })).toBeVisible();
 });

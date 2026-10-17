@@ -54,7 +54,7 @@ CI（`.github/workflows/ci.yml`）依瀏覽器拆成四台機器同時執行：C
 
 | | 處理檔案的工具（`fileTools`） | 需要編輯畫面的工具（`editorTools`） | 從空白開始的工具（`createTools`） |
 |---|---|---|---|
-| 例子 | 清除中繼資料 | 遮蔽、列印追蹤點、HEIC 轉 JPEG、PDF 頁面選取、加密、解密、逐字稿、文件開啟前檢查 | QR code 產生器與讀取、網址檢查、密語與密碼產生器、age 金鑰產生器、加密文字、查證、信件檢查、寫作習慣檢查 |
+| 例子 | 清除中繼資料 | 遮蔽、縮成常見尺寸、列印追蹤點、HEIC 轉 JPEG、PDF 頁面選取、加密、解密、逐字稿、文件開啟前檢查 | QR code 產生器與讀取、網址檢查、密語與密碼產生器、age 金鑰產生器、加密文字、查證、信件檢查、寫作習慣檢查 |
 | 介面 | `src/core/tool.ts` 的 `Tool` | `EditorTool`，編輯畫面登記在 `src/ui/registry.tsx` | `CreateTool`，元件登記在 `src/ui/registry.tsx` |
 | 結果 | 暫存區裡那個檔案的新版本 | 同左，由 `tray.addVersion` 加入 | 產出檔案的放進暫存區，產出文字的只顯示在畫面上 |
 
@@ -112,6 +112,16 @@ CI（`.github/workflows/ci.yml`）依瀏覽器拆成四台機器同時執行：C
 - 授權全文在 `licenses/pdfjs.txt`
 
 測試（`tests/e2e/redact-pdf.spec.ts`）用 pdf-lib 組出兩頁、有文字與作者的 PDF，遮蔽之後確認檔案裡沒有原本的文字、作者與字型，每一頁都是 JPEG，框起來的地方是黑的。中文字型在本機另外驗證過兩種：LibreOffice 轉出、內嵌 Noto Serif CJK 的 PDF，以及引用未內嵌字型 `MSung-Light`、編碼 `UniCNS-UCS2-H` 的 PDF（要靠 CMap），Chromium、WebKit、Firefox 都畫得出字，自動找個資也找得到電話與 Email。
+
+## 縮成常見尺寸
+
+清掉中繼資料之後，照片的原始解析度（例如 4032×3024）與相機的壓縮設定（量化表、色度取樣）仍然跟手機的機型有關（`src/tools/blend/`，畫面在 `src/ui/BlendEditor.tsx`）。讀者選長邊 2048、1600 或 1280 像素，等比縮小、用固定的 JPEG 品質 85 重新壓縮，這兩項就跟大多數人分享的照片一樣。另外做成一個工具、不併進清除中繼資料：縮小會降低畫質，要由讀者決定。
+
+- 接受 JPEG、HEIC、AVIF、WebP。截圖（PNG）轉成 JPEG 會讓文字糊掉，不接受
+- 每次最多縮一半，最後一步再縮到目標尺寸（`downscaleSteps`），一次縮小太多會產生鋸齒。比目標小的不放大，只重新壓縮
+- 輸出一律是 JPEG，旋轉方向由解碼器套用在像素上，中繼資料不會帶過去
+- 畫面上寫明限制：縮小能減少、不能消除感光元件的雜訊特徵（同一台相機的照片仍然可能被比對出來），畫面內容不會改變，Brave 會在輸出的像素加入防指紋的細微變化
+- 讀不到 canvas（Tor Browser）時不輸出，接上 `canvas-access.ts`
 
 ## 列印文件的追蹤點
 
@@ -318,7 +328,7 @@ PDF 的版本紀錄：每一個 `%%EOF` 是一次存檔的結尾，切到那裡�
 
 Tor Browser 15.0（Firefox 140 ESR）一般安全等級的實測結果：
 
-- canvas：讀者允許之前，`getImageData` 與 `toBlob` 一律得到亂數，不會報錯。讀者點擊之後的第一次讀取，會在網址列的 canvas 圖示跳出詢問（Allow、Block），允許之後同一個分頁就正常。`src/ui/canvas-access.ts` 讀取之前先畫四個點讀回來比對，讀不到時丟出 `CanvasBlockedError`。QR code 讀取、HEIC 轉 JPEG 與預覽、遮蔽的套用與自動尋找、PDF 轉成圖片、查證的畫面比對、列印追蹤點的判斷與套用都接上，畫面上請讀者允許之後再按一次。不檢查的話 HEIC 與 PDF 會輸出一張雜訊圖。瀏覽器測試（`tests/e2e/canvas-blocked.spec.ts`）把 `getImageData` 換成亂數來模擬
+- canvas：讀者允許之前，`getImageData` 與 `toBlob` 一律得到亂數，不會報錯。讀者點擊之後的第一次讀取，會在網址列的 canvas 圖示跳出詢問（Allow、Block），允許之後同一個分頁就正常。`src/ui/canvas-access.ts` 讀取之前先畫四個點讀回來比對，讀不到時丟出 `CanvasBlockedError`。QR code 讀取、HEIC 轉 JPEG 與預覽、遮蔽的套用與自動尋找、PDF 轉成圖片、查證的畫面比對、列印追蹤點的判斷與套用、縮成常見尺寸都接上，畫面上請讀者允許之後再按一次。不檢查的話 HEIC 與 PDF 會輸出一張雜訊圖。瀏覽器測試（`tests/e2e/canvas-blocked.spec.ts`）把 `getImageData` 換成亂數來模擬
 - 沒有 service worker，不能離線使用，畫面上也不會出現可以離線使用的提示
 - 沒有 cross-origin isolation，逐字稿只能用 1 個核心（實測 15 秒的華語錄音，base 模型 7.5 秒轉完）。沒有 WebGPU 與 `AudioDecoder`，MP4、M4A 整檔解碼（上限 256 MB）
 - 不能用相機，QR code 讀取改選照片
@@ -500,7 +510,7 @@ iPhone 預設拍出來的是 HEIC，在網頁上選照片時交出來的也是�
 
 ## 規劃
 
-產品規劃記錄在社群的工作區，還沒有公開。目前完成第一階段：桌面、檔案暫存區，以及清除中繼資料（JPEG、PNG、HEIC、AVIF、WebP、GIF、TIFF、SVG、BMP、PNM、JPEG XL，Word、Excel、PowerPoint、LibreOffice 文件與 PDF，MP3、M4A、MP4、MOV、WAV、AVI、FLAC、Ogg、Opus、MKV、WebM，ZIP、TAR、gzip、EPUB、種子檔、HTML）、遮蔽（圖片與 PDF，可以自動找人臉與個資）、列印追蹤點、PDF 頁面選取、查證收到的檔案、文件開啟前檢查、信件檢查、寫作習慣檢查、逐字稿、加密與解密（檔案與一段文字）、age 金鑰產生器、QR code 產生器與讀取、網址檢查、密語與密碼產生器，可以下載與系統分享，一次處理多個檔案，也可以離線使用。2026-10 起部署在 `anoni.net/gears/`（見上方「部署」）。
+產品規劃記錄在社群的工作區，還沒有公開。目前完成第一階段：桌面、檔案暫存區，以及清除中繼資料（JPEG、PNG、HEIC、AVIF、WebP、GIF、TIFF、SVG、BMP、PNM、JPEG XL，Word、Excel、PowerPoint、LibreOffice 文件與 PDF，MP3、M4A、MP4、MOV、WAV、AVI、FLAC、Ogg、Opus、MKV、WebM，ZIP、TAR、gzip、EPUB、種子檔、HTML）、遮蔽（圖片與 PDF，可以自動找人臉與個資）、縮成常見尺寸、列印追蹤點、PDF 頁面選取、查證收到的檔案、文件開啟前檢查、信件檢查、寫作習慣檢查、逐字稿、加密與解密（檔案與一段文字）、age 金鑰產生器、QR code 產生器與讀取、網址檢查、密語與密碼產生器，可以下載與系統分享，一次處理多個檔案，也可以離線使用。2026-10 起部署在 `anoni.net/gears/`（見上方「部署」）。
 
 ## 第三方資料
 
