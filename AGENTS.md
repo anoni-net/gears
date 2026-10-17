@@ -123,6 +123,7 @@ CI（`.github/workflows/ci.yml`）依瀏覽器拆成四台機器同時執行：C
 - 圖片轉黑白一律輸出 PNG，PNG、GIF、BMP 輸出 PNG，其他輸出 JPEG。重新編碼之後原檔的中繼資料一併拿掉
 - PDF 沿用遮蔽的 `buildRedactedPdf`，`transform` 在每一頁畫成圖片之後處理像素，輸出只有圖片
 - 不解碼點陣代表的序號與時間，那是追查文件來源用的。只處理黃色的點，黑白印表機與部分新型號用的是其他方式，畫面上寫明沒看到不代表沒有追蹤
+- 讀不到 canvas（Tor Browser）時原圖照樣顯示，不判斷也不輸出，讀者允許之後按「只看黃色」或「套用」再讀一次
 - 測試用 canvas 畫一張有黑字、螢光筆與每 16 像素一個淡黃點的頁面（`tests/e2e/print-dots.spec.ts`）
 
 ## 選擇 PDF 的頁面
@@ -317,7 +318,7 @@ PDF 的版本紀錄：每一個 `%%EOF` 是一次存檔的結尾，切到那裡�
 
 Tor Browser 15.0（Firefox 140 ESR）一般安全等級的實測結果：
 
-- canvas：讀者允許之前，`getImageData` 與 `toBlob` 一律得到亂數，不會報錯。讀者點擊之後的第一次讀取，會在網址列的 canvas 圖示跳出詢問（Allow、Block），允許之後同一個分頁就正常。`src/ui/canvas-access.ts` 讀取之前先畫四個點讀回來比對，讀不到時丟出 `CanvasBlockedError`。QR code 讀取、HEIC 轉 JPEG 與預覽、遮蔽的套用與自動尋找、PDF 轉成圖片、查證的畫面比對都接上，畫面上請讀者允許之後再按一次。不檢查的話 HEIC 與 PDF 會輸出一張雜訊圖。瀏覽器測試（`tests/e2e/canvas-blocked.spec.ts`）把 `getImageData` 換成亂數來模擬
+- canvas：讀者允許之前，`getImageData` 與 `toBlob` 一律得到亂數，不會報錯。讀者點擊之後的第一次讀取，會在網址列的 canvas 圖示跳出詢問（Allow、Block），允許之後同一個分頁就正常。`src/ui/canvas-access.ts` 讀取之前先畫四個點讀回來比對，讀不到時丟出 `CanvasBlockedError`。QR code 讀取、HEIC 轉 JPEG 與預覽、遮蔽的套用與自動尋找、PDF 轉成圖片、查證的畫面比對、列印追蹤點的判斷與套用都接上，畫面上請讀者允許之後再按一次。不檢查的話 HEIC 與 PDF 會輸出一張雜訊圖。瀏覽器測試（`tests/e2e/canvas-blocked.spec.ts`）把 `getImageData` 換成亂數來模擬
 - 沒有 service worker，不能離線使用，畫面上也不會出現可以離線使用的提示
 - 沒有 cross-origin isolation，逐字稿只能用 1 個核心（實測 15 秒的華語錄音，base 模型 7.5 秒轉完）。沒有 WebGPU 與 `AudioDecoder`，MP4、M4A 整檔解碼（上限 256 MB）
 - 不能用相機，QR code 讀取改選照片

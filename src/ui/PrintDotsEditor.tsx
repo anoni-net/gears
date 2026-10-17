@@ -3,6 +3,7 @@ import type { Report } from "../core/tool.ts";
 import { t, tDynamic } from "../i18n/index.ts";
 import { type DotsFinding, type DotsMode, applyDots, judge, revealYellow } from "../tools/print-dots/index.ts";
 import { trackFail } from "./analytics.ts";
+import { assertCanvasReadable, canvasReadable, isCanvasBlocked } from "./canvas-access.ts";
 import { decodeImage } from "./image-decode.ts";
 import type { PdfPages } from "./pdf-pages.ts";
 import type { FileEditorProps } from "./types.ts";
@@ -21,6 +22,9 @@ export function PrintDotsEditor({ blob, format, onDone, onCancel }: FileEditorPr
   const [finding, setFinding] = useState<DotsFinding | null>(null);
   const [mode, setMode] = useState<DotsMode>("yellow");
   const [status, setStatus] = useState<"loading" | "ready" | "working" | "failed" | "openFailed">("loading");
+  // 瀏覽器不讓讀取 canvas（Tor Browser）。原圖照樣顯示，讀者允許之後按「只看黃色」或「套用」再讀一次
+  const [blocked, setBlocked] = useState(false);
+  const [retry, setRetry] = useState(0);
   const [building, setBuilding] = useState<[number, number] | null>(null);
 
   // 打開檔案：圖片解碼一次，PDF 用 pdf.js 一頁一頁畫
@@ -74,14 +78,20 @@ export function PrintDotsEditor({ blob, format, onDone, onCancel }: FileEditorPr
     el.height = bitmap.height;
     const ctx = el.getContext("2d", { willReadFrequently: true })!;
     ctx.drawImage(bitmap, 0, 0);
+    const readable = canvasReadable();
+    setBlocked(!readable);
+    if (!readable) return setFinding(null);
     const image = ctx.getImageData(0, 0, el.width, el.height);
     setFinding(judge(revealYellow(image.data), el.width * el.height));
     if (view === "yellow") ctx.putImageData(image, 0, 0);
-  }, [bitmap, view]);
+  }, [bitmap, view, retry]);
 
   const apply = async () => {
     setStatus("working");
+    setBlocked(false);
     try {
+      // 讀不到 canvas 時輸出會是一張雜訊圖
+      assertCanvasReadable();
       const removed: Report["removed"] = [{ code: mode === "yellow" ? "print-dots-yellow" : "print-dots-bw" }];
       if (pdf) {
         const { buildRedactedPdf } = await import("./pdf-pages.ts");
@@ -110,10 +120,12 @@ export function PrintDotsEditor({ blob, format, onDone, onCancel }: FileEditorPr
       el.width = el.height = 0;
       if (!out) throw new Error("encode");
       onDone(out, { removed: [...removed, { code: "reencode" }], kept: [] });
-    } catch {
-      trackFail("print-dots", "broken");
+    } catch (error) {
+      const canvasBlocked = isCanvasBlocked(error);
+      trackFail("print-dots", canvasBlocked ? "canvas-blocked" : "broken");
       setBuilding(null);
-      setStatus("failed");
+      setBlocked(canvasBlocked);
+      setStatus(canvasBlocked ? "ready" : "failed");
     }
   };
 
@@ -138,7 +150,10 @@ export function PrintDotsEditor({ blob, format, onDone, onCancel }: FileEditorPr
       <p class="hint">{t("printDots.intro")}</p>
       <div class="buttons" role="group" aria-label={t("printDots.view")}>
         {(["original", "yellow"] as const).map((v) => (
-          <button key={v} type="button" class={view === v ? "primary" : ""} aria-pressed={view === v} onClick={() => setView(v)}>
+          <button key={v} type="button" class={view === v ? "primary" : ""} aria-pressed={view === v} onClick={() => {
+              setView(v);
+              setRetry((n) => n + 1);
+            }}>
             {tDynamic(`printDots.view.${v}`)}
           </button>
         ))}
@@ -158,7 +173,7 @@ export function PrintDotsEditor({ blob, format, onDone, onCancel }: FileEditorPr
         </div>
       ) : null}
       <p class="hint" role="status" data-testid="print-dots-status">
-        {status === "loading" || finding === null ? t("printDots.loading") : tDynamic(`printDots.${finding}`)}
+        {blocked ? null : status === "loading" || finding === null ? t("printDots.loading") : tDynamic(`printDots.${finding}`)}
       </p>
       <div class={zoom ? "print-dots-canvas zoomed" : "print-dots-canvas"}>
         <canvas ref={canvas} data-testid="print-dots-canvas" role="img" aria-label={tDynamic(`printDots.view.${view}`)} />
@@ -188,6 +203,11 @@ export function PrintDotsEditor({ blob, format, onDone, onCancel }: FileEditorPr
       {status === "failed" ? (
         <p class="error" role="alert">
           {t("printDots.failed")}
+        </p>
+      ) : null}
+      {blocked ? (
+        <p class="error" role="alert">
+          {t("canvas.blocked")}
         </p>
       ) : null}
     </div>
