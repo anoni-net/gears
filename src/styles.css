@@ -88,6 +88,12 @@ body {
   margin: 0;
 }
 
+/* 暫存區有檔案時，手機上不會因為往下拉而重新整理、清空暫存區（src/app.tsx 的 useKeepTray） */
+html.has-files,
+html.has-files body {
+  overscroll-behavior-y: none;
+}
+
 a {
   color: var(--link);
 }

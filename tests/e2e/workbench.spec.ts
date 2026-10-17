@@ -241,3 +241,28 @@ test("手機點過頁首的 logo 之後，名稱底下不會留著底線", async
   await expect(page.getByRole("heading", { name: "常見的情況" })).toBeVisible();
   await expect(page.locator(".site-header__product")).toHaveCSS("text-decoration-line", "none");
 });
+
+test("暫存區有檔案時，不會因為往下拉而重新整理，離開前要確認；清空之後恢復", async ({ page, browserName }) => {
+  const overscroll = () => page.evaluate(() => getComputedStyle(document.documentElement).overscrollBehaviorY);
+  expect(await overscroll()).toBe("auto");
+  const jpeg = insertIntoJpeg(await canvasImage(page, "image/jpeg"), exifSegment(sampleTiff()));
+  await addFile(page, "photo.jpg", "image/jpeg", jpeg);
+  await expect(page.locator(".tray .item")).toHaveCount(1);
+  await expect.poll(overscroll).toBe("none");
+
+  // 離開前的確認要有讀者的操作過才會出現，Chromium 才測得到
+  if (browserName === "chromium") {
+    await page.getByRole("button", { name: "清除", exact: true }).click();
+    const dialog = page.waitForEvent("dialog");
+    void page.close({ runBeforeUnload: true });
+    const d = await dialog;
+    expect(d.type()).toBe("beforeunload");
+    await d.dismiss();
+    expect(page.isClosed()).toBe(false);
+  }
+
+  await page.getByRole("button", { name: "清空暫存區" }).click();
+  await page.getByRole("button", { name: "再按一次清空" }).click();
+  await expect(page.locator(".tray .item")).toHaveCount(0);
+  await expect.poll(overscroll).toBe("auto");
+});

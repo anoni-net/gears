@@ -68,6 +68,9 @@ function settle(worker: ServiceWorker): Promise<void> {
   });
 }
 
+// 讀者按了重新載入換新版本，暫存區已經交給新版本，離開前不必再確認（src/app.tsx 的 useKeepTray）
+export const isReloading = () => reloading;
+
 function reload(carried: boolean) {
   if (reloading) return;
   reloading = true;

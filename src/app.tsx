@@ -8,7 +8,7 @@ import { FileView } from "./ui/FileView.tsx";
 import { Licenses } from "./ui/Licenses.tsx";
 import { ToolIntro } from "./ui/ToolIntro.tsx";
 import { TrayList } from "./ui/TrayList.tsx";
-import { useOffline } from "./ui/offline.ts";
+import { isReloading, useOffline } from "./ui/offline.ts";
 import { useAnyWorking } from "./ui/working.ts";
 import { useTray } from "./ui/hooks.ts";
 import { CreateToolView } from "./ui/registry.tsx";
@@ -114,8 +114,28 @@ function AnalyticsChoice() {
   );
 }
 
+// 暫存區只在記憶體裡，重新整理就清空。手機上很容易一滑就觸發下拉重新整理，所以暫存區有檔案時：
+// - 頁面加上 overscroll-behavior-y: none（html.has-files），Android 的 Chrome、Firefox 與 iOS 16 以後的
+//   Safari 不會觸發下拉重新整理
+// - 重新整理或關閉分頁之前請瀏覽器先確認（beforeunload）。iOS 的 Safari 不支援，靠上一項
+// 讀者按重新載入換新版本時暫存區會帶過去，不必確認
+function useKeepTray(hasFiles: boolean) {
+  useEffect(() => {
+    document.documentElement.classList.toggle("has-files", hasFiles);
+    if (!hasFiles) return;
+    const confirm = (e: BeforeUnloadEvent) => {
+      if (isReloading()) return;
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", confirm);
+    return () => window.removeEventListener("beforeunload", confirm);
+  }, [hasFiles]);
+}
+
 export function App() {
   const state = useTray();
+  useKeepTray(state.files.length > 0);
   const route = useRoute();
   const input = useRef<HTMLInputElement>(null);
   const [preset, setPreset] = useState<string>();
