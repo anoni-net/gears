@@ -28,7 +28,7 @@ export const en: Record<MessageKey, string> = {
   "app.updateCarryFailed": "The files in the tray could not be carried over to the new version. Download the ones you need, then reload. The tray will be cleared.",
   "app.updatedKept": "Updated to the new version. The files in the tray are still here.",
   "app.updatedLost": "Updated to the new version, but the files in the tray could not be carried over.",
-  "app.footer.community": "anoni.net anonymous network community",
+  "app.footer.community": "anoni.net community",
   "meta.home.title": "anoni.net Gears",
   "meta.home.description": "Strip metadata from photos and documents, redact personal details, encrypt files, turn audio recordings into transcripts with AI models that run on your device, and verify the files, suspicious emails and links you receive. Everything runs in your browser and files are never uploaded. Maintained by the anoni.net community.",
   "meta.strip-metadata.title": "Remove metadata from photos, documents and media | Gears",
