@@ -1,3 +1,4 @@
+import { remoteResources } from "../doc-check/index.ts";
 import { type TimeValue, emailTime } from "../verify/times.ts";
 
 // 電子郵件的原始檔（.eml，或從郵件軟體「顯示原始郵件」複製的文字）。只讀，不連網：
@@ -58,6 +59,8 @@ export interface Message {
   dkimDomains: string[];
   attachments: Attachment[];
   links: string[];
+  // HTML 內文顯示時會載入的外部圖片與樣式。郵件軟體顯示圖片時就會去抓，常拿來確認收件人打開了信
+  remote: string[];
   hasBody: boolean;
 }
 
@@ -250,6 +253,7 @@ const LINK = /https?:\/\/[^\s"'<>()[\]{}]+/gi;
 interface Collected {
   attachments: Attachment[];
   texts: string[];
+  html: string[];
 }
 
 function walk(raw: string, collected: Collected, depth = 0) {
@@ -275,7 +279,9 @@ function walk(raw: string, collected: Collected, depth = 0) {
   if (name || disposition.main === "attachment" || !type.main.startsWith("text/")) {
     collected.attachments.push({ name: name ?? `attachment-${collected.attachments.length + 1}`, type: type.main, data });
   } else {
-    collected.texts.push(decodeCharset(data, type.params.charset));
+    const text = decodeCharset(data, type.params.charset);
+    collected.texts.push(text);
+    if (type.main === "text/html") collected.html.push(text);
   }
 }
 
@@ -291,7 +297,7 @@ export function parseEmail(input: Uint8Array | string): Message {
   const get = (name: string) => headers.find((h) => h.name.toLowerCase() === name)?.value;
   const all = (name: string) => headers.filter((h) => h.name.toLowerCase() === name).map((h) => h.value);
 
-  const collected: Collected = { attachments: [], texts: [] };
+  const collected: Collected = { attachments: [], texts: [], html: [] };
   const hasBody = !!split && raw.slice(split.index + split[0].length).trim().length > 0;
   if (hasBody) {
     try {
@@ -300,11 +306,14 @@ export function parseEmail(input: Uint8Array | string): Message {
       // 內文結構壞掉時只看標頭
     }
   }
+  // 內文顯示時就會載入的外部資源另外列，不算進連結
+  const remote = [...new Set(collected.html.flatMap(remoteResources))].slice(0, 50);
   const links = new Set<string>();
   for (const text of collected.texts) {
     for (const m of unescapeHtml(text).matchAll(LINK)) {
       if (links.size >= 50) break;
-      links.add(m[0].replace(/[.,;:!?]+$/, ""));
+      const url = m[0].replace(/[.,;:!?]+$/, "");
+      if (!remote.includes(url)) links.add(url);
     }
   }
 
@@ -327,6 +336,7 @@ export function parseEmail(input: Uint8Array | string): Message {
     dkimDomains: [...new Set(dkimDomains)],
     attachments: collected.attachments,
     links: [...links],
+    remote,
     hasBody,
   };
 }

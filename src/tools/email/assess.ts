@@ -11,7 +11,7 @@ import type { AuthRecord, Message } from "./parse.ts";
 
 export type Verdict = "pass" | "fail" | "unclear" | "unrecorded";
 
-export type NoteCode = "reply-to" | "display-name" | "return-path" | "date-skew" | "headers-only" | "body-only" | "dangerous-attachment";
+export type NoteCode = "reply-to" | "display-name" | "return-path" | "date-skew" | "headers-only" | "body-only" | "dangerous-attachment" | "remote-content";
 
 export interface Note {
   code: NoteCode;
@@ -81,6 +81,8 @@ export function assess(msg: Message): Assessment {
     notes.push({ code: "date-skew", times: [msg.date, first] });
   }
   for (const a of msg.attachments) if (DANGEROUS.test(a.name)) notes.push({ code: "dangerous-attachment", value: a.name });
+  // 內文的外部圖片：郵件軟體顯示圖片時就會去抓，寄件的人就知道信被打開了
+  if (msg.remote.length) notes.push({ code: "remote-content", value: String(msg.remote.length) });
 
   return { verdict, domain, authserv: record?.authserv, checks, notes };
 }

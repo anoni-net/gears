@@ -5,6 +5,7 @@ import { decodeUtf8, walkXml } from "../../core/xml.ts";
 import { entryData, readZip } from "../../core/zip.ts";
 import { type Note, type Verdict, assess } from "../email/assess.ts";
 import { parseEmail } from "../email/parse.ts";
+import { CHECK_FORMATS, checkDocument } from "../doc-check/index.ts";
 import { extractExif } from "../redact/keep-exif.ts";
 import { parseExif } from "../strip-metadata/exif.ts";
 import { type TimeValue, anyTime, exifTime, gpsTime, isoTime, pdfTime } from "./times.ts";
@@ -50,6 +51,8 @@ export interface Evidence {
   signatures: Signature[];
   pages?: number; // PDF 的頁數
   email?: EmailEvidence;
+  // 文件打開時會連線的位址與會執行的程式各有幾項（文件開啟前檢查，src/tools/doc-check/）
+  docCheck?: { connect: number; code: number };
 }
 
 // 信件（.eml）：寄件驗證的結果、主旨與附件。解析與判斷跟「信件檢查」共用（src/tools/email/）
@@ -378,6 +381,14 @@ export async function examine(bytes: Uint8Array, format: Format, findings: Findi
     else if (format === "eml") examineEmail(ev, bytes);
   } catch {
     // 結構有問題的檔案，讀到哪裡算哪裡
+  }
+  if (CHECK_FORMATS.includes(format)) {
+    try {
+      const { items } = await checkDocument(bytes, format);
+      ev.docCheck = { connect: items.filter((i) => i.kind === "connect").length, code: items.filter((i) => i.kind === "code").length };
+    } catch {
+      // 檢查不了的文件不影響其他的查證
+    }
   }
   if (format !== "pdf" && format !== "eml") for (const packet of xmpPackets(bytes)) readXmp(ev, packet);
   if (!PHOTO.includes(format) && format !== "pdf" && format !== "eml" && !OOXML.includes(format) && !ODF.includes(format)) fromFindings(ev, findings, format);

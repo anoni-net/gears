@@ -32,7 +32,10 @@ export type WarningCode =
   | "email-reply-to"
   | "email-display-name"
   | "email-date-skew"
-  | "email-attachment";
+  | "email-attachment"
+  | "email-remote-content"
+  | "doc-connects"
+  | "doc-code";
 
 export interface Warning {
   code: WarningCode;
@@ -123,6 +126,8 @@ function fileWarnings(f: CaseFile): Warning[] {
   if (editor) out.push({ code: "editing-software", files: [f.index], value: editor });
   if (ev.signatures.length && !ev.signatures.some((s) => s.coversWhole)) out.push({ code: "signed-then-modified", files: [f.index] });
   if (ev.revisions.length) out.push({ code: "pdf-revisions", files: [f.index], value: String(ev.revisions.length + 1) });
+  if (ev.docCheck?.connect) out.push({ code: "doc-connects", files: [f.index], value: String(ev.docCheck.connect) });
+  else if (ev.docCheck?.code) out.push({ code: "doc-code", files: [f.index] });
   if (ev.email) {
     if (ev.email.verdict === "fail") out.push({ code: "email-auth-failed", files: [f.index], value: ev.email.domain });
     for (const n of ev.email.notes) {
@@ -130,6 +135,7 @@ function fileWarnings(f: CaseFile): Warning[] {
       else if (n.code === "display-name") out.push({ code: "email-display-name", files: [f.index], value: n.value, other: n.other });
       else if (n.code === "date-skew") out.push({ code: "email-date-skew", files: [f.index], times: n.times });
       else if (n.code === "dangerous-attachment") out.push({ code: "email-attachment", files: [f.index], value: n.value });
+      else if (n.code === "remote-content") out.push({ code: "email-remote-content", files: [f.index], value: n.value });
     }
   }
   return out;

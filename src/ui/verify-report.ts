@@ -40,7 +40,7 @@ export const kindText = (e: TimeEntry) => (e.note ? t("verify.kindNote", { kind:
 export const sourceText = (e: TimeEntry) => tDynamic(`verify.source.${e.source}`);
 
 export function typeText(format: Format): string {
-  const kind = format === "eml" ? "email" : format === "pdf" ? "pdf" : isPhoto(format) ? "photo" : VIDEO_FORMATS.includes(format) ? "video" : AUDIO_FORMATS.includes(format) ? "audio" : ["docx", "xlsx", "pptx", "odt", "ods", "odp", "odg"].includes(format) ? "document" : "other";
+  const kind = format === "eml" ? "email" : format === "pdf" ? "pdf" : isPhoto(format) ? "photo" : VIDEO_FORMATS.includes(format) ? "video" : AUDIO_FORMATS.includes(format) ? "audio" : ["docx", "xlsx", "pptx", "docm", "xlsm", "pptm", "odt", "ods", "odp", "odg"].includes(format) ? "document" : "other";
   return tDynamic(`verify.type.${kind}`);
 }
 
