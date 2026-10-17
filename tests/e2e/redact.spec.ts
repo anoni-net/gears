@@ -24,6 +24,8 @@ async function image(page: Page, mime: "image/png" | "image/jpeg") {
 // 畫布先捲進畫面再讀位置，畫面外的座標不會觸發事件（CI 沒有中文字型，版面比本機高）
 async function canvasBox(page: Page) {
   const canvas = page.getByTestId("redact-canvas");
+  // 圖片解碼完之前畫布不接受輸入
+  await expect(canvas).toHaveAttribute("aria-busy", "false");
   await canvas.scrollIntoViewIfNeeded();
   return (await canvas.boundingBox())!;
 }
@@ -130,10 +132,28 @@ test("沒有拍攝資訊的圖片不顯示保留的選項", async ({ page }) => 
   await expect(page.getByRole("checkbox")).toHaveCount(0);
 });
 
+test("圖片解碼完之前畫布標成忙碌，準備好之後才接受輸入", async ({ page }) => {
+  // 模擬很忙的機器：解碼延遲 2 秒。之前 CI 偶發失敗就是測試在這段時間裡操作，第一個輸入被忽略
+  await page.addInitScript(() => {
+    const original = window.createImageBitmap.bind(window);
+    window.createImageBitmap = ((...args: Parameters<typeof createImageBitmap>) =>
+      new Promise((resolve) => setTimeout(resolve, 2000)).then(() => original(...args))) as typeof createImageBitmap;
+  });
+  await page.goto("./redact/");
+  await page.getByTestId("file-input").setInputFiles({ name: "plain.png", mimeType: "image/png", buffer: await image(page, "image/png") });
+  const canvas = page.getByRole("application", { name: "要遮蔽的圖片" });
+  await expect(canvas).toHaveAttribute("aria-busy", "true");
+  await expect(canvas).toHaveAttribute("aria-busy", "false");
+  await canvas.focus();
+  for (const key of ["Enter", "Shift+ArrowLeft", "Shift+ArrowUp", "Enter", "Shift+ArrowRight", "Shift+ArrowRight", "Shift+ArrowDown", "Enter"]) await page.keyboard.press(key);
+  await expect(page.getByText("已經框了 1 個範圍")).toBeVisible();
+});
+
 test("用鍵盤框選：方向鍵移動、Enter 標兩個角，Delete 刪掉", async ({ page }) => {
   await page.goto("./redact/");
   await page.getByTestId("file-input").setInputFiles({ name: "plain.png", mimeType: "image/png", buffer: await image(page, "image/png") });
   const canvas = page.getByRole("application", { name: "要遮蔽的圖片" });
+  await expect(canvas).toHaveAttribute("aria-busy", "false");
   await canvas.focus();
   await page.keyboard.press("Enter"); // 出現游標
   await page.keyboard.press("Shift+ArrowLeft");

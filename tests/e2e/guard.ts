@@ -12,17 +12,22 @@ export interface Guard {
 // Tesseract 讀只含 LSTM 的語言資料時，舊引擎的參數找不到
 const BENIGN = [/^Warning: Parameter not found: /];
 
+// 錄 trace 時，Playwright 在 Chromium 會從頁面讀 blob: 的圖片做快照，被 connect-src 擋下。
+// CI 只在重試時錄 trace（playwright.config.ts），重試時才忽略這一種，第一次執行照樣嚴格檢查
+const TRACING = /^Connecting to 'blob:[^']+' violates the following Content Security Policy directive: "connect-src /;
+
 export const test = base.extend<{ guard: Guard }>({
   guard: [
-    async ({ page, baseURL }, use) => {
+    async ({ page, baseURL }, use, testInfo) => {
       const guard: Guard = { requests: [], errors: [] };
+      const benign = testInfo.retry > 0 ? [...BENIGN, TRACING] : BENIGN;
       const origin = new URL(baseURL!).origin;
       page.on("request", (r) => {
         const url = r.url();
         if (!url.startsWith(origin) && !url.startsWith("blob:") && !url.startsWith("data:")) guard.requests.push(url);
       });
       page.on("console", (m) => {
-        if (m.type() === "error" && !BENIGN.some((re) => re.test(m.text()))) guard.errors.push(m.text());
+        if (m.type() === "error" && !benign.some((re) => re.test(m.text()))) guard.errors.push(m.text());
       });
       page.on("pageerror", (e) => guard.errors.push(e.message));
       await use(guard);

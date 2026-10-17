@@ -29,6 +29,8 @@ async function pageReady(page: Page) {
 
 async function canvasBox(page: Page) {
   const canvas = page.getByTestId("redact-canvas");
+  // 換頁時重新畫，畫好之前不接受輸入
+  await expect(canvas).toHaveAttribute("aria-busy", "false");
   await canvas.scrollIntoViewIfNeeded();
   return (await canvas.boundingBox())!;
 }

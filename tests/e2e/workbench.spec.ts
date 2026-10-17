@@ -9,6 +9,8 @@ import { concat } from "../../src/core/bytes.ts";
 // 在遮蔽的畫布上框出一個範圍。用鍵盤操作，跟版面的高度無關：用滑鼠拖拉時，畫布底下可能被
 // 固定在畫面底部的完成列蓋住，CI 沒有中文字型、版面高度跟本機不同，拖拉的位置會落在完成列底下
 async function drawBox(page: Page) {
+  // 圖片解碼完之前畫布不接受輸入，CI 的機器忙的時候第一個 Enter 會被吃掉
+  await expect(page.getByTestId("redact-canvas")).toHaveAttribute("aria-busy", "false");
   await page.getByRole("application", { name: "要遮蔽的圖片" }).focus();
   await page.keyboard.press("Enter"); // 出現游標
   await page.keyboard.press("Shift+ArrowLeft");
