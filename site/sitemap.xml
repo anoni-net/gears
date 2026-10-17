@@ -358,6 +358,27 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/email-check/" />
   </url>
   <url>
+    <loc>https://anoni.net/gears/writing-style/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/writing-style/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/writing-style/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/writing-style/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/writing-style/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/zh-cn/writing-style/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/writing-style/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/writing-style/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/writing-style/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/writing-style/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/en/writing-style/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/writing-style/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/writing-style/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/writing-style/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/writing-style/" />
+  </url>
+  <url>
     <loc>https://anoni.net/gears/licenses/</loc>
     <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/licenses/" />
     <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/licenses/" />
