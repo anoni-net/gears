@@ -2,11 +2,12 @@ import { test as base, expect, type Page } from "@playwright/test";
 import { exifSegment, insertIntoJpeg, sampleTiff } from "../helpers/fixtures.ts";
 
 // 使用統計只在 anoni.net 上送出。其他測試都在 localhost 上執行，guard.ts 會擋下任何對外連線，
-// 這裡另外把 anoni.net 指到預覽伺服器（只有 Chromium 能改主機解析），攔下送到 Umami 的請求，
+// 這裡另外把 anoni.net 指到 localhost 的預覽伺服器（只有 Chromium 能改主機解析，CI 上預覽伺服器只聽 ::1，
+// 所以寫 localhost 不寫 127.0.0.1），攔下送到 Umami 的請求，
 // 確認送出的只有白名單裡的東西。
 const test = base.extend({});
 test.skip(({ browserName, isMobile }) => browserName !== "chromium" || isMobile, "只有 Chromium 能改主機解析");
-test.use({ launchOptions: { args: ["--host-resolver-rules=MAP anoni.net 127.0.0.1"] } });
+test.use({ launchOptions: { args: ["--host-resolver-rules=MAP anoni.net localhost"] } });
 
 const SEND = "https://aa.anoni.net/api/send";
 
