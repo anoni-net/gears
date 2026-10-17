@@ -75,7 +75,7 @@ export const zhCN: Record<MessageKey, string> = {
   "task.wifi": "给朋友的 Wi-Fi 密码",
   "task.wifi.desc": "生成一张 QR code，朋友用手机相机一扫就能连接。",
   "tray.title": "暂存区",
-  "tray.empty": "把文件拖进来，或",
+  "tray.empty": "也可以把文件拖进来",
   "tray.pick": "选择文件",
   "tray.hint": "文件只在你的浏览器里处理，不会上传。照片、文档、PDF、影音与压缩包可以检查与清除元数据，任何文件都可以加密。可以一次选多个，工具生成的文件也会放在这里。",
   "tray.add": "加入文件",

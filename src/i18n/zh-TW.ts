@@ -79,7 +79,7 @@ export const zhTW = {
   "task.wifi.desc": "產生一張 QR code，朋友用手機相機一掃就能連線。",
 
   "tray.title": "暫存區",
-  "tray.empty": "把檔案拖進來，或",
+  "tray.empty": "也可以把檔案拖進來",
   "tray.pick": "選擇檔案",
   "tray.hint": "檔案只在你的瀏覽器裡處理，不會上傳。照片、文件、PDF、影音與壓縮檔可以檢查與清除中繼資料，任何檔案都可以加密。可以一次選多個，工具產生的檔案也會放在這裡。",
   "tray.add": "加入檔案",

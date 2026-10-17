@@ -74,7 +74,7 @@ export const en: Record<MessageKey, string> = {
   "task.wifi": "Wi-Fi password for friends",
   "task.wifi.desc": "Make a QR code that friends can scan with their phone camera to connect.",
   "tray.title": "Tray",
-  "tray.empty": "Drag files here, or",
+  "tray.empty": "You can also drag files here",
   "tray.pick": "Choose files",
   "tray.hint": "Files are processed in your browser and never uploaded. Photos, documents, PDFs, audio, video and archives can be checked and cleaned of metadata, and any file can be encrypted. You can pick several at once, and files made by the tools also land here.",
   "tray.add": "Add files",
