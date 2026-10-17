@@ -40,9 +40,39 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+// 換版本時暫放的暫存區（src/ui/offline.ts）。只放在這個 service worker 的記憶體裡，不寫進快取或任何儲存空間，
+// 重新載入的頁面拿走就放掉，最多留 HOLD_MS
+let held = null;
+let release = () => {};
+const HOLD_MS = 60_000;
+
 // 讀者在畫面上按「重新載入」時才換成新版本，避免同一個分頁混用新舊程式
 self.addEventListener("message", (event) => {
-  if (event.data === "skipWaiting") self.skipWaiting();
+  const data = event.data;
+  if (data === "skipWaiting") return self.skipWaiting();
+  const reply = event.ports[0];
+  if (data?.type === "hold") {
+    release();
+    held = data.tray;
+    // 瀏覽器會停掉閒置的 service worker，暫放的檔案跟著消失。用 waitUntil 撐到頁面拿走，或時間到為止
+    event.waitUntil(
+      new Promise((resolve) => {
+        const timer = setTimeout(() => {
+          held = null;
+          resolve();
+        }, HOLD_MS);
+        release = () => {
+          clearTimeout(timer);
+          resolve();
+        };
+      }),
+    );
+    reply?.postMessage({ ok: true });
+  } else if (data?.type === "take") {
+    reply?.postMessage({ tray: held });
+    held = null;
+    release();
+  }
 });
 
 self.addEventListener("fetch", (event) => {
