@@ -39,6 +39,7 @@ const editors: Record<string, () => Promise<ComponentType<FileEditorProps>>> = {
   "heic-to-jpeg": () => import("./HeicConvert.tsx").then((m) => m.HeicConvert),
   "pdf-pages": () => import("./PdfPagesEditor.tsx").then((m) => m.PdfPagesEditor),
   transcribe: () => import("./TranscribeEditor.tsx").then((m) => m.TranscribeEditor),
+  "doc-check": () => import("./DocCheckEditor.tsx").then((m) => m.DocCheckEditor),
 };
 
 export function FileEditorView({ id, ...props }: FileEditorProps & { id: string }) {

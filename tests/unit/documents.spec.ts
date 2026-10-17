@@ -203,13 +203,14 @@ test("內嵌的 Office 文件一起清除，層數太深就停下來", async () 
   await expect(stripMetadata.run(deep, "docx")).rejects.toThrow(ToolError);
 });
 
-test("有巨集的 Office 文件（docm）不當成 docx", async () => {
+test("有巨集的 Office 文件算成 docm，清除中繼資料不處理", async () => {
   const docm = await writeZip([
     { name: "[Content_Types].xml", data: enc.encode("<Types/>"), compress: true },
     { name: "word/document.xml", data: enc.encode("<w:document/>"), compress: true },
     { name: "word/vbaProject.bin", data: enc.encode("macro"), compress: true },
   ]);
-  expect(sniff(docm)).toBe("unknown");
+  expect(sniff(docm)).toBe("docm");
+  expect(stripMetadata.accepts("docm")).toBe(false);
 });
 
 test("pdf：文件資訊、XMP、識別碼、註解作者、舊物件與 JPEG 的 EXIF 都拿掉", async () => {

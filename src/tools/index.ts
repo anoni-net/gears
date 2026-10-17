@@ -2,6 +2,7 @@ import { isMedia } from "../core/bytes.ts";
 import type { CreateTool, EditorTool, Tool } from "../core/tool.ts";
 import { stripMetadata } from "./strip-metadata/index.ts";
 import { STREAMABLE } from "./transcribe/sources.ts";
+import { CHECK_FORMATS } from "./doc-check/index.ts";
 
 // 工作台上的所有工具。新增工具時加在這裡，暫存區不必改。
 // 這份清單只有純邏輯，網頁版與之後的瀏覽器擴充套件共用，介面元件另外登記在
@@ -24,6 +25,8 @@ export const editorTools: EditorTool[] = [
   { id: "decrypt", resolves: [], accepts: (format) => format === "age" },
   // 瀏覽器解碼得了聲音的錄音與影片，解碼不了時畫面上說明。可以分段解碼的格式不限大小
   { id: "transcribe", resolves: [], accepts: isMedia, acceptsLarge: (format) => STREAMABLE.includes(format) },
+  // 收到的文件打開時會不會連到外面、執行程式，PDF 可以轉成只有圖片的安全版本
+  { id: "doc-check", resolves: [], accepts: (format) => CHECK_FORMATS.includes(format) },
 ];
 
 // 從空白開始的工具

@@ -349,6 +349,33 @@ html:lang(en) .site-header__product {
   }
 }
 
+/* 文件開啟前檢查 */
+.doc-check .warn {
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+  background: var(--warn-bg);
+}
+
+.doc-check-items {
+  margin: 0;
+  padding-left: 1.2rem;
+}
+
+.doc-check-items li {
+  margin: 0.4rem 0;
+}
+
+.doc-check-host {
+  font-weight: 600;
+}
+
+.doc-check-items code {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--muted);
+  word-break: break-all;
+}
+
 /* 圖示圈：顏色代表類別，跟社群首頁的圖示圈同一種樣式 */
 .icon {
   width: 1.4rem;

@@ -67,6 +67,9 @@ export type Format =
   | "docx"
   | "xlsx"
   | "pptx"
+  | "docm"
+  | "xlsm"
+  | "pptm"
   | "odt"
   | "ods"
   | "odp"
@@ -100,7 +103,7 @@ export function sniff(bytes: Uint8Array): Format {
   if (names) {
     const kind = ooxmlKind(names) ?? mimetypeKind(bytes);
     if (kind) return kind;
-    // 其他 Office 與 ODF 的變體（有巨集的 docm、範本）不當成一般的壓縮檔，免得只清了外殼
+    // 其他 Office 與 ODF 的變體（範本）不當成一般的壓縮檔，免得只清了外殼
     if (names.includes("[Content_Types].xml") || names[0] === "mimetype") return "unknown";
     return "zip";
   }
@@ -171,6 +174,9 @@ export const MIME: Record<Format, string> = {
   docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  docm: "application/vnd.ms-word.document.macroEnabled.12",
+  xlsm: "application/vnd.ms-excel.sheet.macroEnabled.12",
+  pptm: "application/vnd.ms-powerpoint.presentation.macroEnabled.12",
   odt: "application/vnd.oasis.opendocument.text",
   ods: "application/vnd.oasis.opendocument.spreadsheet",
   odp: "application/vnd.oasis.opendocument.presentation",
@@ -213,6 +219,9 @@ export const EXTENSION: Record<Format, string> = {
   docx: "docx",
   xlsx: "xlsx",
   pptx: "pptx",
+  docm: "docm",
+  xlsm: "xlsm",
+  pptm: "pptm",
   odt: "odt",
   ods: "ods",
   odp: "odp",
