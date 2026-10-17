@@ -20,7 +20,7 @@ export const zhCN: Record<MessageKey, string> = {
   "app.analytics.stop": "不要记录",
   "app.analytics.resume": "恢复记录",
   "app.analytics.stopped": "这个浏览器已经停止记录。",
-  "app.analytics.declined": "你的浏览器要求不追踪，所以不记录。",
+  "app.analytics.declined": "你的浏览器要求不追踪，这里不记录使用统计。",
   "app.offlineReady": "工作台已经存在这台设备的浏览器里，没有网络也能打开。",
   "app.update": "文件工作台有新版本。重新加载之后，暂存区里的文件会清空。",
   "app.updateReload": "重新加载",

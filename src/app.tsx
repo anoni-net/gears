@@ -84,18 +84,15 @@ function ClearButton() {
   );
 }
 
-// 頁尾的使用統計說明與開關。選擇存在這個瀏覽器裡，瀏覽器要求不追蹤時直接說明不記錄
+// 頁尾的使用統計說明與開關。選擇存在這個瀏覽器裡。瀏覽器要求不追蹤時什麼都不送，
+// 只說明不記錄，不必提到 Umami
 function AnalyticsChoice() {
   const [off, setOff] = useState(optedOut);
   // 英文的句子之間空一格，中文不空
   const sep = getLocale() === "en" ? " " : "";
   if (browserDeclines())
     return (
-      <p data-testid="analytics">
-        {t("app.analytics.note")}
-        {sep}
-        {t("app.analytics.declined")}
-      </p>
+      <p data-testid="analytics">{t("app.analytics.declined")}</p>
     );
   return (
     <p data-testid="analytics">

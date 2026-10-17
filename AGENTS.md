@@ -228,7 +228,7 @@ PDF 的版本紀錄：每一個 `%%EOF` 是一次存檔的結尾，切到那裡�
 
 - 每個事件只能帶上表的欄位，值也要在 `EVENTS` 的清單裡，對不上整筆不送（`scrub`）。新增事件或欄位時改 `EVENTS`，`tests/unit/analytics.spec.ts` 會檢查工具、任務與模型的清單跟程式一致
 - 不送檔名、檔案大小、檔案內容、讀者輸入的文字、網址檢查的網址、信件的寄件人與網域、雜湊值、查證的結果。螢幕尺寸取到百位數
-- 只在 `anoni.net` 上送，本機預覽與測試都不送。瀏覽器開了 Do Not Track 或 Global Privacy Control 不送。頁尾用一句話說明只記錄使用次數、存放在社群自架的 Umami（不寫主機名），讀者可以選「不要記錄」，選擇存在這個瀏覽器的 localStorage（`gears-analytics-off`）
+- 只在 `anoni.net` 上送，本機預覽與測試都不送。瀏覽器開了 Do Not Track 或 Global Privacy Control 不送，頁尾只說明不記錄，不提 Umami 也不顯示開關。頁尾用一句話說明只記錄使用次數、存放在社群自架的 Umami（不寫主機名），讀者可以選「不要記錄」，選擇存在這個瀏覽器的 localStorage（`gears-analytics-off`）
 - `tests/e2e/analytics.spec.ts` 在 Chromium 把 `anoni.net` 指到預覽伺服器（`vite.config.ts` 的 `preview.allowedHosts`），攔下送到 Umami 的請求，確認內容與頁尾的開關。其他測試都在 localhost，`tests/e2e/guard.ts` 擋下任何對外連線
 - 看數字用工作區的 `python3 umami/report.py --website gears events --funnel task file-add tool-done save`
 
