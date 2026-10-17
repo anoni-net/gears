@@ -257,7 +257,7 @@ function EmailBlock({ email }: { email: NonNullable<Evidence["email"]> }) {
   const [added, setAdded] = useState<Set<number>>(new Set());
   const add = async (i: number) => {
     const att = email.attachments[i]!;
-    await tray.add([new File([att.data as Uint8Array<ArrayBuffer>], att.name, { type: att.type })]);
+    await tray.add([new File([att.data as Uint8Array<ArrayBuffer>], att.name, { type: att.type })], null, "check");
     setAdded((prev) => new Set(prev).add(i));
   };
   return (
@@ -411,7 +411,7 @@ export function VerifyTool(_: CreateToolProps) {
 
   const add = (e: Event) => {
     const el = e.currentTarget as HTMLInputElement;
-    void tray.add([...(el.files ?? [])]);
+    void tray.add([...(el.files ?? [])], null, "check");
     el.value = "";
   };
 

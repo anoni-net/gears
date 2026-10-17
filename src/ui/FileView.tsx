@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import { VIDEO_FORMATS, isMedia, isPhoto } from "../core/bytes.ts";
 import { CONTENT_FINDINGS, type Report, type RunOptions, ToolError } from "../core/tool.ts";
 import type { TrayFile, Version } from "../core/tray.ts";
-import { t, tDynamic } from "../i18n/index.ts";
+import { list, t, tDynamic } from "../i18n/index.ts";
 import { tray } from "../state.ts";
 import { editorTools, fileTools } from "../tools/index.ts";
 import { FileEditorView } from "./registry.tsx";
@@ -16,6 +16,8 @@ import { isWasmUnavailable } from "./wasm.ts";
 import { decodeQrFromBlob } from "./qr-scan.ts";
 import { outputName } from "./output-name.ts";
 import { track } from "./analytics.ts";
+import { type Reason, type ShelfEntry, buildShelf } from "./shelf.ts";
+import { useSignals } from "./shelf-signals.ts";
 
 // 預覽圖。Brave、Chrome、Firefox 不能直接顯示 HEIC，載入失敗時改用 libheif 解碼，
 // 畫成 PNG 再顯示。解碼也失敗時說明原因，中繼資料照樣能處理
@@ -239,8 +241,50 @@ function Output({ version, name }: { version: Version; name: string }) {
   );
 }
 
+const reasonText = (reason: Reason) =>
+  tDynamic(`shelf.reason.${reason.key}`, {
+    n: reason.n ?? 0,
+    findings: list((reason.findings ?? []).map((code) => tDynamic(`finding.${code}`))),
+  });
+
+// 清除中繼資料不接受這種檔案時的說明。收到的信件、有巨集的文件、簽章檔指向下面對的工具
+function noInspectMessage(version: Version, signature: boolean) {
+  if (version.large) return "file.tooLarge" as const;
+  if (version.format === "age") return "file.encrypted" as const;
+  if (["docm", "xlsm", "pptm"].includes(version.format)) return "file.macro" as const;
+  if (version.format === "eml") return "file.email" as const;
+  if (signature) return "file.signature" as const;
+  return "file.unsupported" as const;
+}
+
+function ShelfItem({ entry, busy, onAct }: { entry: ShelfEntry; busy: boolean; onAct(): void }) {
+  const { id, kind, actionable, applied, reason } = entry;
+  const label = kind === "create" ? t("tools.open") : tDynamic(`tool.${id}.${applied && kind === "editor" ? "again" : "action"}`);
+  return (
+    <li class={reason ? "recommended" : undefined}>
+      <IconCircle name={TOOL_META[id]!.icon} cat={TOOL_META[id]!.cat} />
+      <span class="shelf-name">
+        <strong>{tDynamic(`tool.${id}`)}</strong>
+        {applied ? <span class="badge done">{t("tools.done")}</span> : null}
+        {reason ? <span class="badge">{t("tools.recommended")}</span> : null}
+        {reason ? <small class="reason">{reasonText(reason)}</small> : null}
+        <small>{tDynamic(`tool.${id}.desc`)}</small>
+      </span>
+      {/* 處理檔案的工具沒有東西可處理時不顯示按鈕，免得讀者以為還要按。需要編輯畫面的工具可以再做一次 */}
+      {!actionable ? (
+        applied ? null : <span class="hint nothing">{t("tools.nothing")}</span>
+      ) : (
+        <button type="button" class={reason ? "primary" : ""} disabled={busy} onClick={onAct}>
+          {busy && kind === "file" ? t("tools.busy") : label}
+        </button>
+      )}
+    </li>
+  );
+}
+
 interface Props {
   file: TrayFile;
+  others: TrayFile[]; // 暫存區裡的所有檔案，工具列表用來找成對的簽章檔
   index: number;
   busy: boolean;
   preferred?: string; // 從工具的網址進來時，那個工具排在最前面
@@ -269,7 +313,7 @@ function QrInImage({ blob, onOpenTool }: { blob: Blob; onOpenTool: Props["onOpen
   );
 }
 
-export function FileView({ file, index, busy, preferred, onOpenTool }: Props) {
+export function FileView({ file, others, index, busy, preferred, onOpenTool }: Props) {
   const current = file.versions.at(-1)!;
   const isImage = isPhoto(current.format);
   const media = isMedia(current.format);
@@ -304,18 +348,13 @@ export function FileView({ file, index, busy, preferred, onOpenTool }: Props) {
   };
 
 
-  // 適用這個格式的工具。能處理目前找到的資訊的標成建議，排在前面
-  const found = new Set(current.findings.map((f) => f.code));
-  const shelf = [...fileTools.map((tool) => ({ tool, editor: false })), ...editorTools.map((tool) => ({ tool, editor: true }))]
-    .filter(({ tool }) => usable(tool))
-    .map(({ tool, editor }) => ({
-      tool,
-      editor,
-      recommended: tool.resolves.some((code) => found.has(code)),
-      // 看整個版本紀錄，不只看最新的版本：做了別的工具之後，前面處理過的仍然算數
-      applied: file.versions.some((v) => v.tool === tool.id),
-    }))
-    .sort((a, b) => Number(b.tool.id === preferred) - Number(a.tool.id === preferred) || Number(b.recommended) - Number(a.recommended));
+  // 能處理這個檔案的工具，照桌面的三組排列，最多兩個建議（src/ui/shelf.ts）
+  const signals = useSignals(current);
+  const groups = buildShelf({ file, others, preferred, signals });
+  // 從空白開始的工具：查證整理的就是暫存區的檔案，其他的把這個檔案帶過去
+  const openCreate = (id: string) => onOpenTool(id, id === "verify" ? undefined : `tray:${file.id}`);
+  const act = (entry: ShelfEntry) =>
+    entry.kind === "create" ? openCreate(entry.id) : entry.kind === "editor" ? setEditing(entry.id) : void run(entry.id);
 
   return (
     <section class="file" aria-labelledby="file-title">
@@ -371,38 +410,22 @@ export function FileView({ file, index, busy, preferred, onOpenTool }: Props) {
               />
             </>
           ) : (
-            <p class="note">{t(current.large ? "file.tooLarge" : current.format === "age" ? "file.encrypted" : "file.unsupported")}</p>
+            <p class="note">{t(noInspectMessage(current, !!signals.signature))}</p>
           )}
 
           {isImage && file.versions[0]!.tool === null ? <QrInImage blob={current.blob} onOpenTool={onOpenTool} /> : null}
 
           <h3>{t("tools.title")}</h3>
-          <ul class="shelf">
-            {shelf.map(({ tool, editor, recommended, applied }) => (
-              <li key={tool.id}>
-                <IconCircle name={TOOL_META[tool.id]!.icon} cat={TOOL_META[tool.id]!.cat} />
-                <span class="shelf-name">
-                  <strong>{tDynamic(`tool.${tool.id}`)}</strong>
-                  {applied ? <span class="badge done">{t("tools.done")}</span> : null}
-                  {recommended ? <span class="badge">{t("tools.recommended")}</span> : null}
-                  <small>{tDynamic(`tool.${tool.id}.desc`)}</small>
-                </span>
-                {/* 處理檔案的工具沒有東西可處理時不顯示按鈕，免得讀者以為還要按。需要編輯畫面的工具可以再做一次 */}
-                {!editor && !recommended ? (
-                  applied ? null : <span class="hint nothing">{t("tools.nothing")}</span>
-                ) : (
-                  <button
-                    type="button"
-                    class={recommended ? "primary" : ""}
-                    disabled={busy}
-                    onClick={() => (editor ? setEditing(tool.id) : run(tool.id))}
-                  >
-                    {busy ? t("tools.busy") : tDynamic(`tool.${tool.id}.${applied && editor ? "again" : "action"}`)}
-                  </button>
-                )}
-              </li>
-            ))}
-          </ul>
+          {groups.map((group) => (
+            <div class="shelf-group" key={group.id}>
+              <h4>{tDynamic(`desk.group.${group.id}`)}</h4>
+              <ul class="shelf">
+                {group.entries.map((entry) => (
+                  <ShelfItem key={entry.id} entry={entry} busy={busy} onAct={() => act(entry)} />
+                ))}
+              </ul>
+            </div>
+          ))}
           {file.versions.length > 1 ? (
             <p class="actions">
               <button type="button" onClick={() => tray.undo(file.id)} disabled={busy}>
