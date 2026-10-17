@@ -44,11 +44,35 @@ function once(video: HTMLVideoElement, event: string, timeout = SEEK_TIMEOUT): P
   });
 }
 
+// 跳轉之後等新的畫面真的出來。Firefox 偶爾在 seeked 之後畫出來的還是上一格，整個場景就被漏掉，
+// 擷取的畫面也跟標示的時間對不上（2026-10 在 CI 上遇到）。requestVideoFrameCallback 在新的畫面
+// 送出時觸發，最多等 FRAME_WAIT。沒有索引的 WebM 在暫停時不會觸發，連續三次等不到就不再等
+const FRAME_WAIT = 500;
+const frameMisses = new WeakMap<HTMLVideoElement, number>();
+
+function nextFrame(video: HTMLVideoElement): Promise<void> | null {
+  if (typeof video.requestVideoFrameCallback !== "function" || (frameMisses.get(video) ?? 0) >= 3) return null;
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => {
+      video.cancelVideoFrameCallback(id);
+      frameMisses.set(video, (frameMisses.get(video) ?? 0) + 1);
+      resolve();
+    }, FRAME_WAIT);
+    const id = video.requestVideoFrameCallback(() => {
+      clearTimeout(timer);
+      frameMisses.set(video, 0);
+      resolve();
+    });
+  });
+}
+
 async function seek(video: HTMLVideoElement, time: number) {
   if (Math.abs(video.currentTime - time) < 0.001 && video.readyState >= 2) return;
+  const frame = nextFrame(video);
   const done = once(video, "seeked");
   video.currentTime = time;
   await done;
+  await frame;
 }
 
 // 開啟影片，回傳 <video> 與長度。MediaRecorder 錄的 WebM 常沒有寫長度（Infinity），
