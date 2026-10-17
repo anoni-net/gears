@@ -67,10 +67,11 @@ const KINDS: Record<string, FileKind> = {
 
 export const fileKind = (format: Format): FileKind => KINDS[format] ?? "other";
 
-// not-found 是讀取 QR code 時圖片裡找不到，canvas-blocked 是瀏覽器不讓讀取 canvas（Tor Browser，見 canvas-access.ts）
-export type FailReason = "unsupported" | "broken" | "too-large" | "encrypted" | "not-found" | "network" | "stalled" | "canvas-blocked" | "other";
+// not-found 是讀取 QR code 時圖片裡找不到，canvas-blocked 是瀏覽器不讓讀取 canvas（Tor Browser，見 canvas-access.ts），
+// wasm-unavailable 是瀏覽器關掉了 WebAssembly（鎖定模式，見 wasm.ts）
+export type FailReason = "unsupported" | "broken" | "too-large" | "encrypted" | "not-found" | "network" | "stalled" | "canvas-blocked" | "wasm-unavailable" | "other";
 
-const REASONS: FailReason[] = ["unsupported", "broken", "too-large", "encrypted", "not-found", "network", "stalled", "canvas-blocked", "other"];
+const REASONS: FailReason[] = ["unsupported", "broken", "too-large", "encrypted", "not-found", "network", "stalled", "canvas-blocked", "wasm-unavailable", "other"];
 
 // 事件與每個欄位允許的值
 export const EVENTS: Record<string, Record<string, readonly string[]>> = {

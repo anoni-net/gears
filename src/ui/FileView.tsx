@@ -12,6 +12,7 @@ import { useObjectUrl } from "./hooks.ts";
 import { QrContentView } from "./QrContentView.tsx";
 import { canvasReadable } from "./canvas-access.ts";
 import { decodeImage } from "./image-decode.ts";
+import { isWasmUnavailable } from "./wasm.ts";
 import { decodeQrFromBlob } from "./qr-scan.ts";
 import { outputName } from "./output-name.ts";
 import { track } from "./analytics.ts";
@@ -19,7 +20,7 @@ import { track } from "./analytics.ts";
 // 預覽圖。Brave、Chrome、Firefox 不能直接顯示 HEIC，載入失敗時改用 libheif 解碼，
 // 畫成 PNG 再顯示。解碼也失敗時說明原因，中繼資料照樣能處理
 function Preview({ url, blob, format }: { url?: string; blob: Blob; format: Version["format"] }) {
-  const [state, setState] = useState<"native" | "decoding" | "decoded" | "broken" | "canvasBlocked">("native");
+  const [state, setState] = useState<"native" | "decoding" | "decoded" | "broken" | "canvasBlocked" | "noWasm">("native");
   const [decoded, setDecoded] = useState<string>();
   useEffect(() => () => {
     if (decoded) URL.revokeObjectURL(decoded);
@@ -41,8 +42,8 @@ function Preview({ url, blob, format }: { url?: string; blob: Blob; format: Vers
       if (!png) throw new Error("encode");
       setDecoded(URL.createObjectURL(png));
       setState("decoded");
-    } catch {
-      setState("broken");
+    } catch (error) {
+      setState(isWasmUnavailable(error) ? "noWasm" : "broken");
     }
   };
 
@@ -53,6 +54,7 @@ function Preview({ url, blob, format }: { url?: string; blob: Blob; format: Vers
       {state === "decoded" ? <img src={decoded} alt="" /> : null}
       {state === "broken" ? <p class="hint">{t("file.noPreview")}</p> : null}
       {state === "canvasBlocked" ? <p class="hint">{t("canvas.blockedPreview")}</p> : null}
+      {state === "noWasm" ? <p class="hint">{t("wasm.heicPreview")}</p> : null}
     </figure>
   );
 }
