@@ -477,32 +477,70 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
         </p>
       ) : null}
 
-      {/* 每個模型的原始來源、授權與下載的位置，從 models.json 讀，授權全文在授權頁 */}
+      {/* 每個模型分三行寫：原始模型與授權、ONNX 檔是誰轉的、從哪裡下載，從 models.json 讀，授權全文在授權頁。
+          repo 跟原始模型是同一個時，代表是社群拿原始模型自己轉檔，連到 assets.anoni.net 那個目錄的 README.txt */}
       <details class="transcribe-models" data-testid="transcribe-models">
         <summary>{t("transcribe.models.title")}</summary>
         <ul>
-          {MODEL_IDS.map((id) => (
-            <li key={id}>
-              <strong>{tDynamic(`transcribe.model.${id}`)}</strong>
+          {[
+            ...MODEL_IDS.map((id) => {
+              const { source, license, repo, host, dir } = MODELS[id];
+              const ours = repo === new URL(source).pathname.slice(1);
+              return {
+                id: id as string,
+                name: tDynamic(`transcribe.model.${id}`),
+                source,
+                label: new URL(source).pathname.slice(1),
+                license,
+                host,
+                convert: ours
+                  ? { notes: `https://assets.anoni.net/gears/models/${dir}/README.txt` }
+                  : { url: `https://huggingface.co/${repo}`, label: repo },
+              };
+            }),
+            {
+              id: "speaker",
+              name: t("transcribe.speakers"),
+              source: speakerModel.source,
+              label: "3D-Speaker CAM++",
+              license: speakerModel.license,
+              host: "self",
+              convert: { url: "https://github.com/k2-fsa/sherpa-onnx/releases/tag/speaker-recongition-models", label: "sherpa-onnx" },
+            },
+          ].map((m) => (
+            <li key={m.id}>
+              <strong>{m.name}</strong>
               <span>
                 {t("transcribe.models.source")}
-                <a href={MODELS[id].source} target="_blank" rel="noopener">
-                  {new URL(MODELS[id].source).pathname.slice(1)}
+                <a href={m.source} target="_blank" rel="noopener">
+                  {m.label}
                 </a>
-                {t("transcribe.models.detail", { license: MODELS[id].license, host: tDynamic(`transcribe.models.host.${MODELS[id].host}`) })}
+                {t("transcribe.models.licensed", { license: m.license })}
+              </span>
+              <span>
+                {t("transcribe.models.convert")}
+                {"url" in m.convert ? (
+                  <>
+                    <a href={m.convert.url} target="_blank" rel="noopener">
+                      {m.convert.label}
+                    </a>
+                    {t("transcribe.models.convertCopy")}
+                  </>
+                ) : (
+                  <>
+                    {t("transcribe.models.convertOurs")}
+                    <a href={m.convert.notes} target="_blank" rel="noopener">
+                      {t("transcribe.models.convertNotes")}
+                    </a>
+                  </>
+                )}
+              </span>
+              <span>
+                {t("transcribe.models.download")}
+                {tDynamic(`transcribe.models.host.${m.host}`)}
               </span>
             </li>
           ))}
-          <li>
-            <strong>{t("transcribe.speakers")}</strong>
-            <span>
-              {t("transcribe.models.source")}
-              <a href={speakerModel.source} target="_blank" rel="noopener">
-                3D-Speaker CAM++
-              </a>
-              {t("transcribe.models.detail", { license: speakerModel.license, host: t("transcribe.models.host.self") })}
-            </span>
-          </li>
         </ul>
         <p class="hint">
           <button type="button" class="link" onClick={() => navigate("licenses")}>

@@ -1633,7 +1633,8 @@ footer .languages button[aria-current] {
   margin: 0.4rem 0;
 }
 
-.transcribe-models strong {
+.transcribe-models strong,
+.transcribe-models li span {
   display: block;
 }
 

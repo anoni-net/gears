@@ -48,8 +48,13 @@ test("逐字稿列出每個模型的原始來源、授權與下載的位置", as
   for (const info of Object.values(models)) {
     await expect(details.locator(`a[href="${info.source}"]`)).toHaveCount(1);
   }
-  await expect(details).toContainText("assets.anoni.net（社群轉檔）");
-  await expect(details).toContainText("下載自 Hugging Face");
+  // 轉檔的人分三種：onnx-community 與 sherpa-onnx 轉好的連到原本的 repo，社群自己轉的連到轉檔紀錄
+  await expect(details.locator('a[href="https://huggingface.co/onnx-community/whisper-small"]')).toHaveCount(1);
+  await expect(details.locator('a[href^="https://huggingface.co/csukuangfj/sherpa-onnx-omnilingual"]')).toHaveCount(1);
+  await expect(details.locator('a[href="https://assets.anoni.net/gears/models/breeze-asr-25-cffe7cc/README.txt"]')).toHaveCount(1);
+  await expect(details.locator('a[href^="https://assets.anoni.net/gears/models/omnilingual"]')).toHaveCount(0);
+  await expect(details).toContainText("下載：Hugging Face，選了這個模型才直接下載");
+  await expect(details).toContainText("下載：anoni.net，跟工作台同一個網站");
   await details.getByRole("button", { name: "所有授權全文" }).click();
   await expect(page).toHaveURL(/\/gears\/licenses\/$/);
 });

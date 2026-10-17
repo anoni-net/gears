@@ -423,7 +423,7 @@ iPhone 預設拍出來的是 HEIC，在網頁上選照片時交出來的也是�
 
 讀者從頁尾的「授權與來源」打開授權頁（`/gears/licenses/`，`src/ui/Licenses.tsx`，頁面清單在 `src/pages.ts`）。`licenses/` 底下的授權全文用 `?url` 匯入，跟著建置一起輸出（檔名帶雜湊），service worker 也會存起來，離線也能看。工作台自己的 `LICENSE` 沒有副檔名，伺服器會當成二進位檔，所以直接展開在頁面上。新增 `licenses/` 的檔案時，在 `Licenses.tsx` 的 `ENTRIES` 加一筆，三個語系加上 `licenses.<id>` 與 `licenses.<id>.desc`，`tests/e2e/licenses.spec.ts` 會比對每份授權全文。
 
-逐字稿畫面最下面另有收起來的「使用的模型與授權」，從 `models.json` 的 `source`（原始模型）、`license` 與 `host` 讀，新增模型時填好這三欄就會出現。
+逐字稿畫面最下面另有收起來的「使用的模型與授權」，每個模型分三行：原始模型與授權（`source`、`license`）、誰轉成 ONNX 檔（`repo`）、從哪裡下載（`host`）。`repo` 跟原始模型是同一個時當成社群自己轉檔，連到 assets.anoni.net 那個目錄的 `README.txt`，不同時連到轉檔者的 repo。新增模型時填好這幾欄就會出現。
 
 - 密語的字詞表來自 [asian-diceware](https://github.com/anoni-net/asian-diceware) `v0.4.0`，CC BY 4.0，畫面上標示出處
 - 工具的圖示來自 [Material Design Icons](https://pictogrammers.com/library/mdi/)，Pictogrammers Free License
