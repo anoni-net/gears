@@ -12,7 +12,7 @@ type Status =
   | { kind: "opening" }
   | { kind: "scanning"; progress: number }
   | { kind: "capturing"; done: number; total: number }
-  | { kind: "ready" }
+  | { kind: "ready"; evenly: boolean }
   | { kind: "unplayable" }
   | { kind: "canvasBlocked" }
   | { kind: "failed" };
@@ -43,7 +43,7 @@ export function VideoFramesEditor({ blob, onCancel }: FileEditorProps) {
         close = opened.close;
         if (abort.signal.aborted) return close();
         setStatus({ kind: "scanning", progress: 0 });
-        const extracted = await extractFrames(
+        const { frames: extracted, evenly } = await extractFrames(
           opened.video,
           opened.duration,
           (p) => setStatus(p.step === "scan" ? { kind: "scanning", progress: p.ratio } : { kind: "capturing", done: p.done - 1, total: p.total }),
@@ -58,7 +58,7 @@ export function VideoFramesEditor({ blob, onCancel }: FileEditorProps) {
         close();
         setFrames(out);
         setSelected(new Set(out.map((_, i) => i)));
-        setStatus({ kind: "ready" });
+        setStatus({ kind: "ready", evenly });
       } catch (error) {
         close();
         if (abort.signal.aborted) return;
@@ -101,7 +101,7 @@ export function VideoFramesEditor({ blob, onCancel }: FileEditorProps) {
       case "capturing":
         return t("frames.capturing", { n: status.done + 1, total: status.total });
       case "ready":
-        return t("frames.found", { n: frames.length });
+        return status.evenly ? t("frames.evenly", { n: frames.length }) : t("frames.found", { n: frames.length });
       case "unplayable":
         return t("frames.unplayable");
       case "canvasBlocked":
@@ -115,6 +115,13 @@ export function VideoFramesEditor({ blob, onCancel }: FileEditorProps) {
   return (
     <div class="video-frames">
       <p class="hint">{t("frames.intro")}</p>
+      {/* 適合哪些影片：挑法是比對整張畫面的變化，剪輯過的影片效果好，監視器這類只有一小塊在動的挑不到 */}
+      <details class="verify-details">
+        <summary>{t("frames.when")}</summary>
+        <p>{t("frames.when.good")}</p>
+        <p>{t("frames.when.bad")}</p>
+        <p>{t("frames.when.how")}</p>
+      </details>
       <p class={error ? "error" : "hint"} role="status" data-testid="frames-status">
         {message}
       </p>

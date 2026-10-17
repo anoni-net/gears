@@ -27,32 +27,34 @@ test("換場景的地方留下來，同一個場景只留一格", () => {
   const a = scene(20, 200);
   const b = scene(200, 20);
   const c = scene(100, 250);
-  const times = pickFrames(samples([a, a, a, b, b, c, c, c]), { max: 16, min: 1, threshold: 24 });
+  const times = pickFrames(samples([a, a, a, b, b, c, c, c]), { max: 16, min: 1, threshold: 24 }).times;
   expect(times).toEqual([0, 3, 5]);
 });
 
 test("慢慢移動的鏡頭跟上一格留下的比，累積夠多也會留一格", () => {
   // 每一格只差 10，跟前一格比永遠不到門檻，跟上一格留下的比，第 3 格累積到 30
   const lumas = [0, 1, 2, 3, 4, 5, 6].map((i) => scene(20 + i * 10, 200 - i * 10));
-  expect(pickFrames(samples(lumas), { max: 16, min: 1, threshold: 24 })).toEqual([0, 3, 6]);
+  expect(pickFrames(samples(lumas), { max: 16, min: 1, threshold: 24 }).times).toEqual([0, 3, 6]);
 });
 
 test("黑幕與淡出略過，全部都是黑畫面時留中間一格", () => {
   const a = scene(20, 200);
   const b = scene(200, 20);
-  expect(pickFrames(samples([flat(0), a, flat(0), b, flat(0)]), { max: 16, min: 1, threshold: 24 })).toEqual([1, 3]);
-  expect(pickFrames(samples([flat(0), flat(0), flat(0)]))).toEqual([1]);
+  expect(pickFrames(samples([flat(0), a, flat(0), b, flat(0)]), { max: 16, min: 1, threshold: 24 }).times).toEqual([1, 3]);
+  expect(pickFrames(samples([flat(0), flat(0), flat(0)])).times).toEqual([1]);
 });
 
 test("太多時留差距最大的幾格，第一格一定留，依時間排序", () => {
   const lumas = [scene(0, 255), scene(30, 255), scene(130, 255), scene(160, 255), scene(255, 0)];
   // 跟上一格留下的比：30、100、30、大幅反轉
-  expect(pickFrames(samples(lumas), { max: 3, min: 1, threshold: 24 })).toEqual([0, 2, 4]);
+  expect(pickFrames(samples(lumas), { max: 3, min: 1, threshold: 24 }).times).toEqual([0, 2, 4]);
 });
 
 test("畫面幾乎不動的影片，平均補到至少 min 格", () => {
   const still = Array.from({ length: 20 }, () => scene(20, 200));
-  const times = pickFrames(samples(still), { max: 16, min: 4, threshold: 24 });
+  const { times, evenly } = pickFrames(samples(still), { max: 16, min: 4, threshold: 24 });
+  // 畫面上說明這幾格是平均挑的
+  expect(evenly).toBe(true);
   expect(times).toHaveLength(4);
   expect(times[0]).toBe(0);
   expect(new Set(times).size).toBe(4);
@@ -61,7 +63,7 @@ test("畫面幾乎不動的影片，平均補到至少 min 格", () => {
 test("找到兩個以上的場景就不補，不放進同一個場景的重複畫面", () => {
   const a = scene(20, 200);
   const b = scene(200, 20);
-  expect(pickFrames(samples([a, a, a, a, b, b, b, b]), { max: 16, min: 4, threshold: 24 })).toEqual([0, 4]);
+  expect(pickFrames(samples([a, a, a, a, b, b, b, b]), { max: 16, min: 4, threshold: 24 })).toEqual({ times: [0, 4], evenly: false });
 });
 
 test("時間與檔名：不沿用影片的檔名", () => {
