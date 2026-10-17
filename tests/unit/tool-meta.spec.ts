@@ -87,7 +87,7 @@ const DETECT: Record<string, (sources: string[]) => boolean> = {
   camera: (sources) => sources.some((s) => s.includes("getUserMedia")),
 };
 
-test("標籤跟程式實際做的事一致：用到模型、用到相機", () => {
+test("標籤跟程式實際做的事一致：本機模型、相機", () => {
   expect(Object.keys(toolSources).length).toBeGreaterThan(10);
   for (const id of toolIds) {
     for (const [tag, detect] of Object.entries(DETECT)) {
