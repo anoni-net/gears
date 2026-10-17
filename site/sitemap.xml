@@ -169,6 +169,27 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/transcribe/" />
   </url>
   <url>
+    <loc>https://anoni.net/gears/blend/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/blend/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/blend/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/blend/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/blend/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/zh-cn/blend/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/blend/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/blend/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/blend/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/blend/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/en/blend/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/blend/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/blend/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/blend/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/blend/" />
+  </url>
+  <url>
     <loc>https://anoni.net/gears/print-dots/</loc>
     <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/print-dots/" />
     <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/print-dots/" />
