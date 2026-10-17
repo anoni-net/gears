@@ -7,7 +7,7 @@
 - 預設在瀏覽器裡處理。之後若提供上傳到社群伺服器的選項，上傳前要在畫面上寫清楚檔案送到哪裡、誰看得到、保留多久、伺服器會不會留下紀錄，由讀者決定
 - 上傳端點不經過 Cloudflare。Cloudflare 在邊緣解開 TLS，經過的檔案對它是明文
 - 頁面能連線的對象寫死在 CSP 裡（`vite.config.ts`），新增任何對外連線都要改那裡，並在畫面上標示。頁面的 meta 標籤只有自己的網域與使用統計的送出網址（`https://aa.anoni.net/api/send`，見下方「使用統計」）。逐字稿的大模型從 Hugging Face 下載（見下方「逐字稿」），只開在伺服器送的 CSP 標頭 <!-- docs-style-lint: disable-line -->
-- 執行期的相依套件只有 `preact`、`qrcode-generator`（QR code 產生）、`jsqr`（QR code 讀取）、`age-encryption`（加密，連同它相依的 noble 系列）、`libheif-js`（HEIC 解碼，LGPL-3.0，見下方「HEIC」）、`pdf-lib`（PDF 的解析與寫出，見下方「文件」）、`pdfjs-dist`（PDF 的遮蔽，見下方「PDF 的遮蔽」），以及遮蔽的自動尋找用的 `onnxruntime-web` 與 `tesseract.js`（見下方「遮蔽的自動尋找」）、逐字稿用的 `@huggingface/transformers` 與 `opencc-js`（見下方「逐字稿」，分辨說話者用的 onnxruntime 是 Transformers.js 帶的那一份），以及查證計算 SHA-256 用的 `@noble/hashes`（age 加密原本就相依它，鎖定同一個版本，見下方「查證」）。新增套件前先想能不能自己寫，必要時鎖定確切的版本。工具用到的套件在打開工具時才載入
+- 執行期的相依套件只有 `preact`、`qrcode-generator`（QR code 產生）、`jsqr`（QR code 讀取）、`age-encryption`（加密，連同它相依的 noble 系列）、`libheif-js`（HEIC 解碼，LGPL-3.0，見下方「HEIC」）、`pdf-lib`（PDF 的解析與寫出，見下方「文件」）、`pdfjs-dist`（PDF 的遮蔽，見下方「PDF 的遮蔽」），以及遮蔽的自動尋找用的 `onnxruntime-web` 與 `tesseract.js`（見下方「遮蔽的自動尋找」）、逐字稿用的 `@huggingface/transformers` 與 `opencc-js`（見下方「逐字稿」，分辨說話者用的 onnxruntime 是 Transformers.js 帶的那一份），以及查證計算 SHA-256 用的 `@noble/hashes`（age 加密原本就相依它，鎖定同一個版本，見下方「查證」）、下載的軟體驗證用的 `openpgp`（LGPL-3.0，見下方「下載的軟體驗證」）。新增套件前先想能不能自己寫，必要時鎖定確切的版本。工具用到的套件在打開工具時才載入
 - 結構有問題的檔案就停下來，不交出一份沒處理乾淨的檔案
 
 ## 支援的瀏覽器
@@ -54,7 +54,7 @@ CI（`.github/workflows/ci.yml`）依瀏覽器拆成四台機器同時執行：C
 
 | | 處理檔案的工具（`fileTools`） | 需要編輯畫面的工具（`editorTools`） | 從空白開始的工具（`createTools`） |
 |---|---|---|---|
-| 例子 | 清除中繼資料 | 遮蔽、縮成常見尺寸、列印追蹤點、HEIC 轉 JPEG、PDF 頁面選取、加密、解密、逐字稿、文件開啟前檢查 | QR code 產生器與讀取、網址檢查、密語與密碼產生器、age 金鑰產生器、加密文字、查證、信件檢查、寫作習慣檢查 |
+| 例子 | 清除中繼資料 | 遮蔽、縮成常見尺寸、列印追蹤點、HEIC 轉 JPEG、PDF 頁面選取、加密、解密、逐字稿、文件開啟前檢查 | QR code 產生器與讀取、網址檢查、密語與密碼產生器、age 金鑰產生器、加密文字、查證、信件檢查、寫作習慣檢查、下載的軟體驗證 |
 | 介面 | `src/core/tool.ts` 的 `Tool` | `EditorTool`，編輯畫面登記在 `src/ui/registry.tsx` | `CreateTool`，元件登記在 `src/ui/registry.tsx` |
 | 結果 | 暫存區裡那個檔案的新版本 | 同左，由 `tray.addVersion` 加入 | 產出檔案的放進暫存區，產出文字的只顯示在畫面上 |
 
@@ -217,6 +217,18 @@ PDF 的版本紀錄：每一個 `%%EOF` 是一次存檔的結尾，切到那裡�
 - 查證裡的 .eml：寄出與每一站收到的時間進時間線，寄件人、回覆地址、收件人進人名，寄件驗證沒有通過與上面的提醒併進需要留意的地方，附件可以「一起查證」
 
 測試用的信在 `tests/helpers/emails.ts`，網域用 `example.*`、IP 用保留給文件的位址。本機另外用 Python 的 `email` 套件產生的信驗證過折行的中文主旨、兩層 multipart、直接寫 UTF-8 的內文與中文附件檔名。
+
+## 下載的軟體驗證
+
+讀者選下載的檔案與旁邊的簽章檔（`.asc`、`.sig`），用內建的官方公鑰驗證 OpenPGP 的分離式簽章，確認檔案是官方簽署、下載之後沒有被改過的（`src/tools/software-verify/`，畫面在 `src/ui/SoftwareVerifyTool.tsx`）。不必安裝 GnuPG、不必輸入指令。第一版只有 Tor Browser 與 Tails。
+
+- 檔案用串流讀（`Blob.stream()` 交給 openpgp.js），幾 GB 的 Tails 映像檔也不必整個讀進記憶體，同時算出 SHA-256。檔案不放進暫存區，安裝檔只需要讀一次
+- 結果分四種：簽章正確、檔案跟簽章對不上（不要安裝）、不是內建的金鑰簽的、讀不出簽章。簽章檔的名稱不是檔名加上 `.asc` 或 `.sig` 時另外提醒可能選錯了。一次選兩個檔案時，依開頭判斷哪一個是簽章檔
+- openpgp.js 依簽章的建立時間檢查金鑰，子金鑰之後到期，到期前簽的檔案照樣驗得過，撤銷的子金鑰驗不過
+- openpgp.js 透過 `src/tools/software-verify/openpgp.ts` 動態載入，打包成獨立的 `openpgp-*.js`（LGPL 要求可以換成自行編譯的版本），授權全文在 `licenses/openpgp.txt`。6.3.2 裡只有預設的 armor 註解有 `openpgpjs.org` 的網址，沒有對外連線
+- 公鑰在 `src/tools/software-verify/keys.ts`，由 `node scripts/signing-keys.mjs` 從官方的來源下載，比對主金鑰的指紋（寫在 `SIGNERS`，取自官方說明頁），拿掉其他人的認證簽章再寫回，同時列出每把子金鑰的效期。`--check` 只比對，跟 `keys.ts` 不同時以非零值結束
+- 每月跟著文件站的例行查證核對一次：執行 `node scripts/signing-keys.mjs --check`，有變就更新、開 PR，並看一下有沒有快到期的子金鑰。官方換主金鑰時腳本會停下來，要先讀過公告再手動改 `SIGNERS` 的指紋
+- 測試用官方真正的簽章（`tests/helpers/signed/`）：Tor Browser 15.0.25 的 `sha256sums-signed-build.txt` 與簽章，以及 Tails 7.14 映像檔的簽章（只確認簽署的子金鑰在內建的公鑰裡）
 
 ## 寫作習慣檢查
 
@@ -510,7 +522,7 @@ iPhone 預設拍出來的是 HEIC，在網頁上選照片時交出來的也是�
 
 ## 規劃
 
-產品規劃記錄在社群的工作區，還沒有公開。目前完成第一階段：桌面、檔案暫存區，以及清除中繼資料（JPEG、PNG、HEIC、AVIF、WebP、GIF、TIFF、SVG、BMP、PNM、JPEG XL，Word、Excel、PowerPoint、LibreOffice 文件與 PDF，MP3、M4A、MP4、MOV、WAV、AVI、FLAC、Ogg、Opus、MKV、WebM，ZIP、TAR、gzip、EPUB、種子檔、HTML）、遮蔽（圖片與 PDF，可以自動找人臉與個資）、縮成常見尺寸、列印追蹤點、PDF 頁面選取、查證收到的檔案、文件開啟前檢查、信件檢查、寫作習慣檢查、逐字稿、加密與解密（檔案與一段文字）、age 金鑰產生器、QR code 產生器與讀取、網址檢查、密語與密碼產生器，可以下載與系統分享，一次處理多個檔案，也可以離線使用。2026-10 起部署在 `anoni.net/gears/`（見上方「部署」）。
+產品規劃記錄在社群的工作區，還沒有公開。目前完成第一階段：桌面、檔案暫存區，以及清除中繼資料（JPEG、PNG、HEIC、AVIF、WebP、GIF、TIFF、SVG、BMP、PNM、JPEG XL，Word、Excel、PowerPoint、LibreOffice 文件與 PDF，MP3、M4A、MP4、MOV、WAV、AVI、FLAC、Ogg、Opus、MKV、WebM，ZIP、TAR、gzip、EPUB、種子檔、HTML）、遮蔽（圖片與 PDF，可以自動找人臉與個資）、縮成常見尺寸、列印追蹤點、PDF 頁面選取、查證收到的檔案、文件開啟前檢查、信件檢查、下載的軟體驗證、寫作習慣檢查、逐字稿、加密與解密（檔案與一段文字）、age 金鑰產生器、QR code 產生器與讀取、網址檢查、密語與密碼產生器，可以下載與系統分享，一次處理多個檔案，也可以離線使用。2026-10 起部署在 `anoni.net/gears/`（見上方「部署」）。
 
 ## 第三方資料
 
@@ -525,4 +537,5 @@ iPhone 預設拍出來的是 HEIC，在網頁上選照片時交出來的也是�
 - PDF 的遮蔽用 [pdf.js](https://github.com/mozilla/pdf.js)（pdfjs-dist 6.4.299，Apache-2.0）與它附帶的 CMap、標準字型與解碼器，見 `licenses/pdfjs.txt`
 - 遮蔽的自動尋找用 [YuNet](https://github.com/opencv/opencv_zoo/tree/main/models/face_detection_yunet) 模型（MIT）與 [onnxruntime-web](https://github.com/microsoft/onnxruntime) 1.30.0（MIT）、[Tesseract.js](https://github.com/naptha/tesseract.js) 7.0.0 與 tessdata_best 的語言資料（Apache-2.0），見 `licenses/redact-detect.txt`
 - 逐字稿用 [Transformers.js](https://github.com/huggingface/transformers.js) 4.3.1（Apache-2.0）、Whisper small 與 base 的 ONNX 檔（onnx-community，原始模型的模型卡標示 Apache-2.0）、讀者選擇之後從 Hugging Face 下載的 large-v3-turbo（模型卡標示 MIT）、分辨說話者用的 3D-Speaker CAM++（Apache-2.0，ONNX 檔取自 sherpa-onnx）、[opencc-js](https://github.com/nk2028/opencc-js) 1.4.2（MIT，字典 Apache-2.0），見 `licenses/transcribe.txt`
+- 下載的軟體驗證用 [OpenPGP.js](https://github.com/openpgpjs/openpgpjs) 6.3.2（LGPL-3.0），內建 Tor Project 與 Tails 公開的簽章公鑰，見 `licenses/openpgp.txt`
 - 165 反詐騙清單見上方，部署時下載，不進版控

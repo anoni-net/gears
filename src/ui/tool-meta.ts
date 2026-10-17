@@ -22,6 +22,7 @@ export const TOOL_META: Record<string, { icon: IconName; cat: Category }> = {
   "print-dots": { icon: "printer-eye", cat: "privacy" },
   blend: { icon: "image-size-select-large", cat: "privacy" },
   "email-check": { icon: "email-search-outline", cat: "privacy" },
+  "software-verify": { icon: "package-variant-closed-check", cat: "secure" },
   "writing-style": { icon: "text-box-edit-outline", cat: "privacy" },
 };
 
@@ -31,5 +32,5 @@ export const TOOL_META: Record<string, { icon: IconName; cat: Category }> = {
 export const TOOL_GROUPS = [
   { id: "handover", tools: ["strip-metadata", "blend", "redact", "print-dots", "writing-style", "heic-to-jpeg", "pdf-pages", "transcribe"] },
   { id: "send", tools: ["encrypt", "decrypt", "text-crypt", "age-keygen", "passphrase", "qrcode"] },
-  { id: "check", tools: ["verify", "doc-check", "email-check", "url-check", "qr-read"] },
+  { id: "check", tools: ["verify", "doc-check", "email-check", "software-verify", "url-check", "qr-read"] },
 ] as const;

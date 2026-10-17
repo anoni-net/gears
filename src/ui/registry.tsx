@@ -15,6 +15,7 @@ const loaders: Record<string, () => Promise<ComponentType<CreateToolProps>>> = {
   verify: () => import("./VerifyTool.tsx").then((m) => m.VerifyTool),
   "email-check": () => import("./EmailTool.tsx").then((m) => m.EmailTool),
   "writing-style": () => import("./WritingStyleTool.tsx").then((m) => m.WritingStyleTool),
+  "software-verify": () => import("./SoftwareVerifyTool.tsx").then((m) => m.SoftwareVerifyTool),
 };
 
 export function CreateToolView({ id, ...props }: CreateToolProps & { id: string }) {

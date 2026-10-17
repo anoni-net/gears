@@ -2317,3 +2317,42 @@ button.link {
 .style-groups > li > button.small {
   margin-top: 0.5rem;
 }
+
+/* 下載的軟體驗證 */
+.software-picks {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  margin: 1rem 0;
+}
+
+.software-picks .hint {
+  margin: 0.4rem 0 0;
+  overflow-wrap: anywhere;
+}
+
+.software-verify progress {
+  width: 100%;
+}
+
+.software-verify code.hash {
+  overflow-wrap: anywhere;
+}
+
+.software-keys ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.software-keys li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.software-keys code {
+  overflow-wrap: anywhere;
+}
