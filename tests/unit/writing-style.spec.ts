@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { missingFacts } from "../../src/tools/writing-style/facts.ts";
-import { FIXABLE, HABIT_CODES, countHabits, findHabits, fixHabits } from "../../src/tools/writing-style/index.ts";
+import { FIXABLE, HABIT_CODES, applyHabits, countHabits, findHabits, fixHabits } from "../../src/tools/writing-style/index.ts";
 
 const codes = (text: string) => findHabits(text).map((h) => [h.code, h.text.trim()]);
 
@@ -108,4 +108,18 @@ test("改寫前後的事實：數字、中文數字、引號裡的原話與個�
     ["number", "三"],
     ["quote", "先上線再說"],
   ]);
+});
+
+test("逐項套用建議：只改選的那幾處，刪掉語助詞與口頭禪之後不留多餘的逗號", () => {
+  const text = "老實說，這個視頻的用戶很多啦，我們的 App 會上傳到server，其他視頻也一樣";
+  const habits = findHabits(text);
+  const pick = (word: string) => habits.filter((h) => h.text.trim() === word);
+  // 只改第一個「視頻」所在的那一組，同樣的寫法一起改
+  expect(applyHabits(text, pick("視頻"))).toBe("老實說，這個影片的用戶很多啦，我們的 App 會上傳到server，其他影片也一樣");
+  expect(applyHabits(text, [...pick("老實說"), ...pick("啦")])).toBe("這個視頻的用戶很多，我們的 App 會上傳到server，其他視頻也一樣");
+  // 換上中文時，夾在中文之間的空白一起拿掉
+  expect(applyHabits(text, [...pick("App"), ...pick("server")])).toBe("老實說，這個視頻的用戶很多啦，我們的應用程式會上傳到伺服器，其他視頻也一樣");
+  // 沒有建議寫法的不動：用到三次的「其實」、注音文
+  const plain = "其實還好，其實沒事，其實ㄏㄏ";
+  expect(applyHabits(plain, findHabits(plain))).toBe(plain);
 });

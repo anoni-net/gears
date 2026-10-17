@@ -398,6 +398,28 @@ export function fixHabits(text: string, codes: readonly HabitCode[] = FIXABLE): 
   return current;
 }
 
+// 一處習慣要換成的文字：可以直接修正的用 fix，有建議寫法的用 suggest（空字串是刪掉），沒有建議的回傳 undefined
+export function replacementOf(habit: Habit): string | undefined {
+  if (FIXABLE.includes(habit.code)) return habit.fix;
+  return habit.suggest;
+}
+
+// 套用讀者選的幾處建議，例如把「視頻」改成「影片」、刪掉「啦」。其他地方一個字都不動。
+// 換上中文時，夾在中文之間的空白一起拿掉（「的 App 會」改成「的應用程式會」）
+export function applyHabits(text: string, chosen: Habit[]): string {
+  let next = text;
+  for (const h of [...chosen].sort((a, b) => b.start - a.start)) {
+    const to = replacementOf(h);
+    if (to === undefined || next.slice(h.start, h.end) !== h.text) continue;
+    let start = h.start;
+    let end = h.end;
+    if (!to || isHan(to[0])) while (start > 0 && next[start - 1] === " " && isHan(next[start - 2])) start--;
+    if (!to || isHan(to.at(-1))) while (end < next.length && next[end] === " " && isHan(next[end + 1])) end++;
+    next = next.slice(0, start) + to + next.slice(end);
+  }
+  return tidy(next);
+}
+
 // 各類習慣的數量
 export function countHabits(habits: Habit[]): Partial<Record<HabitCode, number>> {
   const counts: Partial<Record<HabitCode, number>> = {};

@@ -2287,3 +2287,13 @@ button.link {
 .writing-style .alert {
   margin-top: 1.25rem;
 }
+
+/* 清單裡逐項套用的按鈕，比一般按鈕小 */
+.writing-style button.small {
+  font-size: 0.85rem;
+  padding: 0.15rem 0.7rem;
+}
+
+.style-groups > li > button.small {
+  margin-top: 0.5rem;
+}

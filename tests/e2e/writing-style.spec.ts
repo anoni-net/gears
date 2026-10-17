@@ -20,7 +20,7 @@ test("從任務打開寫作習慣檢查，標出寫作習慣，修正標點與�
   // 考績打 C 的 C 不算中英夾雜
   await expect(manual.getByText("中英夾雜", { exact: true })).toHaveCount(0);
   // 中國用語附上台灣的說法，個資標出類別
-  await expect(manual.getByText("建議改成「影片」")).toBeVisible();
+  await expect(manual.getByRole("button", { name: "把「視頻」改成「影片」" })).toBeVisible();
   await expect(manual.getByText("電話號碼")).toBeVisible();
   await expect(page.locator(".style-preview mark.pii")).toHaveText("0912-345-678");
 
@@ -42,4 +42,29 @@ test("沒有寫作習慣時說明找不到，修正按鈕停用", async ({ page 
   await expect(page.getByTestId("style-summary")).toHaveText("沒有找到常見的寫作習慣。");
   await expect(page.getByRole("button", { name: "修正標點與符號" })).toBeDisabled();
   await expect(page.locator(".style-preview")).toHaveCount(0);
+});
+
+test("逐項套用建議、整組套用，一步一步復原", async ({ page }) => {
+  await page.goto("./writing-style/");
+  const input = page.getByLabel("要交出去的文字");
+  const text = "老實說這個視頻的用戶很多啦，其他視頻也一樣";
+  await input.fill(text);
+  const manual = page.getByTestId("style-manual");
+  await manual.getByRole("button", { name: "把「視頻」改成「影片」（2 處）" }).click();
+  await expect(input).toHaveValue("老實說這個影片的用戶很多啦，其他影片也一樣");
+  await expect(page.getByTestId("style-summary")).toContainText("已套用 2 處。");
+  await manual.getByRole("button", { name: "刪掉「啦」" }).click();
+  await manual.getByRole("button", { name: "刪掉「老實說」" }).click();
+  await expect(input).toHaveValue("這個影片的用戶很多，其他影片也一樣");
+  await page.getByRole("button", { name: "復原" }).click();
+  await expect(input).toHaveValue("老實說這個影片的用戶很多，其他影片也一樣");
+  await page.getByRole("button", { name: "復原" }).click();
+  await page.getByRole("button", { name: "復原" }).click();
+  await expect(input).toHaveValue(text);
+  await expect(page.getByRole("button", { name: "復原" })).toHaveCount(0);
+
+  // 一組裡有兩種以上的寫法時，可以整組套用
+  await input.fill("這個視頻的用戶很多");
+  await manual.getByRole("button", { name: "這一類全部套用（2 處）" }).click();
+  await expect(input).toHaveValue("這個影片的使用者很多");
 });
