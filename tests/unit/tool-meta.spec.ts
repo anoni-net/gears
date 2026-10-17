@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { toolIds } from "../../src/tools/index.ts";
 import { ICON_PATHS } from "../../src/ui/icon-paths.ts";
 import { TOOL_GROUPS, TOOL_META } from "../../src/ui/tool-meta.ts";
@@ -30,21 +30,63 @@ test("暫存區每種格式都有存在的檔案類型圖示", async () => {
   expect(fileIcon("unknown", false)).toBe("file-outline");
 });
 
-// 會在瀏覽器裡執行模型的模組：逐字稿與 Omnilingual 的 Worker、遮蔽的自動尋找與文字辨識
-const MODEL_MODULES = ["transcribe.worker", "sherpa.worker", "redact-detect", "tesseract", "speaker-embed"];
-
-test("用到模型的工具在桌面上有標記，沒用到的沒有", () => {
-  // 從 src/ui/registry.tsx 找出每個工具的畫面元件，看它有沒有直接引用模型的模組
-  const ui = join(import.meta.dirname, "../../src/ui");
-  const registry = readFileSync(join(ui, "registry.tsx"), "utf8");
-  const uses: Record<string, boolean> = {};
-  for (const m of registry.matchAll(/^\s+"?([a-z-]+)"?: \(\) => import\("\.\/([\w.-]+\.tsx)"\)/gm)) {
-    const source = readFileSync(join(ui, m[2]!), "utf8");
-    uses[m[1]!] = MODEL_MODULES.some((name) => source.includes(`./${name}`));
+// 圖示標籤（src/ui/tool-tags.ts）
+test("每個標籤都有圖示與三個語系的說明，每個工具最多兩個標籤，每個工具的標籤都有補充說明", async () => {
+  const { TAGS, TAG_ORDER, MAX_TAGS } = await import("../../src/ui/tool-tags.ts");
+  const { LOCALES, messagesOf } = await import("../../src/i18n/index.ts");
+  for (const tag of TAG_ORDER) expect(Object.hasOwn(ICON_PATHS, TAGS[tag].icon), tag).toBe(true);
+  for (const id of toolIds) {
+    const tags = TOOL_META[id]!.tags ?? [];
+    expect(tags.length, id).toBeLessThanOrEqual(MAX_TAGS);
+    expect(new Set(tags).size, id).toBe(tags.length);
+    for (const locale of LOCALES) {
+      const messages = messagesOf(locale.id) as Record<string, string>;
+      for (const tag of tags) {
+        expect(messages[`tag.${tag}`], `${locale.id} tag.${tag}`).toBeTruthy();
+        expect(messages[`tag.${tag}.desc`], `${locale.id} tag.${tag}.desc`).toBeTruthy();
+        expect(messages[`tag.${tag}.${id}`], `${locale.id} tag.${tag}.${id}`).toBeTruthy();
+      }
+    }
   }
-  expect(Object.keys(uses).length).toBeGreaterThan(10);
-  for (const id of toolIds) expect(!!TOOL_META[id]!.model, id).toBe(!!uses[id]);
-  // 逐字稿本身就靠模型，遮蔽只有自動尋找用到
-  expect(TOOL_META.transcribe!.model).toBe("core");
-  expect(TOOL_META.redact!.model).toBe("assist");
+});
+
+// 從每個工具的畫面元件沿著 import 一路往下追（只追 src 底下的相對路徑），收集所有原始碼
+const ui = join(import.meta.dirname, "../../src/ui");
+function sourcesOf(entry: string): string[] {
+  const seen = new Set<string>();
+  const stack = [entry];
+  const out: string[] = [];
+  while (stack.length) {
+    const file = stack.pop()!;
+    if (seen.has(file)) continue;
+    seen.add(file);
+    const source = readFileSync(file, "utf8");
+    out.push(source);
+    for (const m of source.matchAll(/(?:from\s*|import\(\s*)"(\.{1,2}\/[^"?]+)(?:\?[^"]*)?"/g)) {
+      const base = join(dirname(file), m[1]!);
+      const found = [base, `${base}.ts`, `${base}.tsx`].find((p) => existsSync(p) && /\.tsx?$/.test(p));
+      if (found) stack.push(found);
+    }
+  }
+  return out;
+}
+const registry = readFileSync(join(ui, "registry.tsx"), "utf8");
+const toolSources: Record<string, string[]> = {};
+for (const m of registry.matchAll(/^\s+"?([a-z-]+)"?: \(\) => import\("\.\/([\w.-]+\.tsx)"\)/gm)) toolSources[m[1]!] = sourcesOf(join(ui, m[2]!));
+
+// 能從程式判斷的標籤：用到了卻沒標、標了卻沒用到，都會失敗
+const DETECT: Record<string, (sources: string[]) => boolean> = {
+  // 模型的執行環境：onnxruntime、Transformers.js、Tesseract，以及逐字稿另外載入的 sherpa-onnx
+  model: (sources) => sources.some((s) => /from "(onnxruntime-web|@huggingface\/transformers|tesseract\.js)|import\("(onnxruntime-web|@huggingface\/transformers|tesseract\.js)|vendor\/sherpa/.test(s)),
+  camera: (sources) => sources.some((s) => s.includes("getUserMedia")),
+};
+
+test("標籤跟程式實際做的事一致：用到模型、用到相機", () => {
+  expect(Object.keys(toolSources).length).toBeGreaterThan(10);
+  for (const id of toolIds) {
+    for (const [tag, detect] of Object.entries(DETECT)) {
+      const marked = (TOOL_META[id]!.tags ?? []).includes(tag as never);
+      expect(marked, `${id} ${tag}`).toBe(!!toolSources[id] && detect(toolSources[id]!));
+    }
+  }
 });
