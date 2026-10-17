@@ -271,34 +271,39 @@ export function App() {
         <div class="view">{view}</div>
       </main>
 
+      {/* 寬螢幕分左右兩欄，說明在左，連結與語系在右並靠右對齊。手機上照原本的順序排下來 */}
       <footer class="frame">
-        <p>{t("app.memoryNote")}</p>
-        {offline.ready ? <p data-testid="offline-ready">{t("app.offlineReady")}</p> : null}
-        <AnalyticsChoice />
-        <p>
-          <a href="https://anoni.net/">{t("app.footer.community")}</a>
-          {" · "}
-          <a href="https://github.com/anoni-net/gears">{t("app.footer.source")}</a>
-          {" · "}
-          {/* 站內的頁面不用一般的連結，避免重新載入、清空暫存區 */}
-          <button type="button" class="link" onClick={() => navigate("licenses")}>
-            {t("app.footer.licenses")}
-          </button>
-        </p>
-        <nav class="languages" aria-label={t("app.language")}>
-          {LOCALES.map((l) => (
-            <button
-              key={l.id}
-              type="button"
-              class="link"
-              lang={l.lang}
-              aria-current={l.id === getLocale() ? "true" : undefined}
-              onClick={() => switchLocale(l.id)}
-            >
-              {l.label}
+        <div class="footer-notes">
+          <p>{t("app.memoryNote")}</p>
+          {offline.ready ? <p data-testid="offline-ready">{t("app.offlineReady")}</p> : null}
+          <AnalyticsChoice />
+        </div>
+        <div class="footer-links">
+          <p>
+            <a href="https://anoni.net/">{t("app.footer.community")}</a>
+            {" · "}
+            <a href="https://github.com/anoni-net/gears">{t("app.footer.source")}</a>
+            {" · "}
+            {/* 站內的頁面不用一般的連結，避免重新載入、清空暫存區 */}
+            <button type="button" class="link" onClick={() => navigate("licenses")}>
+              {t("app.footer.licenses")}
             </button>
-          ))}
-        </nav>
+          </p>
+          <nav class="languages" aria-label={t("app.language")}>
+            {LOCALES.map((l) => (
+              <button
+                key={l.id}
+                type="button"
+                class="link"
+                lang={l.lang}
+                aria-current={l.id === getLocale() ? "true" : undefined}
+                onClick={() => switchLocale(l.id)}
+              >
+                {l.label}
+              </button>
+            ))}
+          </nav>
+        </div>
       </footer>
 
       {dragging ? (

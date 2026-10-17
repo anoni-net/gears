@@ -694,6 +694,30 @@ footer p {
   margin: 0.25rem 0;
 }
 
+/* 寬螢幕分左右兩欄：說明在左，連結與語系在右並靠右對齊，寬度照內容，三個連結維持一行 */
+@media (min-width: 52rem) {
+  footer {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) max-content;
+    grid-template-areas: "notes links";
+    column-gap: 3rem;
+    align-items: start;
+  }
+
+  .footer-notes {
+    grid-area: notes;
+  }
+
+  .footer-links {
+    grid-area: links;
+    text-align: right;
+  }
+
+  .footer-links .languages {
+    justify-content: flex-end;
+  }
+}
+
 footer a {
   color: inherit;
 }
