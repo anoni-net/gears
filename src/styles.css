@@ -694,7 +694,33 @@ footer p {
   margin: 0.25rem 0;
 }
 
-footer a {
+/* 寬螢幕分左右兩欄：說明在左，連結與語系在右並靠右對齊，寬度照內容，三個連結維持一行 */
+@media (min-width: 52rem) {
+  footer {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) max-content;
+    grid-template-areas: "notes links";
+    column-gap: 3rem;
+    align-items: start;
+  }
+
+  .footer-notes {
+    grid-area: notes;
+  }
+
+  .footer-links {
+    grid-area: links;
+    text-align: right;
+  }
+
+  .footer-links .languages {
+    justify-content: flex-end;
+  }
+}
+
+/* 頁尾的連結與站內按鈕（授權與來源、語系、不要記錄）統一用文字的顏色加底線 */
+footer a,
+footer button.link {
   color: inherit;
 }
 
@@ -704,6 +730,13 @@ footer .languages {
   flex-wrap: wrap;
   gap: 0.25rem 1rem;
   margin: 0.25rem 0;
+}
+
+footer .languages .icon {
+  width: 1rem;
+  height: 1rem;
+  align-self: center;
+  margin-right: -0.5rem;
 }
 
 footer .languages button[aria-current] {
