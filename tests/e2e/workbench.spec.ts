@@ -72,6 +72,30 @@ test("桌面有暫存區、任務捷徑與兩組工具，沒有檔案時不顯�
   await expect(page.getByRole("button", { name: "回到桌面" })).toHaveCount(0);
 });
 
+test("桌面的圖示標籤：卡片上的圖示帶著補充說明，最下方的圖示說明列出用到的標籤", async ({ page }) => {
+  // 圖示的名稱是按鈕名稱的一部分，讀螢幕軟體唸得到
+  await expect(page.getByRole("button", { name: /^逐字稿 本機模型：辨識用本機模型/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^遮蔽 本機模型：自動尋找人臉與個資時用到/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^QR code 讀取 相機：用相機掃描 QR code/ })).toBeVisible();
+  await expect(page.getByRole("img", { name: "相機：用相機掃描對方螢幕上的 QR code" })).toHaveAttribute("title", "相機：用相機掃描對方螢幕上的 QR code");
+  await expect(page.locator(".cards .tool-tag")).toHaveCount(4);
+
+  const legend = page.getByTestId("tag-legend");
+  await expect(legend.locator("dt")).toHaveText(["本機模型", "相機"]);
+  await expect(legend).toContainText("模型第一次使用時才下載");
+  await expect(legend).toContainText("瀏覽器會先詢問是否允許");
+  // 每個標籤一個代表色，卡片與圖示說明一致，也不會被卡片的灰色文字蓋掉
+  const color = (selector: string) => page.locator(selector).first().evaluate((el) => getComputedStyle(el).color);
+  const muted = await color(".card-text > span");
+  for (const tag of ["model", "camera"]) {
+    expect(await color(`.cards .tag-${tag}`), tag).toBe(await color(`#tag-legend .tag-${tag}`));
+    expect(await color(`.cards .tag-${tag}`), tag).not.toBe(muted);
+  }
+  // 工具標題下方的連結捲到圖示說明
+  await page.getByRole("link", { name: "圖示說明" }).click();
+  await expect(page.getByRole("heading", { name: "圖示說明" })).toBeInViewport();
+});
+
 test("JPEG：找出位置、清除、下載，旋轉方向保留", async ({ page }) => {
   const jpeg = insertIntoJpeg(await canvasImage(page, "image/jpeg"), exifSegment(sampleTiff(6)));
   const withTrailer = concat([jpeg, text("MOTION-PHOTO-SECRET")]);
