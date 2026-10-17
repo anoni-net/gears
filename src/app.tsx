@@ -21,6 +21,8 @@ import { browserDeclines, optedOut, setOptedOut, track, trackView } from "./ui/a
 import { COMMIT, COMMIT_URL, VERSION } from "./version.ts";
 
 const isCreateTool = (id: string) => createTools.some((tool) => tool.id === id);
+// 處理整個暫存區的工具，加入檔案時留在原畫面（CreateTool 的 tray）
+const usesTray = (id: string) => createTools.some((tool) => tool.id === id && tool.tray);
 const isPage = (id: string) => pageIds.includes(id);
 
 // 語言模型速度量測（實驗頁）用到時才載入，桌面維持輕量
@@ -177,13 +179,13 @@ export function App() {
   const [preset, setPreset] = useState<string>();
 
   // 加入檔案之後顯示那個檔案。正在用從空白開始的工具時，先回到桌面。
-  // 查證例外：它整理的就是暫存區裡的檔案，加入之後留在查證的畫面
+  // 處理整個暫存區的工具（查證、面對面傳送）例外：加入的檔案正是要給它用的，留在原畫面
   // 從哪一組的任務或工具加入，記在檔案上，檔案畫面的工具列表把那一組排在前面（src/ui/shelf.ts）。
   // 工具自己產生的檔案不記
   const addFiles = async (files: File[], origin: string | null = null) => {
     if (!files.length) return;
     await tray.add(files, origin, origin ? undefined : groupOf(route));
-    if ((isCreateTool(route) && route !== "verify") || isPage(route)) navigate("");
+    if ((isCreateTool(route) && !usesTray(route)) || isPage(route)) navigate("");
   };
   const dragging = useDropAnywhere((files) => void addFiles(files));
 

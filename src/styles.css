@@ -2470,3 +2470,56 @@ button.link {
   opacity: 0;
   pointer-events: none;
 }
+
+/* 面對面傳送（src/ui/NearbyTool.tsx）：自己的 QR code 與掃描對方的相機，寬螢幕並排 */
+.nearby-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem;
+}
+
+@media (min-width: 48rem) {
+  .nearby-pair {
+    grid-template-columns: minmax(0, 20rem) minmax(0, 1fr);
+    align-items: start;
+  }
+}
+
+.nearby-code textarea,
+.nearby-paste textarea {
+  display: block;
+  width: 100%;
+  margin: 0.5rem 0;
+  font-family: var(--mono, monospace);
+  font-size: 0.85rem;
+  word-break: break-all;
+}
+
+.nearby-paste {
+  margin-top: 0.75rem;
+}
+
+/* 按鈕列跟上面的內容、按鈕列之間都要隔開（.buttons 本身沒有上下間距） */
+.nearby-actions {
+  margin-top: 1.25rem;
+}
+
+.nearby-code details,
+.nearby-paste .buttons,
+.nearby-code .buttons {
+  margin-top: 0.5rem;
+}
+
+.nearby-paste label {
+  display: block;
+}
+
+.nearby progress {
+  width: 100%;
+  max-width: 28rem;
+}
+
+.nearby-review ul {
+  margin: 0.5rem 0;
+  padding-left: 1.25rem;
+}

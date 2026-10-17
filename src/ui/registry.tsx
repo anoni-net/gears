@@ -10,6 +10,7 @@ const loaders: Record<string, () => Promise<ComponentType<CreateToolProps>>> = {
   passphrase: () => import("./PassphraseTool.tsx").then((m) => m.PassphraseTool),
   "url-check": () => import("./UrlCheckTool.tsx").then((m) => m.UrlCheckTool),
   "qr-read": () => import("./QrReadTool.tsx").then((m) => m.QrReadTool),
+  nearby: () => import("./NearbyTool.tsx").then((m) => m.NearbyTool),
   "age-keygen": () => import("./KeygenTool.tsx").then((m) => m.KeygenTool),
   "text-crypt": () => import("./TextCryptTool.tsx").then((m) => m.TextCryptTool),
   verify: () => import("./VerifyTool.tsx").then((m) => m.VerifyTool),

@@ -54,7 +54,7 @@ CI（`.github/workflows/ci.yml`）依瀏覽器拆成四台機器同時執行：C
 
 | | 處理檔案的工具（`fileTools`） | 需要編輯畫面的工具（`editorTools`） | 從空白開始的工具（`createTools`） |
 |---|---|---|---|
-| 例子 | 清除中繼資料 | 遮蔽、縮成常見尺寸、列印追蹤點、HEIC 轉 JPEG、PDF 頁面選取、加密、解密、逐字稿、影片的關鍵影格、文件開啟前檢查 | QR code 產生器與讀取、網址檢查、密語與密碼產生器、age 金鑰產生器、加密文字、查證、信件檢查、寫作習慣檢查、下載的軟體驗證 |
+| 例子 | 清除中繼資料 | 遮蔽、縮成常見尺寸、列印追蹤點、HEIC 轉 JPEG、PDF 頁面選取、加密、解密、逐字稿、影片的關鍵影格、文件開啟前檢查 | QR code 產生器與讀取、網址檢查、密語與密碼產生器、age 金鑰產生器、加密文字、查證、信件檢查、寫作習慣檢查、下載的軟體驗證、面對面傳送 |
 | 介面 | `src/core/tool.ts` 的 `Tool` | `EditorTool`，編輯畫面登記在 `src/ui/registry.tsx` | `CreateTool`，元件登記在 `src/ui/registry.tsx` |
 | 結果 | 暫存區裡那個檔案的新版本 | 同左，由 `tray.addVersion` 加入 | 產出檔案的放進暫存區，產出文字的只顯示在畫面上 |
 
@@ -63,6 +63,8 @@ CI（`.github/workflows/ci.yml`）依瀏覽器拆成四台機器同時執行：C
 需要編輯畫面的工具，讀者在畫面上操作，結果交給 `tray.addVersion`，一樣先解碼檢查再加成新版本。純邏輯（座標換算、加解密）仍然放在 `src/tools/<工具>/`，有單元測試。從工具的網址或任務進來時，選好檔案就直接打開編輯畫面。
 
 從空白開始的工具，元件與它用到的函式庫在打開工具時才下載（`import()`），桌面維持輕量。產出的檔案用 `tray.add(files, 工具 id)` 放進暫存區，版本列會標出是哪個工具建立的。要打開另一個工具並帶入內容（例如把讀到的網址交給網址檢查）用 `onOpenTool`。
+
+處理整個暫存區的工具（查證、面對面傳送）在 `src/tools/index.ts` 設 `tray: true`，在它的畫面加入檔案時留在原畫面，其他從空白開始的工具會回到桌面、打開加入的檔案（`src/app.tsx` 的 `addFiles`）。
 
 ### 檔案畫面的工具列表
 
@@ -192,9 +194,24 @@ PDF 的版本紀錄：每一個 `%%EOF` 是一次存檔的結尾，切到那裡�
 
 查證紀錄可以下載成 Markdown，開頭是產生的時間（裝置的時鐘與時區）與建置的 commit，接著是雜湊值。也可以放進暫存區（來源記成 `verify`，查證只算讀者自己加入的檔案，所以不會算進這一批），接著用 age 加密。紀錄裡有從檔案讀出來的人名與位置，畫面上提醒讀者小心保管。
 
-在查證的畫面加入檔案時留在查證的畫面（`src/app.tsx` 的 `addFiles`），其他從空白開始的工具加入檔案時回到桌面。
+查證處理的是整個暫存區，在它的畫面加入檔案時留在原畫面（見「工具模組」的 `tray`）。
 
 照片讀 EXIF（`extractExif` 支援的格式，`parseExif` 補上了拍攝、數位化、修改三種時間與各自的時區、GPS 的 UTC 時間與縮圖的位置），PDF 用 pdf-lib 讀文件資訊、XMP、簽章與舊版本，Office 讀 `docProps/core.xml` 與 `app.xml`，LibreOffice 讀 `meta.xml`，XMP 在其他格式裡用 `<x:xmpmeta` 搜尋。其他格式用加入暫存區時清除中繼資料的檢查結果，MP4、MOV、M4A 的時間是 UTC。單元測試在 `tests/unit/verify.spec.ts`。本機另外用 Pillow 寫入 EXIF 的照片、python-docx 產生的 Word 與 Chromium 列印的 PDF 驗證過。
+
+## 面對面傳送
+
+兩台裝置在同一個網路裡，用 WebRTC 直接傳暫存區的檔案，不經過任何伺服器（`src/ui/NearbyTool.tsx`）。規格與實測參考文件站的技術驗證（anoni-net/docs#553），程式是在 Gears 重寫的，沒有搬文件站實驗頁的程式碼（授權不同）。
+
+- 連線描述（`src/tools/nearby/codec.ts`，有單元測試）：只開資料通道的 SDP 每次會變的只有 ICE 帳密、DTLS 指紋、候選與 setup 角色，只編這幾個欄位，約 90 到 110 位元組，接收端照固定樣板組回完整的 SDP。Chromium、Firefox、WebKit 互相接受彼此組回的描述（2026-10-17 兩兩互傳實測）。封包以 `GR` 開頭、版本 1，回應帶著對應的發起描述的標記，對不上的不套
+- 候選只留 UDP 的 host，丟掉 loopback、link-local、CGNAT（`100.64.0.0/10`）與 Tailscale（`fd7a:115c:a1e0::/48`）。`iceServers` 是空的，不用 STUN 與 TURN，連線不會走到網際網路
+- 配對：送出端的 QR code 是工作台的網址，連線描述放在 `#` 後面（不會送到伺服器），手機用系統相機掃就直接打開、自動回應，讀完就用 `history.replaceState` 從網址清掉。接收端的回應由送出端頁面裡的相機掃。沒有相機時複製貼上同一段代碼
+- 先開相機、再建立連線描述：Chrome 與 Safari 取得相機權限之後才交出區網位址，只交 mDNS 名稱的話，網路不支援 mDNS 時兩邊都連不上（文件站的實機測試與 GitHub 的 CI 機器都遇過）。送出端本來就要開相機掃回應，接收端在工作台裡掃也是，至少一邊交出區網位址就連得上。接收端用系統相機打開網址時只交 mDNS 名稱，靠送出端的區網位址。Firefox 在無頭的假相機下仍然只交 mDNS 名稱，真的使用者允許相機之後如何還沒驗證，兩台都是 Firefox 又都沒有相機時要靠 mDNS。區網位址只交給面對面配對的對方，Tailscale 與 CGNAT 的位址濾掉
+- 確認碼：兩邊的 DTLS 指紋排序後取 SHA-256，換成 6 位數字（`src/tools/nearby/protocol.ts`）。鏡頭對螢幕換不掉指紋，複製貼上可能經過別人的伺服器，要靠確認碼核對
+- 傳輸（`src/ui/nearby.ts`）：一條有序、可靠的資料通道，先送檔案清單與每個檔案的 SHA-256，接收端的讀者按「接收」才開始傳，別人不能把檔案直接塞過來。64 KB 一塊，`bufferedAmount` 超過 4 MB 就等。接收端邊收邊算 SHA-256，對不上的不放進暫存區。檔名預設跟下載一樣改成 `gears-第幾個`，讀者可以勾選保留原本的檔名（傳給自己的其他裝置時）。接收端的檔案放在記憶體裡，合計上限先抓 1 GB
+- 自己這一側一個可用的位址都沒有時（沒連上網路，或只剩被濾掉的位址），說明要先連上 Wi-Fi 或熱點
+- 15 秒內連不上時說明公共 Wi-Fi 與訪客網路常擋裝置互連，建議開手機熱點。Tor Browser 把 WebRTC 整個關掉，onion 版說明並建議改用 OnionShare。傳送時用 Wake Lock 不讓螢幕關掉
+- 瀏覽器測試（`tests/e2e/nearby.spec.ts`）在同一個瀏覽器開兩個分頁互傳，走複製貼上與「打開送出端的網址」兩條路。Firefox 不處理背景分頁的輸入，操作哪個分頁之前先 `bringToFront()`。CI 的機器沒有 mDNS 解析，Chromium 與 WebKit 給相機權限。GitHub 機器上的 Firefox 蒐集不到任何候選（2026-10-17 確認，位址隱藏關掉也一樣），測試先探測，蒐集不到就略過，所以 Firefox 的配對只在本機驗證。鏡頭掃 QR code 那一條跟 QR code 讀取共用解碼，沒有自動測試
+- 還沒做的：文件站實測過多條並行連線能讓 iPhone 送出從每秒約 5 MB 提高到 37 MB，第一版只用一條連線。接收大檔案時 iPhone 的記憶體上限、切到背景與鎖屏之後連線是否還在，都要在實機上量
 
 ## 影片的關鍵影格
 
@@ -566,7 +583,7 @@ iPhone 預設拍出來的是 HEIC，在網頁上選照片時交出來的也是�
 
 ## 規劃
 
-產品規劃記錄在社群的工作區，還沒有公開。目前完成第一階段：桌面、檔案暫存區，以及清除中繼資料（JPEG、PNG、HEIC、AVIF、WebP、GIF、TIFF、SVG、BMP、PNM、JPEG XL，Word、Excel、PowerPoint、LibreOffice 文件與 PDF，MP3、M4A、MP4、MOV、WAV、AVI、FLAC、Ogg、Opus、MKV、WebM，ZIP、TAR、gzip、EPUB、種子檔、HTML）、遮蔽（圖片與 PDF，可以自動找人臉與個資）、縮成常見尺寸、列印追蹤點、PDF 頁面選取、查證收到的檔案、影片的關鍵影格、文件開啟前檢查、信件檢查、下載的軟體驗證、寫作習慣檢查、逐字稿、加密與解密（檔案與一段文字）、age 金鑰產生器、QR code 產生器與讀取、網址檢查、密語與密碼產生器，可以下載與系統分享，一次處理多個檔案，也可以離線使用。2026-10 起部署在 `anoni.net/gears/`（見上方「部署」）。
+產品規劃記錄在社群的工作區，還沒有公開。目前完成第一階段：桌面、檔案暫存區，以及清除中繼資料（JPEG、PNG、HEIC、AVIF、WebP、GIF、TIFF、SVG、BMP、PNM、JPEG XL，Word、Excel、PowerPoint、LibreOffice 文件與 PDF，MP3、M4A、MP4、MOV、WAV、AVI、FLAC、Ogg、Opus、MKV、WebM，ZIP、TAR、gzip、EPUB、種子檔、HTML）、遮蔽（圖片與 PDF，可以自動找人臉與個資）、縮成常見尺寸、列印追蹤點、PDF 頁面選取、查證收到的檔案、影片的關鍵影格、文件開啟前檢查、信件檢查、下載的軟體驗證、寫作習慣檢查、逐字稿、加密與解密（檔案與一段文字）、面對面傳送、age 金鑰產生器、QR code 產生器與讀取、網址檢查、密語與密碼產生器，可以下載與系統分享，一次處理多個檔案，也可以離線使用。2026-10 起部署在 `anoni.net/gears/`（見上方「部署」）。
 
 ## 第三方資料
 

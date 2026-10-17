@@ -169,6 +169,9 @@ export interface EditorTool {
 export interface CreateTool {
   id: string;
   output: "file" | "text";
+  // 處理整個暫存區的工具（查證、面對面傳送）。在這個工具的畫面加入檔案時留在原畫面，
+  // 其他從空白開始的工具會回到桌面、打開加入的檔案
+  tray?: boolean;
 }
 
 // 檔案結構有問題、無法安全處理時丟出。寧可停下來，也不交出一份沒處理乾淨的檔案。
