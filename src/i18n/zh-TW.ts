@@ -413,6 +413,7 @@ export const zhTW = {
   "nearby.error.timeout": "15 秒內連不上。公共 Wi-Fi 與訪客網路常常不讓裝置互相連線，可以讓其中一台開手機熱點，另一台連上它再試一次。",
   "nearby.error.closed": "連線中斷了，可能是其中一台切到背景或螢幕關掉。請重新開始。",
   "nearby.error.tooLarge": "檔案合計超過 1 GB，接收端的瀏覽器記憶體可能不夠。請分批傳送。",
+  "nearby.error.noNetwork": "找不到這台裝置的區網位址，請確認已經連上 Wi-Fi 或手機熱點，再重新開始。",
   "nearby.error.failed": "傳送時發生錯誤，請重新開始。",
   "file.version.redact": "遮蔽後",
   "file.version.encrypt": "加密後",

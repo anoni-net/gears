@@ -44,11 +44,27 @@ async function finish(sender: Page, receiver: Page, answer: string) {
 }
 
 // 給相機權限：送出端先開相機再建立連線描述，Chromium 與 WebKit 才會交出區網位址，CI 的機器沒有
-// mDNS 解析，只有 mDNS 名稱的話兩個分頁連不上。Firefox 不支援這項權限，改在 playwright.config.ts 處理
+// mDNS 解析，只有 mDNS 名稱的話兩個分頁連不上。Firefox 不支援這項權限
 async function pair(browser: Browser, baseURL: string) {
   const permissions = browser.browserType().name() === "firefox" ? [] : ["camera"];
   const context = await browser.newContext({ baseURL, permissions });
-  return { sender: await context.newPage(), receiver: await context.newPage(), context };
+  const sender = await context.newPage();
+  // GitHub 機器上的 Firefox 蒐集不到任何候選（2026-10-17 在 CI 上確認），連線建不起來，略過
+  await sender.goto("./");
+  const candidates = await sender.evaluate(async () => {
+    const pc = new RTCPeerConnection({ iceServers: [] });
+    pc.createDataChannel("probe");
+    await pc.setLocalDescription();
+    await new Promise((r) => {
+      pc.onicegatheringstatechange = () => pc.iceGatheringState === "complete" && r(0);
+      setTimeout(r, 3000);
+    });
+    const n = pc.localDescription!.sdp.split("\n").filter((l) => l.startsWith("a=candidate")).length;
+    pc.close();
+    return n;
+  });
+  test.skip(!candidates, "這個環境的瀏覽器蒐集不到 WebRTC 的候選");
+  return { sender, receiver: await context.newPage(), context };
 }
 
 test("複製貼上配對，傳兩個檔案，接收端核對 SHA-256 之後放進暫存區", async ({ browser, baseURL }) => {
@@ -112,4 +128,24 @@ test("瀏覽器關掉 WebRTC 時（Tor Browser）說明，建議改用 OnionShar
   await page.addInitScript(() => Object.defineProperty(globalThis, "RTCPeerConnection", { value: undefined, configurable: true }));
   await page.goto("./nearby/");
   await expect(page.getByRole("alert")).toContainText("OnionShare");
+});
+
+test("找不到區網位址時說明要先連上 Wi-Fi 或熱點", async ({ page }) => {
+  // 把自己這一側描述裡的候選拿掉，模擬沒有連上任何網路
+  await page.addInitScript(() => {
+    const original = Object.getOwnPropertyDescriptor(RTCPeerConnection.prototype, "localDescription")!.get!;
+    Object.defineProperty(RTCPeerConnection.prototype, "localDescription", {
+      get(this: RTCPeerConnection) {
+        const d = original.call(this) as RTCSessionDescription | null;
+        return d && { type: d.type, sdp: d.sdp.replace(/^a=candidate:.*\r?\n/gm, "") };
+      },
+    });
+  });
+  await page.goto("./");
+  await page.getByTestId("file-input").setInputFiles({ name: "n.txt", mimeType: "text/plain", buffer: Buffer.from("hello") });
+  await page.getByRole("button", { name: "回到桌面" }).click();
+  await page.getByRole("button", { name: /^面對面傳送/ }).click();
+  await page.getByRole("button", { name: "送出暫存區的檔案" }).click();
+  await page.getByRole("button", { name: "開始配對（1 個檔案）" }).click();
+  await expect(page.getByTestId("nearby-status")).toContainText("找不到這台裝置的區網位址");
 });

@@ -10,6 +10,7 @@ import { useTray } from "./hooks.ts";
 import {
   ConnectTimeoutError,
   type Incoming,
+  NoNetworkError,
   type Pending,
   TooLargeError,
   answerOffer,
@@ -40,7 +41,7 @@ type Phase =
   | { kind: "sent"; ok: boolean[] }
   | { kind: "declined" }
   | { kind: "received"; count: number; failed: number }
-  | { kind: "error"; reason: "timeout" | "closed" | "tooLarge" | "failed" };
+  | { kind: "error"; reason: "timeout" | "closed" | "tooLarge" | "noNetwork" | "failed" };
 
 const size = (n: number) => (n >= 1024 ** 2 ? `${(n / 1024 ** 2).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
 
@@ -160,8 +161,13 @@ export function NearbyTool(_props: CreateToolProps) {
   const fail = (error: unknown) => {
     close(pending.current);
     pending.current = null;
-    const reason = error instanceof ConnectTimeoutError ? "timeout" : error instanceof TooLargeError ? "tooLarge" : (error as Error)?.message === "closed" ? "closed" : "failed";
-    trackFail("nearby", reason === "timeout" ? "network" : reason === "tooLarge" ? "too-large" : "other");
+    const reason =
+      error instanceof ConnectTimeoutError ? "timeout"
+      : error instanceof NoNetworkError ? "noNetwork"
+      : error instanceof TooLargeError ? "tooLarge"
+      : (error as Error)?.message === "closed" ? "closed"
+      : "failed";
+    trackFail("nearby", reason === "timeout" || reason === "noNetwork" ? "network" : reason === "tooLarge" ? "too-large" : "other");
     setPhase({ kind: "error", reason });
   };
 

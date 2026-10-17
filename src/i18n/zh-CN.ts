@@ -405,6 +405,7 @@ export const zhCN: Record<MessageKey, string> = {
   "nearby.error.timeout": "15 秒内连不上。公共 Wi-Fi 与访客网络常常不让设备互相连接，可以让其中一台开手机热点，另一台连上它再试一次。",
   "nearby.error.closed": "连接中断了，可能是其中一台切到后台或屏幕关掉。请重新开始。",
   "nearby.error.tooLarge": "文件合计超过 1 GB，接收端的浏览器内存可能不够。请分批传送。",
+  "nearby.error.noNetwork": "找不到这台设备的局域网地址，请确认已经连上 Wi-Fi 或手机热点，再重新开始。",
   "nearby.error.failed": "传送时发生错误，请重新开始。",
   "file.version.redact": "遮蔽后",
   "file.version.encrypt": "加密后",

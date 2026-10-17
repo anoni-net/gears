@@ -404,6 +404,7 @@ export const en: Record<MessageKey, string> = {
   "nearby.error.timeout": "Couldn't connect within 15 seconds. Public and guest Wi-Fi often stop devices from reaching each other. Turn on a phone hotspot on one device, connect the other to it, and try again.",
   "nearby.error.closed": "The connection dropped, perhaps because one device went to the background or its screen turned off. Please start over.",
   "nearby.error.tooLarge": "The files add up to more than 1 GB, which may be more than the receiving browser's memory can hold. Send them in smaller batches.",
+  "nearby.error.noNetwork": "This device has no local network address. Make sure it's connected to Wi-Fi or a phone hotspot, then start over.",
   "nearby.error.failed": "Something went wrong during the transfer. Please start over.",
   "file.version.redact": "Redacted",
   "file.version.encrypt": "Encrypted",

@@ -24,6 +24,23 @@ const GATHER_TIMEOUT = 3_000;
 const HIGH_WATER = 4 * 1024 * 1024;
 const LOW_WATER = 1024 * 1024;
 
+// 找不到任何區網裡連得到的位址（沒有連上 Wi-Fi，或只剩 loopback 與 Tailscale 這類被濾掉的位址）
+export class NoNetworkError extends Error {
+  constructor() {
+    super("no-network");
+  }
+}
+
+// 解析自己這一側的描述，沒有可用的候選時改丟 NoNetworkError
+function ownDescription(sdp: string, answer: boolean): Description {
+  try {
+    return parseSdp(sdp, answer);
+  } catch (error) {
+    if (error instanceof CodecError && /候選/.test(error.message)) throw new NoNetworkError();
+    throw error;
+  }
+}
+
 export class ConnectTimeoutError extends Error {
   constructor() {
     super("connect-timeout");
@@ -73,7 +90,7 @@ export async function createOffer(): Promise<Pending> {
   const ready = link(pc.createDataChannel("gears", { ordered: true }));
   await pc.setLocalDescription();
   await gathered(pc);
-  const local = parseSdp(pc.localDescription!.sdp, false);
+  const local = ownDescription(pc.localDescription!.sdp, false);
   return { pc, code: toText(encode(local)), local, link: Promise.resolve(ready) };
 }
 
@@ -86,7 +103,7 @@ export async function answerOffer(text: string): Promise<Pending> {
   await pc.setRemoteDescription({ type: "offer", sdp: buildSdp(remote, sessionId()) });
   await pc.setLocalDescription();
   await gathered(pc);
-  const local = { ...parseSdp(pc.localDescription!.sdp, true), tag: offerTag(remote.ufrag) };
+  const local = { ...ownDescription(pc.localDescription!.sdp, true), tag: offerTag(remote.ufrag) };
   return { pc, code: toText(encode(local)), local, remote, link: ready };
 }
 
