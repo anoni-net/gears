@@ -745,7 +745,7 @@ export const zhTW = {
   "email.privacy": "貼上的內容只在你的瀏覽器裡處理，不會送出。",
   "email.input": "原始郵件",
   "email.openFile": "開啟 .eml 檔",
-  "email.clear": "清除",
+  "email.clear": "清空",
   "email.opened": "已開啟 {name}",
   "email.clearFile": "改成貼上",
   "email.howTo": "如何取得原始郵件",

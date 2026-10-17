@@ -7,6 +7,7 @@ import { type MetaChange, metaChanges } from "../tools/verify/diff.ts";
 import { sha256Blob } from "../tools/verify/hash.ts";
 import { type Warning, summarize } from "../tools/verify/summary.ts";
 import { CopyButton } from "./CopyButton.tsx";
+import { Icon } from "./Icon.tsx";
 import { trackFail, useDoneOnce } from "./analytics.ts";
 import { verdictDetail, verdictTitle } from "./EmailTool.tsx";
 import type { Comparison } from "./pdf-compare.ts";
@@ -401,7 +402,9 @@ export function VerifyTool(_: CreateToolProps) {
   const picker = (
     <>
       <input ref={input} type="file" multiple hidden onChange={add} data-testid="verify-input" />
-      <button type="button" class={files.length ? "" : "primary"} onClick={() => input.current?.click()}>
+      {/* 還沒有檔案時跟暫存區的「選擇檔案」同一個樣式，已經有檔案時是一般的按鈕 */}
+      <button type="button" class={files.length ? "" : "primary pick-files"} onClick={() => input.current?.click()}>
+        {files.length ? null : <Icon name="file-upload-outline" />}
         {t(files.length ? "verify.addMore" : "verify.pick")}
       </button>
     </>

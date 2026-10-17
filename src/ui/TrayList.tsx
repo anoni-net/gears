@@ -94,7 +94,7 @@ export function TrayList({ files, selected, onSelect, onPick, busy, failed, comp
       ) : (
         // 選擇檔案是主要的動作，獨立一行。拖放的說明放在按鈕下方，觸控裝置不能拖放檔案，不顯示
         <div class="drop">
-          <button type="button" class="primary pick" onClick={onPick}>
+          <button type="button" class="primary pick-files" onClick={onPick}>
             <Icon name="file-upload-outline" />
             {t("tray.pick")}
           </button>
