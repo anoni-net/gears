@@ -32,9 +32,9 @@ async function sizeOf(page: Page, data: Uint8Array) {
 
 test("縮成常見尺寸：直的照片依高度縮到 1280，輸出 JPEG", async ({ page }) => {
   await page.goto("./blend/");
-  await page.getByTestId("file-input").setInputFiles({ name: "IMG_0001.jpg", mimeType: "image/jpeg", buffer: await photo(page, 3000, 4000) });
-  await expect(page.getByTestId("blend-original")).toHaveText("原圖 3000 × 4000 像素");
-  await expect(page.getByText("輸出 1536 × 2048 像素")).toBeVisible();
+  await page.getByTestId("file-input").setInputFiles({ name: "IMG_0001.jpg", mimeType: "image/jpeg", buffer: await photo(page, 1800, 2400) });
+  await expect(page.getByTestId("blend-original")).toHaveText("原圖 1800 × 2400 像素");
+  await expect(page.getByText("輸出 1200 × 1600 像素")).toBeVisible();
   await page.getByRole("radio", { name: /1280 像素/ }).check();
   await page.getByRole("button", { name: "縮小並重新壓縮" }).click();
   await expect(page.getByText("長邊縮成 1280 像素")).toBeVisible();
