@@ -277,6 +277,20 @@ node scripts/fetch-165.mjs   # 下載並整理成 public/data/165.txt
 
 每個工具有自己的網址，例如 `/gears/qrcode/`，簡體中文與英文在前面加上 `zh-cn/`、`en/`（`/gears/en/qrcode/`）。建置時 `vite.config.ts` 替每個語系、每個工具產生一份 HTML，`lang`、標題、描述與 `noscript` 取自該語系的字串，並列出其他語系的 `hreflang`。內容跟首頁相同，打開之後由 `src/router.ts` 判斷語系與要顯示哪個工具。主機不需要轉址設定。
 
+## 搜尋引擎與分享預覽
+
+每一頁由 `vite.config.ts` 的 `localized` 產生（見上方「網址」），`seoTags` 加上：
+
+- `canonical` 與三個語系的 `hreflang`，`x-default` 指向正體中文
+- Open Graph 與 Twitter 的卡片：標題與描述跟 `meta.<id>.title`、`meta.<id>.description` 相同，圖片每個語系一張
+- 首頁另外有 WebApplication 的結構化資料（`application/ld+json`，瀏覽器不執行，CSP 不必放寬）
+
+建置時也產生 `sitemap.xml`，列出每個語系的每一頁與彼此的 `hreflang`。社群首頁的 `robots.txt`（`anoni-net/www` 的 `templates/robots.txt.j2`）指到這裡。
+
+分享卡片（`og:image`）由 `node scripts/make-og.mjs <輸出目錄>` 產生，不進 repo，上傳到 m6 的 `/srv/images-anoni-net/gears/og/`，網址填進 `src/og-images.json`。檔名帶內容雜湊，改了卡片上的文字或樣式就重新產生一次。
+
+首頁描述（`meta.home.description`）要涵蓋三組工具，新增或改名工具時一起看一次。網頁標題用名詞片語寫出這一頁能做什麼，不必跟桌面上的工具名稱一字不差。
+
 ## 其他欄位的內容
 
 檢查時找到的「其他程式自訂的欄位或識別碼」也列出名稱與內容（`src/tools/strip-metadata/preview.ts`），廠商的私有區段常藏著序號、帳號或裝置的識別碼。文字直接顯示，二進位資料抽出連續 4 個字元以上的可讀字串，抽不到就顯示開頭的 16 個位元組。同一種資訊的不同值逐行列出（`mergeFindings`），超過 8 個只列前 8 個。

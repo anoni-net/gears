@@ -10,6 +10,7 @@ import whisper from "./src/tools/transcribe/models.json" with { type: "json" };
 import { ASSETS_MODELS } from "./src/tools/transcribe/remote.ts";
 import speakerModel from "./src/tools/transcribe/speaker-model.json" with { type: "json" };
 import { ANALYTICS_ENDPOINT } from "./src/ui/analytics-endpoint.ts";
+import ogImages from "./src/og-images.json" with { type: "json" };
 
 // 頁面能連線的對象寫死在 CSP 裡。就算某個相依套件被植入程式，檔案也送不出去，
 // 讀者也能從頁面原始碼自行確認。connect-src 只有自己的網域，之後的伺服器處理與
@@ -68,15 +69,76 @@ function csp(): Plugin {
 const SITE = "https://anoni.net/gears/";
 const escape = (s: string) => s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
 
-function localized(html: string, locale: (typeof LOCALES)[number], id: string) {
+type Locale = (typeof LOCALES)[number];
+const pageUrl = (locale: Locale, id: string) => `${SITE}${locale.prefix}${id ? `${id}/` : ""}`;
+// Open Graph 的語系寫法
+const OG_LOCALE: Record<string, string> = { "zh-TW": "zh_TW", "zh-CN": "zh_CN", en: "en_US" };
+
+// 搜尋引擎與分享預覽用的標籤：canonical、各語系的 hreflang（x-default 指向正體中文）、Open Graph 與
+// Twitter 的卡片（圖片由 scripts/make-og.mjs 產生、放在 assets.anoni.net，網址在 src/og-images.json），
+// 首頁另外加上 WebApplication 的結構化資料
+function seoTags(locale: Locale, id: string, title: string, description: string, meta: Record<string, string>) {
+  const url = pageUrl(locale, id);
+  const image = (ogImages as Record<string, string>)[locale.id]!;
+  const tags = [
+    `<link rel="canonical" href="${url}" />`,
+    ...LOCALES.map((l) => `<link rel="alternate" hreflang="${l.lang}" href="${pageUrl(l, id)}" />`),
+    `<link rel="alternate" hreflang="x-default" href="${pageUrl(LOCALES[0], id)}" />`,
+    `<meta property="og:type" content="website" />`,
+    `<meta property="og:site_name" content="anoni.net Gears" />`,
+    `<meta property="og:title" content="${escape(title)}" />`,
+    `<meta property="og:description" content="${escape(description)}" />`,
+    `<meta property="og:url" content="${url}" />`,
+    `<meta property="og:locale" content="${OG_LOCALE[locale.id]}" />`,
+    ...LOCALES.filter((l) => l.id !== locale.id).map((l) => `<meta property="og:locale:alternate" content="${OG_LOCALE[l.id]}" />`),
+    `<meta property="og:image" content="${image}" />`,
+    `<meta property="og:image:width" content="1200" />`,
+    `<meta property="og:image:height" content="630" />`,
+    `<meta property="og:image:alt" content="${escape(`${meta["app.title"]} Gears`)}" />`,
+    `<meta name="twitter:card" content="summary_large_image" />`,
+  ];
+  if (!id) {
+    // 不是程式，瀏覽器不會執行，CSP 不必放寬。< 換成 \u003c，內容裡的 </script> 才不會提早結束標籤
+    const data = {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      name: title,
+      alternateName: "Gears",
+      url,
+      description,
+      inLanguage: locale.lang,
+      applicationCategory: "UtilitiesApplication",
+      operatingSystem: "Any",
+      browserRequirements: "Requires JavaScript",
+      isAccessibleForFree: true,
+      offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+      publisher: { "@type": "Organization", name: "anoni.net", url: "https://anoni.net/" },
+    };
+    tags.push(`<script type="application/ld+json">${JSON.stringify(data).replace(/</g, "\\u003c")}</script>`);
+  }
+  return tags.join("\n    ");
+}
+
+// 每個語系、每個頁面的網址，sitemap.xml 用
+function sitemap(ids: string[]) {
+  const entries = ids.flatMap((id) =>
+    LOCALES.map((locale) => {
+      const links = [...LOCALES.map((l) => [l.lang, pageUrl(l, id)]), ["x-default", pageUrl(LOCALES[0], id)]]
+        .map(([lang, href]) => `    <xhtml:link rel="alternate" hreflang="${lang}" href="${href}" />`)
+        .join("\n");
+      return `  <url>\n    <loc>${pageUrl(locale, id)}</loc>\n${links}\n  </url>`;
+    }),
+  );
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n${entries.join("\n")}\n</urlset>\n`;
+}
+
+function localized(html: string, locale: Locale, id: string) {
   const meta = messagesOf(locale.id) as Record<string, string>;
   const title = meta[id ? `meta.${id}.title` : "meta.home.title"]!;
   const description = meta[id ? `meta.${id}.description` : "meta.home.description"]!;
-  // 同一頁的其他語系，讓搜尋引擎知道它們是同一份內容
-  const alternates = LOCALES.map((l) => `<link rel="alternate" hreflang="${l.lang}" href="${SITE}${l.prefix}${id ? `${id}/` : ""}" />`).join("\n    ");
   return html
     .replace(/<html lang="[^"]*">/, `<html lang="${locale.lang}">`)
-    .replace(/<title>[^<]*<\/title>/, `<title>${escape(title)}</title>\n    ${alternates}`)
+    .replace(/<title>[^<]*<\/title>/, `<title>${escape(title)}</title>\n    ${seoTags(locale, id, title, description, meta)}`)
     .replace(/<meta name="description" content="[^"]*"/, `<meta name="description" content="${escape(description)}"`)
     .replace(/<noscript>[^<]*<\/noscript>/, `<noscript>${escape(meta["app.noscript"]!)}</noscript>`);
 }
@@ -99,6 +161,7 @@ function toolPages(): Plugin {
           this.emitFile({ type: "asset", fileName: `${locale.prefix}${id ? `${id}/` : ""}index.html`, source: localized(template, locale, id) });
         }
       }
+      this.emitFile({ type: "asset", fileName: "sitemap.xml", source: sitemap(["", ...toolIds, ...pageIds]) });
     },
   };
 }
