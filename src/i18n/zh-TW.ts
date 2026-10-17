@@ -15,7 +15,7 @@ export const zhTW = {
   "app.loading": "載入中…",
   "app.footer.source": "原始碼",
   "app.footer.licenses": "授權與來源",
-  "app.analytics.note": "使用統計：記錄打開哪些工具、處理完成與失敗的次數，送到社群自架的 Umami（aa.anoni.net），不含檔案、檔名與你輸入的內容。",
+  "app.analytics.note": "使用統計只記錄工具的使用次數，不含檔案與你輸入的內容，存放在社群自架的 Umami。",
   "app.analytics.stop": "不要記錄",
   "app.analytics.resume": "恢復記錄",
   "app.analytics.stopped": "這個瀏覽器已經停止記錄。",

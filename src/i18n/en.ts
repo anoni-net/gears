@@ -15,7 +15,7 @@ export const en: Record<MessageKey, string> = {
   "app.loading": "Loading…",
   "app.footer.source": "Source code",
   "app.footer.licenses": "Licenses and sources",
-  "app.analytics.note": "Usage statistics: which tools are opened and how often processing succeeds or fails, sent to the community's self-hosted Umami (aa.anoni.net). No files, file names or anything you type.",
+  "app.analytics.note": "Usage statistics only count how tools are used, never files or what you type, and are kept on the community's self-hosted Umami.",
   "app.analytics.stop": "Don't record",
   "app.analytics.resume": "Resume recording",
   "app.analytics.stopped": "Recording is off in this browser.",
