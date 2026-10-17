@@ -24,18 +24,14 @@ export interface Carry {
   restore(snapshot: TraySnapshot): void;
 }
 
-// 讀者按了「重新載入」才換版本。第一次開啟時 service worker 接手頁面也會觸發
-// controllerchange，那時候重新載入會把剛放進暫存區的檔案清掉
+// 讀者按了「重新載入」（或沒有東西會遺失、分頁切到背景）才換版本
 let requested = false;
-let finishing = false;
 let reloading = false;
 let silent = false;
-// 收到 skipWaiting 的新版本
-let incoming: ServiceWorker | null = null;
 
-// 新版本接手之後通常馬上收到 controllerchange。等著的那一版已經被更新的一版取代、
-// 或瀏覽器沒有切換時收不到，超過這個時間就直接重新載入，按鈕不會停在那裡沒有反應
-const FALLBACK_MS = 4000;
+// 等新版本接手的上限。等著的那一版已經被更新的一版取代、或瀏覽器沒有切換時等不到，
+// 超過這個時間就交給目前的版本暫放、重新載入，按鈕不會停在那裡沒有反應
+const SETTLE_MS = 8000;
 // 交給 service worker 暫放或拿回來，超過這個時間沒有回應就當成失敗
 const ASK_MS = 5000;
 
@@ -53,6 +49,22 @@ function ask<T>(target: ServiceWorker, message: unknown): Promise<T> {
       resolve(event.data as T);
     };
     target.postMessage(message, [channel.port2]);
+  });
+}
+
+// 等這個 service worker 接手完成（activated），或被更新的一版取代（redundant）
+function settle(worker: ServiceWorker): Promise<void> {
+  const done = () => worker.state === "activated" || worker.state === "redundant";
+  if (done()) return Promise.resolve();
+  return new Promise((resolve) => {
+    const finish = () => {
+      clearTimeout(timer);
+      worker.removeEventListener("statechange", check);
+      resolve();
+    };
+    const check = () => done() && finish();
+    const timer = setTimeout(finish, SETTLE_MS);
+    worker.addEventListener("statechange", check);
   });
 }
 
@@ -74,21 +86,20 @@ export function useOffline(idle: boolean, carry: Carry): OfflineState {
     return s[UPDATED] ? "plain" : null;
   });
 
-  // 新版本接手之後，把暫存區交給它暫放再重新載入。暫放失敗就停下來，讓讀者先下載
-  const finish = async () => {
-    if (finishing || reloading) return;
-    finishing = true;
+  // 新版本接手之後，把暫存區交給它暫放再重新載入。暫放失敗就停下來，讓讀者先下載。
+  // 交給重新載入之後會接手的那一個：等新版本接手完成再交給它。不用固定的等待時間，
+  // 電腦忙的時候新版本比較晚接手，交給舊版本的話，它在重新載入的途中就被換掉了。
+  // 新版本沒有接手（被更新的一版取代、或時間到）時交給目前的版本，重新載入不會讓等著的版本接手
+  const finish = async (next: ServiceWorker | null) => {
+    if (next) await settle(next);
     const snapshot = carry.snapshot();
     if (!snapshot) return reload(false);
-    // 交給重新載入之後會接手的那一個。新版本已經開始接手就直接交給它，不等 controllerchange：
-    // 電腦忙的時候超過 FALLBACK_MS 才收到，交給舊版本的話，它在重新載入的途中就被換掉了
-    const target = incoming && ["activating", "activated"].includes(incoming.state) ? incoming : navigator.serviceWorker.controller;
+    const target = next?.state === "activated" ? next : navigator.serviceWorker.controller;
     try {
       if (!target) throw new Error("no service worker");
       await ask(target, { type: "hold", tray: snapshot });
       reload(true);
     } catch {
-      finishing = false;
       setUpdating(false);
       setCarryFailed(true);
     }
@@ -99,13 +110,11 @@ export function useOffline(idle: boolean, carry: Carry): OfflineState {
     requested = true;
     silent = quiet;
     if (!quiet) setUpdating(true);
-    setTimeout(() => void finish(), FALLBACK_MS);
     // 按下時再查一次，提示出現之後可能又有更新的一版裝好了
     const reg = await navigator.serviceWorker.getRegistration(import.meta.env.BASE_URL).catch(() => undefined);
     const next = reg?.waiting ?? (waiting?.state === "installed" ? waiting : null);
-    incoming = next;
-    if (next) next.postMessage("skipWaiting");
-    else void finish();
+    next?.postMessage("skipWaiting");
+    await finish(next);
   };
 
   // 換版本之後的第一次載入：拿回暫存區
@@ -146,13 +155,8 @@ export function useOffline(idle: boolean, carry: Carry): OfflineState {
       })
       .then(() => alive && setReady(true))
       .catch(() => {});
-    const onChange = () => {
-      if (requested) void finish();
-    };
-    sw.addEventListener("controllerchange", onChange);
     return () => {
       alive = false;
-      sw.removeEventListener("controllerchange", onChange);
     };
   }, []);
 

@@ -21,7 +21,7 @@ export const zhTW = {
   "app.analytics.stopped": "這個瀏覽器已經停止記錄。",
   "app.analytics.declined": "你的瀏覽器要求不追蹤，所以不記錄。",
   "app.offlineReady": "工作台已經存在這台裝置的瀏覽器裡，沒有網路也能開啟。",
-  "app.update": "檔案工作台有新版本。重新載入之後，暫存區的檔案會留著。",
+  "app.update": "檔案工作台有新版本。重新載入之後，暫存區的檔案會留著，還沒套用或下載的結果會消失。",
   "app.updateReload": "重新載入",
   "app.updating": "更新中…",
   "app.updated": "已換上新版本。",

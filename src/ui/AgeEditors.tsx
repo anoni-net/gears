@@ -5,12 +5,14 @@ import { decrypt, encrypt, keysAvailable } from "../tools/age/index.ts";
 import { useAgeKey } from "./AgeKeyFields.tsx";
 import { trackFail } from "./analytics.ts";
 import type { FileEditorProps } from "./types.ts";
+import { useWorking } from "./working.ts";
 
 // 加密任何檔案。用密語加密時，完成後用同一組密語解密一次，確認解得回來才交出去。
 export function EncryptEditor({ blob, onDone, onCancel }: FileEditorProps) {
   const { key, fields } = useAgeKey();
   const [armored, setArmored] = useState(false);
   const [status, setStatus] = useState<"idle" | "working" | "failed">("idle");
+  useWorking(status === "working");
 
   const apply = async () => {
     if (!key) return;
@@ -64,6 +66,7 @@ export function EncryptEditor({ blob, onDone, onCancel }: FileEditorProps) {
 export function DecryptEditor({ blob, onDone, onCancel }: FileEditorProps) {
   const [key, setKey] = useState("");
   const [status, setStatus] = useState<"idle" | "working" | "failed">("idle");
+  useWorking(status === "working");
   const usesIdentity = key.includes("AGE-SECRET-KEY-");
   const blocked = usesIdentity && !keysAvailable();
 

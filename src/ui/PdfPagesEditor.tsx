@@ -4,6 +4,7 @@ import { Icon } from "./Icon.tsx";
 import { pdfFailReason, trackFail } from "./analytics.ts";
 import type { PdfPages } from "./pdf-pages.ts";
 import type { FileEditorProps } from "./types.ts";
+import { useWorking } from "./working.ts";
 
 // 選擇要交出去的頁面。縮圖捲進畫面才畫，長的文件不會一打開就把每一頁都畫一次
 const THUMB_SIDE = 240;
@@ -135,6 +136,7 @@ export function PdfPagesEditor({ blob, onDone, onCancel }: FileEditorProps) {
   // 轉成圖片：字型與文字層都不帶過去，其他頁用過的字也就不會留在字型裡
   const [asImages, setAsImages] = useState(false);
   const [building, setBuilding] = useState<[number, number] | null>(null);
+  useWorking(status === "working");
   // 放大中的頁面
   const [zoom, setZoom] = useState<number | null>(null);
 

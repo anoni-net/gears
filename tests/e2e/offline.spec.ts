@@ -4,6 +4,7 @@ import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { extname, join } from "node:path";
 import whisper from "../../src/tools/transcribe/models.json" with { type: "json" };
+import { wav } from "../helpers/audio.ts";
 import { expect, test } from "./guard.ts";
 
 // Playwright 只在 Chromium 支援 service worker 的離線測試
@@ -63,6 +64,9 @@ test.describe("換上新版本", () => {
   let server: Server;
   let port = 0;
   let sw: ((s: string) => string) | null = null;
+  // 模型的請求先擋著不回應，讓逐字稿停在下載模型的階段
+  let holdModels = false;
+  const held: import("node:http").ServerResponse[] = [];
   const dist = join(import.meta.dirname, "../../dist");
   const TYPES: Record<string, string> = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".json": "application/json", ".webmanifest": "application/manifest+json", ".png": "image/png", ".txt": "text/plain" };
 
@@ -70,6 +74,7 @@ test.describe("換上新版本", () => {
     server = createServer(async (req, res) => {
       let path = decodeURIComponent(new URL(req.url!, "http://x").pathname).replace(/^\/gears/, "");
       if (path.endsWith("/")) path += "index.html";
+      if (holdModels && path.startsWith("/models/whisper/")) return void held.push(res);
       try {
         let body: Buffer | string = await readFile(join(dist, path));
         if (path === "/sw.js" && sw) body = sw(body.toString());
@@ -85,6 +90,11 @@ test.describe("換上新版本", () => {
   test.afterAll(() => new Promise<void>((resolve) => server.close(() => resolve())));
   test.beforeEach(() => {
     sw = null;
+    holdModels = false;
+  });
+  // 擋著的請求在測試結束時回應掉，伺服器才關得掉
+  test.afterEach(() => {
+    for (const res of held.splice(0)) res.writeHead(503).end();
   });
   test.use({ baseURL: async ({}, use) => use(`http://127.0.0.1:${port}/gears/`) });
 
@@ -107,7 +117,7 @@ test.describe("換上新版本", () => {
     await addFile(page, "second.txt", "SECOND");
     await page.getByRole("button", { name: /^first\.txt/ }).click();
     await serveNewVersion(page, "e2e-next");
-    await expect(page.getByText("重新載入之後，暫存區的檔案會留著。")).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText("重新載入之後，暫存區的檔案會留著，還沒套用或下載的結果會消失。")).toBeVisible({ timeout: 30_000 });
     const reload = page.getByRole("button", { name: "重新載入" });
     await reload.click();
     await expect(page.getByText("已換上新版本，暫存區的檔案都還在。")).toBeVisible({ timeout: 10_000 });
@@ -166,6 +176,22 @@ test.describe("換上新版本", () => {
     });
     await page.waitForTimeout(1500);
     expect(await page.evaluate(() => caches.keys())).not.toEqual(["gears-e2e-busy"]);
+  });
+
+  test("轉逐字稿的途中不出現換版本的提示，停下來之後才出現", async ({ page }) => {
+    await page.goto("./transcribe/");
+    await expect(page.getByTestId("offline-ready")).toBeVisible({ timeout: 30_000 });
+    await page.getByTestId("file-input").setInputFiles({ name: "talk.wav", mimeType: "audio/wav", buffer: Buffer.from(wav(2)) });
+    await page.getByLabel(/^base：比較快/).check();
+    holdModels = true;
+    await page.getByRole("button", { name: "開始轉逐字稿" }).click();
+    await expect(page.getByRole("button", { name: "停止" })).toBeVisible();
+    await serveNewVersion(page, "e2e-working");
+    await expect.poll(() => page.evaluate(async () => !!(await navigator.serviceWorker.getRegistration())?.waiting), { timeout: 30_000 }).toBe(true);
+    await page.waitForTimeout(500);
+    await expect(page.getByRole("button", { name: "重新載入" })).toBeHidden();
+    await page.getByRole("button", { name: "停止" }).click();
+    await expect(page.getByRole("button", { name: "重新載入" })).toBeVisible();
   });
 
   test("新版本沒辦法暫放暫存區時不重新載入，請讀者先下載", async ({ page }) => {

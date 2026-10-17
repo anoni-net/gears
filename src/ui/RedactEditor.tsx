@@ -11,6 +11,7 @@ import { extractExif, insertExifJpeg, insertExifPng, rebuildExif } from "../tool
 import { exifFindings, parseExif } from "../tools/strip-metadata/exif.ts";
 import type { FileEditorProps } from "./types.ts";
 import type { PdfPages } from "./pdf-pages.ts";
+import { useWorking } from "./working.ts";
 
 // 編輯時畫面上的圖最多 1600 像素寬，框的座標一律存成原圖的像素
 const PREVIEW_MAX = 1600;
@@ -116,6 +117,7 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
     progress?: number | null;
   } | null>(null);
   const [textLines, setTextLines] = useState<Box[]>([]);
+  useWorking(status === "working" || auto?.state === "running" || !!building);
   // 找人臉時「可能是臉」的範圍，畫成虛線，讀者點一下才變成遮蔽框
   const [maybe, setMaybe] = useState<Box[]>([]);
   // 原檔的拍攝資訊（已經重組、拿掉縮圖），沒有時間、地點或型號就不提供保留的選項

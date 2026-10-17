@@ -9,6 +9,7 @@ import { Licenses } from "./ui/Licenses.tsx";
 import { ToolIntro } from "./ui/ToolIntro.tsx";
 import { TrayList } from "./ui/TrayList.tsx";
 import { useOffline } from "./ui/offline.ts";
+import { useAnyWorking } from "./ui/working.ts";
 import { useTray } from "./ui/hooks.ts";
 import { CreateToolView } from "./ui/registry.tsx";
 import { Icon, IconCircle } from "./ui/Icon.tsx";
@@ -178,6 +179,8 @@ export function App() {
   // 從空白開始的工具有讀者輸入的文字或產生的金鑰，不算
   const idle = !state.files.length && !state.busy && (!route || route === "licenses" || isFileTool(route));
   const offline = useOffline(idle, tray);
+  // 轉逐字稿這類工作進行中不出現換版本的提示，重新載入會中斷它，做完才出現
+  const working = useAnyWorking() || state.busy;
 
   let view;
   if (isCreateTool(route)) {
@@ -245,7 +248,7 @@ export function App() {
       <input ref={input} type="file" multiple hidden onChange={onChange} data-testid="file-input" />
 
       {/* 外層的 frame 負責左右留白，提示框本身才有邊框，窄螢幕上不會貼齊螢幕邊緣 */}
-      {offline.update ? (
+      {offline.update && (!working || offline.updating) ? (
         <div class="frame">
           <div class="update-bar" role="status">
             <span>{t(offline.carryFailed ? "app.updateCarryFailed" : "app.update")}</span>

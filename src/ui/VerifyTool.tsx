@@ -31,6 +31,7 @@ import {
   warningDetail,
   warningTitle,
 } from "./verify-report.ts";
+import { useWorking } from "./working.ts";
 
 // 查證：把暫存區裡讀者加入的檔案當成一批，整理出每個檔案的重點與檔案之間的關聯，
 // 比對出需要留意的地方，可以匯出成查證紀錄。一律讀原檔（第一個版本），不看處理過的版本。
@@ -114,6 +115,7 @@ function CompareView({ from, to, before, after }: { from: number; to: number; be
   const [meta, setMeta] = useState<MetaChange[]>([]);
   const [progress, setProgress] = useState<[number, number] | null>(null);
   const [failed, setFailed] = useState(false);
+  useWorking(!result && !failed);
   useEffect(() => {
     let alive = true;
     setResult(null);
@@ -371,6 +373,8 @@ export function VerifyTool(_: CreateToolProps) {
   const input = useRef<HTMLInputElement>(null);
   const key = files.map((f) => f.id).join(",");
   useDoneOnce("verify", results.size > 0);
+  // 大檔案的雜湊值要算一陣子
+  useWorking(files.some((f) => !results.has(f.id) && !failed.has(f.id)));
 
   useEffect(() => {
     let alive = true;
