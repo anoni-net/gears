@@ -7,9 +7,12 @@ test("語言模型速度量測：實驗頁說明下載來源，不進 sitemap，
   await expect(page.getByTestId("bench-remote")).toContainText("Hugging Face 看得到你的 IP 位址");
   await expect(page.getByTestId("bench-env")).toContainText("核心");
   for (const info of Object.values(models)) await expect(page.getByLabel(new RegExp(`^${info.name.replace(".", "\\.")}`))).toBeVisible();
-  // 桌面沒有入口
+  // 桌面沒有入口，從頁尾連過去
   await page.goto("./");
-  await expect(page.getByText("語言模型速度量測")).toHaveCount(0);
+  await expect(page.locator("main").getByText("語言模型速度量測")).toHaveCount(0);
+  await page.getByRole("button", { name: "語言模型速度量測（實驗）" }).click();
+  await expect(page).toHaveURL(/\/gears\/llm-bench\/$/);
+  await expect(page.getByRole("heading", { name: "語言模型速度量測" })).toBeVisible();
 
   const html = await (await request.get("./llm-bench/")).text();
   expect(html).toContain('<meta name="robots" content="noindex" />');

@@ -14,6 +14,7 @@ export const zhTW = {
   "app.loading": "載入中…",
   "app.footer.source": "原始碼",
   "app.footer.licenses": "授權與來源",
+  "app.footer.llmBench": "語言模型速度量測（實驗）",
   "app.analytics.note": "使用統計只記錄工具的使用次數，不含檔案與你輸入的內容，存放在社群自架的 Umami。",
   "app.analytics.stop": "不要記錄",
   "app.analytics.resume": "恢復記錄",

@@ -246,7 +246,7 @@ PDF 的版本紀錄：每一個 `%%EOF` 是一次存檔的結尾，切到那裡�
 
 `/gears/llm-bench/`（`src/ui/LlmBench.tsx`，Worker 是 `src/ui/llm-bench.worker.ts`）在讀者的瀏覽器裡執行小型語言模型，改寫範例文字，量測載入時間、第一個字出現的時間與每秒的詞元數，也用寫作習慣檢查的規則看改寫有沒有少了數字或引述。給社群評估寫作風格的第二層（用語言模型改寫，研究在社群工作區的 `research/gears-llm/`）用，結論是還不能上線，這一頁讓維護者在不同的裝置上持續量測。
 
-- 實驗頁的清單是 `src/pages.ts` 的 `labIds`：桌面不放入口，不進 sitemap，頁面帶 `<meta name="robots" content="noindex">`
+- 實驗頁的清單是 `src/pages.ts` 的 `labIds`：桌面不放入口，只從頁尾連過去，不進 sitemap，頁面帶 `<meta name="robots" content="noindex">`
 - 模型在 `src/tools/llm-bench/models.json`，從 Hugging Face 下載，鎖定 commit，伺服器送的 CSP 只開這幾個下載路徑（跟 large-v3-turbo 一樣）。Transformers.js 有幾處讀檔沒有把 `revision` 傳下去，Worker 直接把 `env.remotePathTemplate` 鎖在這個 commit。畫面上說明 Hugging Face 看得到 IP 位址、瀏覽器與下載了哪個模型
 - 下載的檔案存在 Transformers.js 自己的快取（`transformers-cache`），頁面上可以刪掉。`useWasmCache` 關掉：存了之後 onnxruntime 的載入程式改用 `blob:` 網址載入，CSP 不允許
 - 下載進度由 `env.fetch` 自己計算，不傳 `progress_callback`（理由同逐字稿）

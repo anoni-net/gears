@@ -15,6 +15,7 @@ export const zhCN: Record<MessageKey, string> = {
   "app.loading": "加载中…",
   "app.footer.source": "源代码",
   "app.footer.licenses": "授权与来源",
+  "app.footer.llmBench": "语言模型速度测量（实验）",
   "app.analytics.note": "使用统计只记录工具的使用次数，不含文件与你输入的内容，存放在社区自架的 Umami。",
   "app.analytics.stop": "不要记录",
   "app.analytics.resume": "恢复记录",
