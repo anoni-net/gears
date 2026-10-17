@@ -29,6 +29,8 @@ npm run test:unit    # 只執行單元測試，不需要瀏覽器
 
 第一次執行瀏覽器測試前要下載核心：`npx playwright install chromium webkit firefox`。Linux 上的 WebKit 另外需要系統函式庫，有 sudo 權限時用 `npx playwright install-deps webkit` 安裝，CI 用 `--with-deps` 一併處理。
 
+CI（`.github/workflows/ci.yml`）依瀏覽器拆成四台機器同時執行：Chromium（加上單元測試與型別檢查）、Firefox、WebKit、iPhone。GitHub 的機器只有 4 核心，Playwright 只開 2 個 worker，全部放在一台要 6 分鐘左右。四台都通過才算通過，部署（`deploy.yml`）等的就是它。新增 Playwright 的 project 時，矩陣也要加一列。
+
 開發伺服器沒有 CSP，瀏覽器測試用的是 `vite preview` 提供的正式建置，CSP 會一起生效。
 
 ## 目錄

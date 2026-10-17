@@ -6,6 +6,21 @@ import { stripMetadata } from "../../src/tools/strip-metadata/index.ts";
 import { exifSegment, insertIntoJpeg, insertIntoPng, metadataChunks, sampleTiff, bytes as text } from "../helpers/fixtures.ts";
 import { concat } from "../../src/core/bytes.ts";
 
+// 在遮蔽的畫布上框出一個範圍。用鍵盤操作，跟版面的高度無關：用滑鼠拖拉時，畫布底下可能被
+// 固定在畫面底部的完成列蓋住，CI 沒有中文字型、版面高度跟本機不同，拖拉的位置會落在完成列底下
+async function drawBox(page: Page) {
+  await page.getByRole("application", { name: "要遮蔽的圖片" }).focus();
+  await page.keyboard.press("Enter"); // 出現游標
+  await page.keyboard.press("Shift+ArrowLeft");
+  await page.keyboard.press("Shift+ArrowUp");
+  await page.keyboard.press("Enter"); // 第一個角
+  await page.keyboard.press("Shift+ArrowRight");
+  await page.keyboard.press("Shift+ArrowRight");
+  await page.keyboard.press("Shift+ArrowDown");
+  await page.keyboard.press("Enter");
+  await expect(page.getByText("已經框了 1 個範圍")).toBeVisible();
+}
+
 test.beforeEach(async ({ page }) => {
   await page.goto("./");
 });
@@ -187,13 +202,7 @@ test("做了第二個工具之後，前面處理過的仍標示已處理", async
   await expect(strip.getByText("已處理")).toBeVisible();
   await expect(strip.getByRole("button")).toHaveCount(0);
   await redact.getByRole("button", { name: "開始框選" }).click();
-  // 捲到畫布的頂端：拖拉的範圍不能落在底部固定的完成列底下
-  await page.getByTestId("redact-canvas").evaluate((el) => el.scrollIntoView({ block: "start" }));
-  const b = (await page.getByTestId("redact-canvas").boundingBox())!;
-  await page.mouse.move(b.x + b.width * 0.1, b.y + b.height * 0.1);
-  await page.mouse.down();
-  await page.mouse.move(b.x + b.width * 0.4, b.y + b.height * 0.4);
-  await page.mouse.up();
+  await drawBox(page);
   await page.getByRole("button", { name: "套用遮蔽" }).click();
 
   // 兩個工具都標示已處理，遮蔽可以再框一次。清除之後已經沒有中繼資料，遮蔽這一步不用再說明
@@ -213,14 +222,7 @@ test("先遮蔽：說明中繼資料是重新產生整張圖時一起拿掉的",
   const jpeg = insertIntoJpeg(await canvasImage(page, "image/jpeg"), exifSegment(sampleTiff()));
   await addFile(page, "photo.jpg", "image/jpeg", jpeg);
   await page.getByRole("button", { name: "開始框選" }).click();
-  const canvas = page.getByTestId("redact-canvas");
-  // 捲到畫布的頂端：拖拉的範圍不能落在底部固定的完成列底下
-  await canvas.evaluate((el) => el.scrollIntoView({ block: "start" }));
-  const b = (await canvas.boundingBox())!;
-  await page.mouse.move(b.x + b.width * 0.1, b.y + b.height * 0.1);
-  await page.mouse.down();
-  await page.mouse.move(b.x + b.width * 0.4, b.y + b.height * 0.4);
-  await page.mouse.up();
+  await drawBox(page);
   await page.getByRole("button", { name: "套用遮蔽" }).click();
 
   const note = page.getByTestId("removed-note");

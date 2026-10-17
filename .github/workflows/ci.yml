@@ -9,9 +9,29 @@ permissions:
   contents: read
 
 jobs:
+  # 依瀏覽器拆成四台機器同時跑。GitHub 的機器是 4 核心，Playwright 只開 2 個 worker，
+  # 全部放在一台要 6 分鐘左右。單元測試與型別檢查很快，跟 Chromium 放在同一台。
+  # 四台都通過，這個 workflow 才算通過，deploy.yml 等的就是它
   test:
+    name: test (${{ matrix.name }})
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: chromium
+            projects: --project=unit --project=chromium
+            browser: chromium
+          - name: firefox
+            projects: --project=firefox
+            browser: firefox
+          - name: webkit
+            projects: --project=webkit
+            browser: webkit
+          - name: iphone
+            projects: --project=iphone
+            browser: webkit
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -21,7 +41,8 @@ jobs:
       - run: npm ci
       # 瀏覽器測試用 pillow-heif 產生真的 HEIC（tests/global-setup.ts）
       - uses: astral-sh/setup-uv@v10.3.0
-      - run: npm run typecheck
+      - if: matrix.name == 'chromium'
+        run: npm run typecheck
       # 逐字稿的瀏覽器測試要 Whisper base、分辨說話者的 CAM++ 與 sherpa-onnx 的 WebAssembly（約 80、28、14 MB，不進 repo），依清單快取
       - uses: actions/cache@v6.1.0
         with:
@@ -31,11 +52,11 @@ jobs:
             public/vendor/sherpa
           key: whisper-base-speaker-sherpa-${{ hashFiles('src/tools/transcribe/models.json', 'src/tools/transcribe/speaker-model.json', 'src/tools/transcribe/sherpa-runtime.json') }}
       - run: node scripts/fetch-whisper.mjs base speaker sherpa --no-webgpu
-      - run: npx playwright install --with-deps chromium webkit firefox
-      - run: npm test
+      - run: npx playwright install --with-deps ${{ matrix.browser }}
+      - run: npx playwright test ${{ matrix.projects }}
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
-          name: playwright-results
+          name: playwright-results-${{ matrix.name }}
           path: test-results/
           retention-days: 7
