@@ -1,0 +1,1 @@
+import{y as e}from"./index-iw0UbBBR.js";function t(t){let n=t?.startsWith(`tray:`)?Number(t.slice(5)):NaN;return e.get().files.find(e=>e.id===n)}var n=e=>new File([e.versions.at(-1).blob],e.name);export{t as n,n as t};
