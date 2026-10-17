@@ -41,6 +41,29 @@ function union(boxes: Box[]): Box {
   return { x, y, w: right - x, h: bottom - y };
 }
 
+// 一段文字裡的個資，寫作習慣檢查（src/tools/writing-style/）也用這份規則
+export function findPiiInText(text: string): { kind: PiiKind; start: number; end: number; text: string }[] {
+  const found: { kind: PiiKind; start: number; end: number; text: string }[] = [];
+  const taken = (start: number, end: number) => found.some((f) => f.start < end && f.end > start);
+  for (const [kind, pattern] of PATTERNS) {
+    for (const m of text.matchAll(pattern)) {
+      let match = m[0];
+      let start = m.index;
+      if (kind === "handle") {
+        const at = match.indexOf("@");
+        start += at;
+        match = match.slice(at);
+      }
+      if (kind === "phone" && (digits(match) < 8 || digits(match) > 12)) continue;
+      const trimmed = match.trimEnd();
+      const end = start + trimmed.length;
+      if (taken(start, end)) continue;
+      found.push({ kind, start, end, text: trimmed });
+    }
+  }
+  return found.sort((a, b) => a.start - b.start);
+}
+
 export function findPii(lines: Word[][]): PiiMatch[] {
   const matches: PiiMatch[] = [];
   for (const words of lines) {

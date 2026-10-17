@@ -2216,3 +2216,74 @@ button.link {
   white-space: pre-wrap;
   font-size: 0.85rem;
 }
+
+/* 寫作習慣檢查：可以直接修正的用淡綠，要讀者自己改的用淡橘，個資用淡紅 */
+.writing-style .buttons {
+  margin: 0.75rem 0;
+}
+
+.style-preview {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 0.75rem 1rem;
+  line-height: 1.9;
+}
+
+.style-preview mark {
+  color: inherit;
+  background: color-mix(in srgb, var(--warn) 18%, transparent);
+  border-bottom: 2px solid var(--warn);
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+.style-preview mark.fixable {
+  background: color-mix(in srgb, var(--cat-privacy) 15%, transparent);
+  border-bottom-color: var(--cat-privacy);
+}
+
+.style-preview mark.pii {
+  background: color-mix(in srgb, var(--danger) 15%, transparent);
+  border-bottom-color: var(--danger-text);
+}
+
+.style-groups {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.style-groups > li {
+  border-top: 1px solid var(--line);
+  padding: 0.75rem 0;
+}
+
+.style-groups strong .badge {
+  margin-left: 0.4rem;
+}
+
+.style-groups .hint {
+  margin: 0.25rem 0;
+}
+
+.style-examples {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1rem;
+  padding: 0;
+  margin: 0.25rem 0 0;
+}
+
+.style-examples li {
+  display: flex;
+  gap: 0.4rem;
+  align-items: baseline;
+}
+
+.writing-style .alert {
+  margin-top: 1.25rem;
+}
