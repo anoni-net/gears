@@ -18,6 +18,7 @@ export const TOOL_META: Record<string, { icon: IconName; cat: Category }> = {
   "age-keygen": { icon: "key-plus", cat: "secure" },
   "text-crypt": { icon: "message-lock-outline", cat: "secure" },
   verify: { icon: "file-search-outline", cat: "secure" },
+  "doc-check": { icon: "file-alert-outline", cat: "secure" },
   "email-check": { icon: "email-search-outline", cat: "privacy" },
 };
 
@@ -27,5 +28,5 @@ export const TOOL_META: Record<string, { icon: IconName; cat: Category }> = {
 export const TOOL_GROUPS = [
   { id: "handover", tools: ["strip-metadata", "redact", "heic-to-jpeg", "pdf-pages", "transcribe"] },
   { id: "send", tools: ["encrypt", "decrypt", "text-crypt", "age-keygen", "passphrase", "qrcode"] },
-  { id: "check", tools: ["verify", "email-check", "url-check", "qr-read"] },
+  { id: "check", tools: ["verify", "doc-check", "email-check", "url-check", "qr-read"] },
 ] as const;

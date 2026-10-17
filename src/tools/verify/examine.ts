@@ -364,7 +364,7 @@ function fromFindings(ev: Evidence, findings: Finding[], format: Format) {
   }
 }
 
-const OOXML: Format[] = ["docx", "xlsx", "pptx"];
+const OOXML: Format[] = ["docx", "xlsx", "pptx", "docm", "xlsm", "pptm"];
 const ODF: Format[] = ["odt", "ods", "odp", "odg"];
 
 // findings 是暫存區加入檔案時清除中繼資料檢查的結果，沒有專門讀取的格式用它補上

@@ -54,7 +54,7 @@ CI（`.github/workflows/ci.yml`）依瀏覽器拆成四台機器同時執行：C
 
 | | 處理檔案的工具（`fileTools`） | 需要編輯畫面的工具（`editorTools`） | 從空白開始的工具（`createTools`） |
 |---|---|---|---|
-| 例子 | 清除中繼資料 | 遮蔽、HEIC 轉 JPEG、PDF 頁面選取、加密、解密、逐字稿 | QR code 產生器與讀取、網址檢查、密語與密碼產生器、age 金鑰產生器、加密文字、查證、信件檢查 |
+| 例子 | 清除中繼資料 | 遮蔽、HEIC 轉 JPEG、PDF 頁面選取、加密、解密、逐字稿、文件開啟前檢查 | QR code 產生器與讀取、網址檢查、密語與密碼產生器、age 金鑰產生器、加密文字、查證、信件檢查 |
 | 介面 | `src/core/tool.ts` 的 `Tool` | `EditorTool`，編輯畫面登記在 `src/ui/registry.tsx` | `CreateTool`，元件登記在 `src/ui/registry.tsx` |
 | 結果 | 暫存區裡那個檔案的新版本 | 同左，由 `tray.addVersion` 加入 | 產出檔案的放進暫存區，產出文字的只顯示在畫面上 |
 
@@ -161,6 +161,23 @@ PDF 的版本紀錄：每一個 `%%EOF` 是一次存檔的結尾，切到那裡�
 在查證的畫面加入檔案時留在查證的畫面（`src/app.tsx` 的 `addFiles`），其他從空白開始的工具加入檔案時回到桌面。
 
 照片讀 EXIF（`extractExif` 支援的格式，`parseExif` 補上了拍攝、數位化、修改三種時間與各自的時區、GPS 的 UTC 時間與縮圖的位置），PDF 用 pdf-lib 讀文件資訊、XMP、簽章與舊版本，Office 讀 `docProps/core.xml` 與 `app.xml`，LibreOffice 讀 `meta.xml`，XMP 在其他格式裡用 `<x:xmpmeta` 搜尋。其他格式用加入暫存區時清除中繼資料的檢查結果，MP4、MOV、M4A 的時間是 UTC。單元測試在 `tests/unit/verify.spec.ts`。本機另外用 Pillow 寫入 EXIF 的照片、python-docx 產生的 Word 與 Chromium 列印的 PDF 驗證過。
+
+## 文件開啟前檢查
+
+有些 Word 與 PDF 被做成一打開就連到外面（遠端範本、外部圖片、打開時執行的動作），寄件的人就知道誰在什麼時候、從哪個 IP 打開。記者與公民團體收到不明來源的文件時最需要先確認這件事（`src/tools/doc-check/`，畫面在 `src/ui/DocCheckEditor.tsx`）。只讀檔案的結構，不打開、不執行、不連線，列出的是檔案裡寫了什麼。
+
+| 格式 | 打開時會連線 | 會執行的程式 | 內嵌 |
+|---|---|---|---|
+| Word、Excel、PowerPoint（含有巨集的 docm、xlsm、pptm） | 外部關聯（`TargetMode="External"`）的遠端範本、圖片、頁框、物件、外部連結與合併列印來源，`INCLUDEPICTURE`、`INCLUDETEXT`、`LINK` 欄位裡的網址（指令拆成好幾段 `instrText` 時接起來判斷），Excel 的網頁查詢與資料庫連線 | `vbaProject.bin`、ActiveX、DDE 欄位 | `embeddings/` |
+| LibreOffice | 連結的圖片、物件、表格與章節來源 | `Basic/`、`Scripts/`、綁在文件事件上的巨集，DDE | `Object N/` |
+| PDF | 打開時執行的動作（`OpenAction`、文件與頁面的 `AA`、註解在頁面打開或看得到時的觸發）裡的網址、送出表單與遠端檔案，打開時執行的 JavaScript 裡的網址 | JavaScript（文件層級的名稱樹、各種動作，以及沒有被引用、但檔案裡還有的）、開啟其他程式（`Launch`）、XFA 表單 | 附件（`EmbeddedFiles`、檔案附件註解）、多媒體 |
+| HTML、SVG | 外部的圖片、頁框、樣式、字型、CSS 的 `url()` | `script`、`on*` 屬性 | |
+
+- 連結（點了才會連）另外收在可以展開的清單，網路芳鄰路徑（`\\主機\分享`）另外提醒：Windows 連過去時會自動送出帳號名稱與密碼的雜湊值
+- PDF 可以轉成安全的 PDF：沿用遮蔽的 `buildRedactedPdf`，每一頁畫成圖片再組回去，做法跟 Dangerzone 相同，原檔的程式、連結、表單與內嵌的檔案都不會留下。Office 文件要轉成圖片需要 LibreOffice 的 WebAssembly 版，體積很大，先只寫說明（保護檢視、不要按啟用內容、離線打開或用 Dangerzone）
+- 有巨集的 Office 文件判斷成 `docm`、`xlsm`、`pptm`（`src/core/documents.ts`），清除中繼資料不接受，只清外殼、巨集原樣留著不妥
+- 畫面上寫明「沒有找到不等於一定安全」：實際的行為要看打開的軟體與設定，程式也可能用認不出的方式連線
+- 測試用的文件在 `tests/helpers/tracked-docs.ts`，網域用 `example.*`
 
 ## 信件檢查與信件的查證
 
@@ -437,7 +454,7 @@ iPhone 預設拍出來的是 HEIC，在網頁上選照片時交出來的也是�
 
 ## 規劃
 
-產品規劃記錄在社群的工作區，還沒有公開。目前完成第一階段：桌面、檔案暫存區，以及清除中繼資料（JPEG、PNG、HEIC、AVIF、WebP、GIF、TIFF、SVG、BMP、PNM、JPEG XL，Word、Excel、PowerPoint、LibreOffice 文件與 PDF，MP3、M4A、MP4、MOV、WAV、AVI、FLAC、Ogg、Opus、MKV、WebM，ZIP、TAR、gzip、EPUB、種子檔、HTML）、遮蔽（圖片與 PDF，可以自動找人臉與個資）、PDF 頁面選取、查證收到的檔案、信件檢查、逐字稿、加密與解密（檔案與一段文字）、age 金鑰產生器、QR code 產生器與讀取、網址檢查、密語與密碼產生器，可以下載與系統分享，一次處理多個檔案，也可以離線使用。2026-10 起部署在 `anoni.net/gears/`（見上方「部署」）。
+產品規劃記錄在社群的工作區，還沒有公開。目前完成第一階段：桌面、檔案暫存區，以及清除中繼資料（JPEG、PNG、HEIC、AVIF、WebP、GIF、TIFF、SVG、BMP、PNM、JPEG XL，Word、Excel、PowerPoint、LibreOffice 文件與 PDF，MP3、M4A、MP4、MOV、WAV、AVI、FLAC、Ogg、Opus、MKV、WebM，ZIP、TAR、gzip、EPUB、種子檔、HTML）、遮蔽（圖片與 PDF，可以自動找人臉與個資）、PDF 頁面選取、查證收到的檔案、文件開啟前檢查、信件檢查、逐字稿、加密與解密（檔案與一段文字）、age 金鑰產生器、QR code 產生器與讀取、網址檢查、密語與密碼產生器，可以下載與系統分享，一次處理多個檔案，也可以離線使用。2026-10 起部署在 `anoni.net/gears/`（見上方「部署」）。
 
 ## 第三方資料
 
