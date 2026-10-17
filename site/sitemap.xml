@@ -463,6 +463,27 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/software-verify/" />
   </url>
   <url>
+    <loc>https://anoni.net/gears/nearby/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/nearby/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/nearby/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/nearby/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/nearby/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/zh-cn/nearby/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/nearby/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/nearby/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/nearby/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/nearby/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/en/nearby/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/nearby/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/nearby/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/nearby/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/nearby/" />
+  </url>
+  <url>
     <loc>https://anoni.net/gears/licenses/</loc>
     <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/licenses/" />
     <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/licenses/" />
