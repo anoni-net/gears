@@ -12,6 +12,7 @@ import { navigate } from "../router.ts";
 import { THREAD_OPTIONS, defaultThreads } from "../tools/transcribe/threads.ts";
 import { type AudioStream, TooLargeError, openAudio } from "./audio-stream.ts";
 import { detectGpu } from "./gpu.ts";
+import { wasmAvailable } from "./wasm.ts";
 import type { Reply, Request } from "./transcribe.worker.ts";
 import sherpaWorkerUrl from "./sherpa.worker.ts?worker&url";
 import workerUrl from "./transcribe.worker.ts?worker&url";
@@ -50,6 +51,8 @@ const modelBytes = (id: ModelId, device: Device) => (device === "webgpu" ? MODEL
 // 多執行緒要頁面在 cross-origin isolation 底下，沒有時只能用 1 個
 const THREADS = THREAD_OPTIONS;
 const ISOLATED = typeof crossOriginIsolated !== "undefined" && crossOriginIsolated;
+// 辨識全部靠 WebAssembly。瀏覽器關掉時（鎖定模式）打開就說明，開始的按鈕不能按（見 wasm.ts）
+const NO_WASM = !wasmAvailable();
 const FIREFOX = /Firefox\//.test(navigator.userAgent);
 const DEFAULT_THREADS = ISOLATED
   ? defaultThreads({
@@ -387,13 +390,18 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
         </>
       )}
 
+      {NO_WASM ? (
+        <p class="error" role="alert" data-testid="transcribe-nowasm">
+          {t("wasm.transcribe")}
+        </p>
+      ) : null}
       <div class="buttons">
         {busy ? (
           <button type="button" onClick={stop}>
             {t("transcribe.stop")}
           </button>
         ) : (
-          <button type="button" class="primary" onClick={start}>
+          <button type="button" class="primary" disabled={NO_WASM} onClick={start}>
             {remote ? t("transcribe.remote.start") : phase.kind === "done" ? t("tool.transcribe.again") : t("transcribe.start")}
           </button>
         )}

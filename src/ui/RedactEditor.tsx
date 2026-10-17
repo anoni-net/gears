@@ -7,6 +7,7 @@ import { t } from "../i18n/index.ts";
 import { type Box, boxFromPoints, isDark, isUsable, samplePoints } from "../tools/redact/index.ts";
 import { assertCanvasReadable, isCanvasBlocked } from "./canvas-access.ts";
 import { decodeImage } from "./image-decode.ts";
+import { wasmAvailable } from "./wasm.ts";
 import { overlaps } from "../tools/redact/pii.ts";
 import { extractExif, insertExifJpeg, insertExifPng, rebuildExif } from "../tools/redact/keep-exif.ts";
 import { exifFindings, parseExif } from "../tools/strip-metadata/exif.ts";
@@ -115,7 +116,7 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
   // progress 是 0 到 1，null 表示還在載入模型
   const [auto, setAuto] = useState<{
     kind: "faces" | "text" | "lines";
-    state: "running" | "done" | "failed" | "blocked";
+    state: "running" | "done" | "failed" | "blocked" | "noWasm";
     n: number;
     progress?: number | null;
   } | null>(null);
@@ -354,6 +355,12 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
       setAuto({ kind, state: "done", n: addFound(textLines) });
       return;
     }
+    // 找人臉與辨識文字都是 WebAssembly，瀏覽器關掉時直接說明，不下載模型（見 wasm.ts）
+    if (!wasmAvailable()) {
+      trackFail("redact", "wasm-unavailable");
+      setAuto({ kind, state: "noWasm", n: 0 });
+      return;
+    }
     setAuto({ kind, state: "running", n: 0, progress: null });
     const onProgress = (progress: number | null) =>
       setAuto((a) => (a?.kind === kind && a.state === "running" ? { ...a, progress } : a));
@@ -384,6 +391,7 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
     if (!a) return t("redact.autoNote");
     if (a.state === "failed") return t("redact.findFailed");
     if (a.state === "blocked") return t("canvas.blocked");
+    if (a.state === "noWasm") return t("wasm.find");
     if (a.state === "running") {
       if (a.kind === "faces") return t(a.progress == null ? "redact.loadingFaces" : "redact.findingFaces");
       return t(a.progress == null ? "redact.loadingText" : "redact.findingText");
@@ -461,7 +469,7 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
           換訊息時下面的圖片不會跳動。看得到、唸得出來的只有目前那一則 */}
       <div class="redact-auto-message">
         <div>
-          <p class={auto?.state === "failed" || auto?.state === "blocked" ? "error" : "hint"} role="status" data-testid="redact-auto-status">
+          <p class={auto?.state === "failed" || auto?.state === "blocked" || auto?.state === "noWasm" ? "error" : "hint"} role="status" data-testid="redact-auto-status">
             {autoMessage(auto)}
           </p>
           {maybe.length && auto?.state !== "running" ? (

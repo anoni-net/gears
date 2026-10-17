@@ -3,6 +3,7 @@ import type { Report } from "../core/tool.ts";
 import { t } from "../i18n/index.ts";
 import { assertCanvasReadable, isCanvasBlocked } from "./canvas-access.ts";
 import { decodeImage } from "./image-decode.ts";
+import { isWasmUnavailable } from "./wasm.ts";
 import { trackFail } from "./analytics.ts";
 import type { FileEditorProps } from "./types.ts";
 import { useWorking } from "./working.ts";
@@ -26,7 +27,7 @@ async function toJpeg(blob: Blob): Promise<Blob> {
 }
 
 export function HeicConvert({ blob, onDone, onCancel }: FileEditorProps) {
-  const [status, setStatus] = useState<"idle" | "working" | "failed" | "canvasBlocked">("idle");
+  const [status, setStatus] = useState<"idle" | "working" | "failed" | "canvasBlocked" | "noWasm">("idle");
   useWorking(status === "working");
   const apply = async () => {
     setStatus("working");
@@ -34,9 +35,16 @@ export function HeicConvert({ blob, onDone, onCancel }: FileEditorProps) {
       const report: Report = { removed: [{ code: "reencode" }], kept: [], notes: [{ code: "heic-converted" }] };
       onDone(await toJpeg(blob), report);
     } catch (error) {
-      const blocked = isCanvasBlocked(error);
-      trackFail("heic-to-jpeg", blocked ? "canvas-blocked" : "unsupported");
-      setStatus(blocked ? "canvasBlocked" : "failed");
+      if (isCanvasBlocked(error)) {
+        trackFail("heic-to-jpeg", "canvas-blocked");
+        setStatus("canvasBlocked");
+      } else if (isWasmUnavailable(error)) {
+        trackFail("heic-to-jpeg", "wasm-unavailable");
+        setStatus("noWasm");
+      } else {
+        trackFail("heic-to-jpeg", "unsupported");
+        setStatus("failed");
+      }
     }
   };
   return (
@@ -50,9 +58,9 @@ export function HeicConvert({ blob, onDone, onCancel }: FileEditorProps) {
           {t("redact.cancel")}
         </button>
       </div>
-      {status === "failed" || status === "canvasBlocked" ? (
+      {status === "failed" || status === "canvasBlocked" || status === "noWasm" ? (
         <p class="error" role="alert">
-          {t(status === "failed" ? "heic.failed" : "canvas.blocked")}
+          {t(status === "failed" ? "heic.failed" : status === "noWasm" ? "wasm.heicConvert" : "canvas.blocked")}
         </p>
       ) : null}
     </div>
