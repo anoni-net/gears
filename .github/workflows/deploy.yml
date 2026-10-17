@@ -72,6 +72,10 @@ jobs:
 
       # assets/ 的檔名帶雜湊。上一版的檔案多留一輪：已經開著舊頁面的讀者，之後才載入的
       # 工具還會要舊的檔案，刪掉的話會拿到 404
+      #
+      # rsync 用 --checksum 比對內容。預設只比大小與修改時間，頁面與 sw.js 常常只換了
+      # 雜湊、大小不變，建置與 checkout 又落在同一秒，2026-10-17 就因此沒有複製新的頁面，
+      # 新的程式跟舊的頁面參照到不同的檔案。推送前再用 check-site.mjs 確認參照到的檔案都在
       - name: 推到 build 分支
         run: |
           git config user.name "github-actions[bot]"
@@ -84,13 +88,14 @@ jobs:
           mkdir -p ../out/site/assets ../out/deploy
           keep=$(mktemp)
           { ls dist/assets; cat ../out/deploy/assets.txt 2>/dev/null || true; } | sort -u >"$keep"
-          rsync -a --delete --exclude assets/ dist/ ../out/site/
-          rsync -a dist/assets/ ../out/site/assets/
+          rsync -a --checksum --delete --exclude assets/ dist/ ../out/site/
+          rsync -a --checksum dist/assets/ ../out/site/assets/
           for f in ../out/site/assets/*; do
             grep -qxF "$(basename "$f")" "$keep" || rm "$f"
           done
           ls dist/assets >../out/deploy/assets.txt
           cp deploy/models.txt deploy/nginx-headers.conf ../out/deploy/
+          node scripts/check-site.mjs ../out/site
           cd ../out
           git add -A
           if git diff --cached --quiet; then
