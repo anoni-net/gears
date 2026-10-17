@@ -10,6 +10,7 @@ import { IconCircle } from "./Icon.tsx";
 import { TOOL_META } from "./tool-meta.ts";
 import { useObjectUrl } from "./hooks.ts";
 import { QrContentView } from "./QrContentView.tsx";
+import { canvasReadable } from "./canvas-access.ts";
 import { decodeImage } from "./image-decode.ts";
 import { decodeQrFromBlob } from "./qr-scan.ts";
 import { outputName } from "./output-name.ts";
@@ -18,7 +19,7 @@ import { track } from "./analytics.ts";
 // 預覽圖。Brave、Chrome、Firefox 不能直接顯示 HEIC，載入失敗時改用 libheif 解碼，
 // 畫成 PNG 再顯示。解碼也失敗時說明原因，中繼資料照樣能處理
 function Preview({ url, blob, format }: { url?: string; blob: Blob; format: Version["format"] }) {
-  const [state, setState] = useState<"native" | "decoding" | "decoded" | "broken">("native");
+  const [state, setState] = useState<"native" | "decoding" | "decoded" | "broken" | "canvasBlocked">("native");
   const [decoded, setDecoded] = useState<string>();
   useEffect(() => () => {
     if (decoded) URL.revokeObjectURL(decoded);
@@ -26,6 +27,8 @@ function Preview({ url, blob, format }: { url?: string; blob: Blob; format: Vers
 
   const fallback = async () => {
     if (format !== "heic") return setState("broken");
+    // 解碼之後要從 canvas 輸出成 PNG，瀏覽器不讓讀取時會是一張雜訊圖（見 canvas-access.ts）
+    if (!canvasReadable()) return setState("canvasBlocked");
     setState("decoding");
     try {
       const bitmap = await decodeImage(blob);
@@ -49,6 +52,7 @@ function Preview({ url, blob, format }: { url?: string; blob: Blob; format: Vers
       {state === "decoding" ? <p class="hint">{t("file.decoding")}</p> : null}
       {state === "decoded" ? <img src={decoded} alt="" /> : null}
       {state === "broken" ? <p class="hint">{t("file.noPreview")}</p> : null}
+      {state === "canvasBlocked" ? <p class="hint">{t("canvas.blockedPreview")}</p> : null}
     </figure>
   );
 }
@@ -247,7 +251,8 @@ function QrInImage({ blob, onOpenTool }: { blob: Blob; onOpenTool: Props["onOpen
   useEffect(() => {
     let alive = true;
     setText(null);
-    void decodeQrFromBlob(blob).then((found) => alive && setText(found));
+    // 瀏覽器不讓讀取 canvas 時（Tor Browser）不顯示，讀者沒有要求讀 QR code
+    void decodeQrFromBlob(blob).then((found) => alive && setText(found), () => {});
     return () => {
       alive = false;
     };

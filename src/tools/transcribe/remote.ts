@@ -8,8 +8,11 @@
 
 export const hfUrl = (repo: string, revision: string, file: string) => `https://huggingface.co/${repo}/resolve/${revision}/${file}`;
 
-// 社群轉檔的模型，目錄名稱帶著原始模型的 commit，內容不會變
-export const ASSETS_MODELS = "https://assets.anoni.net/gears/models/";
+import { IS_ONION } from "../../site.ts";
+
+// 社群轉檔的模型，目錄名稱帶著原始模型的 commit，內容不會變。onion 版由同一個 onion 網站
+// 提供（m6 的 nginx 指到同一份檔案），不經過 clearnet
+export const ASSETS_MODELS = IS_ONION ? "/models/assets/" : "https://assets.anoni.net/gears/models/";
 export const assetsUrl = (dir: string, file: string) => `${ASSETS_MODELS}${dir}/${file}`;
 
 // 下載失敗的錯誤訊息都以這個開頭，畫面靠它分辨是下載出了問題

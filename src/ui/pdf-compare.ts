@@ -1,3 +1,4 @@
+import { canvasReadable } from "./canvas-access.ts";
 import { type LineDiff, diffLines } from "../tools/verify/diff.ts";
 import { type PdfPages, openPdf } from "./pdf-pages.ts";
 
@@ -23,6 +24,7 @@ export interface Comparison {
   pages: PageDiff[]; // 只列有差異的頁面
   same: number; // 沒有差異的頁數
   visualSkipped: boolean; // 頁數太多時只比對文字
+  visualBlocked: boolean; // 瀏覽器不讓讀取 canvas（Tor Browser），只比對文字
 }
 
 const SIDE = 1000; // 比對時畫成長邊 1000 像素
@@ -88,7 +90,9 @@ export async function compareVersions(before: Uint8Array, after: Uint8Array, onP
   const [a, b] = await Promise.all([openPdf(before), openPdf(after)]);
   try {
     const total = Math.max(a.count, b.count);
-    const visualSkipped = total > MAX_VISUAL_PAGES;
+    // 讀不到 canvas 的像素時，每一格都會被當成不同，也輸出不了標好差異的圖
+    const visualBlocked = !canvasReadable();
+    const visualSkipped = visualBlocked || total > MAX_VISUAL_PAGES;
     const pages: PageDiff[] = [];
     let same = 0;
     for (let i = 0; i < total; i++) {
@@ -129,7 +133,7 @@ export async function compareVersions(before: Uint8Array, after: Uint8Array, onP
       else same++;
     }
     onProgress?.(total, total);
-    return { pagesBefore: a.count, pagesAfter: b.count, pages, same, visualSkipped };
+    return { pagesBefore: a.count, pagesAfter: b.count, pages, same, visualSkipped, visualBlocked };
   } finally {
     a.close();
     b.close();

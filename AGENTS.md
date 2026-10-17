@@ -12,7 +12,7 @@
 
 ## 支援的瀏覽器
 
-Brave、Safari、Firefox，桌面與手機。iOS 上的瀏覽器都是 WebKit 核心，行為與 Safari 相同。Tor Browser 目前不在支援範圍。
+Brave、Safari、Firefox，桌面與手機。iOS 上的瀏覽器都是 WebKit 核心，行為與 Safari 相同。Tor Browser 用 onion 版，有幾項功能受限，見下方「onion 版與 Tor Browser」。
 
 ## 開發
 
@@ -253,7 +253,7 @@ PDF 的版本紀錄：每一個 `%%EOF` 是一次存檔的結尾，切到那裡�
 | `task` | `task`：桌面任務的 id | `src/app.tsx` 的 `onTask` |
 | `file-add` | `kind`：image、document、pdf、media、archive、email、other | 暫存區的 `added`（`src/state.ts`），只算讀者加入的檔案 |
 | `tool-done` | `tool`：工具 id | 暫存區產生新版本時，從空白開始的工具在結果第一次出現時（`useDoneOnce`），逐字稿在轉完時 |
-| `tool-fail` | `tool`：工具 id 或 `tray`（加入時就讀不了），`reason`：unsupported、broken、too-large、encrypted、not-found、network、stalled、other | 暫存區的 `failed` 與各編輯畫面失敗的地方 |
+| `tool-fail` | `tool`：工具 id 或 `tray`（加入時就讀不了），`reason`：unsupported、broken、too-large、encrypted、not-found、network、stalled、canvas-blocked（瀏覽器不讓讀取 canvas）、other | 暫存區的 `failed` 與各編輯畫面失敗的地方 |
 | `save` | `how`：download、share、zip | 下載連結、`saveBlob`、系統分享、批次的壓縮檔 |
 | `transcribe` | `model`、`device`（cpu、gpu）、`fallback`（顯示卡失敗退回 CPU 時是 1） | 逐字稿轉完時 |
 
@@ -291,8 +291,27 @@ PDF 的版本紀錄：每一個 `%%EOF` 是一次存檔的結尾，切到那裡�
 - 複製到 `build` 分支時 rsync 用 `--checksum` 比對內容，推送前用 `node scripts/check-site.mjs` 確認頁面、`sw.js` 與程式參照到的檔案都在。2026-10-17 曾因 rsync 只比大小與時間，頁面只換了雜湊、大小不變，建置與 checkout 又在同一秒，新的頁面沒有複製過去，`sw.js` 清單裡的檔案也已經刪掉，service worker 裝不起來
 - m6：`/srv/anoni-net-gears/build` 是 `build` 分支的 clone，ubuntu 的 crontab `*/5 * * * * /home/ubuntu/gears-pull.sh`（原始檔 `tools/m6-pull.sh`，改了要再複製一次），log 在 `/home/ubuntu/gears-pull.log`。新版本上線前先把模型下載齊、把標頭換上（`/etc/nginx/snippets/gears-headers.conf`，`nginx -t` 通過才 reload），service worker 預先存的檔案連當時的標頭一起存，順序反過來的話，讀者的 Worker 會一直帶著舊的 CSP
 - nginx 的 location 與快取標頭的範本在 `tools/nginx-gears.conf`，實際設定在 m6 的 `/etc/nginx/conf.d/anoninet.conf`，改了要手動同步。頁面與圖片帶 `no-transform`，Cloudflare 不在頁面注入 Web Analytics 與 JS Detections 的 script，也不用 Polish 重新壓縮圖片。其他檔案不能帶：帶了 `no-transform` 的回應 Cloudflare 完全不壓縮，連 nginx 送出的 gzip 也會解開，讀者取得的是原始大小（`.wasm` 用 `application/wasm` 送出，onnxruntime 的 WebAssembly 壓縮後約小四分之三）。pdf.js 的 `.mjs` 另外指定 JavaScript 的 MIME
-- Cloudflare：Cache Rule「gears respect origin」讓 `/gears/` 的邊緣與瀏覽器都照 nginx 的快取標頭，頁面、manifest 與 165 清單是 `no-cache`，每次回來確認，`sw.js` 另由「docs sw.js no-cache」整個不快取。Transform Rule `onion-anoni.net` 排除 `/gears`，onion 版還沒有規劃（Tor Browser 不在支援範圍），不送 `Onion-Location`
+- Cloudflare：Cache Rule「gears respect origin」讓 `/gears/` 的邊緣與瀏覽器都照 nginx 的快取標頭，頁面、manifest 與 165 清單是 `no-cache`，每次回來確認，`sw.js` 另由「docs sw.js no-cache」整個不快取。Transform Rule `onion-anoni.net` 排除 `/gears`，`onion-gears` 對 `/gears/` 送 `Onion-Location`，指到 onion 版的同一頁（見下方「onion 版與 Tor Browser」）
 - 自己建置時（例如本機預覽）先執行 `node scripts/fetch-165.mjs` 與 `node scripts/fetch-whisper.mjs`
+
+## onion 版與 Tor Browser
+
+網址是 `http://gears.<onion>/`，跟社群其他 onion 服務一樣切成子網域，網站放在根目錄。`GEARS_TARGET=onion npm run build` 建置到 `dist-onion/`，建置目標寫在 `vite.config.ts` 與 `src/site.ts`：
+
+- 頁面只連自己的網域。使用統計在建置時整段拿掉，頁尾寫明不記錄。社群轉檔的模型改由 onion 網站的 `/models/assets/` 提供，m6 的 nginx 指到 `assets.anoni.net` 的同一份檔案。分享卡片的圖片放在 clearnet，不放。逐字稿的 large-v3-turbo 仍然在讀者選擇之後從 Hugging Face 下載，經過 Tor 網路
+- 頁尾連到 onion 的社群首頁
+- `node scripts/check-site.mjs dist-onion / --onion` 檢查頁面、程式、樣式與 manifest 沒有連到 clearnet 的 anoni.net（授權說明的文字檔會寫到出處，不算）。`npm run test:onion` 建置之後在根目錄執行冒煙測試（`tests/onion/`），CI 在 Chromium 那台執行
+- 部署：`deploy.yml` 建置兩份，onion 版推到 `build` 分支的 `onion/`，標頭是 `deploy/nginx-headers-onion.conf`，m6 的拉取腳本換到 `/etc/nginx/snippets/gears-onion-headers.conf`。nginx 的 server block 與快取的對照（`$gears_onion_cache_control`）在 `tools/nginx-gears.conf`
+
+Tor Browser 15.0（Firefox 140 ESR）一般安全等級的實測結果：
+
+- canvas：讀者允許之前，`getImageData` 與 `toBlob` 一律得到亂數，不會報錯。讀者點擊之後的第一次讀取，會在網址列的 canvas 圖示跳出詢問（Allow、Block），允許之後同一個分頁就正常。`src/ui/canvas-access.ts` 讀取之前先畫四個點讀回來比對，讀不到時丟出 `CanvasBlockedError`。QR code 讀取、HEIC 轉 JPEG 與預覽、遮蔽的套用與自動尋找、PDF 轉成圖片、查證的畫面比對都接上，畫面上請讀者允許之後再按一次。不檢查的話 HEIC 與 PDF 會輸出一張雜訊圖。瀏覽器測試（`tests/e2e/canvas-blocked.spec.ts`）把 `getImageData` 換成亂數來模擬
+- 沒有 service worker，不能離線使用，畫面上也不會出現可以離線使用的提示
+- 沒有 cross-origin isolation，逐字稿只能用 1 個核心（實測 15 秒的華語錄音，base 模型 7.5 秒轉完）。沒有 WebGPU 與 `AudioDecoder`，MP4、M4A 整檔解碼（上限 256 MB）
+- 不能用相機，QR code 讀取改選照片
+- 「較安全」等級關掉 JIT，WebAssembly 照樣可以用，只是比較慢。「最安全」等級關掉 JavaScript，只看得到 `noscript` 的說明
+
+在本機用無頭的 Tor Browser 測試：用 `TOR_PROVIDER=none` 啟動、不連 Tor，profile 的 `user.js` 讓本機網址不走代理（`network.proxy.allow_hijacking_localhost` 與 `no_proxies_on`），加上 `--marionette -remote-allow-system-access` 就能用 Marionette 操作頁面與瀏覽器本身。Tor Browser 一直是私密瀏覽、又有 first-party 隔離，允許 canvas 的權限要用分頁的 `contentPrincipal` 加（`Services.perms.addFromPrincipal(p, "canvas", ALLOW_ACTION)`），不能預先寫進 profile。Marionette 與 WebDriver BiDi 不能同時開 session，安全等級改過之後會留在 profile（NoScript 自己也存了一份），換回來要重建 profile。
 
 ## 165 反詐騙清單
 

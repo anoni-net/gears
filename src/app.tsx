@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "preact/hooks";
+import { COMMUNITY_URL, IS_ONION } from "./site.ts";
 import { LOCALES, getLocale, t, tDynamic } from "./i18n/index.ts";
 import { navigate, routeUrl, switchLocale, useRoute } from "./router.ts";
 import { tray } from "./state.ts";
@@ -89,6 +90,7 @@ function ClearButton() {
 // 只說明不記錄，不必提到 Umami
 function AnalyticsChoice() {
   const [off, setOff] = useState(optedOut);
+  if (IS_ONION) return <p data-testid="analytics">{t("app.analytics.onion")}</p>;
   // 英文的句子之間空一格，中文不空
   const sep = getLocale() === "en" ? " " : "";
   if (browserDeclines())
@@ -327,7 +329,7 @@ export function App() {
         </div>
         <div class="footer-links">
           <p>
-            <a href="https://anoni.net/">{t("app.footer.community")}</a>
+            <a href={COMMUNITY_URL}>{t("app.footer.community")}</a>
             {" · "}
             <a href="https://github.com/anoni-net/gears">{t("app.footer.source")}</a>
             {" · "}

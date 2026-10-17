@@ -2,13 +2,14 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import { t } from "../i18n/index.ts";
 import { QrContentView } from "./QrContentView.tsx";
 import { track, trackFail } from "./analytics.ts";
+import { isCanvasBlocked } from "./canvas-access.ts";
 import { decodeQrFromBlob, decodeQrFromVideo } from "./qr-scan.ts";
 import type { CreateToolProps } from "./types.ts";
 
 // 相機畫面與照片都只在瀏覽器裡解讀。相機需要 HTTPS 才能使用。
 export function QrReadTool({ onOpenTool }: CreateToolProps) {
   const [text, setText] = useState<string | null>(null);
-  const [status, setStatus] = useState<"idle" | "scanning" | "reading" | "notFound" | "cameraError">("idle");
+  const [status, setStatus] = useState<"idle" | "scanning" | "reading" | "notFound" | "cameraError" | "canvasBlocked">("idle");
   const video = useRef<HTMLVideoElement>(null);
   const stream = useRef<MediaStream | null>(null);
   const input = useRef<HTMLInputElement>(null);
@@ -73,7 +74,15 @@ export function QrReadTool({ onOpenTool }: CreateToolProps) {
     stop();
     setText(null);
     setStatus("reading");
-    const found = await decodeQrFromBlob(file);
+    let found: string | null;
+    try {
+      found = await decodeQrFromBlob(file);
+    } catch (error) {
+      if (!isCanvasBlocked(error)) throw error;
+      trackFail("qr-read", "canvas-blocked");
+      setStatus("canvasBlocked");
+      return;
+    }
     if (found) track("tool-done", { tool: "qr-read" });
     else trackFail("qr-read", "not-found");
     setText(found);
@@ -106,6 +115,11 @@ export function QrReadTool({ onOpenTool }: CreateToolProps) {
       {status === "notFound" ? (
         <p class="error" role="alert">
           {t("qrread.notFound")}
+        </p>
+      ) : null}
+      {status === "canvasBlocked" ? (
+        <p class="error" role="alert">
+          {t("canvas.blocked")}
         </p>
       ) : null}
       {status === "cameraError" ? (

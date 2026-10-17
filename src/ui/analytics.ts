@@ -4,6 +4,7 @@ import models from "../tools/transcribe/models.json" with { type: "json" };
 import { toolIds } from "../tools/index.ts";
 import { TASKS } from "./tasks.ts";
 import { ANALYTICS_ENDPOINT, ANALYTICS_WEBSITE } from "./analytics-endpoint.ts";
+import { IS_ONION } from "../site.ts";
 
 // 使用統計：送到社群自架的 Umami（aa.anoni.net，網站 anoni-net-gears），看讀者打開哪些工具、
 // 有沒有處理完、在哪裡失敗。不載入 Umami 的 script，由這裡直接送到 /api/send，CSP 也只開這個網址。
@@ -14,6 +15,7 @@ import { ANALYTICS_ENDPOINT, ANALYTICS_WEBSITE } from "./analytics-endpoint.ts";
 //
 // 不送的情況：不在 anoni.net 上（本機預覽與測試）、瀏覽器開了 Do Not Track 或 Global Privacy
 // Control、讀者在頁尾選了不要記錄（存在這個瀏覽器的 localStorage）。送不出去就算了，不重試。
+// onion 版完全不送，建置時整段拿掉（src/site.ts）。
 
 const HOST = "anoni.net";
 const OPT_OUT = "gears-analytics-off";
@@ -65,10 +67,10 @@ const KINDS: Record<string, FileKind> = {
 
 export const fileKind = (format: Format): FileKind => KINDS[format] ?? "other";
 
-// not-found 是讀取 QR code 時圖片裡找不到
-export type FailReason = "unsupported" | "broken" | "too-large" | "encrypted" | "not-found" | "network" | "stalled" | "other";
+// not-found 是讀取 QR code 時圖片裡找不到，canvas-blocked 是瀏覽器不讓讀取 canvas（Tor Browser，見 canvas-access.ts）
+export type FailReason = "unsupported" | "broken" | "too-large" | "encrypted" | "not-found" | "network" | "stalled" | "canvas-blocked" | "other";
 
-const REASONS: FailReason[] = ["unsupported", "broken", "too-large", "encrypted", "not-found", "network", "stalled", "other"];
+const REASONS: FailReason[] = ["unsupported", "broken", "too-large", "encrypted", "not-found", "network", "stalled", "canvas-blocked", "other"];
 
 // 事件與每個欄位允許的值
 export const EVENTS: Record<string, Record<string, readonly string[]>> = {
@@ -136,14 +138,14 @@ export function browserDeclines(): boolean {
 let sessionOff: boolean | null = null;
 
 export function enabled(): boolean {
-  if (location.hostname !== HOST || browserDeclines()) return false;
+  if (IS_ONION || location.hostname !== HOST || browserDeclines()) return false;
   return !(sessionOff ?? optedOut());
 }
 
 let firstView = true;
 
 function send(extra: { name?: string; data?: Record<string, string> }) {
-  if (!enabled()) return;
+  if (IS_ONION || !enabled()) return;
   const payload = {
     website: ANALYTICS_WEBSITE,
     hostname: HOST,

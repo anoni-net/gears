@@ -5,6 +5,7 @@ import type { Format } from "../core/bytes.ts";
 import type { Report } from "../core/tool.ts";
 import { t } from "../i18n/index.ts";
 import { type Box, boxFromPoints, isDark, isUsable, samplePoints } from "../tools/redact/index.ts";
+import { assertCanvasReadable, isCanvasBlocked } from "./canvas-access.ts";
 import { decodeImage } from "./image-decode.ts";
 import { overlaps } from "../tools/redact/pii.ts";
 import { extractExif, insertExifJpeg, insertExifPng, rebuildExif } from "../tools/redact/keep-exif.ts";
@@ -100,6 +101,8 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
   latest.current = boxes;
   const [draft, setDraft] = useState<Box | null>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "working" | "failed" | "decodeFailed">("loading");
+  // 瀏覽器不讓讀取 canvas（Tor Browser）。框留著，讀者允許之後可以再按一次
+  const [canvasBlocked, setCanvasBlocked] = useState(false);
   const start = useRef<[number, number] | null>(null);
   // 畫布上的手指。兩根以上就改成捲動頁面，記下上一次的中點
   const touches = useRef(new Map<number, [number, number]>());
@@ -112,7 +115,7 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
   // progress 是 0 到 1，null 表示還在載入模型
   const [auto, setAuto] = useState<{
     kind: "faces" | "text" | "lines";
-    state: "running" | "done" | "failed";
+    state: "running" | "done" | "failed" | "blocked";
     n: number;
     progress?: number | null;
   } | null>(null);
@@ -355,6 +358,7 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
     const onProgress = (progress: number | null) =>
       setAuto((a) => (a?.kind === kind && a.state === "running" ? { ...a, progress } : a));
     try {
+      assertCanvasReadable();
       const { findFaces, findText } = await import("./redact-detect.ts");
       if (kind === "faces") {
         const { faces, maybe: possible } = await findFaces(bitmap, onProgress);
@@ -366,8 +370,8 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
         const found = kind === "lines" ? lines : pii.map((m) => m.box);
         setAuto({ kind, state: "done", n: addFound(found) || found.length });
       }
-    } catch {
-      setAuto({ kind, state: "failed", n: 0 });
+    } catch (error) {
+      setAuto({ kind, state: isCanvasBlocked(error) ? "blocked" : "failed", n: 0 });
     }
   };
 
@@ -379,6 +383,7 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
     if (status === "loading") return t(isPdf ? "redact.loadingPage" : "redact.loading");
     if (!a) return t("redact.autoNote");
     if (a.state === "failed") return t("redact.findFailed");
+    if (a.state === "blocked") return t("canvas.blocked");
     if (a.state === "running") {
       if (a.kind === "faces") return t(a.progress == null ? "redact.loadingFaces" : "redact.findingFaces");
       return t(a.progress == null ? "redact.loadingText" : "redact.findingText");
@@ -392,7 +397,10 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
   const apply = async () => {
     if ((!bitmap && !pdf) || !total) return;
     setStatus("working");
+    setCanvasBlocked(false);
     try {
+      // 輸出之後要讀回來抽查每個框，瀏覽器不讓讀取 canvas 時輸出也是一張雜訊圖
+      assertCanvasReadable();
       if (pdf) {
         const { buildRedactedPdf } = await import("./pdf-pages.ts");
         const out = await buildRedactedPdf(pdf, pageBoxes, {
@@ -410,10 +418,12 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
         kept: kept ? [{ code: "exif-kept" }] : [],
       };
       onDone(out, report);
-    } catch {
-      trackFail("redact", "broken");
+    } catch (error) {
+      const blocked = isCanvasBlocked(error);
+      trackFail("redact", blocked ? "canvas-blocked" : "broken");
       setBuilding(null);
-      setStatus("failed");
+      setCanvasBlocked(blocked);
+      setStatus(blocked ? "ready" : "failed");
     }
   };
 
@@ -451,7 +461,7 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
           換訊息時下面的圖片不會跳動。看得到、唸得出來的只有目前那一則 */}
       <div class="redact-auto-message">
         <div>
-          <p class={auto?.state === "failed" ? "error" : "hint"} role="status" data-testid="redact-auto-status">
+          <p class={auto?.state === "failed" || auto?.state === "blocked" ? "error" : "hint"} role="status" data-testid="redact-auto-status">
             {autoMessage(auto)}
           </p>
           {maybe.length && auto?.state !== "running" ? (
@@ -536,6 +546,11 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
       {status === "failed" ? (
         <p class="error" role="alert">
           {t("redact.failed")}
+        </p>
+      ) : null}
+      {canvasBlocked ? (
+        <p class="error" role="alert">
+          {t("canvas.blocked")}
         </p>
       ) : null}
       <p class="hint" id="redact-keys">

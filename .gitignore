@@ -1,5 +1,6 @@
 node_modules/
 dist/
+dist-onion/
 test-results/
 playwright-report/
 public/data/
