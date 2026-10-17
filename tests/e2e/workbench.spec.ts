@@ -312,3 +312,13 @@ test("暫存區有檔案、頁面在最上面時，手指往下拉的手勢被�
   await page.evaluate(() => window.scrollTo(0, 200));
   if (await page.evaluate(() => window.scrollY > 0)) expect(await pull(100, 200)).toBe(false); // 頁面不在最上面
 });
+
+test("首頁按清空變成紅底確認時，按鈕不會貼到頁首的底線", async ({ page }) => {
+  const jpeg = insertIntoJpeg(await canvasImage(page, "image/jpeg"), exifSegment(sampleTiff()));
+  await addFile(page, "photo.jpg", "image/jpeg", jpeg);
+  await page.locator(".site-header__home").click();
+  await page.getByRole("button", { name: "清空暫存區" }).click();
+  const armed = (await page.getByRole("button", { name: "再按一次清空" }).boundingBox())!;
+  const header = (await page.locator(".site-header").boundingBox())!;
+  expect(header.y + header.height - (armed.y + armed.height)).toBeGreaterThanOrEqual(4);
+});

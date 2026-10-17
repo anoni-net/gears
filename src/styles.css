@@ -235,6 +235,8 @@ html:lang(en) .site-header__product {
   align-items: center;
   gap: 0 0.25rem;
   margin-left: auto;
+  /* 跟一般狀態的按鈕一樣高。首頁只有清空這一顆時，變成比較矮的紅底確認也不會貼到頁首的底線 */
+  min-height: 3rem;
 }
 
 .site-header__actions button {
