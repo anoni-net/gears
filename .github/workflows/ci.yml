@@ -53,6 +53,9 @@ jobs:
           key: whisper-base-speaker-sherpa-${{ hashFiles('src/tools/transcribe/models.json', 'src/tools/transcribe/speaker-model.json', 'src/tools/transcribe/sherpa-runtime.json') }}
       - run: node scripts/fetch-whisper.mjs base speaker sherpa --no-webgpu
       - run: npx playwright install --with-deps ${{ matrix.browser }}
+      # 影片的關鍵影格的測試影片（H.264 MP4、VP8 WebM）由 tests/global-setup.ts 用 ffmpeg 產生，
+      # GitHub 的 ubuntu 機器沒有預裝
+      - run: sudo apt-get install -y --no-install-recommends ffmpeg
       - run: npx playwright test ${{ matrix.projects }}
       # onion 版（GEARS_TARGET=onion）建得起來、沒有連到 clearnet，網站放在根目錄也打得開
       - if: matrix.name == 'chromium'
