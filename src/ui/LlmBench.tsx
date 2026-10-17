@@ -145,6 +145,8 @@ export function LlmBench() {
       finish();
     };
     const request: BenchRequest = { repo: info.repo, revision: info.revision, device, dtype, threads, texts };
+    // 社群轉檔的模型（src/tools/llm-bench/models.json 的 host 是 assets）從 assets.anoni.net 下載
+    if ("dir" in info) Object.assign(request, { repo: info.dir, assets: { dir: info.dir, files: info.files, parts: info.parts } });
     w.postMessage(request);
   };
 

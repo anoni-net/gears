@@ -1141,7 +1141,7 @@ export const zhTW = {
   "meta.llm-bench.description": "在這台裝置的瀏覽器裡執行小型語言模型，量測載入時間與產生文字的速度。給社群評估寫作風格改寫用的實驗頁。",
   "bench.title": "語言模型速度量測",
   "bench.intro": "這是社群評估寫作風格改寫用的實驗頁，桌面沒有入口。在這台裝置的瀏覽器裡執行小型語言模型，改寫範例文字，量測載入時間、第一個字出現的時間與每秒產生的詞元數，也用寫作習慣檢查的規則看改寫有沒有少了數字或引述。改寫的結果只是參考，模型可能改掉意思。",
-  "bench.remote": "模型從 Hugging Face 下載，Hugging Face 看得到你的 IP 位址、瀏覽器與下載了哪個模型。檔案存在這個瀏覽器的快取，可以用下方的按鈕刪掉。範例文字與你輸入的文字只在這個分頁裡處理，不會送出。",
+  "bench.remote": "模型從 Hugging Face 下載，Hugging Face 看得到你的 IP 位址、瀏覽器與下載了哪個模型。Qwen3 1.7B 是社群轉檔的版本，從 assets.anoni.net 下載，中間經過 Cloudflare。檔案存在這個瀏覽器的快取，可以用下方的按鈕刪掉。範例文字與你輸入的文字只在這個分頁裡處理，不會送出。",
   "bench.probing": "正在檢查這台裝置……",
   "bench.env": "瀏覽器回報 {cores} 個核心，{threads}。顯示卡：{gpu}。",
   "bench.isolated": "可以用多執行緒",

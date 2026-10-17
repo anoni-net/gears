@@ -289,6 +289,7 @@ PDF 的版本紀錄：每一個 `%%EOF` 是一次存檔的結尾，切到那裡�
 
 - 實驗頁的清單是 `src/pages.ts` 的 `labIds`：桌面不放入口，只從頁尾連過去，不進 sitemap，頁面帶 `<meta name="robots" content="noindex">`
 - 模型在 `src/tools/llm-bench/models.json`，從 Hugging Face 下載，鎖定 commit，伺服器送的 CSP 只開這幾個下載路徑（跟 large-v3-turbo 一樣）。Transformers.js 有幾處讀檔沒有把 `revision` 傳下去，Worker 直接把 `env.remotePathTemplate` 鎖在這個 commit。畫面上說明 Hugging Face 看得到 IP 位址、瀏覽器與下載了哪個模型
+- Qwen3 1.7B 改用社群轉檔的版本（`host` 是 `assets`），從 assets.anoni.net 的 `qwen3-1.7b-3231b52/` 下載。onnx-community 的顯示卡版把權重包在單一個 1.43 GB 的 `.onnx` 檔，瀏覽器裡建立推論環境時記憶體不夠（`std::bad_alloc`，2026-10-18 在 Apple M5 Pro 的 Chromium 實測），其他模型都把權重放在另外的 `.onnx_data` 檔。轉檔只把權重改存成外部檔案，權重與計算都沒有修改，外部權重檔再用 `scripts/split-model.mjs` 切成 400 MB 一段，轉檔的做法與實測數字見社群工作區的 `research/gears-llm/02-browser-gpu.md`。Worker 的 `env.fetch` 只下載 `files` 清單上的檔案、比對 SHA-256，切段的檔案沿用逐字稿的 `joinParts`，CSP 不必另外開（assets.anoni.net 的模型目錄已經開了），也不再開這個模型在 Hugging Face 的路徑
 - 下載的檔案存在 Transformers.js 自己的快取（`transformers-cache`），頁面上可以刪掉。`useWasmCache` 關掉：存了之後 onnxruntime 的載入程式改用 `blob:` 網址載入，CSP 不允許
 - 下載進度由 `env.fetch` 自己計算，不傳 `progress_callback`（理由同逐字稿）
 - 瀏覽器裡用 CPU 只有 Qwen3 0.6B 能用（改寫品質不夠，只當 CPU 速度的參考，沒有顯示卡時預設選它）。Qwen3 1.7B 的 4 位元版是單一個 2.15 GB 的檔案，超過瀏覽器能建立的 ArrayBuffer 上限，8 位元版建立推論環境時記憶體不夠（`std::bad_alloc`，WebAssembly 最多 4 GB，還要複製一份模型）。Qwen3.5 的每一種量化版本都用到 WebAssembly 沒有實作的 `GatherBlockQuantized`（Node 的 onnxruntime 有）。Qwen3 4B 只有顯示卡版。顯示卡版的 Qwen3.5 0.8B 在 Chromium 的軟體模擬顯示卡上可以建立並完成改寫
