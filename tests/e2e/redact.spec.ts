@@ -56,7 +56,7 @@ async function pixel(page: Page, x: number, y: number) {
 
 test("從任務選檔案，直接打開遮蔽畫面，塗黑之後產生新版本", async ({ page }) => {
   await page.goto("./");
-  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.getByRole("button", { name: /遮蔽截圖上的名字與電話/ }).click()]);
+  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.getByRole("button", { name: /截圖上的名字與電話/ }).click()]);
   await chooser.setFiles({ name: "chat.png", mimeType: "image/png", buffer: await image(page, "image/png") });
   await expect(page.getByTestId("redact-canvas")).toBeVisible();
 

@@ -48,7 +48,7 @@ test("頁面瀏覽、任務、加入檔案、處理完成與下載，不含檔�
 
   const jpeg = insertIntoJpeg(await canvasJpeg(page), exifSegment(sampleTiff(1)));
   const chooser = page.waitForEvent("filechooser");
-  await page.getByRole("button", { name: /分享照片與影片前/ }).click();
+  await page.getByRole("button", { name: /照片與影片的拍攝位置/ }).click();
   await (await chooser).setFiles({ name: "IMG_SECRET_NAME.jpg", mimeType: "image/jpeg", buffer: Buffer.from(jpeg) });
   await page.getByRole("button", { name: "清除", exact: true }).click();
   await expect(page.getByText("沒有找到可能透露身分的中繼資料。")).toBeVisible();
@@ -81,13 +81,13 @@ test("頁尾選了不要記錄之後就不送，重新整理也一樣", async ({
   await expect.poll(() => sent.length).toBe(1);
   await page.getByTestId("analytics").getByRole("button", { name: "不要記錄" }).click();
   await expect(page.getByTestId("analytics")).toContainText("這個瀏覽器已經停止記錄。");
-  await page.getByRole("button", { name: /這封信真的是他寄的嗎/ }).click();
+  await page.getByRole("button", { name: /可疑的通知信/ }).click();
   await page.goto(home);
   await expect(page.getByTestId("analytics").getByRole("button", { name: "恢復記錄" })).toBeVisible();
   await page.waitForTimeout(500);
   expect(sent.length).toBe(1);
 
   await page.getByTestId("analytics").getByRole("button", { name: "恢復記錄" }).click();
-  await page.getByRole("button", { name: /這封信真的是他寄的嗎/ }).click();
+  await page.getByRole("button", { name: /可疑的通知信/ }).click();
   await expect.poll(() => sent.map((s) => s.name ?? s.url)).toEqual(["/gears/", "task", "/gears/email-check/"]);
 });

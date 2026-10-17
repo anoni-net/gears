@@ -11,7 +11,7 @@ import { useDoneOnce } from "./analytics.ts";
 import { useScamList } from "./scam-list-loader.ts";
 import { formatSize, timeText } from "./verify-report.ts";
 
-// 看懂這封信：貼上原始郵件或開啟 .eml 檔，用白話說明寄件人是誰、實際從哪裡寄出、
+// 信件檢查：貼上原始郵件或開啟 .eml 檔，用白話說明寄件人是誰、實際從哪裡寄出、
 // 寄件驗證有沒有通過、回覆地址有沒有被換掉。只讀信裡已經記下的結果，不連網，
 // 信裡的網址交給網址檢查。查證工具讀 .eml 用的是同一套解析（src/tools/email/）。
 

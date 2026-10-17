@@ -10,7 +10,7 @@ test.beforeEach(async ({ page }) => {
 
 test("從任務貼上冒用的信：驗證沒有通過、需要留意的地方、連結交給網址檢查", async ({ page }) => {
   await page.goto("./");
-  await page.getByRole("button", { name: /這封信真的是他寄的嗎/ }).click();
+  await page.getByRole("button", { name: /可疑的通知信/ }).click();
   await page.getByTestId("email-input").fill(PHISH_EML);
 
   const verdict = page.getByTestId("email-verdict");

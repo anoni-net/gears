@@ -46,8 +46,8 @@ async function previewLoaded(page: Page) {
 test("桌面有暫存區、任務捷徑與兩組工具，沒有檔案時不顯示清空按鈕", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "檔案工作台" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "暫存區" })).toBeVisible();
-  await expect(page.getByRole("button", { name: /分享照片與影片前，拿掉拍攝位置/ })).toBeVisible();
-  await expect(page.getByRole("button", { name: /把 Wi-Fi 密碼傳給朋友/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /照片與影片的拍攝位置/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /給朋友的 Wi-Fi 密碼/ })).toBeVisible();
   await expect(page.getByRole("heading", { name: "交出去之前" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "安全地傳送" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "檢查收到的" })).toBeVisible();
@@ -93,7 +93,7 @@ test("退回上一步，再清空暫存區", async ({ page }) => {
   await page.getByRole("button", { name: "清空暫存區" }).click();
   await expect(page.locator(".tray .item")).toHaveCount(1);
   await page.getByRole("button", { name: "再按一次清空" }).click();
-  await expect(page.getByRole("button", { name: /分享照片與影片前，拿掉拍攝位置/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /照片與影片的拍攝位置/ })).toBeVisible();
   await expect(page.locator(".tray .item")).toHaveCount(0);
   await expect(page.getByText("把檔案拖進來，或")).toBeVisible();
 });
@@ -236,6 +236,6 @@ test("手機點過頁首的 logo 之後，名稱底下不會留著底線", async
   test.skip(!isMobile, "觸控裝置點過之後 :hover 會一直留著");
   await page.goto("./qrcode/");
   await page.locator(".site-header__logo").tap();
-  await expect(page.getByRole("heading", { name: "想做什麼" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "常見的情況" })).toBeVisible();
   await expect(page.locator(".site-header__product")).toHaveCSS("text-decoration-line", "none");
 });
