@@ -322,3 +322,10 @@ test("首頁按清空變成紅底確認時，按鈕不會貼到頁首的底線",
   const header = (await page.locator(".site-header").boundingBox())!;
   expect(header.y + header.height - (armed.y + armed.height)).toBeGreaterThanOrEqual(4);
 });
+
+test("首頁沒有檔案時，頁首沒有空白的操作列", async ({ page }) => {
+  await expect(page.locator(".site-header__actions")).toBeHidden();
+  const header = (await page.locator(".site-header").boundingBox())!;
+  const title = (await page.locator(".site-header__title").boundingBox())!;
+  expect(header.height - title.height).toBeLessThan(8);
+});

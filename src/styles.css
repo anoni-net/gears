@@ -239,6 +239,11 @@ html:lang(en) .site-header__product {
   min-height: 3rem;
 }
 
+/* 首頁、暫存區是空的時候沒有任何操作，不佔位置（手機上不會多出空白的第二列） */
+.site-header__actions:empty {
+  display: none;
+}
+
 .site-header__actions button {
   display: inline-flex;
   align-items: center;
