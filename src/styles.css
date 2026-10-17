@@ -1014,9 +1014,20 @@ footer .languages button[aria-current] {
   align-items: flex-start;
 }
 
+.segmented label:hover {
+  border-color: var(--accent);
+}
+
+/* 選到的除了框線加粗，再加上淡淡的底色，一整排裡一眼看得出來 */
 .segmented label:has(input:checked) {
   border-color: var(--accent);
   box-shadow: 0 0 0 1px var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+  font-weight: 600;
+}
+
+.segmented:disabled label {
+  cursor: default;
 }
 
 .qr-preview {
@@ -1522,6 +1533,56 @@ footer .languages button[aria-current] {
 }
 
 /* 逐字稿 */
+
+/* 語言、模型、勾選框、核心數這幾組之間留一樣的距離 */
+.transcribe > fieldset,
+.transcribe > .check {
+  margin-top: 1.25rem;
+}
+
+/* 模型與勾選框做成整塊可以點的卡片：讀者不必瞄準小圓圈，選到的有底色與加粗的框線 */
+.transcribe .choices .check,
+.transcribe > .check {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 0.6rem 0.8rem;
+  margin-bottom: 0.5rem;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.transcribe .choices .check:hover,
+.transcribe > .check:hover {
+  border-color: var(--accent);
+}
+
+.transcribe .choices .check:has(input:checked),
+.transcribe > .check:has(input:checked) {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+}
+
+.transcribe .choices .check:has(input:focus-visible),
+.transcribe > .check:has(input:focus-visible) {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.transcribe .choices:disabled .check,
+.transcribe > .check:has(input:disabled) {
+  cursor: default;
+}
+
+/* 開始與取消、轉完之後的下載與複製：按鈕之間留距離，窄螢幕時換行 */
+.transcribe .buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 1.25rem 0 0.75rem;
+}
+
 .choices {
   border: 0;
   padding: 0;
@@ -1572,7 +1633,8 @@ footer .languages button[aria-current] {
   margin: 0.4rem 0;
 }
 
-.transcribe-models strong {
+.transcribe-models strong,
+.transcribe-models li span {
   display: block;
 }
 
