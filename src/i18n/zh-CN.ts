@@ -16,7 +16,7 @@ export const zhCN: Record<MessageKey, string> = {
   "app.loading": "加载中…",
   "app.footer.source": "源代码",
   "app.footer.licenses": "授权与来源",
-  "app.analytics.note": "使用统计：记录打开哪些工具、处理完成与失败的次数，发送到社区自架的 Umami（aa.anoni.net），不含文件、文件名与你输入的内容。",
+  "app.analytics.note": "使用统计只记录工具的使用次数，不含文件与你输入的内容，存放在社区自架的 Umami。",
   "app.analytics.stop": "不要记录",
   "app.analytics.resume": "恢复记录",
   "app.analytics.stopped": "这个浏览器已经停止记录。",
