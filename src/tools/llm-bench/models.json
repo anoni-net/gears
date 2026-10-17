@@ -5,6 +5,36 @@
     "source": "https://huggingface.co/Qwen/Qwen3-1.7B",
     "license": "Apache-2.0",
     "name": "Qwen3 1.7B",
+    "host": "assets",
+    "dir": "qwen3-1.7b-3231b52",
+    "files": {
+      "config.json": "d1b8c9eaf3e0a725cf153483256cc1491023773e7271f6cd9f059421f90d7f89",
+      "generation_config.json": "9e9e031ae8bca36eefcdcdd0b35d83c61baa01e31d68d5f5a961c9ca1a4b95bf",
+      "tokenizer.json": "e7a95fce95bf5b0946d0ddb3f9d7caa030b7e850bbe92b0edb26bcf563e9f3d5",
+      "tokenizer_config.json": "7c5194eecfd95a4dcbd6b4b502af785d2541fd65a388d1cae7ad43693c67b802",
+      "onnx/model_q4f16.onnx": "6f557d749389be0915654c74743455fe50475473a95743bd6c70db4539a3a673",
+      "onnx/model_q4f16.onnx_data": "be35d3a5656cd1c9f19bd9768c7c451805db1b16326ede9e2c78d30db7684146"
+    },
+    "parts": {
+      "onnx/model_q4f16.onnx_data": [
+        {
+          "sha256": "eced81315902506ba98de583a7e901a7eb0d1bd920a4ff6d049cae66f8fc9594",
+          "bytes": 400000000
+        },
+        {
+          "sha256": "caa916b312c227bd461bd0adc3ad0dd517724d023e16508f4f151a26d01e1735",
+          "bytes": 400000000
+        },
+        {
+          "sha256": "7685174927455982140e5d01ef45c7a42bc7fd88401da684baa002aa7c1ebfd9",
+          "bytes": 400000000
+        },
+        {
+          "sha256": "d8ca36c1b8c5e7653b4d775d497bb7c68d6226db472204d08964b31338aca277",
+          "bytes": 225772544
+        }
+      ]
+    },
     "gpu": {
       "dtype": "q4f16",
       "bytes": 1430000000
@@ -17,6 +47,7 @@
     "source": "https://huggingface.co/Qwen/Qwen3.5-2B",
     "license": "Apache-2.0",
     "name": "Qwen3.5 2B",
+    "host": "hf",
     "gpu": {
       "dtype": "q4f16",
       "bytes": 1580000000
@@ -29,6 +60,7 @@
     "source": "https://huggingface.co/Qwen/Qwen3-4B",
     "license": "Apache-2.0",
     "name": "Qwen3 4B",
+    "host": "hf",
     "gpu": {
       "dtype": "q4f16",
       "bytes": 2830000000
@@ -41,6 +73,7 @@
     "source": "https://huggingface.co/Qwen/Qwen3.5-0.8B",
     "license": "Apache-2.0",
     "name": "Qwen3.5 0.8B",
+    "host": "hf",
     "gpu": {
       "dtype": "q4f16",
       "bytes": 650000000
@@ -53,6 +86,7 @@
     "source": "https://huggingface.co/Qwen/Qwen3-0.6B",
     "license": "Apache-2.0",
     "name": "Qwen3 0.6B",
+    "host": "hf",
     "gpu": {
       "dtype": "q4f16",
       "bytes": 570000000

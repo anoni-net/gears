@@ -1120,7 +1120,7 @@ export const zhCN: Record<MessageKey, string> = {
   "meta.llm-bench.description": "在这台设备的浏览器里运行小型语言模型，测量加载时间与生成文字的速度。给社区评估写作风格改写用的实验页。",
   "bench.title": "语言模型速度测量",
   "bench.intro": "这是社区评估写作风格改写用的实验页，桌面没有入口。在这台设备的浏览器里运行小型语言模型，改写示例文字，测量加载时间、第一个字出现的时间与每秒生成的词元数，也用写作习惯检查的规则看改写有没有少了数字或引述。改写的结果只是参考，模型可能改掉意思。",
-  "bench.remote": "模型从 Hugging Face 下载，Hugging Face 看得到你的 IP 地址、浏览器与下载了哪个模型。文件存在这个浏览器的缓存，可以用下方的按钮删掉。示例文字与你输入的文字只在这个标签页里处理，不会送出。",
+  "bench.remote": "模型从 Hugging Face 下载，Hugging Face 看得到你的 IP 地址、浏览器与下载了哪个模型。Qwen3 1.7B 是社区转换的版本，从 assets.anoni.net 下载，中间经过 Cloudflare。文件存在这个浏览器的缓存，可以用下方的按钮删掉。示例文字与你输入的文字只在这个标签页里处理，不会送出。",
   "bench.probing": "正在检查这台设备……",
   "bench.env": "浏览器回报 {cores} 个核心，{threads}。显卡：{gpu}。",
   "bench.isolated": "可以用多线程",

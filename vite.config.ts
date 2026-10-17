@@ -59,7 +59,9 @@ const HEADER_CSP = policy(
     ...Object.values(whisper)
       .filter((m) => m.host === "hf")
       .map((m) => `https://huggingface.co/${m.repo}/resolve/${m.revision}/`),
-    ...Object.values(benchModels).map((m) => `https://huggingface.co/${m.repo}/resolve/${m.revision}/`),
+    ...Object.values(benchModels)
+      .filter((m) => m.host === "hf")
+      .map((m) => `https://huggingface.co/${m.repo}/resolve/${m.revision}/`),
     "https://*.hf.co",
     ...(ONION ? [] : [ASSETS_MODELS]),
   ].join(" "),
