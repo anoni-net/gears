@@ -4,8 +4,8 @@
 // 只存工作台自己的檔案（頁面、程式、圖示、165 清單），讀者放進暫存區的檔案從來不經過
 // 這裡，也不會被寫進任何快取。人臉與文字辨識的模型很大，用到時才存。
 
-const VERSION = "2882ea62f3c54445";
-const FILES = ["age-keygen/index.html","assets/AgeEditors-gCm7LaUP.js","assets/AgeKeyFields-Cyu8J3H4.js","assets/EmailTool-DtMEss3f.js","assets/HeicConvert-ClcojAU-.js","assets/KeygenTool-Dr6sIf9b.js","assets/PassphraseTool-DmuMTbFQ.js","assets/PdfPagesEditor-Deb_-7vj.js","assets/QrReadTool-CL4-ySGR.js","assets/QrTool-BIafJdHP.js","assets/RedactEditor-mYyAEo0v.js","assets/TextCryptTool-B36hSTHc.js","assets/TranscribeEditor-R9Xtzhsm.js","assets/UrlCheckTool-115ipDG_.js","assets/VerifyTool-BkPEwCC5.js","assets/age-BRthVgOk.js","assets/asian-diceware-7776-B6etXB3N.js","assets/cn2t-Dj0Mm1HJ.js","assets/heif-wasm-5j_bKUa8.js","assets/index-BYkDPHSN.css","assets/index-DrtdWjhr.js","assets/jsQR-BFC9zyzC.js","assets/jsxRuntime-B9_0b-nI.js","assets/keep-exif-cPBCgNhp.js","assets/libheif-BfiPCEgt.wasm","assets/libheif-CgtyKh8t.txt","assets/material-design-icons-DdzlwXnB.txt","assets/ort.wasm.bundle.min-L9saZmiC.js","assets/pdf-compare-DB-2FUM2.js","assets/pdf-lib-3s6WMkXa.js","assets/pdf-lib-C4A6Ah2f.txt","assets/pdf-pages-3i-yQ29B.js","assets/pdf-pages-Bl9DHYPw.js","assets/pdf.worker.min-CjEcRF4W.mjs","assets/pdfjs-hoTZjcxU.txt","assets/preload-helper-CMmJIFbb.js","assets/qrcode-DteyOdw4.js","assets/redact-detect-CHVp_xO_.js","assets/redact-detect-DLPhHhUm.txt","assets/rolldown-runtime-BCiCTKAo.js","assets/save-BOrm7xrY.js","assets/scam-list-loader-hwX0i-Z9.js","assets/sha2-DOkirqsL.js","assets/sherpa.worker-BItpTkhY.js","assets/speaker-embed-kccPfA50.js","assets/tesseract-BoiZRbaI.js","assets/tool-DwGqnoVc.js","assets/transcribe-BTJ8WMXQ.txt","assets/transcribe.worker-CbhiGJUo.js","assets/transformers.web-B9nk_0_c.js","data/165.txt","decrypt/index.html","email-check/index.html","en/age-keygen/index.html","en/decrypt/index.html","en/email-check/index.html","en/encrypt/index.html","en/heic-to-jpeg/index.html","en/index.html","en/licenses/index.html","en/passphrase/index.html","en/pdf-pages/index.html","en/qr-read/index.html","en/qrcode/index.html","en/redact/index.html","en/strip-metadata/index.html","en/text-crypt/index.html","en/transcribe/index.html","en/url-check/index.html","en/verify/index.html","encrypt/index.html","favicon.svg","heic-to-jpeg/index.html","icons/apple-touch-icon.png","icons/icon-192.png","icons/icon-512.png","index.html","licenses/index.html","logo-wordmark-tonal.svg","logo-wordmark-white.svg","manifest.webmanifest","passphrase/index.html","pdf-pages/index.html","qr-read/index.html","qrcode/index.html","redact/index.html","strip-metadata/index.html","text-crypt/index.html","transcribe/index.html","url-check/index.html","verify/index.html","zh-cn/age-keygen/index.html","zh-cn/decrypt/index.html","zh-cn/email-check/index.html","zh-cn/encrypt/index.html","zh-cn/heic-to-jpeg/index.html","zh-cn/index.html","zh-cn/licenses/index.html","zh-cn/passphrase/index.html","zh-cn/pdf-pages/index.html","zh-cn/qr-read/index.html","zh-cn/qrcode/index.html","zh-cn/redact/index.html","zh-cn/strip-metadata/index.html","zh-cn/text-crypt/index.html","zh-cn/transcribe/index.html","zh-cn/url-check/index.html","zh-cn/verify/index.html"];
+const VERSION = "d456fffc99ccc9e6";
+const FILES = ["age-keygen/index.html","assets/AgeEditors-pAvLcabT.js","assets/AgeKeyFields-hhsWxs5P.js","assets/EmailTool-CGKZ14qY.js","assets/HeicConvert-B_FeFUFi.js","assets/KeygenTool-BKOYJ76V.js","assets/PassphraseTool-tlvkR35F.js","assets/PdfPagesEditor-BEWH-TiO.js","assets/QrReadTool-C5_xmIIf.js","assets/QrTool-qsombrBL.js","assets/RedactEditor-DSYB0RpV.js","assets/TextCryptTool-D8_oqZyQ.js","assets/TranscribeEditor-D-Vw-s4E.js","assets/UrlCheckTool-bf5b56HV.js","assets/VerifyTool-D3s8djjP.js","assets/age-BRthVgOk.js","assets/asian-diceware-7776-B6etXB3N.js","assets/cn2t-Dj0Mm1HJ.js","assets/heif-wasm-5j_bKUa8.js","assets/index-BYkDPHSN.css","assets/index-D7anu_-E.js","assets/jsQR-BFC9zyzC.js","assets/jsxRuntime-Cb_LKRsr.js","assets/keep-exif-fsZ88XzP.js","assets/libheif-BfiPCEgt.wasm","assets/libheif-CgtyKh8t.txt","assets/material-design-icons-DdzlwXnB.txt","assets/ort.wasm.bundle.min-L9saZmiC.js","assets/pdf-compare-Bz1CbOQD.js","assets/pdf-lib-3s6WMkXa.js","assets/pdf-lib-C4A6Ah2f.txt","assets/pdf-pages-3i-yQ29B.js","assets/pdf-pages-Bl9DHYPw.js","assets/pdf.worker.min-CjEcRF4W.mjs","assets/pdfjs-hoTZjcxU.txt","assets/preload-helper-CMmJIFbb.js","assets/qrcode-BaXh8Syx.js","assets/redact-detect-BbGIPK1Q.js","assets/redact-detect-DLPhHhUm.txt","assets/rolldown-runtime-BCiCTKAo.js","assets/save-Gy4IfICW.js","assets/scam-list-loader-DE-vjcgR.js","assets/sha2-DOkirqsL.js","assets/sherpa.worker-BItpTkhY.js","assets/speaker-embed-kccPfA50.js","assets/tesseract-BoiZRbaI.js","assets/tool-DwGqnoVc.js","assets/transcribe-BTJ8WMXQ.txt","assets/transcribe.worker-CbhiGJUo.js","assets/transformers.web-B9nk_0_c.js","data/165.txt","decrypt/index.html","email-check/index.html","en/age-keygen/index.html","en/decrypt/index.html","en/email-check/index.html","en/encrypt/index.html","en/heic-to-jpeg/index.html","en/index.html","en/licenses/index.html","en/passphrase/index.html","en/pdf-pages/index.html","en/qr-read/index.html","en/qrcode/index.html","en/redact/index.html","en/strip-metadata/index.html","en/text-crypt/index.html","en/transcribe/index.html","en/url-check/index.html","en/verify/index.html","encrypt/index.html","favicon.svg","heic-to-jpeg/index.html","icons/apple-touch-icon.png","icons/icon-192.png","icons/icon-512.png","index.html","licenses/index.html","logo-wordmark-tonal.svg","logo-wordmark-white.svg","manifest.webmanifest","passphrase/index.html","pdf-pages/index.html","qr-read/index.html","qrcode/index.html","redact/index.html","strip-metadata/index.html","text-crypt/index.html","transcribe/index.html","url-check/index.html","verify/index.html","zh-cn/age-keygen/index.html","zh-cn/decrypt/index.html","zh-cn/email-check/index.html","zh-cn/encrypt/index.html","zh-cn/heic-to-jpeg/index.html","zh-cn/index.html","zh-cn/licenses/index.html","zh-cn/passphrase/index.html","zh-cn/pdf-pages/index.html","zh-cn/qr-read/index.html","zh-cn/qrcode/index.html","zh-cn/redact/index.html","zh-cn/strip-metadata/index.html","zh-cn/text-crypt/index.html","zh-cn/transcribe/index.html","zh-cn/url-check/index.html","zh-cn/verify/index.html"];
 const BASE = "/gears/";
 const CACHE = `gears-${VERSION}`;
 const RUNTIME = `gears-${VERSION}-runtime`;
@@ -40,9 +40,39 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+// 換版本時暫放的暫存區（src/ui/offline.ts）。只放在這個 service worker 的記憶體裡，不寫進快取或任何儲存空間，
+// 重新載入的頁面拿走就放掉，最多留 HOLD_MS
+let held = null;
+let release = () => {};
+const HOLD_MS = 60_000;
+
 // 讀者在畫面上按「重新載入」時才換成新版本，避免同一個分頁混用新舊程式
 self.addEventListener("message", (event) => {
-  if (event.data === "skipWaiting") self.skipWaiting();
+  const data = event.data;
+  if (data === "skipWaiting") return self.skipWaiting();
+  const reply = event.ports[0];
+  if (data?.type === "hold") {
+    release();
+    held = data.tray;
+    // 瀏覽器會停掉閒置的 service worker，暫放的檔案跟著消失。用 waitUntil 撐到頁面拿走，或時間到為止
+    event.waitUntil(
+      new Promise((resolve) => {
+        const timer = setTimeout(() => {
+          held = null;
+          resolve();
+        }, HOLD_MS);
+        release = () => {
+          clearTimeout(timer);
+          resolve();
+        };
+      }),
+    );
+    reply?.postMessage({ ok: true });
+  } else if (data?.type === "take") {
+    reply?.postMessage({ tray: held });
+    held = null;
+    release();
+  }
 });
 
 self.addEventListener("fetch", (event) => {
