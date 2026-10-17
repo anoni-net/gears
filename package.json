@@ -16,6 +16,7 @@
     "preview": "vite preview --port 4173 --strictPort",
     "typecheck": "tsc --noEmit",
     "test": "playwright test",
+    "test:onion": "playwright test -c playwright.onion.config.ts",
     "test:unit": "playwright test --project=unit"
   },
   "dependencies": {

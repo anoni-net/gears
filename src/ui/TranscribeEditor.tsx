@@ -5,7 +5,8 @@ import { MODELS, MODEL_IDS, type ModelId, SAMPLE_RATE, type Segment, clock, merg
 import { type Device, type GpuInfo, gpuUsable } from "../tools/transcribe/device.ts";
 import { LANGUAGES, type Language, modelsFor, preferredModel } from "../tools/transcribe/languages.ts";
 import { type Part, partName } from "../tools/transcribe/parts.ts";
-import { REMOTE_ERROR } from "../tools/transcribe/remote.ts";
+import { ASSETS_MODELS, REMOTE_ERROR } from "../tools/transcribe/remote.ts";
+import { IS_ONION } from "../site.ts";
 import speakerModel from "../tools/transcribe/speaker-model.json" with { type: "json" };
 import { navigate } from "../router.ts";
 import { THREAD_OPTIONS, defaultThreads } from "../tools/transcribe/threads.ts";
@@ -496,7 +497,7 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
                 license,
                 host,
                 convert: ours
-                  ? { notes: `https://assets.anoni.net/gears/models/${dir}/README.txt` }
+                  ? { notes: `${ASSETS_MODELS}${dir}/README.txt` }
                   : { url: `https://huggingface.co/${repo}`, label: repo },
               };
             }),
@@ -539,7 +540,7 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
               </span>
               <span>
                 {t("transcribe.models.download")}
-                {tDynamic(`transcribe.models.host.${m.host}`)}
+                {tDynamic(`transcribe.models.host.${IS_ONION && m.host === "assets" ? "self" : m.host}`)}
               </span>
             </li>
           ))}

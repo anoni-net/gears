@@ -1,6 +1,7 @@
 import { GlobalWorkerOptions, getDocument, type PDFDocumentProxy } from "pdfjs-dist";
 import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import type { Box } from "../tools/redact/index.ts";
+import { assertCanvasReadable } from "./canvas-access.ts";
 
 // 用 pdf.js 把 PDF 的頁面畫成圖片，遮蔽的編輯畫面與選擇頁面的縮圖都用它。
 //
@@ -106,7 +107,9 @@ export interface PdfBuildHooks {
 
 // 逐頁處理，同一時間只有一頁的圖片在記憶體裡。indices 是要輸出的頁面（從 0 開始），
 // 選擇頁面時只輸出選中的那幾頁，沒有框的頁面一樣轉成圖片
+// 每一頁從 canvas 編碼成 JPEG，瀏覽器不讓讀取 canvas 時丟出 CanvasBlockedError（見 canvas-access.ts）
 export async function buildRedactedPdf(pages: PdfPages, boxes: Box[][], hooks: PdfBuildHooks, indices?: number[]): Promise<Blob> {
+  assertCanvasReadable();
   const lib = await import("../tools/strip-metadata/pdf-lib.ts");
   // 不寫入 pdf-lib 預設的 Producer、Creator 與時間
   const out = await lib.PDFDocument.create({ updateMetadata: false });

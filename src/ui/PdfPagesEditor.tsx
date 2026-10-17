@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import { t } from "../i18n/index.ts";
 import { Icon } from "./Icon.tsx";
 import { pdfFailReason, trackFail } from "./analytics.ts";
+import { isCanvasBlocked } from "./canvas-access.ts";
 import type { PdfPages } from "./pdf-pages.ts";
 import type { FileEditorProps } from "./types.ts";
 import { useWorking } from "./working.ts";
@@ -133,6 +134,7 @@ export function PdfPagesEditor({ blob, onDone, onCancel }: FileEditorProps) {
   const [pdf, setPdf] = useState<PdfPages | null>(null);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [status, setStatus] = useState<"loading" | "ready" | "working" | "failed" | "openFailed">("loading");
+  const [canvasBlocked, setCanvasBlocked] = useState(false);
   // 轉成圖片：字型與文字層都不帶過去，其他頁用過的字也就不會留在字型裡
   const [asImages, setAsImages] = useState(false);
   const [building, setBuilding] = useState<[number, number] | null>(null);
@@ -170,6 +172,7 @@ export function PdfPagesEditor({ blob, onDone, onCancel }: FileEditorProps) {
 
   const apply = async () => {
     setStatus("working");
+    setCanvasBlocked(false);
     try {
       const indices = [...selected].sort((a, b) => a - b);
       if (asImages && pdf) {
@@ -182,11 +185,14 @@ export function PdfPagesEditor({ blob, onDone, onCancel }: FileEditorProps) {
       const { keepPages } = await import("../tools/pdf-pages/index.ts");
       const result = await keepPages(new Uint8Array(await blob.arrayBuffer()), [...selected]);
       onDone(new Blob([result.data as Uint8Array<ArrayBuffer>], { type: "application/pdf" }), result.report);
-    } catch {
-      // 解不開的內容或檢查沒有通過（新檔裡出現沒選的頁面），都不交出結果
-      trackFail("pdf-pages", "broken");
+    } catch (error) {
+      // 解不開的內容或檢查沒有通過（新檔裡出現沒選的頁面），都不交出結果。瀏覽器不讓讀取 canvas 時
+      // 轉不成圖片，選項留著，讀者允許之後可以再按一次
+      const blocked = isCanvasBlocked(error);
+      trackFail("pdf-pages", blocked ? "canvas-blocked" : "broken");
       setBuilding(null);
-      setStatus("failed");
+      setCanvasBlocked(blocked);
+      setStatus(blocked ? "ready" : "failed");
     }
   };
 
@@ -266,6 +272,11 @@ export function PdfPagesEditor({ blob, onDone, onCancel }: FileEditorProps) {
       {status === "failed" ? (
         <p class="error" role="alert">
           {t("pdfPages.failed")}
+        </p>
+      ) : null}
+      {canvasBlocked ? (
+        <p class="error" role="alert">
+          {t("canvas.blocked")}
         </p>
       ) : null}
     </div>

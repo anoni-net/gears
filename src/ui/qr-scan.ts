@@ -8,6 +8,7 @@
 // 縮小由這裡自己平均像素，不交給 canvas：WebKit（iPhone 上的每個瀏覽器）縮圖時
 // 只取樣部分像素，縮到多小紋路都還在。
 
+import { assertCanvasReadable, canvasReadable } from "./canvas-access.ts";
 import { decodeImage } from "./image-decode.ts";
 
 type Decode = (data: Uint8ClampedArray, width: number, height: number) => { data: string } | null;
@@ -81,7 +82,9 @@ function readHalving(decode: Decode, full: Pixels, max: number): string | null {
   }
 }
 
+// 瀏覽器不讓讀取 canvas 時丟出 CanvasBlockedError（見 canvas-access.ts）
 export async function decodeQrFromBlob(blob: Blob): Promise<string | null> {
+  assertCanvasReadable();
   const decode = await loadJsQR();
   let bitmap: ImageBitmap;
   try {
@@ -102,7 +105,7 @@ export async function decodeQrFromBlob(blob: Blob): Promise<string | null> {
 }
 
 export async function decodeQrFromVideo(video: HTMLVideoElement): Promise<string | null> {
-  if (!video.videoWidth) return null;
+  if (!video.videoWidth || !canvasReadable()) return null;
   const decode = await loadJsQR();
   // 對著螢幕掃描時也會拍到直紋，一樣逐級減半
   return readHalving(decode, capture(video, video.videoWidth, video.videoHeight, 800), 800);

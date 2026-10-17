@@ -3,6 +3,9 @@
 // 建置時的 commit（vite.config.ts）
 declare const __GEARS_COMMIT__: string;
 
+// onion 版的建置（vite.config.ts，見 src/site.ts）
+declare const __GEARS_ONION__: boolean;
+
 declare module "libheif-js/libheif-wasm/libheif.js" {
   const factory: (options: { wasmBinary: ArrayBuffer }) => unknown;
   export default factory;

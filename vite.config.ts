@@ -11,6 +11,14 @@ import { ASSETS_MODELS } from "./src/tools/transcribe/remote.ts";
 import speakerModel from "./src/tools/transcribe/speaker-model.json" with { type: "json" };
 import { ANALYTICS_ENDPOINT } from "./src/ui/analytics-endpoint.ts";
 import ogImages from "./src/og-images.json" with { type: "json" };
+import { ONION_HOST } from "./src/site.ts";
+
+// onion 版（GEARS_TARGET=onion）：給 gears.<onion> 的建置，網站放在子網域的根目錄，輸出到 dist-onion/。
+// 頁面只連自己的網域：不送使用統計，社群轉檔的模型也由同一個 onion 網站提供（src/site.ts）。
+// 逐字稿的大模型仍然在讀者選擇之後從 Hugging Face 下載，經過 Tor 網路
+const ONION = process.env.GEARS_TARGET === "onion";
+const BASE = ONION ? "/" : "/gears/";
+const OUT_DIR = ONION ? "dist-onion" : "dist";
 
 // 頁面能連線的對象寫死在 CSP 裡。就算某個相依套件被植入程式，檔案也送不出去，
 // 讀者也能從頁面原始碼自行確認。connect-src 只有自己的網域，之後的伺服器處理與
@@ -33,23 +41,23 @@ const policy = (connect: string) => [
 ].join("; ");
 
 // 頁面的 meta 標籤只允許自己的網域，加上使用統計的送出網址（社群自架的 Umami，見 src/ui/analytics.ts）
-const CSP = policy(`'self' ${ANALYTICS_ENDPOINT}`);
+const CSP = policy(ONION ? "'self'" : `'self' ${ANALYTICS_ENDPOINT}`);
 
 // 伺服器用標頭送的 CSP 多開兩個地方，給逐字稿的 Worker 下載別的網域的模型（見
 // src/tools/transcribe/remote.ts）。Worker 只吃標頭的 CSP。頁面同時有標頭與 meta 標籤時兩者
 // 都要符合，頁面本身仍然只能連自己的網域。
 // - Hugging Face（讀者選擇之後才連）：huggingface.co 限定在每個模型的下載路徑，不開放上傳用的
 //   API，下載會轉址到 *.hf.co 的 CDN（轉址之後 CSP 不比對路徑，只能寫主機）
-// - assets.anoni.net：社群轉檔的模型，限定在模型的目錄
+// - assets.anoni.net：社群轉檔的模型，限定在模型的目錄（onion 版由自己的網域提供）
 const HEADER_CSP = policy(
   [
     "'self'",
-    ANALYTICS_ENDPOINT,
+    ...(ONION ? [] : [ANALYTICS_ENDPOINT]),
     ...Object.values(whisper)
       .filter((m) => m.host === "hf")
       .map((m) => `https://huggingface.co/${m.repo}/resolve/${m.revision}/`),
     "https://*.hf.co",
-    ASSETS_MODELS,
+    ...(ONION ? [] : [ASSETS_MODELS]),
   ].join(" "),
 );
 
@@ -66,7 +74,8 @@ function csp(): Plugin {
 // 每個語系、每個工具一份 HTML（/gears/qrcode/、/gears/en/qrcode/），標題、描述與 lang 各自
 // 不同，可以被搜尋到，也不需要伺服器的轉址設定。內容跟首頁相同，打開之後由 src/router.ts
 // 判斷語系與要顯示哪個工具。
-const SITE = "https://anoni.net/gears/";
+const SITE = ONION ? `http://gears.${ONION_HOST}/` : "https://anoni.net/gears/";
+const COMMUNITY = ONION ? `http://${ONION_HOST}/` : "https://anoni.net/";
 const escape = (s: string) => s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
 
 type Locale = (typeof LOCALES)[number];
@@ -91,11 +100,16 @@ function seoTags(locale: Locale, id: string, title: string, description: string,
     `<meta property="og:url" content="${url}" />`,
     `<meta property="og:locale" content="${OG_LOCALE[locale.id]}" />`,
     ...LOCALES.filter((l) => l.id !== locale.id).map((l) => `<meta property="og:locale:alternate" content="${OG_LOCALE[l.id]}" />`),
-    `<meta property="og:image" content="${image}" />`,
-    `<meta property="og:image:width" content="1200" />`,
-    `<meta property="og:image:height" content="630" />`,
-    `<meta property="og:image:alt" content="${escape(`${meta["app.title"]} Gears`)}" />`,
-    `<meta name="twitter:card" content="summary_large_image" />`,
+    // 分享卡片的圖片放在 clearnet 的 assets.anoni.net，onion 版不放
+    ...(ONION
+      ? []
+      : [
+          `<meta property="og:image" content="${image}" />`,
+          `<meta property="og:image:width" content="1200" />`,
+          `<meta property="og:image:height" content="630" />`,
+          `<meta property="og:image:alt" content="${escape(`${meta["app.title"]} Gears`)}" />`,
+          `<meta name="twitter:card" content="summary_large_image" />`,
+        ]),
   ];
   if (!id) {
     // 不是程式，瀏覽器不會執行，CSP 不必放寬。< 換成 \u003c，內容裡的 </script> 才不會提早結束標籤
@@ -112,7 +126,7 @@ function seoTags(locale: Locale, id: string, title: string, description: string,
       browserRequirements: "Requires JavaScript",
       isAccessibleForFree: true,
       offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
-      publisher: { "@type": "Organization", name: "anoni.net", url: "https://anoni.net/" },
+      publisher: { "@type": "Organization", name: "anoni.net", url: COMMUNITY },
     };
     tags.push(`<script type="application/ld+json">${JSON.stringify(data).replace(/</g, "\\u003c")}</script>`);
   }
@@ -166,7 +180,7 @@ function toolPages(): Plugin {
   };
 }
 
-// 離線使用：建置完成後列出 dist/ 裡的檔案，產生 /gears/sw.js（範本在 src/sw/sw-template.js）。
+// 離線使用：建置完成後列出輸出目錄裡的檔案，產生 /gears/sw.js（範本在 src/sw/sw-template.js）。
 // vendor/、models/ 底下的辨識模型與 onnxruntime 的 WebAssembly（約 14 MB）很大，不預先存，
 // 用到時才存（src/sw/sw-template.js 的 LAZY）。版本是所有檔案內容的雜湊，
 // 任何檔案改了（包括每月更新的 165 清單），瀏覽器就會裝新的 service worker
@@ -175,7 +189,7 @@ function serviceWorker(base: string): Plugin {
     name: "gears-service-worker",
     apply: "build",
     closeBundle() {
-      const dist = join(import.meta.dirname, "dist");
+      const dist = join(import.meta.dirname, OUT_DIR);
       const files: string[] = [];
       const walk = (dir: string) => {
         for (const name of readdirSync(dir)) {
@@ -205,6 +219,7 @@ function serviceWorker(base: string): Plugin {
 // 部署時 nginx 送的標頭（tools/nginx-gears.conf 引用），跟預覽伺服器送的是同一組。CSP 會跟著
 // 大模型的 commit 變，所以每次建置都產生一份，m6 的拉取腳本（tools/m6-pull.sh）比對有變才換上、
 // 檢查設定之後 reload。快取標頭的對照在 tools/nginx-gears.conf 的 map $gears_cache_control
+// onion 版另外一份（nginx-headers-onion.conf），快取的對照是 $gears_onion_cache_control
 function nginxHeaders(): Plugin {
   return {
     name: "gears-nginx-headers",
@@ -215,10 +230,10 @@ function nginxHeaders(): Plugin {
         `add_header Content-Security-Policy "${HEADER_CSP}" always;`,
         ...Object.entries(isolation).map(([name, value]) => `add_header ${name} "${value}" always;`),
         'add_header X-Content-Type-Options "nosniff" always;',
-        "add_header Cache-Control $gears_cache_control always;",
+        `add_header Cache-Control ${ONION ? "$gears_onion_cache_control" : "$gears_cache_control"} always;`,
       ];
       mkdirSync(join(import.meta.dirname, "deploy"), { recursive: true });
-      writeFileSync(join(import.meta.dirname, "deploy/nginx-headers.conf"), `${lines.join("\n")}\n`);
+      writeFileSync(join(import.meta.dirname, ONION ? "deploy/nginx-headers-onion.conf" : "deploy/nginx-headers.conf"), `${lines.join("\n")}\n`);
     },
   };
 }
@@ -237,7 +252,7 @@ function commit(): string {
 const isolation = { "Cross-Origin-Opener-Policy": "same-origin", "Cross-Origin-Embedder-Policy": "require-corp" };
 
 export default defineConfig({
-  base: "/gears/",
+  base: BASE,
   server: { headers: isolation },
   // 預覽伺服器另外用標頭送 CSP：Web Worker 不受頁面 meta 標籤的 CSP 約束，要靠標頭。
   // 部署時 nginx 也要送一樣的 CSP 標頭（開發伺服器需要內嵌腳本，不加）
@@ -245,13 +260,14 @@ export default defineConfig({
   preview: { headers: { ...isolation, "Content-Security-Policy": HEADER_CSP }, allowedHosts: ["anoni.net"] },
   // Worker 裡用 import() 延後載入 Transformers.js 與 OpenCC，要輸出成 ES 模組
   worker: { format: "es" },
-  define: { __GEARS_COMMIT__: JSON.stringify(commit()) },
-  plugins: [csp(), toolPages(), serviceWorker("/gears/"), nginxHeaders()],
+  define: { __GEARS_COMMIT__: JSON.stringify(commit()), __GEARS_ONION__: JSON.stringify(ONION) },
+  plugins: [csp(), toolPages(), serviceWorker(BASE), nginxHeaders()],
   oxc: {
     jsx: { runtime: "automatic", importSource: "preact" },
   },
   build: {
     target: "es2022",
+    outDir: OUT_DIR,
     // 小檔案也輸出成獨立檔案，不內嵌成 data: 網址，CSP 才看得到每一個資源
     assetsInlineLimit: 0,
   },

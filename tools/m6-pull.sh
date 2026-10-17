@@ -5,15 +5,15 @@
 #
 # 本檔是那支腳本的原始檔，改了之後要複製到 m6 的 /home/ubuntu/gears-pull.sh。
 #
-# build 分支由 .github/workflows/deploy.yml 推上來：site/ 是網站，deploy/ 是這裡要用的
-# 模型清單（models.txt）與 nginx 標頭（nginx-headers.conf）。新的版本上線之前先做兩件事，
+# build 分支由 .github/workflows/deploy.yml 推上來：site/ 是網站，onion/ 是 onion 版，deploy/ 是
+# 這裡要用的模型清單（models.txt）與 nginx 標頭（nginx-headers.conf、nginx-headers-onion.conf）。新的版本上線之前先做兩件事，
 # 新頁面用得到的模型與標頭要先就位：
 #
 # 1. 模型：Whisper small、base 與 CAM++ 的單一檔案超過 GitHub 的 100 MB，不進 build 分支，
 #    照清單下載到 $BASE/models/，比對 SHA-256 之後才放進去。路徑帶著模型的版本，
 #    已經在的檔案不再下載
-# 2. nginx 標頭：CSP 會跟著大模型的 commit 變。內容不同時換上、nginx -t 通過才 reload，
-#    沒通過就退回原本那一份
+# 2. nginx 標頭：CSP 會跟著大模型的 commit 變，clearnet 與 onion 各一份。內容不同時換上、
+#    nginx -t 通過才 reload，沒通過就退回原本那一份
 #
 # 只接受 fast-forward。build 分支的歷史被改寫時停下來寫進 log，不強制覆蓋，等人處理。
 # 有更新或失敗時才寫 log。上一輪還沒跑完時這一輪直接略過（第一次下載模型要幾分鐘）。
@@ -23,6 +23,7 @@ BASE=/srv/anoni-net-gears
 REPO=$BASE/build
 LOG=/home/ubuntu/gears-pull.log
 SNIPPET=/etc/nginx/snippets/gears-headers.conf
+ONION_SNIPPET=/etc/nginx/snippets/gears-onion-headers.conf
 
 log() { echo "$(date -Iseconds) $*" >>"$LOG"; }
 
@@ -55,27 +56,38 @@ if [ "$failed" = 1 ]; then
     exit 1
 fi
 
-# 2. nginx 標頭
-new=$(mktemp)
-git -C "$REPO" show "$target:deploy/nginx-headers.conf" >"$new"
-if ! cmp -s "$new" "$SNIPPET"; then
-    prev=$(mktemp)
-    [ -f "$SNIPPET" ] && cp "$SNIPPET" "$prev"
-    sudo install -m 644 "$new" "$SNIPPET"
+# 2. nginx 標頭：clearnet 與 onion 各一份。內容不同的才換上，全部換好之後 nginx -t 通過才 reload，
+#    沒通過就全部退回原本那一份
+changed=""
+backup=$(mktemp -d)
+for pair in "nginx-headers.conf:$SNIPPET" "nginx-headers-onion.conf:$ONION_SNIPPET"; do
+    file=${pair%%:*}
+    dest=${pair#*:}
+    new=$(mktemp)
+    # build 分支還沒有 onion 版時略過
+    if git -C "$REPO" show "$target:deploy/$file" >"$new" 2>/dev/null && ! cmp -s "$new" "$dest"; then
+        [ -f "$dest" ] && cp "$dest" "$backup/$(basename "$dest")"
+        sudo install -m 644 "$new" "$dest"
+        changed="$changed $dest"
+    fi
+    rm -f "$new"
+done
+if [ -n "$changed" ]; then
     # nginx -t 平常就會印出既有的 ssl_stapling 警告，只在失敗時寫進 log
     if check=$(sudo nginx -t -q 2>&1); then
         sudo systemctl reload nginx
-        log "換上新的 nginx 標頭"
+        log "換上新的 nginx 標頭：$changed"
     else
-        if [ -s "$prev" ]; then sudo install -m 644 "$prev" "$SNIPPET"; else sudo rm -f "$SNIPPET"; fi
+        for dest in $changed; do
+            if [ -f "$backup/$(basename "$dest")" ]; then sudo install -m 644 "$backup/$(basename "$dest")" "$dest"; else sudo rm -f "$dest"; fi
+        done
         echo "$check" >>"$LOG"
         log "新的 nginx 標頭沒有通過 nginx -t，退回原本的，停在 $before"
-        rm -f "$new" "$prev"
+        rm -rf "$backup"
         exit 1
     fi
-    rm -f "$prev"
 fi
-rm -f "$new"
+rm -rf "$backup"
 
 # 3. 網站
 if ! git -C "$REPO" merge --ff-only -q "$target" 2>>"$LOG"; then
