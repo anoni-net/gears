@@ -1114,7 +1114,7 @@ export const en: Record<MessageKey, string> = {
   "meta.llm-bench.description": "Run small language models in this device's browser and measure loading time and generation speed. A lab page the community uses to evaluate writing-style rewriting.",
   "bench.title": "Language model speed test",
   "bench.intro": "This is a lab page the community uses to evaluate writing-style rewriting. It is not linked from the desktop. It runs a small language model in this device's browser, rewrites sample text, and measures loading time, time to the first word and tokens per second. It also uses the writing habit check rules to see whether numbers or quotes went missing. The rewrites are for reference only and may change the meaning.",
-  "bench.remote": "Models are downloaded from Hugging Face, which can see your IP address, your browser and which model you downloaded. The files are stored in this browser's cache, and you can delete them with the button below. The sample text and anything you type are processed in this tab only and never sent.",
+  "bench.remote": "Models are downloaded from Hugging Face, which can see your IP address, your browser and which model you downloaded. Qwen3 1.7B is a version converted by the community and is downloaded from assets.anoni.net through Cloudflare. The files are stored in this browser's cache, and you can delete them with the button below. The sample text and anything you type are processed in this tab only and never sent.",
   "bench.probing": "Checking this device…",
   "bench.env": "The browser reports {cores} cores and {threads}. GPU: {gpu}.",
   "bench.isolated": "can use multiple threads",
