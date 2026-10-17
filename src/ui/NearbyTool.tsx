@@ -54,45 +54,47 @@ function QrCode({ text, label }: { text: string; label: string }) {
   );
 }
 
-// 相機一直掃，掃到的文字交給 onCode。onCode 回傳 false 表示不是要的代碼，繼續掃
-function useScanner(active: boolean, onCode: (text: string) => boolean) {
+const cameraSupported = () => typeof navigator.mediaDevices?.getUserMedia === "function" && window.isSecureContext;
+
+// 開相機。連線描述要在開相機之後才建立：取得相機權限之後，Chrome 與 Safari 才會交出區網位址，
+// 只交 mDNS 名稱的話，網路不支援 mDNS 時兩邊都連不上（anoni-net/docs#553 的實機測試遇過）。
+// 至少一邊交出區網位址，另一邊就連得到。沒有相機或讀者不允許時回傳 null，改用複製貼上
+async function openCamera(): Promise<MediaStream | null> {
+  if (!cameraSupported()) return null;
+  try {
+    return await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+  } catch {
+    return null;
+  }
+}
+
+// 用已經開好的相機一直掃，掃到的文字交給 onCode。onCode 回傳 false 表示不是要的代碼，繼續掃
+function useScanner(stream: MediaStream | null, active: boolean, onCode: (text: string) => boolean) {
   const video = useRef<HTMLVideoElement>(null);
-  const [state, setState] = useState<"off" | "on" | "denied">("off");
   const handler = useRef(onCode);
   handler.current = onCode;
   useEffect(() => {
-    if (!active || typeof navigator.mediaDevices?.getUserMedia !== "function" || !window.isSecureContext) return;
+    if (!stream || !active) return;
     let alive = true;
-    let stream: MediaStream | null = null;
     let timer = 0;
-    void navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false }).then(
-      (s) => {
-        if (!alive) return s.getTracks().forEach((track) => track.stop());
-        stream = s;
-        setState("on");
-        requestAnimationFrame(() => {
-          if (!video.current) return;
-          video.current.srcObject = s;
-          void video.current.play();
-        });
-        const tick = async () => {
-          if (!alive) return;
-          const found = video.current ? await decodeQrFromVideo(video.current).catch(() => null) : null;
-          if (found && handler.current(found)) return;
-          timer = window.setTimeout(tick, 250);
-        };
-        void tick();
-      },
-      () => alive && setState("denied"),
-    );
+    requestAnimationFrame(() => {
+      if (!video.current) return;
+      video.current.srcObject = stream;
+      void video.current.play().catch(() => {});
+    });
+    const tick = async () => {
+      if (!alive) return;
+      const found = video.current?.videoWidth ? await decodeQrFromVideo(video.current).catch(() => null) : null;
+      if (found && handler.current(found)) return;
+      timer = window.setTimeout(tick, 250);
+    };
+    void tick();
     return () => {
       alive = false;
       clearTimeout(timer);
-      stream?.getTracks().forEach((track) => track.stop());
-      setState("off");
     };
-  }, [active]);
-  return { video, state };
+  }, [stream, active]);
+  return video;
 }
 
 // 傳送的時候不讓螢幕關掉，手機鎖屏之後連線可能斷掉
@@ -122,11 +124,29 @@ export function NearbyTool(_props: CreateToolProps) {
   const [pasted, setPasted] = useState("");
   const [notCode, setNotCode] = useState(false);
   const pending = useRef<Pending | null>(null);
+  const [stream, setStream] = useState<MediaStream | null>(null);
+  const [cameraDenied, setCameraDenied] = useState(false);
+  const stopCamera = () =>
+    setStream((s) => {
+      s?.getTracks().forEach((track) => track.stop());
+      return null;
+    });
+  const startCamera = async () => {
+    const s = await openCamera();
+    setStream(s);
+    setCameraDenied(!s);
+  };
   const busy = phase.kind === "connecting" || phase.kind === "transfer" || phase.kind === "preparing" || phase.kind === "awaiting";
   useWorking(busy || phase.kind === "offering" || phase.kind === "answering");
   useWakeLock(busy || phase.kind === "offering" || phase.kind === "answering" || phase.kind === "review");
 
-  useEffect(() => () => close(pending.current), []);
+  useEffect(
+    () => () => {
+      close(pending.current);
+      stopCamera();
+    },
+    [],
+  );
 
   // 從送出端的 QR code 打開時，網址的 # 後面是連線描述。讀完就從網址清掉，不留在瀏覽紀錄裡
   useEffect(() => {
@@ -150,6 +170,7 @@ export function NearbyTool(_props: CreateToolProps) {
   const startSend = async () => {
     setPhase({ kind: "preparing" });
     try {
+      await startCamera();
       const p = await createOffer();
       pending.current = p;
       setCode(new URL(`${routeUrl("nearby")}#${p.code}`, location.href).href);
@@ -234,9 +255,14 @@ export function NearbyTool(_props: CreateToolProps) {
     void receive(text);
     return true;
   };
-  const scanner = useScanner(scanning, (text) => (mode === "send" ? gotAnswer(text) : gotOffer(text)));
+  const scanner = useScanner(stream, scanning, (text) => (mode === "send" ? gotAnswer(text) : gotOffer(text)));
+  // 掃完就關相機。接收端的回應在相機還開著時建立，送出端的發起也是，見 openCamera
+  useEffect(() => {
+    if (!scanning && phase.kind !== "preparing") stopCamera();
+  }, [scanning, phase.kind]);
 
   const restart = () => {
+    stopCamera();
     close(pending.current);
     pending.current = null;
     setPhase({ kind: "idle" });
@@ -289,8 +315,8 @@ export function NearbyTool(_props: CreateToolProps) {
     ) : null;
   const camera = scanning ? (
     <>
-      {scanner.state === "on" ? <video ref={scanner.video} class="camera" playsInline muted aria-label={t("nearby.camera")} /> : null}
-      {scanner.state === "denied" ? <p class="hint">{t("nearby.cameraDenied")}</p> : null}
+      {stream ? <video ref={scanner} class="camera" playsInline muted aria-label={t("nearby.camera")} /> : null}
+      {cameraDenied ? <p class="hint">{t("nearby.cameraDenied")}</p> : null}
       {notCode ? <p class="error">{t("nearby.notCode")}</p> : null}
     </>
   ) : null;
@@ -333,7 +359,8 @@ export function NearbyTool(_props: CreateToolProps) {
             type="button"
             onClick={() => {
               setMode("receive");
-              setPhase({ kind: "scanning" });
+              setPhase({ kind: "preparing" });
+              void startCamera().then(() => setPhase({ kind: "scanning" }));
             }}
           >
             {t("nearby.receive")}

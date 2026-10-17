@@ -35,7 +35,14 @@ export default defineConfig({
     { name: "unit", testDir: "tests/unit" },
     { name: "chromium", testDir: "tests/e2e", use: { ...devices["Desktop Chrome"] } },
     { name: "webkit", testDir: "tests/e2e", use: { ...devices["Desktop Safari"] } },
-    { name: "firefox", testDir: "tests/e2e", use: { ...devices["Desktop Firefox"] } },
+    // 面對面傳送的測試在同一個瀏覽器開兩個分頁互連。GitHub 的機器沒有 mDNS 解析，兩邊都只交出
+    // mDNS 名稱就連不上；Chromium 與 WebKit 靠相機權限交出區網位址（見 src/ui/NearbyTool.tsx 的
+    // openCamera），Firefox 的假相機不會，只好關掉位址隱藏。只影響 WebRTC 的候選
+    {
+      name: "firefox",
+      testDir: "tests/e2e",
+      use: { ...devices["Desktop Firefox"], launchOptions: { firefoxUserPrefs: { "media.peerconnection.ice.obfuscate_host_addresses": false } } },
+    },
     { name: "iphone", testDir: "tests/e2e", use: { ...devices["iPhone 15"] } },
   ],
 });

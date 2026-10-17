@@ -43,8 +43,11 @@ async function finish(sender: Page, receiver: Page, answer: string) {
   await expect(receiver.locator("section.tray li")).toHaveCount(2);
 }
 
+// 給相機權限：送出端先開相機再建立連線描述，Chromium 與 WebKit 才會交出區網位址，CI 的機器沒有
+// mDNS 解析，只有 mDNS 名稱的話兩個分頁連不上。Firefox 不支援這項權限，改在 playwright.config.ts 處理
 async function pair(browser: Browser, baseURL: string) {
-  const context = await browser.newContext({ baseURL });
+  const permissions = browser.browserType().name() === "firefox" ? [] : ["camera"];
+  const context = await browser.newContext({ baseURL, permissions });
   return { sender: await context.newPage(), receiver: await context.newPage(), context };
 }
 

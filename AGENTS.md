@@ -203,10 +203,11 @@ PDF 的版本紀錄：每一個 `%%EOF` 是一次存檔的結尾，切到那裡�
 - 連線描述（`src/tools/nearby/codec.ts`，有單元測試）：只開資料通道的 SDP 每次會變的只有 ICE 帳密、DTLS 指紋、候選與 setup 角色，只編這幾個欄位，約 90 到 110 位元組，接收端照固定樣板組回完整的 SDP。Chromium、Firefox、WebKit 互相接受彼此組回的描述（2026-10-17 兩兩互傳實測）。封包以 `GR` 開頭、版本 1，回應帶著對應的發起描述的標記，對不上的不套
 - 候選只留 UDP 的 host，丟掉 loopback、link-local、CGNAT（`100.64.0.0/10`）與 Tailscale（`fd7a:115c:a1e0::/48`）。`iceServers` 是空的，不用 STUN 與 TURN，連線不會走到網際網路
 - 配對：送出端的 QR code 是工作台的網址，連線描述放在 `#` 後面（不會送到伺服器），手機用系統相機掃就直接打開、自動回應，讀完就用 `history.replaceState` 從網址清掉。接收端的回應由送出端頁面裡的相機掃。沒有相機時複製貼上同一段代碼
+- 先開相機、再建立連線描述：Chrome 與 Safari 取得相機權限之後才交出區網位址，只交 mDNS 名稱的話，網路不支援 mDNS 時兩邊都連不上（文件站的實機測試與 GitHub 的 CI 機器都遇過）。送出端本來就要開相機掃回應，接收端在工作台裡掃也是，至少一邊交出區網位址就連得上。接收端用系統相機打開網址時只交 mDNS 名稱，靠送出端的區網位址。Firefox 在無頭的假相機下仍然只交 mDNS 名稱，真的使用者允許相機之後如何還沒驗證，兩台都是 Firefox 又都沒有相機時要靠 mDNS。區網位址只交給面對面配對的對方，Tailscale 與 CGNAT 的位址濾掉
 - 確認碼：兩邊的 DTLS 指紋排序後取 SHA-256，換成 6 位數字（`src/tools/nearby/protocol.ts`）。鏡頭對螢幕換不掉指紋，複製貼上可能經過別人的伺服器，要靠確認碼核對
 - 傳輸（`src/ui/nearby.ts`）：一條有序、可靠的資料通道，先送檔案清單與每個檔案的 SHA-256，接收端的讀者按「接收」才開始傳，別人不能把檔案直接塞過來。64 KB 一塊，`bufferedAmount` 超過 4 MB 就等。接收端邊收邊算 SHA-256，對不上的不放進暫存區。檔名跟下載一樣改成 `gears-第幾個`。接收端的檔案放在記憶體裡，合計上限先抓 1 GB
 - 15 秒內連不上時說明公共 Wi-Fi 與訪客網路常擋裝置互連，建議開手機熱點。Tor Browser 把 WebRTC 整個關掉，onion 版說明並建議改用 OnionShare。傳送時用 Wake Lock 不讓螢幕關掉
-- 瀏覽器測試（`tests/e2e/nearby.spec.ts`）在同一個瀏覽器開兩個分頁互傳，走複製貼上與「打開送出端的網址」兩條路。Firefox 不處理背景分頁的輸入，操作哪個分頁之前先 `bringToFront()`。鏡頭掃 QR code 那一條跟 QR code 讀取共用解碼，沒有自動測試
+- 瀏覽器測試（`tests/e2e/nearby.spec.ts`）在同一個瀏覽器開兩個分頁互傳，走複製貼上與「打開送出端的網址」兩條路。Firefox 不處理背景分頁的輸入，操作哪個分頁之前先 `bringToFront()`。CI 的機器沒有 mDNS 解析，Chromium 與 WebKit 給相機權限，Firefox 在 `playwright.config.ts` 關掉位址隱藏。鏡頭掃 QR code 那一條跟 QR code 讀取共用解碼，沒有自動測試
 - 還沒做的：文件站實測過多條並行連線能讓 iPhone 送出從每秒約 5 MB 提高到 37 MB，第一版只用一條連線。接收大檔案時 iPhone 的記憶體上限、切到背景與鎖屏之後連線是否還在，都要在實機上量
 
 ## 影片的關鍵影格
