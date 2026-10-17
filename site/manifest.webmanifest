@@ -1,7 +1,7 @@
 {
   "name": "anoni.net Gears 檔案工作台",
   "short_name": "Gears",
-  "description": "檔案交出去之前，先在你的瀏覽器裡處理好。",
+  "description": "在瀏覽器裡處理要交出去的檔案，也替收到的檔案整理查證線索，檔案不上傳。",
   "lang": "zh-Hant-TW",
   "start_url": "/gears/",
   "scope": "/gears/",

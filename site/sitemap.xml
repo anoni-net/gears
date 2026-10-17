@@ -1,0 +1,360 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://anoni.net/gears/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/zh-cn/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/en/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/strip-metadata/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/strip-metadata/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/strip-metadata/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/strip-metadata/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/strip-metadata/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/zh-cn/strip-metadata/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/strip-metadata/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/strip-metadata/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/strip-metadata/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/strip-metadata/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/en/strip-metadata/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/strip-metadata/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/strip-metadata/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/strip-metadata/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/strip-metadata/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/redact/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/redact/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/redact/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/redact/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/redact/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/zh-cn/redact/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/redact/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/redact/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/redact/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/redact/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/en/redact/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/redact/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/redact/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/redact/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/redact/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/heic-to-jpeg/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/heic-to-jpeg/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/heic-to-jpeg/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/heic-to-jpeg/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/heic-to-jpeg/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/zh-cn/heic-to-jpeg/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/heic-to-jpeg/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/heic-to-jpeg/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/heic-to-jpeg/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/heic-to-jpeg/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/en/heic-to-jpeg/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/heic-to-jpeg/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/heic-to-jpeg/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/heic-to-jpeg/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/heic-to-jpeg/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/pdf-pages/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/pdf-pages/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/pdf-pages/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/pdf-pages/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/pdf-pages/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/zh-cn/pdf-pages/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/pdf-pages/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/pdf-pages/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/pdf-pages/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/pdf-pages/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/en/pdf-pages/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/pdf-pages/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/pdf-pages/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/pdf-pages/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/pdf-pages/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/encrypt/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/encrypt/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/encrypt/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/encrypt/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/encrypt/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/zh-cn/encrypt/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/encrypt/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/encrypt/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/encrypt/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/encrypt/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/en/encrypt/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/encrypt/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/encrypt/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/encrypt/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/encrypt/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/decrypt/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/decrypt/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/decrypt/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/decrypt/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/decrypt/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/zh-cn/decrypt/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/decrypt/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/decrypt/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/decrypt/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/decrypt/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/en/decrypt/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/decrypt/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/decrypt/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/decrypt/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/decrypt/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/transcribe/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/transcribe/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/transcribe/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/transcribe/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/transcribe/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/zh-cn/transcribe/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/transcribe/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/transcribe/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/transcribe/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/transcribe/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/en/transcribe/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/transcribe/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/transcribe/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/transcribe/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/transcribe/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/qrcode/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/qrcode/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/qrcode/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/qrcode/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/qrcode/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/zh-cn/qrcode/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/qrcode/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/qrcode/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/qrcode/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/qrcode/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/en/qrcode/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/qrcode/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/qrcode/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/qrcode/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/qrcode/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/url-check/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/url-check/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/url-check/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/url-check/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/url-check/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/zh-cn/url-check/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/url-check/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/url-check/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/url-check/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/url-check/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/en/url-check/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/url-check/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/url-check/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/url-check/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/url-check/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/qr-read/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/qr-read/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/qr-read/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/qr-read/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/qr-read/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/zh-cn/qr-read/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/qr-read/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/qr-read/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/qr-read/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/qr-read/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/en/qr-read/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/qr-read/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/qr-read/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/qr-read/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/qr-read/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/passphrase/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/passphrase/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/passphrase/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/passphrase/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/passphrase/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/zh-cn/passphrase/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/passphrase/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/passphrase/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/passphrase/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/passphrase/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/en/passphrase/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/passphrase/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/passphrase/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/passphrase/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/passphrase/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/age-keygen/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/age-keygen/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/age-keygen/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/age-keygen/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/age-keygen/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/zh-cn/age-keygen/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/age-keygen/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/age-keygen/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/age-keygen/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/age-keygen/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/en/age-keygen/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/age-keygen/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/age-keygen/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/age-keygen/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/age-keygen/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/text-crypt/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/text-crypt/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/text-crypt/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/text-crypt/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/text-crypt/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/zh-cn/text-crypt/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/text-crypt/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/text-crypt/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/text-crypt/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/text-crypt/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/en/text-crypt/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/text-crypt/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/text-crypt/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/text-crypt/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/text-crypt/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/verify/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/verify/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/verify/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/verify/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/verify/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/zh-cn/verify/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/verify/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/verify/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/verify/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/verify/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/en/verify/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/verify/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/verify/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/verify/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/verify/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/email-check/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/email-check/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/email-check/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/email-check/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/email-check/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/zh-cn/email-check/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/email-check/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/email-check/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/email-check/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/email-check/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/en/email-check/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/email-check/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/email-check/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/email-check/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/email-check/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/licenses/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/licenses/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/licenses/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/licenses/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/licenses/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/zh-cn/licenses/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/licenses/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/licenses/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/licenses/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/licenses/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/en/licenses/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/licenses/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/licenses/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/licenses/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/licenses/" />
+  </url>
+</urlset>
