@@ -54,7 +54,7 @@ CI（`.github/workflows/ci.yml`）依瀏覽器拆成四台機器同時執行：C
 
 | | 處理檔案的工具（`fileTools`） | 需要編輯畫面的工具（`editorTools`） | 從空白開始的工具（`createTools`） |
 |---|---|---|---|
-| 例子 | 清除中繼資料 | 遮蔽、縮成常見尺寸、列印追蹤點、HEIC 轉 JPEG、PDF 頁面選取、加密、解密、逐字稿、文件開啟前檢查 | QR code 產生器與讀取、網址檢查、密語與密碼產生器、age 金鑰產生器、加密文字、查證、信件檢查、寫作習慣檢查、下載的軟體驗證 |
+| 例子 | 清除中繼資料 | 遮蔽、縮成常見尺寸、列印追蹤點、HEIC 轉 JPEG、PDF 頁面選取、加密、解密、逐字稿、影片的關鍵影格、文件開啟前檢查 | QR code 產生器與讀取、網址檢查、密語與密碼產生器、age 金鑰產生器、加密文字、查證、信件檢查、寫作習慣檢查、下載的軟體驗證 |
 | 介面 | `src/core/tool.ts` 的 `Tool` | `EditorTool`，編輯畫面登記在 `src/ui/registry.tsx` | `CreateTool`，元件登記在 `src/ui/registry.tsx` |
 | 結果 | 暫存區裡那個檔案的新版本 | 同左，由 `tray.addVersion` 加入 | 產出檔案的放進暫存區，產出文字的只顯示在畫面上 |
 
@@ -195,6 +195,17 @@ PDF 的版本紀錄：每一個 `%%EOF` 是一次存檔的結尾，切到那裡�
 在查證的畫面加入檔案時留在查證的畫面（`src/app.tsx` 的 `addFiles`），其他從空白開始的工具加入檔案時回到桌面。
 
 照片讀 EXIF（`extractExif` 支援的格式，`parseExif` 補上了拍攝、數位化、修改三種時間與各自的時區、GPS 的 UTC 時間與縮圖的位置），PDF 用 pdf-lib 讀文件資訊、XMP、簽章與舊版本，Office 讀 `docProps/core.xml` 與 `app.xml`，LibreOffice 讀 `meta.xml`，XMP 在其他格式裡用 `<x:xmpmeta` 搜尋。其他格式用加入暫存區時清除中繼資料的檢查結果，MP4、MOV、M4A 的時間是 UTC。單元測試在 `tests/unit/verify.spec.ts`。本機另外用 Pillow 寫入 EXIF 的照片、python-docx 產生的 Word 與 Chromium 列印的 PDF 驗證過。
+
+## 影片的關鍵影格
+
+收到影片要查證時，常見的做法是擷取幾個畫面做反向圖片搜尋，找出影片原本的出處，現有的線上工具多半要先上傳影片。這裡在瀏覽器裡挑出畫面明顯不同的幾格，讀者勾選之後加進暫存區（檔名 `frame-1-05.3.jpg`，不沿用影片的檔名），用哪個搜尋服務由讀者決定，工作台不連到任何服務。畫面上提醒反向圖片搜尋要把圖片上傳給該服務，有人臉或個資時先遮蔽。純邏輯在 `src/tools/video-frames/`（有單元測試），擷取在 `src/ui/video-frames.ts`，畫面在 `src/ui/VideoFramesEditor.tsx`。
+
+- 不用影片檔裡標記的 I 影格：編碼器多半每一兩秒放一格，跟畫面有沒有換沒有關係。改成比對畫面：最多取樣 240 個時間點（間隔至少 0.5 秒），每個時間點畫成 32 × 32 的灰階，跟上一格留下的畫面平均差 24 以上才留，慢慢移動的鏡頭累積夠多也會留一格。單一顏色的畫面（黑幕、淡入淡出）略過。超過 16 格時留差距最大的。只找到一格時（畫面幾乎不動）平均補到 4 格，找到兩格以上就不補，補進來的會是同一個場景的重複畫面
+- 用瀏覽器的 `<video>` 解碼，從 Blob 的網址讀，幾 GB 的影片也不必整個讀進記憶體（`acceptsLarge`）。擷取的畫面長邊最多 1920 像素，重新編碼成 JPEG，不帶任何中繼資料
+- MediaRecorder 錄的 WebM（瀏覽器的螢幕錄影常是這種）沒有索引，Firefox 跳轉之後畫面不會更新，取樣到的全是第一格。取樣的畫面幾乎都一樣時，改成以 16 倍速從頭播放、依序取樣，挑出來的畫面也一樣播放擷取。畫面真的不動的影片也會走到這裡，所以只在 2 秒到 30 分鐘的影片這樣做。播放 15 秒都沒有前進就當成播不了
+- 瀏覽器播不了的格式（AVI、Firefox 的 HEVC）畫面上說明，建議轉成 MP4（H.264）
+- 要讀 canvas 的像素，Tor Browser 讀不到時說明，讀者按「再試一次」時在點擊的當下讀一次，網址列才會跳出詢問
+- 測試影片不進 repo：`tests/global-setup.ts` 有 ffmpeg 時產生紅、綠、藍三個場景的 H.264 MP4 與 VP8 WebM，另外在頁面裡用 MediaRecorder 錄一段沒有索引的 WebM。Linux 版的 WebKit 少了 GStreamer 的外掛時，跳轉正常、畫到 canvas 卻全是黑的，`canPlayType` 也照樣回報可以，所以測試先實際畫一格確認，畫不出來就略過。iPhone 與 Safari 上的擷取要在實機確認
 
 ## 文件開啟前檢查
 
@@ -431,7 +442,7 @@ node scripts/fetch-165.mjs   # 下載並整理成 public/data/165.txt
 
 ## 測試用的檔案
 
-照片與圖檔不進 repo，品牌圖示（`public/icons/`）例外。單元測試用 `tests/helpers/fixtures.ts` 組出結構完整的檔案。瀏覽器測試先用 canvas 產生一張可以解碼的圖，再塞進中繼資料。
+照片與圖檔不進 repo，品牌圖示（`public/icons/`）例外。單元測試用 `tests/helpers/fixtures.ts` 組出結構完整的檔案。瀏覽器測試先用 canvas 產生一張可以解碼的圖，再塞進中繼資料。影片的測試檔見上方「影片的關鍵影格」。
 
 HEIC 有兩種測試檔。單元測試在測試裡組出結構完整、不能解碼的檔案。能解碼的真 HEIC 由 `tests/global-setup.ts` 在瀏覽器測試開始前呼叫 `scripts/make-test-images.py`，用 pillow-heif 產生到 `tests/.generated/`（不進版控）。有 `uv` 就用 `uv run --with pillow-heif==1.8.1`，CI 用 `astral-sh/setup-uv` 安裝。產生不了時，用到真 HEIC 的測試會略過。
 
@@ -554,7 +565,7 @@ iPhone 預設拍出來的是 HEIC，在網頁上選照片時交出來的也是�
 
 ## 規劃
 
-產品規劃記錄在社群的工作區，還沒有公開。目前完成第一階段：桌面、檔案暫存區，以及清除中繼資料（JPEG、PNG、HEIC、AVIF、WebP、GIF、TIFF、SVG、BMP、PNM、JPEG XL，Word、Excel、PowerPoint、LibreOffice 文件與 PDF，MP3、M4A、MP4、MOV、WAV、AVI、FLAC、Ogg、Opus、MKV、WebM，ZIP、TAR、gzip、EPUB、種子檔、HTML）、遮蔽（圖片與 PDF，可以自動找人臉與個資）、縮成常見尺寸、列印追蹤點、PDF 頁面選取、查證收到的檔案、文件開啟前檢查、信件檢查、下載的軟體驗證、寫作習慣檢查、逐字稿、加密與解密（檔案與一段文字）、age 金鑰產生器、QR code 產生器與讀取、網址檢查、密語與密碼產生器，可以下載與系統分享，一次處理多個檔案，也可以離線使用。2026-10 起部署在 `anoni.net/gears/`（見上方「部署」）。
+產品規劃記錄在社群的工作區，還沒有公開。目前完成第一階段：桌面、檔案暫存區，以及清除中繼資料（JPEG、PNG、HEIC、AVIF、WebP、GIF、TIFF、SVG、BMP、PNM、JPEG XL，Word、Excel、PowerPoint、LibreOffice 文件與 PDF，MP3、M4A、MP4、MOV、WAV、AVI、FLAC、Ogg、Opus、MKV、WebM，ZIP、TAR、gzip、EPUB、種子檔、HTML）、遮蔽（圖片與 PDF，可以自動找人臉與個資）、縮成常見尺寸、列印追蹤點、PDF 頁面選取、查證收到的檔案、影片的關鍵影格、文件開啟前檢查、信件檢查、下載的軟體驗證、寫作習慣檢查、逐字稿、加密與解密（檔案與一段文字）、age 金鑰產生器、QR code 產生器與讀取、網址檢查、密語與密碼產生器，可以下載與系統分享，一次處理多個檔案，也可以離線使用。2026-10 起部署在 `anoni.net/gears/`（見上方「部署」）。
 
 ## 第三方資料
 

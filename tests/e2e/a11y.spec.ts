@@ -4,6 +4,8 @@ import { wav } from "../helpers/audio.ts";
 import { syntheticDocx, syntheticPdf } from "../helpers/documents.ts";
 import { PHISH_EML } from "../helpers/emails.ts";
 import { incrementalPdf } from "../helpers/pdf-incremental.ts";
+import { existsSync, readFileSync } from "node:fs";
+import { SCENES_WEBM } from "../global-setup.ts";
 import { expect, test } from "./guard.ts";
 
 // 用 axe-core 檢查 WCAG 2.1 AA。只在 Chromium 跑，結果跟瀏覽器無關
@@ -14,7 +16,7 @@ async function audit(page: Page) {
   return result.violations.map((v) => `${v.id}: ${v.help} (${v.nodes.map((n) => n.target.join(" ")).slice(0, 3).join(" | ")})`);
 }
 
-for (const path of ["./", "./en/", "./qrcode/", "./url-check/", "./passphrase/", "./age-keygen/", "./text-crypt/", "./qr-read/", "./redact/", "./pdf-pages/", "./strip-metadata/", "./verify/", "./email-check/", "./writing-style/", "./licenses/", "./llm-bench/"]) {
+for (const path of ["./", "./en/", "./qrcode/", "./url-check/", "./passphrase/", "./age-keygen/", "./text-crypt/", "./qr-read/", "./redact/", "./pdf-pages/", "./strip-metadata/", "./verify/", "./email-check/", "./writing-style/", "./video-frames/", "./licenses/", "./llm-bench/"]) {
   test(`${path} 沒有無障礙問題`, async ({ page }) => {
     await page.goto(path);
     await page.waitForLoadState("networkidle");
@@ -64,6 +66,14 @@ test("選擇 PDF 頁面的畫面沒有無障礙問題", async ({ page }) => {
   // 放大檢視的對話框
   await page.getByRole("button", { name: "放大第 1 頁" }).click();
   await expect(page.getByTestId("page-zoom-canvas")).not.toHaveClass(/waiting/, { timeout: 15000 });
+  expect(await audit(page)).toEqual([]);
+});
+
+test("影片的關鍵影格挑完畫面之後沒有無障礙問題", async ({ page }) => {
+  test.skip(!existsSync(SCENES_WEBM), "沒有測試影片（需要 ffmpeg）");
+  await page.goto("./video-frames/");
+  await page.getByTestId("file-input").setInputFiles({ name: "clip.webm", mimeType: "video/webm", buffer: readFileSync(SCENES_WEBM) });
+  await expect(page.getByTestId("frames-status")).toContainText(/挑出 \d+ 格/, { timeout: 60_000 });
   expect(await audit(page)).toEqual([]);
 });
 

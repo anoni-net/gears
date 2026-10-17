@@ -41,6 +41,7 @@ const editors: Record<string, () => Promise<ComponentType<FileEditorProps>>> = {
   "heic-to-jpeg": () => import("./HeicConvert.tsx").then((m) => m.HeicConvert),
   "pdf-pages": () => import("./PdfPagesEditor.tsx").then((m) => m.PdfPagesEditor),
   transcribe: () => import("./TranscribeEditor.tsx").then((m) => m.TranscribeEditor),
+  "video-frames": () => import("./VideoFramesEditor.tsx").then((m) => m.VideoFramesEditor),
   "doc-check": () => import("./DocCheckEditor.tsx").then((m) => m.DocCheckEditor),
   blend: () => import("./BlendEditor.tsx").then((m) => m.BlendEditor),
   "print-dots": () => import("./PrintDotsEditor.tsx").then((m) => m.PrintDotsEditor),
