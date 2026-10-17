@@ -4,8 +4,9 @@ import { mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "n
 import { join, relative } from "node:path";
 import { defineConfig, type Plugin } from "vite";
 import { LOCALES, messagesOf } from "./src/i18n/index.ts";
-import { pageIds } from "./src/pages.ts";
+import { labIds, pageIds } from "./src/pages.ts";
 import { toolIds } from "./src/tools/index.ts";
+import benchModels from "./src/tools/llm-bench/models.json" with { type: "json" };
 import whisper from "./src/tools/transcribe/models.json" with { type: "json" };
 import { ASSETS_MODELS } from "./src/tools/transcribe/remote.ts";
 import speakerModel from "./src/tools/transcribe/speaker-model.json" with { type: "json" };
@@ -47,7 +48,8 @@ const CSP = policy(ONION ? "'self'" : `'self' ${ANALYTICS_ENDPOINT}`);
 // src/tools/transcribe/remote.ts）。Worker 只吃標頭的 CSP。頁面同時有標頭與 meta 標籤時兩者
 // 都要符合，頁面本身仍然只能連自己的網域。
 // - Hugging Face（讀者選擇之後才連）：huggingface.co 限定在每個模型的下載路徑，不開放上傳用的
-//   API，下載會轉址到 *.hf.co 的 CDN（轉址之後 CSP 不比對路徑，只能寫主機）
+//   API，下載會轉址到 *.hf.co 的 CDN（轉址之後 CSP 不比對路徑，只能寫主機）。語言模型速度量測的
+//   實驗頁（src/tools/llm-bench/models.json）也一樣，每個模型鎖定 commit
 // - assets.anoni.net：社群轉檔的模型，限定在模型的目錄（onion 版由自己的網域提供）
 const HEADER_CSP = policy(
   [
@@ -56,6 +58,7 @@ const HEADER_CSP = policy(
     ...Object.values(whisper)
       .filter((m) => m.host === "hf")
       .map((m) => `https://huggingface.co/${m.repo}/resolve/${m.revision}/`),
+    ...Object.values(benchModels).map((m) => `https://huggingface.co/${m.repo}/resolve/${m.revision}/`),
     "https://*.hf.co",
     ...(ONION ? [] : [ASSETS_MODELS]),
   ].join(" "),
@@ -111,6 +114,7 @@ function seoTags(locale: Locale, id: string, title: string, description: string,
           `<meta name="twitter:card" content="summary_large_image" />`,
         ]),
   ];
+  if (labIds.includes(id)) tags.push(`<meta name="robots" content="noindex" />`);
   if (!id) {
     // 不是程式，瀏覽器不會執行，CSP 不必放寬。< 換成 \u003c，內容裡的 </script> 才不會提早結束標籤
     const data = {
@@ -175,7 +179,7 @@ function toolPages(): Plugin {
           this.emitFile({ type: "asset", fileName: `${locale.prefix}${id ? `${id}/` : ""}index.html`, source: localized(template, locale, id) });
         }
       }
-      this.emitFile({ type: "asset", fileName: "sitemap.xml", source: sitemap(["", ...toolIds, ...pageIds]) });
+      this.emitFile({ type: "asset", fileName: "sitemap.xml", source: sitemap(["", ...toolIds, ...pageIds.filter((id) => !labIds.includes(id))]) });
     },
   };
 }

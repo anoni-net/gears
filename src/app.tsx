@@ -1,3 +1,4 @@
+import type { ComponentType } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { COMMUNITY_URL, IS_ONION } from "./site.ts";
 import { LOCALES, getLocale, t, tDynamic } from "./i18n/index.ts";
@@ -7,6 +8,7 @@ import { createTools, editorTools, fileTools } from "./tools/index.ts";
 import { Desktop, type Task } from "./ui/Desktop.tsx";
 import { FileView } from "./ui/FileView.tsx";
 import { Licenses } from "./ui/Licenses.tsx";
+import { pageIds } from "./pages.ts";
 import { ToolIntro } from "./ui/ToolIntro.tsx";
 import { TrayList } from "./ui/TrayList.tsx";
 import { isReloading, useOffline } from "./ui/offline.ts";
@@ -18,6 +20,16 @@ import { TOOL_META } from "./ui/tool-meta.ts";
 import { browserDeclines, optedOut, setOptedOut, track, trackView } from "./ui/analytics.ts";
 
 const isCreateTool = (id: string) => createTools.some((tool) => tool.id === id);
+const isPage = (id: string) => pageIds.includes(id);
+
+// 語言模型速度量測（實驗頁）用到時才載入，桌面維持輕量
+function LlmBenchView() {
+  const [View, setView] = useState<ComponentType | null>(null);
+  useEffect(() => {
+    void import("./ui/LlmBench.tsx").then((m) => setView(() => m.LlmBench));
+  }, []);
+  return View ? <View /> : null;
+}
 const isFileTool = (id: string) => [...fileTools, ...editorTools].some((tool) => tool.id === id);
 
 // 整個頁面都能拖放，不必瞄準某一塊區域。
@@ -168,7 +180,7 @@ export function App() {
   const addFiles = async (files: File[], origin: string | null = null) => {
     if (!files.length) return;
     await tray.add(files, origin);
-    if ((isCreateTool(route) && route !== "verify") || route === "licenses") navigate("");
+    if ((isCreateTool(route) && route !== "verify") || isPage(route)) navigate("");
   };
   const dragging = useDropAnywhere((files) => void addFiles(files));
 
@@ -193,7 +205,7 @@ export function App() {
 
   const selectFile = (id: number) => {
     tray.select(id);
-    if (isCreateTool(route) || route === "licenses") navigate("");
+    if (isCreateTool(route) || isPage(route)) navigate("");
   };
 
   const openTool = (id: string, value?: string) => {
@@ -242,6 +254,8 @@ export function App() {
     );
   } else if (route === "licenses") {
     view = <Licenses />;
+  } else if (route === "llm-bench") {
+    view = <LlmBenchView />;
   } else if (selected) {
     view = <FileView key={selected.id} file={selected} index={selectedIndex} busy={state.busy} preferred={route} onOpenTool={openTool} />;
   } else if (isFileTool(route)) {

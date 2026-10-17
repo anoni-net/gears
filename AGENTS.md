@@ -242,6 +242,18 @@ PDF 的版本紀錄：每一個 `%%EOF` 是一次存檔的結尾，切到那裡�
 - 畫面最下面寫明改變寫作風格不會拿掉內容透露的線索（只有作者知道的細節、時間、職位與單位）
 - `facts.ts` 的 `missingFacts` 比對改寫前後的數字（中文數字換成阿拉伯數字再比）、引號裡的原話與個資，給之後用語言模型改寫時檢查有沒有改掉事實。社群工作區的 `research/gears-llm/` 用同一套規則評測模型，規則改了評測的數字也會跟著變
 
+## 語言模型速度量測（實驗頁）
+
+`/gears/llm-bench/`（`src/ui/LlmBench.tsx`，Worker 是 `src/ui/llm-bench.worker.ts`）在讀者的瀏覽器裡執行小型語言模型，改寫範例文字，量測載入時間、第一個字出現的時間與每秒的詞元數，也用寫作習慣檢查的規則看改寫有沒有少了數字或引述。給社群評估寫作風格的第二層（用語言模型改寫，研究在社群工作區的 `research/gears-llm/`）用，結論是還不能上線，這一頁讓維護者在不同的裝置上持續量測。
+
+- 實驗頁的清單是 `src/pages.ts` 的 `labIds`：桌面不放入口，不進 sitemap，頁面帶 `<meta name="robots" content="noindex">`
+- 模型在 `src/tools/llm-bench/models.json`，從 Hugging Face 下載，鎖定 commit，伺服器送的 CSP 只開這幾個下載路徑（跟 large-v3-turbo 一樣）。Transformers.js 有幾處讀檔沒有把 `revision` 傳下去，Worker 直接把 `env.remotePathTemplate` 鎖在這個 commit。畫面上說明 Hugging Face 看得到 IP 位址、瀏覽器與下載了哪個模型
+- 下載的檔案存在 Transformers.js 自己的快取（`transformers-cache`），頁面上可以刪掉。`useWasmCache` 關掉：存了之後 onnxruntime 的載入程式改用 `blob:` 網址載入，CSP 不允許
+- 下載進度由 `env.fetch` 自己計算，不傳 `progress_callback`（理由同逐字稿）
+- 瀏覽器裡用 CPU 只有 Qwen3 0.6B 能用（改寫品質不夠，只當 CPU 速度的參考，沒有顯示卡時預設選它）。Qwen3 1.7B 的 4 位元版是單一個 2.15 GB 的檔案，超過瀏覽器能建立的 ArrayBuffer 上限，8 位元版建立推論環境時記憶體不夠（`std::bad_alloc`，WebAssembly 最多 4 GB，還要複製一份模型）。Qwen3.5 的每一種量化版本都用到 WebAssembly 沒有實作的 `GatherBlockQuantized`（Node 的 onnxruntime 有）。Qwen3 4B 只有顯示卡版。顯示卡版的 Qwen3.5 0.8B 在 Chromium 的軟體模擬顯示卡上可以建立並完成改寫
+- 提示（`prompt.ts`）只給 Worker 用，範例文字（`samples.ts`）只給頁面用，兩邊不共用模組。提示與研究的 `eval/run.mjs` 相同，數字可以跟研究報告對照
+- 量測中不出現換版本的提示（`useWorking`）。「複製結果」把裝置資訊與每一段的時間、改寫結果寫成 JSON
+
 ## 逐字稿
 
 把錄音或影片的聲音轉成帶時間的段落，支援華語、台語、粵語與多種亞洲語言（`src/ui/TranscribeEditor.tsx`，語言與模型見下方）。結果不是錄音的新版本，TXT 與 SRT 另外放進暫存區，也可以直接下載或複製。逐字稿是草稿，畫面上寫明要對照錄音校對。
