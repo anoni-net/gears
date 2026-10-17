@@ -52,7 +52,7 @@ export interface Evidence {
   email?: EmailEvidence;
 }
 
-// 信件（.eml）：寄件驗證的結果、主旨與附件。解析與判斷跟「看懂這封信」共用（src/tools/email/）
+// 信件（.eml）：寄件驗證的結果、主旨與附件。解析與判斷跟「信件檢查」共用（src/tools/email/）
 export interface EmailEvidence {
   subject?: string;
   verdict: Verdict;

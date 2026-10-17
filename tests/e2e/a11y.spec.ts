@@ -82,7 +82,7 @@ test("查證的畫面沒有無障礙問題", async ({ page }) => {
   expect(await audit(page)).toEqual([]);
 });
 
-test("看懂這封信的結果畫面沒有無障礙問題", async ({ page }) => {
+test("信件檢查的結果畫面沒有無障礙問題", async ({ page }) => {
   await page.route("**/gears/data/165.txt", (route) => route.fulfill({ body: "secure-login.example.com\n", contentType: "text/plain" }));
   await page.goto("./email-check/");
   await page.getByTestId("email-input").fill(PHISH_EML);

@@ -24,7 +24,7 @@ test("從桌面打開 QR code 產生器，中文內容下載成 PNG 與 SVG", as
 
 test("Wi-Fi 任務：產生的檔案放進暫存區，接著可以下載", async ({ page }) => {
   await page.goto("./");
-  await page.getByRole("button", { name: /把 Wi-Fi 密碼傳給朋友/ }).click();
+  await page.getByRole("button", { name: /給朋友的 Wi-Fi 密碼/ }).click();
   await expect(page).toHaveURL(/\/gears\/qrcode\/$/);
   await expect(page.getByLabel("Wi-Fi")).toBeChecked();
 
@@ -64,5 +64,5 @@ test("每個工具都有自己的網址，可以直接打開，也可以用上�
   await expect(page).toHaveURL(/\/gears\/qrcode\/$/);
   await page.goBack();
   await expect(page).toHaveURL(/\/gears\/$/);
-  await expect(page.getByRole("heading", { name: "想做什麼" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "常見的情況" })).toBeVisible();
 });
