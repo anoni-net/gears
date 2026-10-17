@@ -119,6 +119,14 @@ button:hover:not(:disabled),
   border-color: var(--brand-cyan-500);
 }
 
+/* 按鈕列：全站共用的排版，各工具只另外設定上下的邊距 */
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
 button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
@@ -684,11 +692,6 @@ h4 {
   margin-top: 1.5rem;
 }
 
-.output .buttons {
-  display: flex;
-  gap: 0.5rem;
-}
-
 footer {
   border-top: 1px solid var(--hair);
   padding-top: 0.75rem;
@@ -766,18 +769,22 @@ footer .languages button[aria-current] {
   margin: 0.25rem 0;
 }
 
-/* 選擇檔案：獨立一行的主要按鈕，拖放的說明在下方 */
-.tray .drop .pick {
+/* 選擇檔案：前面有上傳圖示、比一般按鈕高一點的主要按鈕，暫存區與查證的空白畫面共用 */
+button.pick-files {
   gap: 0.4rem;
-  width: 100%;
-  max-width: 16rem;
   min-height: 2.75rem;
-  margin-bottom: 0.25rem;
 }
 
-.tray .drop .pick .icon {
+button.pick-files .icon {
   width: 1.25rem;
   height: 1.25rem;
+}
+
+/* 暫存區裡獨立一行，拖放的說明在下方 */
+.tray .drop .pick-files {
+  width: 100%;
+  max-width: 16rem;
+  margin-bottom: 0.25rem;
 }
 
 .tray .drop .drag-note {
@@ -1104,9 +1111,6 @@ footer .languages button[aria-current] {
 }
 
 .qr-result .buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
   margin-top: 0.75rem;
 }
 
@@ -1136,10 +1140,6 @@ footer .languages button[aria-current] {
 }
 
 .passphrase .buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  align-items: center;
   margin-bottom: 0.25rem;
 }
 
@@ -1195,20 +1195,10 @@ footer .languages button[aria-current] {
   font-size: 0.95rem;
 }
 
-.url-check .buttons {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-}
-
 /* QR code 讀取 */
 
 .qr-read .buttons,
 .qr-content .buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  align-items: center;
   margin-bottom: 0.75rem;
 }
 
@@ -1539,12 +1529,6 @@ footer .languages button[aria-current] {
   }
 }
 
-.redact .buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
 /* 自動尋找與復原、清除之間的分隔 */
 .redact-toolbar-divider {
   align-self: stretch;
@@ -1642,9 +1626,6 @@ footer .languages button[aria-current] {
 
 /* 開始與取消、轉完之後的下載與複製：按鈕之間留距離，窄螢幕時換行 */
 .transcribe .buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
   margin: 1.25rem 0 0.75rem;
 }
 
@@ -1745,9 +1726,6 @@ footer .languages button[aria-current] {
 /* 加密與解密 */
 
 .age .buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
   margin-bottom: 0.75rem;
 }
 
@@ -1765,10 +1743,6 @@ footer .languages button[aria-current] {
 }
 
 .keygen .buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  align-items: center;
   margin-bottom: 0.5rem;
 }
 
@@ -2021,12 +1995,6 @@ button.link {
 .verify-versions .verify-type {
   display: block;
   margin: 0.1rem 0 0.3rem;
-}
-
-.verify-versions .buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
 }
 
 .verify-compare {

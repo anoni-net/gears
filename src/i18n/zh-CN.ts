@@ -724,7 +724,7 @@ export const zhCN: Record<MessageKey, string> = {
   "email.privacy": "粘贴的内容只在你的浏览器里处理，不会送出。",
   "email.input": "原始邮件",
   "email.openFile": "打开 .eml 文件",
-  "email.clear": "清除",
+  "email.clear": "清空",
   "email.opened": "已打开 {name}",
   "email.clearFile": "改成粘贴",
   "email.howTo": "如何取得原始邮件",
