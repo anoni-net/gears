@@ -20,6 +20,7 @@ export const TOOL_META: Record<string, { icon: IconName; cat: Category }> = {
   verify: { icon: "file-search-outline", cat: "secure" },
   "doc-check": { icon: "file-alert-outline", cat: "secure" },
   "print-dots": { icon: "printer-eye", cat: "privacy" },
+  blend: { icon: "image-size-select-large", cat: "privacy" },
   "email-check": { icon: "email-search-outline", cat: "privacy" },
   "writing-style": { icon: "text-box-edit-outline", cat: "privacy" },
 };
@@ -28,7 +29,7 @@ export const TOOL_META: Record<string, { icon: IconName; cat: Category }> = {
 // 那是開發的分法，讀者要先想清楚工具怎麼運作才找得到。每個工具剛好出現在一組，
 // tests/unit/tool-meta.spec.ts 會檢查
 export const TOOL_GROUPS = [
-  { id: "handover", tools: ["strip-metadata", "redact", "print-dots", "writing-style", "heic-to-jpeg", "pdf-pages", "transcribe"] },
+  { id: "handover", tools: ["strip-metadata", "blend", "redact", "print-dots", "writing-style", "heic-to-jpeg", "pdf-pages", "transcribe"] },
   { id: "send", tools: ["encrypt", "decrypt", "text-crypt", "age-keygen", "passphrase", "qrcode"] },
   { id: "check", tools: ["verify", "doc-check", "email-check", "url-check", "qr-read"] },
 ] as const;
