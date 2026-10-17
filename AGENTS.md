@@ -54,7 +54,7 @@ CI（`.github/workflows/ci.yml`）依瀏覽器拆成四台機器同時執行：C
 
 | | 處理檔案的工具（`fileTools`） | 需要編輯畫面的工具（`editorTools`） | 從空白開始的工具（`createTools`） |
 |---|---|---|---|
-| 例子 | 清除中繼資料 | 遮蔽、HEIC 轉 JPEG、PDF 頁面選取、加密、解密、逐字稿、文件開啟前檢查 | QR code 產生器與讀取、網址檢查、密語與密碼產生器、age 金鑰產生器、加密文字、查證、信件檢查、寫作習慣檢查 |
+| 例子 | 清除中繼資料 | 遮蔽、列印追蹤點、HEIC 轉 JPEG、PDF 頁面選取、加密、解密、逐字稿、文件開啟前檢查 | QR code 產生器與讀取、網址檢查、密語與密碼產生器、age 金鑰產生器、加密文字、查證、信件檢查、寫作習慣檢查 |
 | 介面 | `src/core/tool.ts` 的 `Tool` | `EditorTool`，編輯畫面登記在 `src/ui/registry.tsx` | `CreateTool`，元件登記在 `src/ui/registry.tsx` |
 | 結果 | 暫存區裡那個檔案的新版本 | 同左，由 `tray.addVersion` 加入 | 產出檔案的放進暫存區，產出文字的只顯示在畫面上 |
 
@@ -112,6 +112,18 @@ CI（`.github/workflows/ci.yml`）依瀏覽器拆成四台機器同時執行：C
 - 授權全文在 `licenses/pdfjs.txt`
 
 測試（`tests/e2e/redact-pdf.spec.ts`）用 pdf-lib 組出兩頁、有文字與作者的 PDF，遮蔽之後確認檔案裡沒有原本的文字、作者與字型，每一頁都是 JPEG，框起來的地方是黑的。中文字型在本機另外驗證過兩種：LibreOffice 轉出、內嵌 Noto Serif CJK 的 PDF，以及引用未內嵌字型 `MSung-Light`、編碼 `UniCNS-UCS2-H` 的 PDF（要靠 CMap），Chromium、WebKit、Firefox 都畫得出字，自動找個資也找得到電話與 Email。
+
+## 列印文件的追蹤點
+
+很多彩色雷射印表機在每一頁印上肉眼幾乎看不到的淡黃色小點，編著印表機的序號與列印的時間，紙本掃描或翻拍交出去時會跟著過去（`src/tools/print-dots/`，畫面在 `src/ui/PrintDotsEditor.tsx`）。接受照片與 PDF。
+
+- 只看黃色：用「紅綠兩色比藍色亮多少」畫成灰階，黑色的字變成白色，淡黃色的小點變成看得到的深色圖案，讀者放大看是不是規則排列的小點。紙張本身常帶一點點黃，差距在 4 以內的當成白色
+- 淡黃色的判斷（`isFaintYellow`）：紅綠都在 190 以上、藍色在 140 以上、紅綠比藍色亮 12 以上、紅綠相差不超過 40。螢光筆那種飽和的黃色藍色很暗，不算。淡黃色超過畫面的 15% 時比較可能是光線讓整張紙偏黃，畫面上改成建議轉黑白（`judge`）
+- 去掉淡黃色：淡黃色的像素改成白色，其他顏色不動。轉成黑白：Otsu 法找門檻（限制在 100 到 200），淡黃色比門檻亮，一起變成白色。照片與彩色的圖會變成黑白，畫面上寫明
+- 圖片轉黑白一律輸出 PNG，PNG、GIF、BMP 輸出 PNG，其他輸出 JPEG。重新編碼之後原檔的中繼資料一併拿掉
+- PDF 沿用遮蔽的 `buildRedactedPdf`，`transform` 在每一頁畫成圖片之後處理像素，輸出只有圖片
+- 不解碼點陣代表的序號與時間，那是追查文件來源用的。只處理黃色的點，黑白印表機與部分新型號用的是其他方式，畫面上寫明沒看到不代表沒有追蹤
+- 測試用 canvas 畫一張有黑字、螢光筆與每 16 像素一個淡黃點的頁面（`tests/e2e/print-dots.spec.ts`）
 
 ## 選擇 PDF 的頁面
 
@@ -487,7 +499,7 @@ iPhone 預設拍出來的是 HEIC，在網頁上選照片時交出來的也是�
 
 ## 規劃
 
-產品規劃記錄在社群的工作區，還沒有公開。目前完成第一階段：桌面、檔案暫存區，以及清除中繼資料（JPEG、PNG、HEIC、AVIF、WebP、GIF、TIFF、SVG、BMP、PNM、JPEG XL，Word、Excel、PowerPoint、LibreOffice 文件與 PDF，MP3、M4A、MP4、MOV、WAV、AVI、FLAC、Ogg、Opus、MKV、WebM，ZIP、TAR、gzip、EPUB、種子檔、HTML）、遮蔽（圖片與 PDF，可以自動找人臉與個資）、PDF 頁面選取、查證收到的檔案、文件開啟前檢查、信件檢查、寫作習慣檢查、逐字稿、加密與解密（檔案與一段文字）、age 金鑰產生器、QR code 產生器與讀取、網址檢查、密語與密碼產生器，可以下載與系統分享，一次處理多個檔案，也可以離線使用。2026-10 起部署在 `anoni.net/gears/`（見上方「部署」）。
+產品規劃記錄在社群的工作區，還沒有公開。目前完成第一階段：桌面、檔案暫存區，以及清除中繼資料（JPEG、PNG、HEIC、AVIF、WebP、GIF、TIFF、SVG、BMP、PNM、JPEG XL，Word、Excel、PowerPoint、LibreOffice 文件與 PDF，MP3、M4A、MP4、MOV、WAV、AVI、FLAC、Ogg、Opus、MKV、WebM，ZIP、TAR、gzip、EPUB、種子檔、HTML）、遮蔽（圖片與 PDF，可以自動找人臉與個資）、列印追蹤點、PDF 頁面選取、查證收到的檔案、文件開啟前檢查、信件檢查、寫作習慣檢查、逐字稿、加密與解密（檔案與一段文字）、age 金鑰產生器、QR code 產生器與讀取、網址檢查、密語與密碼產生器，可以下載與系統分享，一次處理多個檔案，也可以離線使用。2026-10 起部署在 `anoni.net/gears/`（見上方「部署」）。
 
 ## 第三方資料
 

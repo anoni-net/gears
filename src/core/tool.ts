@@ -65,6 +65,8 @@ export const SEGMENT_CODES = [
   "pdf-fields",
   "pdf-shared-fonts",
   "reencode",
+  "print-dots-yellow",
+  "print-dots-bw",
   "exif-kept",
   "age-passphrase",
   "age-recipients",

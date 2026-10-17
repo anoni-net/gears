@@ -349,6 +349,26 @@ html:lang(en) .site-header__product {
   }
 }
 
+/* 列印文件的追蹤點：預設依寬度縮放，放大時用原本的像素、可以左右捲動 */
+.print-dots-canvas {
+  margin: 0.5rem 0 1rem;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: #fff;
+  overflow: auto;
+  max-height: 80vh;
+}
+
+.print-dots-canvas canvas {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.print-dots-canvas.zoomed canvas {
+  max-width: none;
+}
+
 /* 文件開啟前檢查 */
 .doc-check .warn {
   padding: 0.5rem 0.75rem;

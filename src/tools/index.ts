@@ -25,6 +25,8 @@ export const editorTools: EditorTool[] = [
   { id: "decrypt", resolves: [], accepts: (format) => format === "age" },
   // 瀏覽器解碼得了聲音的錄音與影片，解碼不了時畫面上說明。可以分段解碼的格式不限大小
   { id: "transcribe", resolves: [], accepts: isMedia, acceptsLarge: (format) => STREAMABLE.includes(format) },
+  // 列印文件的追蹤點：拍照或掃描的紙本，去掉淡黃色的小點或轉成黑白
+  { id: "print-dots", resolves: [], accepts: (format) => ["jpeg", "png", "heic", "avif", "webp", "gif", "bmp", "pdf"].includes(format) },
   // 收到的文件打開時會不會連到外面、執行程式，PDF 可以轉成只有圖片的安全版本
   { id: "doc-check", resolves: [], accepts: (format) => CHECK_FORMATS.includes(format) },
 ];
