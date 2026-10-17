@@ -396,6 +396,16 @@ html:lang(en) .site-header__product {
   word-break: break-all;
 }
 
+/* 點了才會連的連結依網域分組，展開之後列出同一個網域的網址 */
+.doc-check-hosts summary {
+  cursor: pointer;
+}
+
+.doc-check-hosts details ul {
+  margin: 0.25rem 0 0;
+  padding-left: 1.2rem;
+}
+
 /* 圖示圈：顏色代表類別，跟社群首頁的圖示圈同一種樣式 */
 .icon {
   width: 1.4rem;
