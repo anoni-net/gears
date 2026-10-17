@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import { t, tDynamic } from "../i18n/index.ts";
 import models from "../tools/llm-bench/models.json" with { type: "json" };
 import { SAMPLES } from "../tools/llm-bench/samples.ts";
-import { missingFacts } from "../tools/writing-style/facts.ts";
+import { addedNumbers, missingFacts } from "../tools/writing-style/facts.ts";
 import { FIXABLE, findHabits, fixHabits } from "../tools/writing-style/index.ts";
 import { CopyButton } from "./CopyButton.tsx";
 import type { BenchReply, BenchRequest } from "./llm-bench.worker.ts";
@@ -33,6 +33,7 @@ interface TextResult {
   tokens: number;
   output: string;
   missing: string[];
+  added: string[];
   habitsLeft: number;
 }
 
@@ -127,6 +128,7 @@ export function LlmBench() {
           ...data,
           input: texts[data.index]!,
           missing: missingFacts(input, data.output).map((f) => f.text),
+          added: addedNumbers(input, data.output).map((f) => f.text),
           habitsLeft: manualHabits(data.output),
         };
         update((r) => ({ texts: [...r.texts, result] }));
@@ -280,7 +282,16 @@ export function LlmBench() {
                     <td>{x.firstToken.toFixed(1)} s</td>
                     <td>{x.tokensPerSecond.toFixed(1)}</td>
                     <td>{x.total.toFixed(1)} s</td>
-                    <td>{x.missing.length ? x.missing.join(tDynamic("bench.sep")) : t("bench.factsOk")}</td>
+                    <td>
+                      {x.missing.length || x.added.length
+                        ? [
+                            x.missing.length ? t("bench.missing", { items: x.missing.join(tDynamic("bench.sep")) }) : "",
+                            x.added.length ? t("bench.added", { items: x.added.join(tDynamic("bench.sep")) }) : "",
+                          ]
+                            .filter(Boolean)
+                            .join(tDynamic("bench.sep"))
+                        : t("bench.factsOk")}
+                    </td>
                   </tr>
                 )),
               )}

@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { missingFacts } from "../../src/tools/writing-style/facts.ts";
+import { addedNumbers, missingFacts } from "../../src/tools/writing-style/facts.ts";
 import { FIXABLE, HABIT_CODES, applyHabits, countHabits, findHabits, fixHabits } from "../../src/tools/writing-style/index.ts";
 
 const codes = (text: string) => findHabits(text).map((h) => [h.code, h.text.trim()]);
@@ -108,6 +108,15 @@ test("改寫前後的事實：數字、中文數字、引號裡的原話與個�
     ["number", "三"],
     ["quote", "先上線再說"],
   ]);
+});
+
+test("改寫後多出的數字：捏造的精確數字要標出來，冠詞、列舉與序數換成阿拉伯數字不算", () => {
+  const original = "系統裡有全台大概二十幾家分店的資料，我在十月一日問了一個主管，他提出三點：一、範圍；二、時間。這是第三次了";
+  // 研究裡 Qwen3 4B 把「大概二十幾家」寫成「約二十三家」
+  expect(addedNumbers(original, "系統裡有全台約二十三家分店的資料").map((f) => f.text)).toEqual(["二十三"]);
+  expect(addedNumbers(original, "系統裡有全台約二十多家分店的資料，我在10月1日詢問1位主管，他提出3點：1. 範圍；2. 時間。這是第3次")).toEqual([]);
+  // 同一個數字只列一次，個資裡的數字不算
+  expect(addedNumbers("請打電話給我", "請在 5 天內、5 點前打 0912-345-678 給我").map((f) => f.text)).toEqual(["5"]);
 });
 
 test("逐項套用建議：只改選的那幾處，刪掉語助詞與口頭禪之後不留多餘的逗號", () => {
