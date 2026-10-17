@@ -1,19 +1,21 @@
 import type { Category } from "./Icon.tsx";
 import type { IconName } from "./icon-paths.ts";
+import type { TagId } from "./tool-tags.ts";
 
 // 每個工具的圖示與類別。圖示跟文件站小工具區的同一個工具一致，類別照品牌素材頁的
 // 圖示分類色：跟個人隱私有關的用綠色，處理機敏資料與密碼的用玫瑰紅。
-export const TOOL_META: Record<string, { icon: IconName; cat: Category }> = {
+// tags：桌面卡片上的圖示標籤（src/ui/tool-tags.ts），讀者打開之前就該知道的事
+export const TOOL_META: Record<string, { icon: IconName; cat: Category; tags?: TagId[] }> = {
   "strip-metadata": { icon: "image-off-outline", cat: "privacy" },
   "url-check": { icon: "shield-link-variant-outline", cat: "privacy" },
-  "qr-read": { icon: "qrcode-scan", cat: "privacy" },
+  "qr-read": { icon: "qrcode-scan", cat: "privacy", tags: ["camera"] },
   qrcode: { icon: "qrcode", cat: "privacy" },
-  redact: { icon: "selection-remove", cat: "secure" },
+  redact: { icon: "selection-remove", cat: "secure", tags: ["model"] },
   "heic-to-jpeg": { icon: "file-jpg-box", cat: "privacy" },
   "pdf-pages": { icon: "file-document-multiple-outline", cat: "privacy" },
   encrypt: { icon: "lock-outline", cat: "secure" },
   decrypt: { icon: "lock-open-variant-outline", cat: "secure" },
-  transcribe: { icon: "subtitles-outline", cat: "secure" },
+  transcribe: { icon: "subtitles-outline", cat: "secure", tags: ["model"] },
   passphrase: { icon: "dice-multiple-outline", cat: "secure" },
   "age-keygen": { icon: "key-plus", cat: "secure" },
   "text-crypt": { icon: "message-lock-outline", cat: "secure" },
@@ -25,7 +27,7 @@ export const TOOL_META: Record<string, { icon: IconName; cat: Category }> = {
   "software-verify": { icon: "package-variant-closed-check", cat: "secure" },
   "writing-style": { icon: "text-box-edit-outline", cat: "privacy" },
   "video-frames": { icon: "movie-search-outline", cat: "secure" },
-  nearby: { icon: "cellphone-link", cat: "secure" },
+  nearby: { icon: "cellphone-link", cat: "secure", tags: ["camera"] },
 };
 
 // 桌面的工具依讀者的目的分組（2026-10-16 起）。原本依操作方式分成「處理檔案」與「從空白開始」，
