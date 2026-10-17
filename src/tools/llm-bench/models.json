@@ -1,0 +1,66 @@
+{
+  "qwen3-1.7b": {
+    "repo": "onnx-community/Qwen3-1.7B-ONNX",
+    "revision": "3231b522c6e703b2f9b3cd8ea27426a1289a02f2",
+    "source": "https://huggingface.co/Qwen/Qwen3-1.7B",
+    "license": "Apache-2.0",
+    "name": "Qwen3 1.7B",
+    "gpu": {
+      "dtype": "q4f16",
+      "bytes": 1430000000
+    },
+    "cpu": null
+  },
+  "qwen3.5-2b": {
+    "repo": "onnx-community/Qwen3.5-2B-ONNX",
+    "revision": "315216e893038beefcc6eba41ac168913dd0d879",
+    "source": "https://huggingface.co/Qwen/Qwen3.5-2B",
+    "license": "Apache-2.0",
+    "name": "Qwen3.5 2B",
+    "gpu": {
+      "dtype": "q4f16",
+      "bytes": 1580000000
+    },
+    "cpu": null
+  },
+  "qwen3-4b": {
+    "repo": "onnx-community/Qwen3-4B-ONNX",
+    "revision": "ca652ef636e8b121ff4a1607c37ab578cb866987",
+    "source": "https://huggingface.co/Qwen/Qwen3-4B",
+    "license": "Apache-2.0",
+    "name": "Qwen3 4B",
+    "gpu": {
+      "dtype": "q4f16",
+      "bytes": 2830000000
+    },
+    "cpu": null
+  },
+  "qwen3.5-0.8b": {
+    "repo": "onnx-community/Qwen3.5-0.8B-ONNX",
+    "revision": "8fe9dbe3fb39fe902e18df9be84b6a0ac77ae0f6",
+    "source": "https://huggingface.co/Qwen/Qwen3.5-0.8B",
+    "license": "Apache-2.0",
+    "name": "Qwen3.5 0.8B",
+    "gpu": {
+      "dtype": "q4f16",
+      "bytes": 650000000
+    },
+    "cpu": null
+  },
+  "qwen3-0.6b": {
+    "repo": "onnx-community/Qwen3-0.6B-ONNX",
+    "revision": "58ca03a5e7b354b480b1a82b34bde8dc7b854cc0",
+    "source": "https://huggingface.co/Qwen/Qwen3-0.6B",
+    "license": "Apache-2.0",
+    "name": "Qwen3 0.6B",
+    "gpu": {
+      "dtype": "q4f16",
+      "bytes": 570000000
+    },
+    "cpu": {
+      "dtype": "q4",
+      "bytes": 920000000
+    },
+    "note": true
+  }
+}

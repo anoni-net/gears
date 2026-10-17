@@ -2356,3 +2356,68 @@ button.link {
 .software-keys code {
   overflow-wrap: anywhere;
 }
+
+/* 語言模型速度量測（實驗頁）：模型的選項沿用逐字稿的卡片樣式 */
+.llm-bench > fieldset {
+  margin-top: 1.25rem;
+}
+
+.llm-bench .choices .check {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 0.6rem 0.8rem;
+  margin-bottom: 0.5rem;
+  cursor: pointer;
+}
+
+.llm-bench .choices .check:has(input:checked) {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+}
+
+.llm-bench .choices .check small {
+  display: block;
+  color: var(--muted);
+}
+
+.llm-bench .buttons {
+  margin: 1.25rem 0 0.75rem;
+}
+
+.bench-results {
+  overflow-x: auto;
+}
+
+.bench-results table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.5rem 0 1rem;
+  font-size: 0.9rem;
+}
+
+.bench-results th,
+.bench-results td {
+  border-bottom: 1px solid var(--line);
+  padding: 0.35rem 0.5rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.bench-results td small {
+  display: block;
+  color: var(--muted);
+}
+
+.bench-results details {
+  margin: 0.5rem 0;
+}
+
+.bench-text {
+  white-space: pre-wrap;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 0.6rem 0.8rem;
+}
