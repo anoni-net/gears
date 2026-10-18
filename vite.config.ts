@@ -13,7 +13,7 @@ import speakerModel from "./src/tools/transcribe/speaker-model.json" with { type
 import { ANALYTICS_ENDPOINT } from "./src/ui/analytics-endpoint.ts";
 import ogImages from "./src/og-images.json" with { type: "json" };
 import { ONION_HOST } from "./src/site.ts";
-import { WISH_ENDPOINT_CLEARNET, WISH_ENDPOINT_ONION } from "./src/wish.ts";
+import { FEEDBACK_ENDPOINT_CLEARNET, FEEDBACK_ENDPOINT_ONION } from "./src/feedback.ts";
 import { calver } from "./src/core/version.ts";
 
 // onion 版（GEARS_TARGET=onion）：給 gears.<onion> 的建置，網站放在子網域的根目錄，輸出到 dist-onion/。
@@ -44,9 +44,9 @@ const policy = (connect: string) => [
 ].join("; ");
 
 // 頁面的 meta 標籤只允許自己的網域，加上使用統計的送出網址（社群自架的 Umami，見 src/ui/analytics.ts）
-// 與許願區的送出網址（社群自架的表單伺服器，見 src/wish.ts，onion 版送到 onion 的表單伺服器）
-const WISH_ENDPOINT = ONION ? WISH_ENDPOINT_ONION : WISH_ENDPOINT_CLEARNET;
-const CSP = policy(ONION ? `'self' ${WISH_ENDPOINT}` : `'self' ${ANALYTICS_ENDPOINT} ${WISH_ENDPOINT}`);
+// 與建議與回饋的送出網址（社群自架的表單伺服器，見 src/feedback.ts，onion 版送到 onion 的表單伺服器）
+const FEEDBACK_ENDPOINT = ONION ? FEEDBACK_ENDPOINT_ONION : FEEDBACK_ENDPOINT_CLEARNET;
+const CSP = policy(ONION ? `'self' ${FEEDBACK_ENDPOINT}` : `'self' ${ANALYTICS_ENDPOINT} ${FEEDBACK_ENDPOINT}`);
 
 // 伺服器用標頭送的 CSP 多開兩個地方，給逐字稿的 Worker 下載別的網域的模型（見
 // src/tools/transcribe/remote.ts）。Worker 只吃標頭的 CSP。頁面同時有標頭與 meta 標籤時兩者
@@ -59,7 +59,7 @@ const HEADER_CSP = policy(
   [
     "'self'",
     ...(ONION ? [] : [ANALYTICS_ENDPOINT]),
-    WISH_ENDPOINT,
+    FEEDBACK_ENDPOINT,
     ...Object.values(whisper)
       .filter((m) => m.host === "hf")
       .map((m) => `https://huggingface.co/${m.repo}/resolve/${m.revision}/`),

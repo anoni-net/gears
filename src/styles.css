@@ -440,7 +440,7 @@ html:lang(en) .site-header__product {
   --topic: var(--cat-secure);
 }
 
-/* 使用者區（許願區、之後的設定）不是工具，用品牌主色，跟兩類工具分開 */
+/* 使用者區（建議與回饋、之後的設定）不是工具，用品牌主色，跟兩類工具分開 */
 .cat-user {
   --topic: var(--accent);
 }
@@ -2619,15 +2619,15 @@ button.link {
   font-size: 0.9rem;
 }
 
-/* 許願區（src/ui/WishPage.tsx）：說明文字放在欄位名稱底下，不跟著加粗 */
-.wish {
+/* 建議與回饋（src/ui/FeedbackPage.tsx）：說明文字放在欄位名稱底下，不跟著加粗 */
+.feedback {
   max-width: 44rem;
 }
 
-.wish .field .hint {
+.feedback .field .hint {
   font-weight: normal;
 }
 
-.wish .buttons {
+.feedback .buttons {
   margin-top: 0.5rem;
 }
