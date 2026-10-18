@@ -6,7 +6,7 @@
 
 - 預設在瀏覽器裡處理。之後若提供上傳到社群伺服器的選項，上傳前要在畫面上寫清楚檔案送到哪裡、誰看得到、保留多久、伺服器會不會留下紀錄，由讀者決定
 - 上傳端點不經過 Cloudflare。Cloudflare 在邊緣解開 TLS，經過的檔案對它是明文
-- 頁面能連線的對象寫死在 CSP 裡（`vite.config.ts`），新增任何對外連線都要改那裡，並在畫面上標示。頁面的 meta 標籤只有自己的網域與使用統計的送出網址（`https://aa.anoni.net/api/send`，見下方「使用統計」）。逐字稿的大模型從 Hugging Face 下載（見下方「逐字稿」），只開在伺服器送的 CSP 標頭 <!-- docs-style-lint: disable-line -->
+- 頁面能連線的對象寫死在 CSP 裡（`vite.config.ts`），新增任何對外連線都要改那裡，並在畫面上標示。頁面的 meta 標籤只有自己的網域、使用統計的送出網址（`https://aa.anoni.net/api/send`，見下方「使用統計」）與建議與回饋的送出網址（見下方「建議與回饋」）。逐字稿的大模型從 Hugging Face 下載（見下方「逐字稿」），只開在伺服器送的 CSP 標頭 <!-- docs-style-lint: disable-line -->
 - 執行期的相依套件只有 `preact`、`qrcode-generator`（QR code 產生）、`jsqr`（QR code 讀取）、`age-encryption`（加密，連同它相依的 noble 系列）、`libheif-js`（HEIC 解碼，LGPL-3.0，見下方「HEIC」）、`pdf-lib`（PDF 的解析與寫出，見下方「文件」）、`pdfjs-dist`（PDF 的遮蔽，見下方「PDF 的遮蔽」），以及遮蔽的自動尋找用的 `onnxruntime-web` 與 `tesseract.js`（見下方「遮蔽的自動尋找」）、逐字稿用的 `@huggingface/transformers` 與 `opencc-js`（見下方「逐字稿」，分辨說話者用的 onnxruntime 是 Transformers.js 帶的那一份），以及查證計算 SHA-256 用的 `@noble/hashes`（age 加密原本就相依它，鎖定同一個版本，見下方「查證」）、下載的軟體驗證用的 `openpgp`（LGPL-3.0，見下方「下載的軟體驗證」）。新增套件前先想能不能自己寫，必要時鎖定確切的版本。工具用到的套件在打開工具時才載入
 - 結構有問題的檔案就停下來，不交出一份沒處理乾淨的檔案
 
@@ -368,6 +368,19 @@ PDF 的版本紀錄：每一個 `%%EOF` 是一次存檔的結尾，切到那裡�
 - `tests/e2e/analytics.spec.ts` 在 Chromium 把 `anoni.net` 指到預覽伺服器（`vite.config.ts` 的 `preview.allowedHosts`），攔下送到 Umami 的請求，確認內容與頁尾的開關。其他測試都在 localhost，`tests/e2e/guard.ts` 擋下任何對外連線
 - 看數字用工作區的 `python3 umami/report.py --website gears events --funnel task file-add tool-done save`
 
+## 建議與回饋
+
+讀者在「建議與回饋」許願新功能、回報問題，或寫下哪裡不好用（`/gears/feedback/`，畫面在 `src/ui/FeedbackPage.tsx`，送出在 `src/feedback.ts`）。原本叫「許願區」，回報問題放在許願底下不自然，2026-10-18 改名，許願新功能改寫在說明裡。入口有兩個：桌面最後的「使用者區」，以及頁尾的「建議與回饋」。使用者區放跟 Gears 本身有關、不是工具的頁面（`src/ui/tool-meta.ts` 的 `USER_PAGES`），目前只有建議與回饋，之後的設定也放這裡，圖示圈用品牌主色（`cat-user`），跟兩類工具分開。
+
+- 表單由 Gears 自己畫，送到社群自架的 Formbricks（`form.anoni.net`），用它給網頁用的公開 API（`/api/v1/client/<環境>/responses`），不需要金鑰。不嵌入 Formbricks 的頁面：整個網站送了 `Cross-Origin-Embedder-Policy: require-corp`，別的網站的頁面嵌不進來，讀者也不必認識另一個服務。畫面上不提 Formbricks
+- CSP 的 `connect-src` 只開送出的那一個路徑（`FEEDBACK_ENDPOINT_CLEARNET`，meta 標籤與標頭都有）。onion 版送到 `form.<onion>` 的同一個路徑（`FEEDBACK_ENDPOINT_ONION`），兩個網址分成兩個常數，建置時沒用到的會被拿掉，onion 版的產物裡沒有 clearnet 的網址
+- 送出前畫面寫明送到哪裡、一併送出哪些資訊、暫存區的檔案不會送出、伺服器記下什麼（`feedback.privacy`）。請求不帶 cookie 與 Referer
+- 一併送出的是讀者從哪個工具過來（`tool`，桌面是 `home`，在 `src/app.tsx` 記下）、介面的語系（`locale`）與版本（`version`），對應問卷的三個 hidden fields
+- Formbricks 每個語系一份問卷，id 寫在 `FEEDBACK_SURVEYS`。題目 id 與選項照社群工作區的 `formbricks/gears_survey.py`，選擇題存的是選項的文字，`feedback.kind.*` 與 `feedback.frequency.*` 的字串要跟那份檔案一字不差，改字時兩邊一起改
+- 問卷是草稿或已關閉時伺服器回 403，畫面說明建議與回饋暫時沒有開放。送不出去時填好的內容留著，讀者可以再按一次
+- 收到的需求在社群的工作區整理（`formbricks/`），決定要做的改寫成這個 repo 的 issue，掛 `request` 標籤，不公開讀者寫的原文與聯絡方式。送出之後的畫面連到 `request` 標籤的 issue 列表
+- 瀏覽器測試（`tests/e2e/feedback.spec.ts`）攔下送出的請求，確認內容、成功與 403 的畫面，以及暫存區的檔案留著
+
 ## 離線使用
 
 第一次開啟之後，沒有網路也能使用。service worker 的範本在 `src/sw/sw-template.js`，建置時 `vite.config.ts` 的 `serviceWorker()` 列出 `dist/` 的檔案、算出版本（所有檔案內容的雜湊），輸出成 `/gears/sw.js`。
@@ -403,7 +416,7 @@ PDF 的版本紀錄：每一個 `%%EOF` 是一次存檔的結尾，切到那裡�
 
 網址是 `http://gears.<onion>/`，跟社群其他 onion 服務一樣切成子網域，網站放在根目錄。`GEARS_TARGET=onion npm run build` 建置到 `dist-onion/`，建置目標寫在 `vite.config.ts` 與 `src/site.ts`：
 
-- 頁面只連自己的網域。使用統計在建置時整段拿掉，頁尾寫明不記錄。社群轉檔的模型改由 onion 網站的 `/models/assets/` 提供，m6 的 nginx 指到 `assets.anoni.net` 的同一份檔案。分享卡片的圖片放在 clearnet，不放。逐字稿的 large-v3-turbo 仍然在讀者選擇之後從 Hugging Face 下載，經過 Tor 網路
+- 頁面只連自己的網域，以及建議與回饋的送出網址（onion 的表單伺服器，見上方「建議與回饋」）。使用統計在建置時整段拿掉，頁尾寫明不記錄。社群轉檔的模型改由 onion 網站的 `/models/assets/` 提供，m6 的 nginx 指到 `assets.anoni.net` 的同一份檔案。分享卡片的圖片放在 clearnet，不放。逐字稿的 large-v3-turbo 仍然在讀者選擇之後從 Hugging Face 下載，經過 Tor 網路
 - 頁尾連到 onion 的社群首頁
 - `node scripts/check-site.mjs dist-onion / --onion` 檢查頁面、程式、樣式與 manifest 沒有連到 clearnet 的 anoni.net（授權說明的文字檔會寫到出處，不算）。`npm run test:onion` 建置之後在根目錄執行冒煙測試（`tests/onion/`），CI 在 Chromium 那台執行
 - 部署：`deploy.yml` 建置兩份，onion 版推到 `build` 分支的 `onion/`，標頭是 `deploy/nginx-headers-onion.conf`，m6 的拉取腳本換到 `/etc/nginx/snippets/gears-onion-headers.conf`。nginx 的 server block 與快取的對照（`$gears_onion_cache_control`）在 `tools/nginx-gears.conf`
@@ -462,6 +475,7 @@ node scripts/fetch-165.mjs   # 下載並整理成 public/data/165.txt
 
 - 能不用 canvas 輸出圖檔就不用。Brave 預設會擾動 canvas 讀出來的像素，QR code 的 PNG 由 `src/core/png-encode.ts` 直接寫位元組。遮蔽與 QR code 讀取必須解碼影像，只能用 canvas：遮蔽輸出後抽查每個框是否夠黑，門檻容許這點雜訊。QR code 讀取對雜訊不敏感
 - 用到 WebAssembly 的功能（逐字稿、遮蔽的自動尋找、HEIC 的解碼器）先用 `src/ui/wasm.ts` 的 `wasmAvailable()` 檢查。iPhone、iPad 與 Mac 的鎖定模式會關掉 Safari 的 WebAssembly，不檢查的話讀者要等模型下載完才失敗，收到的還是「記憶體不夠」這類錯誤的原因。檢查時實際編譯一個 8 個位元組的空模組，只看 `typeof WebAssembly` 不夠。逐字稿一打開就說明、開始的按鈕不能按，自動尋找請讀者手動框選，HEIC 說明載入不了解碼器。瀏覽器測試（`tests/e2e/wasm-unavailable.spec.ts`）把頁面的 `WebAssembly` 拿掉來模擬
+- 工具以外的頁面（`src/pages.ts` 的 `pageIds`：授權與來源、語言模型速度量測、建議與回饋）不顯示暫存區，版面改成單欄（`.workbench.solo`）。暫存區的檔案仍在記憶體裡，回到桌面就看得到
 - 站內導覽不用一般的 `<a href>`。一般的連結會重新載入頁面，暫存區只在記憶體裡，會整個清空。改用 `src/router.ts` 的 `navigate()`，外觀要像連結時用 `button.link`
 - 解碼圖片一律用 `src/ui/image-decode.ts` 的 `decodeImage()`，不要直接呼叫 `createImageBitmap()`，HEIC 才會在不支援的瀏覽器上改用 libheif
 - 遮蔽畫面分成兩區：會改變框的動作（自動尋找、復原、清除）在圖片上方，套用與取消在圖片下方的完成列，完成列捲動時固定在畫面底部（`position: sticky`）。窄螢幕的復原、清除只顯示圖示，文字留在按鈕裡給讀螢幕軟體

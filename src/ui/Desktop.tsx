@@ -1,7 +1,7 @@
 import { t, tDynamic } from "../i18n/index.ts";
 import { navigate } from "../router.ts";
 import { Icon, IconCircle } from "./Icon.tsx";
-import { TOOL_GROUPS, TOOL_META } from "./tool-meta.ts";
+import { PAGE_META, TOOL_GROUPS, TOOL_META, USER_PAGES } from "./tool-meta.ts";
 import { TAGS, TAG_ORDER, type TagId } from "./tool-tags.ts";
 import { TASKS, type Task } from "./tasks.ts";
 
@@ -47,7 +47,7 @@ function ToolCard({ id }: { id: string }) {
   );
 }
 
-// 桌面：任務捷徑，加上依讀者的目的分成三組的工具。暫存區在旁邊一直看得到。
+// 桌面：任務捷徑，加上依讀者的目的分成三組的工具，最後是使用者區。暫存區在旁邊一直看得到。
 export function Desktop({ onTask }: Props) {
   // 圖示說明只列出有工具用到的標籤
   const used = TAG_ORDER.filter((tag) => Object.values(TOOL_META).some((meta) => meta.tags?.includes(tag)));
@@ -90,6 +90,23 @@ export function Desktop({ onTask }: Props) {
             </ul>
           </div>
         ))}
+        <div class="tool-group">
+          <h3>{t("desk.group.user")}</h3>
+          <p class="hint">{t("desk.group.user.desc")}</p>
+          <ul class="cards">
+            {USER_PAGES.map((id) => (
+              <li key={id}>
+                <button type="button" class="card" onClick={() => navigate(id)}>
+                  <IconCircle name={PAGE_META[id].icon} cat={PAGE_META[id].cat} />
+                  <span class="card-text">
+                    <strong>{tDynamic(`${id}.title`)}</strong>
+                    <span>{tDynamic(`${id}.desc`)}</span>
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
       </section>
 
       {used.length ? (

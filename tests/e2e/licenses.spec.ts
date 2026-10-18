@@ -38,6 +38,7 @@ test("直接打開英文版的授權頁", async ({ page }) => {
   await page.goto("./en/licenses/");
   await expect(page.getByRole("heading", { name: "Licenses and sources" })).toBeVisible();
   await expect(page).toHaveTitle("Licenses and sources | Gears");
+  await expect(page.getByRole("heading", { name: "Tray" })).toHaveCount(0);
 });
 
 test("逐字稿列出每個模型的原始來源、授權與下載的位置", async ({ page }) => {

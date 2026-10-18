@@ -9,6 +9,10 @@ test("首頁在根目錄，頁尾連到 onion 的社群首頁，不記錄使用�
   await expect(page.getByRole("button", { name: /QR code 讀取/ })).toBeVisible();
   await expect(page.getByRole("link", { name: "匿名網路社群 anoni.net" })).toHaveAttribute("href", `http://${ONION_HOST}/`);
   await expect(page.getByTestId("analytics")).toHaveText("onion 版不記錄使用統計。");
+  // 建議與回饋送到 onion 的表單伺服器，CSP 只開那一個網址
+  const csp = await page.locator('meta[http-equiv="Content-Security-Policy"]').getAttribute("content");
+  expect(csp).toContain(`connect-src 'self' http://form.${ONION_HOST}/api/v1/client/`);
+  expect(csp).not.toContain("form.anoni.net");
 });
 
 test("工具的網址在根目錄底下，打開之後可以換工具", async ({ page }) => {

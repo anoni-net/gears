@@ -39,6 +39,13 @@ export const TOOL_GROUPS = [
   { id: "check", tools: ["verify", "video-frames", "doc-check", "email-check", "software-verify", "url-check", "qr-read"] },
 ] as const;
 
+// 桌面最後的使用者區：跟 Gears 本身有關、不是工具的頁面。目前只有建議與回饋，之後的設定也放這裡
+export const USER_PAGES = ["feedback"] as const;
+
+export const PAGE_META: Record<(typeof USER_PAGES)[number], { icon: IconName; cat: Category }> = {
+  feedback: { icon: "message-reply-text-outline", cat: "user" },
+};
+
 export type GroupId = (typeof TOOL_GROUPS)[number]["id"];
 
 export const groupOf = (toolId: string): GroupId | undefined =>
