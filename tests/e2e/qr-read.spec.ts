@@ -138,7 +138,7 @@ test("範例：每一張都用真的解碼流程讀得出來", async ({ page }) 
   await expect(page.getByRole("heading", { name: "分享前要遮住" })).toBeVisible();
   for (const sample of samples) {
     await page.locator(`[data-sample="${sample.id}"]`).click();
-    const text = "bytes" in sample ? new TextDecoder("big5").decode(Buffer.from(sample.bytes, "hex")) : sample.text;
+    const text = sample.bytes ? new TextDecoder("big5").decode(Buffer.from(sample.bytes, "hex")) : sample.text!;
     await expect(page.getByTestId("qr-text"), sample.id).toHaveText(text);
   }
   await expect(page.getByTestId("qr-fields")).toContainText("ISBN");

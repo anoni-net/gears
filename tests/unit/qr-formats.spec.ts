@@ -115,7 +115,7 @@ test("電子發票的一維條碼：期別、發票號碼與隨機碼", () => {
 // 讀取工具的範例（scripts/make-qr-samples.mjs 照這份產生圖片）：每一張都要拆成標示的格式
 test("範例的內容都認得出標示的格式", () => {
   for (const sample of samples) {
-    const text = "bytes" in sample ? new TextDecoder("big5").decode(Buffer.from(sample.bytes, "hex")) : sample.text;
+    const text = sample.bytes ? new TextDecoder("big5").decode(Buffer.from(sample.bytes, "hex")) : sample.text!;
     expect(classify(text, sample.format).kind, sample.id).toBe(sample.kind);
   }
 });
