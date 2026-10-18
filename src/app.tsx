@@ -332,16 +332,19 @@ export function App() {
         </div>
       ) : null}
 
-      <main class="workbench frame">
-        <TrayList
-          files={state.files}
-          selected={state.selected}
-          onSelect={selectFile}
-          onPick={pick}
-          busy={state.busy}
-          failed={state.failed}
-          compact={!atHome && !state.files.length}
-        />
+      {/* 授權、建議與回饋這類工具以外的頁面不顯示暫存區，改成單欄。檔案仍在記憶體裡，回到桌面就看得到 */}
+      <main class={isPage(route) ? "workbench solo frame" : "workbench frame"}>
+        {isPage(route) ? null : (
+          <TrayList
+            files={state.files}
+            selected={state.selected}
+            onSelect={selectFile}
+            onPick={pick}
+            busy={state.busy}
+            failed={state.failed}
+            compact={!atHome && !state.files.length}
+          />
+        )}
         <div class="view">{view}</div>
       </main>
 

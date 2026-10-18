@@ -43,6 +43,8 @@ test("從桌面的使用者區打開建議與回饋，送出之後顯示收到�
   await expect(page).toHaveURL(/\/gears\/feedback\/$/);
   await expect(page.getByRole("heading", { name: "建議與回饋" })).toBeVisible();
   await expect(page.getByTestId("feedback-privacy")).toContainText("暫存區的檔案不會送出");
+  // 工具以外的頁面不顯示暫存區
+  await expect(page.getByRole("heading", { name: "暫存區" })).toHaveCount(0);
 
   const send = page.getByRole("button", { name: "送出" });
   await expect(send).toBeDisabled();
@@ -62,6 +64,8 @@ test("從桌面的使用者區打開建議與回饋，送出之後顯示收到�
     data: { kind: "新的工具", goal: "想把手機的錄音轉成逐字稿，但打不開這個檔案", frequency: "每週", tool: "home", locale: "zh-TW" },
   });
   expect((sent[0]!.data as Record<string, string>).contact).toBeUndefined();
+  await page.getByRole("button", { name: "回到桌面" }).click();
+  await expect(page.getByRole("heading", { name: "暫存區" })).toBeVisible();
   await expect(page.getByText("notes.txt").first()).toBeVisible();
 });
 

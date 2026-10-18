@@ -489,6 +489,11 @@ h4 {
     grid-template-columns: 17rem minmax(0, 1fr);
     align-items: start;
   }
+
+  /* 工具以外的頁面沒有暫存區（src/app.tsx） */
+  .workbench.solo {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .tray {
