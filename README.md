@@ -26,7 +26,7 @@ anoni.net Gears 檔案工作台，在瀏覽器裡處理要交出去的檔案：�
 - 用密語或 age 公鑰加密任何檔案或一段文字，以及解密
 - 面對面傳送：兩台裝置連上同一個 Wi-Fi 或手機熱點，互掃 QR code 配對，用 WebRTC 直接傳暫存區的檔案，不經過任何伺服器
 - 網址檢查：比對 165 反詐騙的停止解析清單、標出真正的網域、清除追蹤碼
-- QR code 的產生與讀取
+- QR code 的產生與讀取：文字、Wi-Fi、聯絡資料、活動、位置、Email、電話與簡訊，讀取時拆成欄位，付款、兩步驟驗證與付費號碼另外提醒
 - 密語與密碼產生器
 - 一次清除多個檔案，下載成一個壓縮檔
 - 第一次開啟之後可以離線使用
@@ -86,7 +86,7 @@ Tools in the first version:
 - Encrypt any file or a piece of text with a passphrase or an age public key, and decrypt
 - Nearby transfer: pair two devices on the same Wi-Fi or phone hotspot by scanning each other's QR code, and send files from the tray directly over WebRTC, without going through any server
 - Check a link against Taiwan's 165 anti-fraud blocklist, show the real domain, and remove tracking parameters
-- Generate and read QR codes
+- Generate and read QR codes: text, Wi-Fi, contacts, events, locations, email, phone and SMS. Scanned codes are broken into fields, with warnings for payments, two-step verification keys and premium-rate numbers
 - Generate passphrases and passwords
 - Clean many files at once and download them as one archive
 - Works offline after the first visit

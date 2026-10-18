@@ -23,9 +23,37 @@ test("從照片讀出網址，再交給網址檢查", async ({ page }) => {
 test("Wi-Fi 的 QR code 拆成網路名稱與密碼", async ({ page }) => {
   await page.goto("./qr-read/");
   await page.getByTestId("qr-input").setInputFiles({ name: "wifi.png", mimeType: "image/png", buffer: png("WIFI:T:WPA;S:anoni-cafe;P:secret pass;;") });
-  await expect(page.locator(".wifi dd").first()).toHaveText("anoni-cafe");
+  await expect(page.getByTestId("qr-fields")).toContainText("Wi-Fi");
+  await expect(page.getByTestId("qr-fields").getByText("anoni-cafe", { exact: true })).toBeVisible();
   await expect(page.getByText("secret pass", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "複製密碼" })).toBeVisible();
+});
+
+test("付款與兩步驟驗證的 QR code 拆成欄位，另外提醒", async ({ page }) => {
+  await page.goto("./qr-read/");
+  const address = "bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq";
+  await page.getByTestId("qr-input").setInputFiles({ name: "pay.png", mimeType: "image/png", buffer: png(`bitcoin:${address}?amount=0.001&label=anoni.net`) });
+  await expect(page.getByTestId("qr-fields")).toContainText("Bitcoin");
+  await expect(page.getByTestId("qr-fields").getByText(address, { exact: true })).toBeVisible();
+  await expect(page.getByText("付款前核對收款地址的開頭與結尾")).toBeVisible();
+  await expect(page.getByRole("button", { name: "複製地址" })).toBeVisible();
+
+  await page.getByTestId("qr-input").setInputFiles({ name: "otp.png", mimeType: "image/png", buffer: png("otpauth://totp/Example:alice?secret=JBSWY3DPEHPK3PXP&issuer=Example") });
+  await expect(page.getByTestId("qr-fields")).toContainText("兩步驟驗證");
+  await expect(page.getByTestId("qr-fields")).toContainText("alice");
+  await expect(page.getByText("拍到這張 QR code 的人都能產生同一組驗證碼")).toBeVisible();
+});
+
+test("聯絡資料與簡訊在打開之前先列出內容", async ({ page }) => {
+  await page.goto("./qr-read/");
+  await page.getByTestId("qr-input").setInputFiles({ name: "card.png", mimeType: "image/png", buffer: png("MECARD:N:陳,小明;TEL:0912345678;EMAIL:ming@example.org;;") });
+  await expect(page.getByTestId("qr-fields")).toContainText("聯絡資料");
+  await expect(page.getByTestId("qr-fields")).toContainText("陳小明");
+  await expect(page.getByTestId("qr-fields")).toContainText("ming@example.org");
+
+  await page.getByTestId("qr-input").setInputFiles({ name: "sms.png", mimeType: "image/png", buffer: png("SMSTO:0204000000:訂閱") });
+  await expect(page.getByTestId("qr-fields")).toContainText("0204000000");
+  await expect(page.getByText("陌生的號碼可能是付費簡訊")).toBeVisible();
 });
 
 test("翻拍螢幕的照片，白底上有子像素的直紋也讀得出來", async ({ page }) => {

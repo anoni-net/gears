@@ -4,6 +4,7 @@ import { wav } from "../helpers/audio.ts";
 import { syntheticDocx, syntheticPdf } from "../helpers/documents.ts";
 import { PHISH_EML } from "../helpers/emails.ts";
 import { incrementalPdf } from "../helpers/pdf-incremental.ts";
+import { encodeQr, qrPng } from "../../src/tools/qrcode/index.ts";
 import { existsSync, readFileSync } from "node:fs";
 import { SCENES_WEBM } from "../global-setup.ts";
 import { expect, test } from "./guard.ts";
@@ -34,6 +35,24 @@ test("加入文件、清除之後的檔案畫面沒有無障礙問題", async ({
   expect(await audit(page)).toEqual([]);
   await page.getByRole("button", { name: "清除", exact: true }).click();
   await expect(page.getByText("沒有找到可能透露身分的中繼資料。")).toBeVisible();
+  expect(await audit(page)).toEqual([]);
+});
+
+test("QR code 產生器的聯絡資料與錯誤訊息、讀取的付款提醒沒有無障礙問題", async ({ page }) => {
+  await page.goto("./qrcode/");
+  await page.getByRole("radio", { name: "聯絡資料" }).check();
+  await page.getByLabel("姓名").fill("陳小明");
+  await expect(page.getByRole("img", { name: "QR code 預覽" })).toBeVisible();
+  expect(await audit(page)).toEqual([]);
+  await page.getByLabel("電話號碼").fill("abc");
+  await expect(page.getByRole("alert")).toBeVisible();
+  expect(await audit(page)).toEqual([]);
+
+  await page.goto("./qr-read/");
+  await page.getByTestId("qr-input").setInputFiles({ name: "pay.png", mimeType: "image/png", buffer: Buffer.from(qrPng(encodeQr("monero:4AdUnd?tx_amount=1", "M"), 6)) });
+  await expect(page.getByTestId("qr-fields")).toContainText("Monero");
+  expect(await audit(page)).toEqual([]);
+  await page.emulateMedia({ colorScheme: "dark" });
   expect(await audit(page)).toEqual([]);
 });
 

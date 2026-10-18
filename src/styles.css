@@ -1294,20 +1294,39 @@ button.pick-files .icon {
   margin-bottom: 0.75rem;
 }
 
-.wifi {
+.qr-fields {
   display: grid;
   grid-template-columns: max-content 1fr;
   gap: 0.25rem 1rem;
   margin: 0 0 0.75rem;
 }
 
-.wifi dt {
+.qr-fields dt {
   color: var(--muted);
 }
 
-.wifi dd {
+.qr-fields dd {
   margin: 0;
   overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+
+.qr-content .warn {
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+  background: var(--warn-bg);
+}
+
+/* 產生器：QR code 裡實際放的內容，收起來，要確認時再展開 */
+.qr-raw {
+  margin-top: 0.75rem;
+}
+
+.qr-raw pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 0.85rem;
+  margin: 0.5rem 0 0;
 }
 
 .qr-found {

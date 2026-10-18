@@ -227,6 +227,27 @@ PDF 的版本紀錄：每一個 `%%EOF` 是一次存檔的結尾，切到那裡�
 - 瀏覽器測試（`tests/e2e/nearby.spec.ts`）在同一個瀏覽器開兩個分頁互傳，走複製貼上與「打開送出端的網址」兩條路。Firefox 不處理背景分頁的輸入，操作哪個分頁之前先 `bringToFront()`。CI 的機器沒有 mDNS 解析，Chromium 與 WebKit 給相機權限。GitHub 機器上的 Firefox 蒐集不到任何候選（2026-10-17 確認，位址隱藏關掉也一樣），測試先探測，蒐集不到就略過，所以 Firefox 的配對只在本機驗證。鏡頭掃 QR code 那一條跟 QR code 讀取共用解碼，沒有自動測試
 - 還沒做的：文件站實測過多條並行連線能讓 iPhone 送出從每秒約 5 MB 提高到 37 MB，第一版只用一條連線。接收大檔案時 iPhone 的記憶體上限、切到背景與鎖屏之後連線是否還在，都要在實機上量
 
+## QR code 的內容格式
+
+產生器除了文字與網址，也做手機的相機認得的幾種格式，掃到之後會直接帶出動作（`src/tools/qrcode/index.ts`，畫面在 `src/ui/QrTool.tsx`）。寫法跟著 ZXing 的慣例走，Android 與 iOS 的相機都認得：
+
+| 格式 | 內容 | 說明 |
+|---|---|---|
+| Wi-Fi | `WIFI:T:WPA;S:…;P:…;;` | 反斜線、分號、逗號、冒號與雙引號要跳脫 |
+| 聯絡資料 | vCard 3.0 | 姓名整串放在 `N` 的姓氏欄，中文姓名不拆成姓與名。`URL` 是網址型別，逗號不跳脫 |
+| 活動 | 單獨的 `VEVENT` | 時間不帶時區，掃描的手機當成它所在地的時間，畫面上寫明 |
+| 位置 | `geo:緯度,經度` | 輸入欄接受地圖 App 複製的「緯度, 經度」，也讀得出地圖網址裡的 `@緯度,經度` |
+| Email | `mailto:`，主旨與內容百分比編碼 | mailto 裡的加號是字面上的加號，不能當空白 |
+| 電話 | `tel:` | 去掉空白、連字號、括號與點，剩下的只能是數字與 +、*、# |
+| 簡訊 | `SMSTO:號碼:內容` | `sms:` 的內容參數各家寫法不一，SMSTO 兩邊都認得 |
+
+- 欄位都放在同一份表單，切換格式時填過的內容留著（電話與簡訊共用號碼）。欄位不夠時顯示提示，格式不對時說明原因、不畫出 QR code
+- 除了文字之外，預覽下方收著「QR code 裡的文字」，讀者可以確認實際放進去的內容。聯絡資料另外提醒印在名片或海報上時拍到的人都能存下，只填願意公開的欄位
+- 下載的檔名依格式命名（`contact-qrcode.png`、`event-qrcode.png` 這類）
+- 讀取端（`src/tools/qr-read/index.ts`，畫面在 `src/ui/QrContentView.tsx`）認得上表的格式，另外認得 MECARD、MATMSG、vCard 2.1 的 quoted-printable、`sms:`、包在 `VCALENDAR` 裡的活動（`TZID` 與 UTC 的時間照標示顯示）、兩步驟驗證的 `otpauth://`，以及 `bitcoin:`、`monero:`、`zcash:` 的付款網址。認得的格式拆成欄位，讀者在手機帶出動作之前先看清楚
+- 有風險的格式在畫面上提醒：電話與簡訊可能是付費號碼，付款的 QR code 可能被貼上假的（按鈕改成複製地址），兩步驟驗證的金鑰拍到的人都能產生同一組驗證碼。金鑰本身不拆成欄位顯示，原文照樣列出
+- 單元測試（`tests/unit/qrcode.spec.ts`、`tests/unit/qr-read.spec.ts`）把每一種格式產生的 QR code 解碼回文字比對，再交給讀取端拆回欄位
+
 ## 影片的關鍵影格
 
 收到影片要查證時，常見的做法是擷取幾個畫面做反向圖片搜尋，找出影片原本的出處，現有的線上工具多半要先上傳影片。這裡在瀏覽器裡挑出畫面明顯不同的幾格，讀者勾選之後加進暫存區（檔名 `frame-1-05.3.jpg`，不沿用影片的檔名），用哪個搜尋服務由讀者決定，工作台不連到任何服務。畫面上提醒反向圖片搜尋要把圖片上傳給該服務，有人臉或個資時先遮蔽。純邏輯在 `src/tools/video-frames/`（有單元測試），擷取在 `src/ui/video-frames.ts`，畫面在 `src/ui/VideoFramesEditor.tsx`。
@@ -496,7 +517,7 @@ node scripts/fetch-165.mjs   # 下載並整理成 public/data/165.txt
 
 HEIC 有兩種測試檔。單元測試在測試裡組出結構完整、不能解碼的檔案。能解碼的真 HEIC 由 `tests/global-setup.ts` 在瀏覽器測試開始前呼叫 `scripts/make-test-images.py`，用 pillow-heif 產生到 `tests/.generated/`（不進版控）。有 `uv` 就用 `uv run --with pillow-heif==1.8.1`，CI 用 `astral-sh/setup-uv` 安裝。產生不了時，用到真 HEIC 的測試會略過。
 
-QR code 的測試把產生的 PNG 解碼回像素，用 `jsQR` 讀出文字，跟輸入比對，中文與 Wi-Fi 的特殊字元都要測。編碼寫錯的典型後果是掃得出來、內容卻錯。
+QR code 的測試把產生的 PNG 解碼回像素，用 `jsQR` 讀出文字，跟輸入比對，中文與 Wi-Fi、vCard、活動的特殊字元都要測。編碼寫錯的典型後果是掃得出來、內容卻錯。
 
 QR code 讀取（`src/ui/qr-scan.ts`）要能讀翻拍螢幕的照片。白底上拍到的子像素直紋會讓 jsQR 讀不出來，所以讀不到時逐級減半再讀，縮小由程式自己平均像素：WebKit 用 canvas 縮圖時只取樣部分像素，紋路一直留著，iPhone 上讀不出來的就是這種照片。瀏覽器測試用 canvas 畫一張帶直紋的 QR code 重現。
 
