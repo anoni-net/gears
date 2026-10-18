@@ -246,7 +246,10 @@ PDF 的版本紀錄：每一個 `%%EOF` 是一次存檔的結尾，切到那裡�
 - 下載的檔名依格式命名（`contact-qrcode.png`、`event-qrcode.png` 這類）
 - 讀取端（`src/tools/qr-read/index.ts`，畫面在 `src/ui/QrContentView.tsx`）認得上表的格式，另外認得 MECARD、MATMSG、vCard 2.1 的 quoted-printable、`sms:`、包在 `VCALENDAR` 裡的活動（`TZID` 與 UTC 的時間照標示顯示）、兩步驟驗證的 `otpauth://`，以及 `bitcoin:`、`monero:`、`zcash:` 的付款網址。認得的格式拆成欄位，讀者在手機帶出動作之前先看清楚
 - 有風險的格式在畫面上提醒：電話與簡訊可能是付費號碼，付款的 QR code 可能被貼上假的（按鈕改成複製地址），兩步驟驗證的金鑰拍到的人都能產生同一組驗證碼。金鑰本身不拆成欄位顯示，原文照樣列出
-- 單元測試（`tests/unit/qrcode.spec.ts`、`tests/unit/qr-read.spec.ts`）把每一種格式產生的 QR code 解碼回文字比對，再交給讀取端拆回欄位
+- 台灣的電子發票證明聯（`parseInvoice`）：照財政部《電子發票證明聯一維及二維條碼規格說明》Ver 1.9（2022-05-10）。左邊的 QR code 前 77 碼是字軌號碼、民國年月日、隨機碼、未稅與含稅金額（十六進位）、買方與賣方的統一編號與加密驗證，之後以冒號接著品目筆數、中文編碼參數（0 Big5、1 UTF-8、2 Base64、3 境外電商）與「品名:數量:單價」，放不下的接在右邊以 `**` 開頭的 QR code。兩個 QR code 各自讀，左邊列出發票的欄位與讀得到的品項，品項沒讀完時說明其他的在右邊。境外電商的金額是 8 碼整數加 2 碼小數，可能是外幣，不加單位。畫面上提醒發票的 QR code 帶著金額、店家與買了什麼，打了統編時還有買方的統一編號，分享收據的照片前可以先遮蔽
+- Big5 的內容：jsQR 用 `decodeURIComponent` 解開位元組，不是 UTF-8 的那一段會變成空字串，Big5 的電子發票整個讀成空的。`qrText` 發現有位元組沒解出文字時，先用 UTF-8 解整串位元組，不是的話當成 Big5（`TextDecoder("big5")`，三種瀏覽器核心都支援）
+- 格式清單在 `src/tools/qrcode/formats.ts`，產生器、讀取與使用統計共用。跟 `QrContent` 的 `kind` 對不上時型別檢查會失敗
+- 單元測試（`tests/unit/qrcode.spec.ts`、`tests/unit/qr-read.spec.ts`）把每一種格式產生的 QR code 解碼回文字比對，再交給讀取端拆回欄位。電子發票用規格說明的範例，Big5 的那一份由 `tests/helpers/qr-decode.ts` 的 `encodeBytes` 直接把位元組放進 QR code
 
 ## 影片的關鍵影格
 
@@ -382,6 +385,8 @@ PDF 的版本紀錄：每一個 `%%EOF` 是一次存檔的結尾，切到那裡�
 | `tool-fail` | `tool`：工具 id 或 `tray`（加入時就讀不了），`reason`：unsupported、broken、too-large、encrypted、not-found、network、stalled、canvas-blocked（瀏覽器不讓讀取 canvas）、wasm-unavailable（瀏覽器關掉了 WebAssembly）、other | 暫存區的 `failed` 與各編輯畫面失敗的地方 |
 | `save` | `how`：download、share、zip | 下載連結、`saveBlob`、系統分享、批次的壓縮檔 |
 | `transcribe` | `model`、`device`（cpu、gpu）、`fallback`（顯示卡失敗退回 CPU 時是 1） | 逐字稿轉完時 |
+| `qr-make` | `format`：產生器的格式（`QR_MODES`） | QR code 放進暫存區或下載時 |
+| `qr-read` | `format`：讀到的格式（`QR_KINDS`） | QR code 讀取讀到時，暫存區的圖片自動讀出的不算 |
 
 - 每個事件只能帶上表的欄位，值也要在 `EVENTS` 的清單裡，對不上整筆不送（`scrub`）。新增事件或欄位時改 `EVENTS`，`tests/unit/analytics.spec.ts` 會檢查工具、任務與模型的清單跟程式一致
 - 不送檔名、檔案大小、檔案內容、讀者輸入的文字、網址檢查的網址、信件的寄件人與網域、雜湊值、查證的結果。螢幕尺寸取到百位數

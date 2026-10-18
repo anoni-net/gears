@@ -2,6 +2,7 @@ import { useEffect, useRef } from "preact/hooks";
 import type { Format } from "../core/bytes.ts";
 import models from "../tools/transcribe/models.json" with { type: "json" };
 import { toolIds } from "../tools/index.ts";
+import { QR_KINDS, QR_MODES } from "../tools/qrcode/formats.ts";
 import { TASKS } from "./tasks.ts";
 import { ANALYTICS_ENDPOINT, ANALYTICS_WEBSITE } from "./analytics-endpoint.ts";
 import { IS_ONION } from "../site.ts";
@@ -82,6 +83,9 @@ export const EVENTS: Record<string, Record<string, readonly string[]>> = {
   "tool-fail": { tool: [...toolIds, "tray"], reason: REASONS },
   save: { how: ["download", "share", "zip"] },
   transcribe: { model: Object.keys(models), device: ["cpu", "gpu"], fallback: ["0", "1"] },
+  // QR code 的格式：產生時放進暫存區或下載才記，讀取時讀到才記，內容一律不送
+  "qr-make": { format: QR_MODES },
+  "qr-read": { format: QR_KINDS },
 };
 
 // 欄位剛好是列出的那幾個、值也在清單裡才回傳，其他一律 null

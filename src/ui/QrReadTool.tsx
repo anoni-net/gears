@@ -4,6 +4,13 @@ import { QrContentView } from "./QrContentView.tsx";
 import { track, trackFail } from "./analytics.ts";
 import { isCanvasBlocked } from "./canvas-access.ts";
 import { decodeQrFromBlob, decodeQrFromVideo } from "./qr-scan.ts";
+import { classify } from "../tools/qr-read/index.ts";
+
+// 只記讀到哪一種格式，內容不送
+const done = (text: string) => {
+  track("tool-done", { tool: "qr-read" });
+  track("qr-read", { format: classify(text).kind });
+};
 import type { CreateToolProps } from "./types.ts";
 
 // 相機畫面與照片都只在瀏覽器裡解讀。相機需要 HTTPS 才能使用。
@@ -30,7 +37,7 @@ export function QrReadTool({ onOpenTool }: CreateToolProps) {
       if (!alive) return;
       if (found) {
         stop();
-        track("tool-done", { tool: "qr-read" });
+        done(found);
         setText(found);
         setStatus("idle");
       } else {
@@ -83,7 +90,7 @@ export function QrReadTool({ onOpenTool }: CreateToolProps) {
       setStatus("canvasBlocked");
       return;
     }
-    if (found) track("tool-done", { tool: "qr-read" });
+    if (found) done(found);
     else trackFail("qr-read", "not-found");
     setText(found);
     setStatus(found ? "idle" : "notFound");

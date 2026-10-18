@@ -10,8 +10,9 @@
 
 import { assertCanvasReadable, canvasReadable } from "./canvas-access.ts";
 import { decodeImage } from "./image-decode.ts";
+import { qrText } from "../tools/qr-read/index.ts";
 
-type Decode = (data: Uint8ClampedArray, width: number, height: number) => { data: string } | null;
+type Decode = (data: Uint8ClampedArray, width: number, height: number) => Parameters<typeof qrText>[0] | null;
 type Pixels = { data: Uint8ClampedArray; width: number; height: number };
 
 let jsQR: Promise<Decode> | null = null;
@@ -67,8 +68,9 @@ function shrink(src: Pixels, f: number): Pixels {
 }
 
 function read(decode: Decode, img: Pixels): string | null {
-  // 雜訊偶爾會被讀成一個內容是空的 QR code，當成沒讀到
-  return decode(img.data, img.width, img.height)?.data || null;
+  // 雜訊偶爾會被讀成一個內容是空的 QR code，當成沒讀到。Big5 的內容由 qrText 自己解
+  const result = decode(img.data, img.width, img.height);
+  return result ? qrText(result) || null : null;
 }
 
 // 縮到長邊不超過 max 再讀，讀不到就逐級減半

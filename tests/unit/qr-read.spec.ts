@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
-import { classify, formatIcalTime, parseWifi } from "../../src/tools/qr-read/index.ts";
-import { eventPayload, geoPayload, mailtoPayload, smsPayload, telPayload, vcardPayload, wifiPayload } from "../../src/tools/qrcode/index.ts";
+import { classify, formatIcalTime, parseWifi, qrText } from "../../src/tools/qr-read/index.ts";
+import { encodeQr, eventPayload, geoPayload, mailtoPayload, qrPng, smsPayload, telPayload, vcardPayload, wifiPayload } from "../../src/tools/qrcode/index.ts";
+import { INVOICE_HEAD, big5Invoice, decodeQrPngResult, encodeBytes } from "../helpers/qr-decode.ts";
 
 test("Wi-Fi 格式拆成欄位，跳脫字元還原", () => {
   const text = wifiPayload({ ssid: 'Cafe;"5G"', password: "a:b,c\\d", security: "WPA", hidden: true });
@@ -89,4 +90,57 @@ test("付款網址拆出地址、金額與附註", () => {
     message: "捐款",
   });
   expect(classify("zcash:zs1example?amount=2").kind).toBe("payment");
+});
+
+// 規格說明（Ver 1.9）的範例：銷售額 0x144、總計額 0x154、隨機碼 9999、民國 102 年 5 月 23 日
+test("電子發票左邊的 QR code：UTF-8 與 Base64 的範例", () => {
+  expect(classify(`${INVOICE_HEAD}:**********:3:3:1:乾電池:1:105:`)).toEqual({
+    kind: "invoice",
+    number: "AB-11223344",
+    date: "2013-05-23",
+    random: "9999",
+    total: "340",
+    buyer: "",
+    seller: "01234567",
+    items: [{ name: "乾電池", qty: "1", price: "105" }],
+    itemTotal: 3,
+    foreign: false,
+  });
+  // Base64 的左半段只有品名，數量與單價在右邊
+  expect(classify(`${INVOICE_HEAD}:**********:3:3:2:5Lm+6Zu75rGg`)).toMatchObject({ kind: "invoice", items: [], itemTotal: 3 });
+  // 有打統編時記下買方的統一編號
+  const withBuyer = INVOICE_HEAD.replace("0000000001234567", "8765432101234567");
+  expect(classify(`${withBuyer}:**********:1:1:1:咖啡:2:60`)).toMatchObject({ buyer: "87654321", seller: "01234567", items: [{ name: "咖啡", qty: "2", price: "60" }] });
+});
+
+test("電子發票右邊的 QR code 接著左邊的品項", () => {
+  const items = [
+    { name: "口罩", qty: "1", price: "210" },
+    { name: "牛奶", qty: "1", price: "25" },
+  ];
+  expect(classify("**口罩:1:210:牛奶:1:25")).toEqual({ kind: "invoice-more", items });
+  // Base64 的右半段從上一個品項的數量接起
+  expect(classify("**OjE6MTA1OuWPo+e9qToxOjIxMDrniZvlpbY6MToyNQ==")).toEqual({ kind: "invoice-more", items });
+  // Markdown 的粗體不是發票
+  expect(classify("**重要**").kind).toBe("text");
+});
+
+test("境外電商的金額是整數與小數各自的十六進位", () => {
+  expect(classify(`${INVOICE_HEAD}:**********:1:1:3:0000000000:0000016B63:Cloud storage:1:363.99`)).toMatchObject({
+    kind: "invoice",
+    total: "363.99",
+    foreign: true,
+    items: [{ name: "Cloud storage", qty: "1", price: "363.99" }],
+  });
+});
+
+test("Big5 的電子發票：jsQR 解不出文字時改用位元組解碼", () => {
+  const result = decodeQrPngResult(qrPng(encodeBytes(big5Invoice()), 4))!;
+  expect(result.data).toBe("");
+  const text = qrText(result);
+  expect(text).toBe(`${INVOICE_HEAD}:**********:3:3:0:乾電池:1:105:`);
+  expect(classify(text)).toMatchObject({ kind: "invoice", items: [{ name: "乾電池", qty: "1", price: "105" }] });
+  // UTF-8 的內容照 jsQR 解出來的文字
+  const utf8 = decodeQrPngResult(qrPng(encodeQr("匿名網路", "M"), 4))!;
+  expect(qrText(utf8)).toBe("匿名網路");
 });

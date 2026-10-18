@@ -1,4 +1,5 @@
 import { encodeQr, MARGIN, qrPng } from "../../src/tools/qrcode/index.ts";
+import { big5Invoice, encodeBytes } from "../helpers/qr-decode.ts";
 import { expect, test } from "./guard.ts";
 
 const png = (text: string) => Buffer.from(qrPng(encodeQr(text, "M"), 6));
@@ -54,6 +55,25 @@ test("聯絡資料與簡訊在打開之前先列出內容", async ({ page }) => 
   await page.getByTestId("qr-input").setInputFiles({ name: "sms.png", mimeType: "image/png", buffer: png("SMSTO:0204000000:訂閱") });
   await expect(page.getByTestId("qr-fields")).toContainText("0204000000");
   await expect(page.getByText("陌生的號碼可能是付費簡訊")).toBeVisible();
+});
+
+test("Big5 編碼的電子發票拆出號碼、金額與品項，暫存區的收據照片也一樣", async ({ page }) => {
+  const photo = Buffer.from(qrPng(encodeBytes(big5Invoice()), 6));
+  await page.goto("./qr-read/");
+  await page.getByTestId("qr-input").setInputFiles({ name: "invoice.png", mimeType: "image/png", buffer: photo });
+  const fields = page.getByTestId("qr-fields");
+  await expect(fields).toContainText("電子發票");
+  await expect(fields).toContainText("AB-11223344");
+  await expect(fields).toContainText("2013-05-23");
+  await expect(fields).toContainText("340 元");
+  await expect(fields).toContainText("乾電池 × 1，單價 105 元");
+  await expect(fields).toContainText("列出 1 項，發票上共 3 項");
+  await expect(page.getByText("分享發票或收據的照片之前")).toBeVisible();
+
+  await page.getByRole("button", { name: "回到桌面" }).click();
+  await page.getByTestId("file-input").setInputFiles({ name: "receipt.png", mimeType: "image/png", buffer: photo });
+  await expect(page.getByRole("heading", { name: "圖片裡的 QR code" })).toBeVisible();
+  await expect(page.getByTestId("qr-fields")).toContainText("乾電池");
 });
 
 test("翻拍螢幕的照片，白底上有子像素的直紋也讀得出來", async ({ page }) => {

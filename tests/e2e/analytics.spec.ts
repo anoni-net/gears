@@ -1,5 +1,6 @@
 import { test as base, expect, type Page } from "@playwright/test";
 import { exifSegment, insertIntoJpeg, sampleTiff } from "../helpers/fixtures.ts";
+import { encodeQr, qrPng } from "../../src/tools/qrcode/index.ts";
 
 // 使用統計只在 anoni.net 上送出。其他測試都在 localhost 上執行，guard.ts 會擋下任何對外連線，
 // 這裡另外把 anoni.net 指到 localhost 的預覽伺服器（只有 Chromium 能改主機解析，CI 上預覽伺服器只聽 ::1，
@@ -73,6 +74,30 @@ test("頁面瀏覽、任務、加入檔案、處理完成與下載，不含檔�
   });
   expect(JSON.stringify(sent)).not.toContain("SECRET");
   expect(JSON.stringify(sent)).not.toContain("utm_source");
+  expect(errors).toEqual([]);
+});
+
+test("QR code 只記格式，不送內容", async ({ page, baseURL }) => {
+  const { sent, errors, home } = await open(page, baseURL!);
+  await page.goto(`${home}qrcode/`);
+  await page.getByRole("radio", { name: "聯絡資料" }).check();
+  await page.getByLabel("姓名").fill("SECRET 王小明");
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "下載 PNG" }).click();
+  await download;
+
+  await page.goto(`${home}qr-read/`);
+  await page.getByTestId("qr-input").setInputFiles({ name: "pay.png", mimeType: "image/png", buffer: Buffer.from(qrPng(encodeQr("bitcoin:SECRETADDRESS?amount=1", "M"), 6)) });
+  await expect(page.getByTestId("qr-fields")).toContainText("Bitcoin");
+
+  await expect.poll(() => sent.filter((s) => s.name).map((s) => [s.name, s.data])).toEqual([
+    ["tool-done", { tool: "qrcode" }],
+    ["qr-make", { format: "contact" }],
+    ["save", { how: "download" }],
+    ["tool-done", { tool: "qr-read" }],
+    ["qr-read", { format: "payment" }],
+  ]);
+  expect(JSON.stringify(sent)).not.toContain("SECRET");
   expect(errors).toEqual([]);
 });
 

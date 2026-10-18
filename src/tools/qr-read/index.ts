@@ -3,7 +3,15 @@
 // 認得的格式見 AGENTS.md「QR code 的內容格式」。讀者在打開之前先看到這張 QR code 會做什麼：
 // 撥給誰、傳什麼簡訊、付款給哪個地址，有風險的格式在畫面上另外提醒。
 
+import type { QrKind } from "../qrcode/formats.ts";
+
 export type Coin = "bitcoin" | "monero" | "zcash";
+
+export interface InvoiceItem {
+  name: string;
+  qty: string;
+  price: string;
+}
 
 export type QrContent =
   | { kind: "url"; url: string }
@@ -16,7 +24,33 @@ export type QrContent =
   | { kind: "event"; title: string; start: string; end: string; location: string; description: string }
   | { kind: "otp"; type: string; issuer: string; account: string }
   | { kind: "payment"; coin: Coin; address: string; amount: string; label: string; message: string }
+  | { kind: "invoice"; number: string; date: string; random: string; total: string; buyer: string; seller: string; items: InvoiceItem[]; itemTotal: number; foreign: boolean }
+  | { kind: "invoice-more"; items: InvoiceItem[] }
   | { kind: "text"; text: string };
+
+// 格式清單（使用統計用）要跟 kind 一致，兩個方向都檢查
+type Same<A, B> = [A] extends [B] ? ([B] extends [A] ? true : never) : never;
+const kindsMatch: Same<QrContent["kind"], QrKind> = true;
+void kindsMatch;
+
+// jsQR 用 decodeURIComponent 解開位元組，不是 UTF-8 的那一段會變成空字串。台灣的電子發票
+// 與一些舊系統用 Big5，這時改用位元組自己解：先試 UTF-8，不是的話當成 Big5
+interface Chunk {
+  type: string;
+  bytes?: number[];
+  text?: string;
+}
+
+export function qrText(result: { data: string; binaryData: number[]; chunks: Chunk[] }): string {
+  const lost = result.chunks.some((c) => c.type === "byte" && c.bytes?.length && !c.text);
+  if (!lost) return result.data;
+  const bytes = new Uint8Array(result.binaryData);
+  try {
+    return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  } catch {
+    return new TextDecoder("big5").decode(bytes);
+  }
+}
 
 // WIFI:、MECARD:、MATMSG: 共用的寫法：前綴之後是「鍵:值;」，反斜線跳脫特殊字元，
 // 最後以兩個分號結束。同一個鍵可以出現好幾次（MECARD 的 TEL）
@@ -262,7 +296,91 @@ function parsePayment(text: string): QrContent | null {
   };
 }
 
-const PARSERS = [parseWifi, parseMecard, parseMatmsg, parseVcard, parseEvent, parseMailto, parseTel, parseSms, parseGeo, parseOtp, parsePayment];
+// 台灣的電子發票證明聯左右各一個 QR code，規格見財政部的《電子發票證明聯一維及二維條碼規格說明》
+// Ver 1.9。左邊前 77 碼是固定欄位：字軌號碼 10、民國年月日 7、隨機碼 4、未稅與含稅金額
+// 各 8（十六進位）、買方與賣方統一編號各 8、加密驗證 24。接著以冒號分隔：營業人自行使用區、
+// 兩個 QR code 記載的品目筆數、發票的品目總筆數、中文編碼參數（0 Big5、1 UTF-8、2 Base64、
+// 3 境外電商的 UTF-8），再來是「品名:數量:單價」。左邊放不下的接在右邊，右邊以 ** 開頭
+const INVOICE = /^([A-Z]{2}\d{8})(\d{3})(\d{2})(\d{2})(\d{4})([0-9A-Fa-f]{8})([0-9A-Fa-f]{8})(\d{8})(\d{8})(.{24})/;
+
+const hexAmount = (s: string) => String(parseInt(s, 16));
+
+// 境外電商的金額是 8 碼整數加 2 碼小數，各自用十六進位
+function foreignAmount(s: string): string {
+  if (!/^[0-9A-Fa-f]{10}$/.test(s)) return "";
+  const cents = parseInt(s.slice(8), 16);
+  return `${parseInt(s.slice(0, 8), 16)}.${String(cents).padStart(2, "0")}`;
+}
+
+// Base64 的品項從冒號之後一路接到右邊的 QR code，只讀左邊時取到 4 的倍數為止
+function decodeBase64Prefix(s: string): string {
+  const usable = s.slice(0, s.length - (s.length % 4));
+  try {
+    const bin = atob(usable);
+    return new TextDecoder().decode(Uint8Array.from(bin, (c) => c.charCodeAt(0)));
+  } catch {
+    return "";
+  }
+}
+
+const NUMBER = /^-?\d+(\.\d+)?$/;
+
+// 「品名:數量:單價」一組一組讀。右邊的 QR code 可能從上一組的數量接起，開頭對不上的跳過，
+// 品項讀完之後的補充說明也不算
+function invoiceItems(fields: string[]): InvoiceItem[] {
+  const items: InvoiceItem[] = [];
+  for (let i = 0; i + 2 < fields.length; ) {
+    const [name, qty, price] = [fields[i]!, fields[i + 1]!, fields[i + 2]!];
+    if (name && !NUMBER.test(name) && NUMBER.test(qty) && NUMBER.test(price)) {
+      items.push({ name, qty, price });
+      i += 3;
+    } else {
+      i++;
+    }
+  }
+  return items;
+}
+
+function parseInvoice(text: string): QrContent | null {
+  // 右邊的 QR code：接著左邊的「品名:數量:單價」，或是 Base64 的後半段
+  if (/^\*\*(?:[^*:\n]*:\d|[A-Za-z0-9+/]+=*$)/.test(text)) {
+    const body = text.slice(2);
+    const plain = body.includes(":") ? body : decodeBase64Prefix(body);
+    return { kind: "invoice-more", items: invoiceItems(plain.split(":")) };
+  }
+  const m = INVOICE.exec(text);
+  if (!m || (text.length > 77 && text[77] !== ":")) return null;
+  const month = Number(m[3]);
+  const day = Number(m[4]);
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+  const rest = text.slice(77).split(":");
+  // rest[0] 是第 77 碼之後、第一個冒號之前，正常是空的
+  const [, , , itemTotalField = "", encoding = "", ...fields] = rest;
+  const foreign = encoding === "3";
+  let itemFields = fields;
+  let total = hexAmount(m[7]!);
+  if (foreign) {
+    total = foreignAmount(fields[1] ?? "");
+    itemFields = fields.slice(2);
+  } else if (encoding === "2") {
+    itemFields = decodeBase64Prefix(fields.join(":")).split(":");
+  }
+  const items = invoiceItems(itemFields);
+  return {
+    kind: "invoice",
+    number: `${m[1]!.slice(0, 2)}-${m[1]!.slice(2)}`,
+    date: `${Number(m[2]) + 1911}-${m[3]}-${m[4]}`,
+    random: m[5]!,
+    total,
+    buyer: m[8] === "00000000" ? "" : m[8]!,
+    seller: m[9]!,
+    items,
+    itemTotal: Number(itemTotalField) || items.length,
+    foreign,
+  };
+}
+
+const PARSERS = [parseInvoice, parseWifi, parseMecard, parseMatmsg, parseVcard, parseEvent, parseMailto, parseTel, parseSms, parseGeo, parseOtp, parsePayment];
 
 export function classify(text: string): QrContent {
   for (const parse of PARSERS) {

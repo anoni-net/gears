@@ -1,9 +1,13 @@
 import { Fragment } from "preact";
 import { list, t } from "../i18n/index.ts";
-import { type QrContent, classify } from "../tools/qr-read/index.ts";
+import { type InvoiceItem, type QrContent, classify } from "../tools/qr-read/index.ts";
 import { CopyButton } from "./CopyButton.tsx";
 
 const COINS = { bitcoin: "Bitcoin", monero: "Monero", zcash: "Zcash" } as const;
+
+// 一行一個品項，境外電商的金額可能是外幣，不加單位
+const itemLines = (items: InvoiceItem[], foreign = false) =>
+  items.map((i) => t(foreign ? "qrread.invoice.itemForeign" : "qrread.invoice.item", { name: i.name, qty: i.qty, price: i.price })).join("\n");
 
 // 認得的格式拆成欄位，讀者在手機帶出動作之前先看清楚：存進哪個聯絡人、撥給誰、
 // 付款給哪個地址。空的欄位不列
@@ -66,6 +70,19 @@ function rows(c: QrContent): [string, string][] {
           [t("qrread.recipient"), c.label],
           [t("qrread.memo"), c.message],
         ];
+      case "invoice":
+        return [
+          [t("qrread.invoice.number"), c.number],
+          [t("qrread.invoice.date"), c.date],
+          [t("qrread.invoice.random"), c.random],
+          [t("qrread.invoice.total"), c.foreign ? c.total : t("qrread.invoice.amount", { n: c.total })],
+          [t("qrread.invoice.seller"), c.seller],
+          [t("qrread.invoice.buyer"), c.buyer],
+          [t("qrread.invoice.items"), itemLines(c.items, c.foreign)],
+          [t("qrread.invoice.itemCount"), c.itemTotal > c.items.length ? t("qrread.invoice.partial", { shown: c.items.length, total: c.itemTotal }) : ""],
+        ];
+      case "invoice-more":
+        return [[t("qrread.invoice.items"), itemLines(c.items)]];
       default:
         return [];
     }
@@ -87,6 +104,10 @@ function kindLabel(c: QrContent): string | null {
       return t("qrread.kind.otp");
     case "payment":
       return COINS[c.coin];
+    case "invoice":
+      return t("qrread.kind.invoice");
+    case "invoice-more":
+      return t("qrread.kind.invoiceMore");
     default:
       return null;
   }
@@ -100,6 +121,8 @@ const NOTES: Partial<Record<QrContent["kind"], string>> = {
   sms: "qrread.smsNote",
   otp: "qrread.otpNote",
   payment: "qrread.paymentNote",
+  invoice: "qrread.invoiceNote",
+  "invoice-more": "qrread.invoiceNote",
 };
 
 // 讀出來的 QR code 內容。網址可以送去網址檢查，其他認得的格式拆成欄位顯示。

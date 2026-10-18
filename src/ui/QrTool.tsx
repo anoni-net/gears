@@ -18,6 +18,7 @@ import {
   vcardPayload,
   wifiPayload,
 } from "../tools/qrcode/index.ts";
+import { QR_MODES, type QrMode } from "../tools/qrcode/formats.ts";
 import { saveBlob } from "./save.ts";
 import { track } from "./analytics.ts";
 import type { CreateToolProps } from "./types.ts";
@@ -25,10 +26,10 @@ import type { CreateToolProps } from "./types.ts";
 const ECC: Ecc[] = ["L", "M", "Q", "H"];
 const SECURITY: WifiSecurity[] = ["WPA", "WEP", "nopass"];
 
-// 內容的格式，排序依常用的程度。手機的相機掃到後面幾種會直接帶出動作（存成聯絡人、
-// 加進行事曆、寫信、撥號、傳簡訊），格式見 src/tools/qrcode/index.ts
-const MODES = ["text", "wifi", "contact", "event", "geo", "email", "phone", "sms"] as const;
-type Mode = (typeof MODES)[number];
+// 手機的相機掃到 Wi-Fi 之後的幾種會直接帶出動作（連線、存成聯絡人、加進行事曆、寫信、
+// 撥號、傳簡訊），格式見 src/tools/qrcode/index.ts
+const MODES = QR_MODES;
+type Mode = QrMode;
 
 // 下載的檔名，看得出是哪一種 QR code
 const FILE_NAMES: Record<Mode, string> = {
@@ -137,6 +138,11 @@ export function QrTool({ preset, onCreate }: CreateToolProps) {
   const matrix = result && "matrix" in result ? result.matrix : null;
   const name = FILE_NAMES[mode];
   const png = () => new File([qrPng(matrix!) as Uint8Array<ArrayBuffer>], `${name}.png`, { type: "image/png" });
+  // 放進暫存區或下載才算完成。暫存區不記工具產生的檔案（src/state.ts 的 added），由這裡記
+  const made = () => {
+    track("tool-done", { tool: "qrcode" });
+    track("qr-make", { format: mode });
+  };
 
   return (
     <div class="qr">
@@ -251,13 +257,13 @@ export function QrTool({ preset, onCreate }: CreateToolProps) {
               <path d={qrPath(matrix)} fill="#000" />
             </svg>
             <div class="buttons">
-              <button type="button" class="primary" onClick={() => onCreate(png())}>
+              <button type="button" class="primary" onClick={() => (made(), onCreate(png()))}>
                 {t("qr.toTray")}
               </button>
-              <button type="button" onClick={() => (track("tool-done", { tool: "qrcode" }), saveBlob(png(), `${name}.png`))}>
+              <button type="button" onClick={() => (made(), saveBlob(png(), `${name}.png`))}>
                 {t("qr.downloadPng")}
               </button>
-              <button type="button" onClick={() => (track("tool-done", { tool: "qrcode" }), saveBlob(new Blob([qrSvg(matrix)], { type: "image/svg+xml" }), `${name}.svg`))}>
+              <button type="button" onClick={() => (made(), saveBlob(new Blob([qrSvg(matrix)], { type: "image/svg+xml" }), `${name}.svg`))}>
                 {t("qr.downloadSvg")}
               </button>
             </div>
