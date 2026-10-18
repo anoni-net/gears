@@ -19,7 +19,7 @@ import { Icon, IconCircle } from "./ui/Icon.tsx";
 import { TOOL_META, groupOf } from "./ui/tool-meta.ts";
 import { browserDeclines, optedOut, setOptedOut, track, trackView } from "./ui/analytics.ts";
 import { COMMIT, COMMIT_URL, VERSION } from "./version.ts";
-import { requestUrl } from "./request.ts";
+import { WishPage } from "./ui/WishPage.tsx";
 
 const isCreateTool = (id: string) => createTools.some((tool) => tool.id === id);
 // 處理整個暫存區的工具，加入檔案時留在原畫面（CreateTool 的 tray）
@@ -176,6 +176,9 @@ export function App() {
   const state = useTray();
   useKeepTray(state.files.length > 0);
   const route = useRoute();
+  // 許願區記下讀者從哪個工具過來（src/wish.ts），在許願區裡換語系時不變
+  const from = useRef("");
+  if (route !== "wish") from.current = route;
   const input = useRef<HTMLInputElement>(null);
   const [preset, setPreset] = useState<string>();
 
@@ -262,6 +265,8 @@ export function App() {
     view = <Licenses />;
   } else if (route === "llm-bench") {
     view = <LlmBenchView />;
+  } else if (route === "wish") {
+    view = <WishPage from={from.current} />;
   } else if (selected) {
     view = <FileView key={selected.id} file={selected} others={state.files} index={selectedIndex} busy={state.busy} preferred={route} onOpenTool={openTool} />;
   } else if (isFileTool(route)) {
@@ -353,15 +358,9 @@ export function App() {
             {" · "}
             <a href="https://github.com/anoni-net/gears">{t("app.footer.source")}</a>
             {" · "}
-            {/* 新分頁打開，暫存區的檔案留在這一頁 */}
-            <a
-              href={requestUrl(route, getLocale(), `${VERSION} ${COMMIT}`)}
-              target="_blank"
-              rel="noopener noreferrer"
-              data-testid="request-link"
-            >
-              {t("app.footer.request")}
-            </a>
+            <button type="button" class="link" onClick={() => navigate("wish")} data-testid="wish-link">
+              {t("app.footer.wish")}
+            </button>
             {" · "}
             {/* 站內的頁面不用一般的連結，避免重新載入、清空暫存區 */}
             <button type="button" class="link" onClick={() => navigate("licenses")}>
