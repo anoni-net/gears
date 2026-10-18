@@ -437,7 +437,7 @@ PDF 的版本紀錄：每一個 `%%EOF` 是一次存檔的結尾，切到那裡�
 
 - 內容都是假的：人名與帳號是虛構的，網域用 `example.*`，IP 用保留給文件的位址，照片的位置用公開的地標。頁面開頭寫明
 - 檔案按下按鈕時才在瀏覽器裡產生，不放進 repo（`src/ui/samples.ts`，位元組由 `src/tools/samples/files.ts` 寫出，pdf-lib 用到時才載入）。照片用 canvas 畫一張圖再插進 EXIF（`src/tools/samples/exif.ts`，測試的 `tests/helpers/fixtures.ts` 也用它），Tor Browser 沒有允許讀取 canvas 時畫出來的是雜訊，照樣帶著 EXIF
-- 範例檔放進暫存區時標成 `sample`（`TrayFile.sample`），檔案畫面標出「範例檔案」。暫存區有範例時，`file-add`、`tool-done`、`tool-fail`、`save` 都不記（`src/ui/analytics.ts` 的 `setSampleGate`），同時有讀者自己的檔案時也一起不記，判斷不了是哪一個檔案的。範例頁的頁面瀏覽照樣記
+- 範例檔放進暫存區時標成 `sample`（`TrayFile.sample`），檔案畫面標出「範例檔案」。暫存區有範例時，`file-add`、`tool-done`、`tool-fail`、`save` 都不記（`src/ui/analytics.ts` 的 `setSampleGate`），同時有讀者自己的檔案時也一起不記，判斷不了是哪一個檔案的。這是維護者要知道的事，畫面上不寫。範例頁的頁面瀏覽照樣記
 - 打開的方式依工具不同（`src/app.tsx` 的 `openSample`）：處理檔案的工具先換到它的網址再加入檔案，編輯畫面直接打開。查證讀整個暫存區，加入之後換到查證。信件檢查用預設值 `tray:<檔案 id>`
 - 瀏覽器測試（`tests/e2e/samples.spec.ts`）逐一打開每份範例，確認工具找到上表的東西
 - 新增範例：在 `FILE_SAMPLES` 加一筆、`files.ts` 寫產生的程式，三個語系加上 `samples.<id>.title` 與 `samples.<id>.desc`，`samples.spec.ts` 加一個測試
