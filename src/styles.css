@@ -1333,17 +1333,31 @@ button.pick-files .icon {
   margin-top: 1.25rem;
 }
 
-/* 讀取的範例：圖片一律放在白底上，深色模式也掃得出來 */
-.qr-samples {
-  margin-top: 1.5rem;
+/* 範例頁（src/ui/SamplesPage.tsx） */
+.sample-tool {
+  margin-top: 2rem;
 }
 
-.qr-samples summary {
-  cursor: pointer;
-  font-weight: 600;
+.sample-tool > h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0 0 0.75rem;
 }
 
-.qr-samples h3 {
+.sample-file {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 0.9rem 1rem;
+  background: var(--surface);
+}
+
+.sample-file p {
+  margin: 0.35rem 0 0.75rem;
+}
+
+/* QR code 與條碼的範例：圖片一律放在白底上，深色模式也掃得出來 */
+.qr-samples h4 {
   font-size: 1rem;
   margin: 1rem 0 0.5rem;
 }

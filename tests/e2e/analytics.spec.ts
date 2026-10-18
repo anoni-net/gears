@@ -89,10 +89,15 @@ test("QR code 只記格式，不送內容", async ({ page, baseURL }) => {
   await page.goto(`${home}qr-read/`);
   await page.getByTestId("qr-input").setInputFiles({ name: "pay.png", mimeType: "image/png", buffer: Buffer.from(qrPng(encodeQr("bitcoin:SECRETADDRESS?amount=1", "M"), 6)) });
   await expect(page.getByTestId("qr-fields")).toContainText("Bitcoin");
-  // 範例不記
-  await page.getByText("範例：手邊沒有條碼也能試").click();
+  // 範例不記：QR code 的範例，以及放進暫存區的範例檔、處理與下載
+  await page.getByTestId("sample-link").click();
   await page.locator('[data-sample="wifi"]').click();
   await expect(page.getByTestId("qr-fields")).toContainText("anoni-cafe");
+  await page.goBack();
+  await page.locator('[data-sample="photo"]').click();
+  await expect(page.getByTestId("sample-note")).toBeVisible();
+  await page.getByRole("button", { name: "清除", exact: true }).click();
+  await expect(page.getByText("沒有找到可能透露身分的中繼資料。")).toBeVisible();
 
   await expect.poll(() => sent.filter((s) => s.name).map((s) => [s.name, s.data])).toEqual([
     ["tool-done", { tool: "qrcode" }],
@@ -101,6 +106,7 @@ test("QR code 只記格式，不送內容", async ({ page, baseURL }) => {
     ["tool-done", { tool: "qr-read" }],
     ["qr-read", { format: "payment" }],
   ]);
+  expect(sent.filter((s) => !s.name).map((s) => s.url)).toContain("/gears/samples/");
   expect(JSON.stringify(sent)).not.toContain("SECRET");
   expect(errors).toEqual([]);
 });

@@ -20,6 +20,8 @@ import { TOOL_META, groupOf } from "./ui/tool-meta.ts";
 import { browserDeclines, optedOut, setOptedOut, track, trackView } from "./ui/analytics.ts";
 import { COMMIT, COMMIT_URL, VERSION } from "./version.ts";
 import { FeedbackPage } from "./ui/FeedbackPage.tsx";
+import { SampleLink, SamplesPage } from "./ui/SamplesPage.tsx";
+import { type FileSample, makeSampleFile } from "./ui/samples.ts";
 
 const isCreateTool = (id: string) => createTools.some((tool) => tool.id === id);
 // 處理整個暫存區的工具，加入檔案時留在原畫面（CreateTool 的 tray）
@@ -223,6 +225,27 @@ export function App() {
     navigate(id);
   };
 
+  // 範例頁的檔案：產生之後標成範例放進暫存區，用對應的工具打開。查證讀整個暫存區，
+  // 信件檢查用預設值 tray:<檔案 id> 讀，處理檔案的工具在它的網址選好檔案就直接打開
+  const openSample = async (sample: FileSample) => {
+    const file = await makeSampleFile(sample);
+    if (isCreateTool(sample.tool)) {
+      await tray.add([file], null, groupOf(sample.tool), true);
+      if (usesTray(sample.tool)) {
+        tray.select(null);
+        setPreset(undefined);
+        navigate(sample.tool);
+      } else {
+        openTool(sample.tool, `tray:${tray.get().selected}`);
+      }
+    } else {
+      setPreset(undefined);
+      navigate(sample.tool);
+      await tray.add([file], null, groupOf(sample.tool), true);
+    }
+  };
+  const showSamples = (tool: string) => openTool("samples", tool);
+
   const onTask = (task: Task) => {
     track("task", { task: task.id });
     tray.select(null);
@@ -252,6 +275,7 @@ export function App() {
           {tDynamic(`tool.${route}`)}
         </h2>
         <p class="hint">{tDynamic(`tool.${route}.desc`)}</p>
+        <SampleLink tool={route} onOpen={showSamples} />
         <CreateToolView
           key={`${route}-${preset ?? ""}`}
           id={route}
@@ -267,10 +291,12 @@ export function App() {
     view = <LlmBenchView />;
   } else if (route === "feedback") {
     view = <FeedbackPage from={from.current} />;
+  } else if (route === "samples") {
+    view = <SamplesPage focus={preset} onOpenFile={openSample} onOpenQr={(id) => openTool("qr-read", `sample:${id}`)} />;
   } else if (selected) {
     view = <FileView key={selected.id} file={selected} others={state.files} index={selectedIndex} busy={state.busy} preferred={route} onOpenTool={openTool} />;
   } else if (isFileTool(route)) {
-    view = <ToolIntro id={route} onPick={pick} />;
+    view = <ToolIntro id={route} onPick={pick} onSamples={showSamples} />;
   } else {
     view = <Desktop onTask={onTask} />;
   }

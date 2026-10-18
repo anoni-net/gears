@@ -132,16 +132,18 @@ test("電子發票的一維條碼與 Tor bridge 的 QR code", async ({ page }) =
   await expect(page.getByText("掃了等於讓對方用你的帳號登入")).toBeVisible();
 });
 
-test("範例：每一張都用真的解碼流程讀得出來", async ({ page }) => {
+test("範例頁的每一張 QR code 與條碼，用讀取工具打開都讀得出來", async ({ page }) => {
   await page.goto("./qr-read/");
-  await page.getByText("範例：手邊沒有條碼也能試").click();
+  await page.getByTestId("sample-link").click();
+  await expect(page).toHaveURL(/\/gears\/samples\/$/);
   await expect(page.getByRole("heading", { name: "分享前要遮住" })).toBeVisible();
   for (const sample of samples) {
     await page.locator(`[data-sample="${sample.id}"]`).click();
+    await expect(page).toHaveURL(/\/gears\/qr-read\/$/);
     const text = sample.bytes ? new TextDecoder("big5").decode(Buffer.from(sample.bytes, "hex")) : sample.text!;
     await expect(page.getByTestId("qr-text"), sample.id).toHaveText(text);
+    await page.goBack();
   }
-  await expect(page.getByTestId("qr-fields")).toContainText("ISBN");
 });
 
 test("翻拍螢幕的照片，白底上有子像素的直紋也讀得出來", async ({ page }) => {

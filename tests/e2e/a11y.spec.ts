@@ -17,7 +17,7 @@ async function audit(page: Page) {
   return result.violations.map((v) => `${v.id}: ${v.help} (${v.nodes.map((n) => n.target.join(" ")).slice(0, 3).join(" | ")})`);
 }
 
-for (const path of ["./", "./en/", "./qrcode/", "./url-check/", "./passphrase/", "./age-keygen/", "./text-crypt/", "./qr-read/", "./redact/", "./pdf-pages/", "./strip-metadata/", "./verify/", "./email-check/", "./writing-style/", "./video-frames/", "./nearby/", "./licenses/", "./llm-bench/", "./feedback/"]) {
+for (const path of ["./", "./en/", "./qrcode/", "./url-check/", "./passphrase/", "./age-keygen/", "./text-crypt/", "./qr-read/", "./redact/", "./pdf-pages/", "./strip-metadata/", "./verify/", "./email-check/", "./writing-style/", "./video-frames/", "./nearby/", "./licenses/", "./llm-bench/", "./feedback/", "./samples/"]) {
   test(`${path} 沒有無障礙問題`, async ({ page }) => {
     await page.goto(path);
     await page.waitForLoadState("networkidle");
@@ -52,7 +52,7 @@ test("QR code 產生器的聯絡資料與錯誤訊息、讀取的付款提醒沒
   await page.getByTestId("qr-input").setInputFiles({ name: "pay.png", mimeType: "image/png", buffer: Buffer.from(qrPng(encodeQr("monero:4AdUnd?tx_amount=1", "M"), 6)) });
   await expect(page.getByTestId("qr-fields")).toContainText("Monero");
   expect(await audit(page)).toEqual([]);
-  await page.getByText("範例：手邊沒有條碼也能試").click();
+  await page.getByTestId("sample-link").click();
   await page.locator('[data-sample="boarding-pdf417"]').click();
   await expect(page.getByTestId("qr-fields")).toContainText("登機證");
   expect(await audit(page)).toEqual([]);

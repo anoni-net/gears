@@ -261,7 +261,7 @@ PDF 的版本紀錄：每一個 `%%EOF` 是一次存檔的結尾，切到那裡�
 - 影像解碼（`src/ui/qr-scan.ts`）：先用 jsQR 讀 QR code，讀不到再交給 zxing-wasm 找其他條碼（`src/ui/zxing.ts`）。QR code 留給 jsQR，不需要 WebAssembly，鎖定模式照樣能讀。zxing-wasm 預設從 jsDelivr 下載 WebAssembly，`locateFile` 換成自己網域的 `assets/zxing_reader-*.wasm`（約 950 KB，壓縮後約 420 KB），升級前一樣在套件裡搜尋對外的網址。相機的畫面給 zxing 的是長邊 1600 像素，一維條碼要比較高的解析度
 - 暫存區的圖片自動讀取時只找 QR code、PDF417、Aztec、Data Matrix、Code 128 與 Code 39（`PRIVATE_FORMATS`），登機證、票券與發票這類帶有個資的才列出來。商品條碼不找，照片裡常拍到包裝，列出一串商品編號沒有幫助
 - WebAssembly 被關掉時（`wasmAvailable()`），讀取工具說明只能讀 QR code
-- 讀取工具最下面收著「範例」：22 張 QR code 與條碼，依「分享前要遮住」、「打開之前先看清楚」、「不該外流的連線設定」、「日常」分組，內容都是假的（保留給文件的 IP、`example.org`、虛構的帳號）。點一下就用那張圖走一般的解碼流程，圖片也可以讓另一支手機的相機掃，手邊沒有條碼或對外展示時用。範例不記使用統計。內容與預期的格式寫在 `src/tools/qr-read/samples.json`，圖片由 `scripts/make-qr-samples.mjs` 在建置前（`prebuild`、`predev`）用 zxing-wasm 的完整版產生到 `public/samples/qr/`，不進版控。新增範例時三個語系要加 `qrread.sample.<id>`，`tests/unit/qr-formats.spec.ts` 檢查每張範例拆得出標示的格式，瀏覽器測試逐張點過一次
+- 範例：22 張 QR code 與條碼放在範例頁（見下方「範例」），依「分享前要遮住」、「打開之前先看清楚」、「不該外流的連線設定」、「日常」分組，點一下就用讀取工具打開（預設值 `sample:<id>`），走一般的解碼流程、不記使用統計，圖片也可以讓另一支手機的相機掃。內容與預期的格式寫在 `src/tools/qr-read/samples.json`，圖片由 `scripts/make-qr-samples.mjs` 在建置前（`prebuild`、`predev`）用 zxing-wasm 的完整版產生到 `public/samples/qr/`，不進版控。新增時三個語系要加 `qrread.sample.<id>`，`tests/unit/qr-formats.spec.ts` 檢查每張拆得出標示的格式，瀏覽器測試逐張打開一次
 - 台灣的電子發票證明聯（`parseInvoice`）：照財政部《電子發票證明聯一維及二維條碼規格說明》Ver 1.9（2022-05-10）。左邊的 QR code 前 77 碼是字軌號碼、民國年月日、隨機碼、未稅與含稅金額（十六進位）、買方與賣方的統一編號與加密驗證，之後以冒號接著品目筆數、中文編碼參數（0 Big5、1 UTF-8、2 Base64、3 境外電商）與「品名:數量:單價」，放不下的接在右邊以 `**` 開頭的 QR code。兩個 QR code 各自讀，左邊列出發票的欄位與讀得到的品項，品項沒讀完時說明其他的在右邊。境外電商的金額是 8 碼整數加 2 碼小數，可能是外幣，不加單位。畫面上提醒發票的 QR code 帶著金額、店家與買了什麼，打了統編時還有買方的統一編號，分享收據的照片前可以先遮蔽
 - Big5 的內容：jsQR 用 `decodeURIComponent` 解開位元組，不是 UTF-8 的那一段會變成空字串，Big5 的電子發票整個讀成空的。`qrText` 發現有位元組沒解出文字時，先用 UTF-8 解整串位元組，不是的話當成 Big5（`TextDecoder("big5")`，三種瀏覽器核心都支援）
 - 格式清單在 `src/tools/qrcode/formats.ts`，產生器、讀取與使用統計共用。跟 `QrContent` 的 `kind` 對不上時型別檢查會失敗
@@ -412,7 +412,7 @@ PDF 的版本紀錄：每一個 `%%EOF` 是一次存檔的結尾，切到那裡�
 
 ## 建議與回饋
 
-讀者在「建議與回饋」許願新功能、回報問題，或寫下哪裡不好用（`/gears/feedback/`，畫面在 `src/ui/FeedbackPage.tsx`，送出在 `src/feedback.ts`）。原本叫「許願區」，回報問題放在許願底下不自然，2026-10-18 改名，許願新功能改寫在說明裡。入口有兩個：桌面最後的「使用者區」，以及頁尾的「建議與回饋」。使用者區放跟 Gears 本身有關、不是工具的頁面（`src/ui/tool-meta.ts` 的 `USER_PAGES`），目前只有建議與回饋，之後的設定也放這裡，圖示圈用品牌主色（`cat-user`），跟兩類工具分開。
+讀者在「建議與回饋」許願新功能、回報問題，或寫下哪裡不好用（`/gears/feedback/`，畫面在 `src/ui/FeedbackPage.tsx`，送出在 `src/feedback.ts`）。原本叫「許願區」，回報問題放在許願底下不自然，2026-10-18 改名，許願新功能改寫在說明裡。入口有兩個：桌面最後的「使用者區」，以及頁尾的「建議與回饋」。使用者區放跟 Gears 本身有關、不是工具的頁面（`src/ui/tool-meta.ts` 的 `USER_PAGES`），目前是範例與建議與回饋，之後的設定也放這裡，圖示圈用品牌主色（`cat-user`），跟兩類工具分開。
 
 - 表單由 Gears 自己畫，送到社群自架的 Formbricks（`form.anoni.net`），用它給網頁用的公開 API（`/api/v1/client/<環境>/responses`），不需要金鑰。不嵌入 Formbricks 的頁面：整個網站送了 `Cross-Origin-Embedder-Policy: require-corp`，別的網站的頁面嵌不進來，讀者也不必認識另一個服務。畫面上不提 Formbricks
 - CSP 的 `connect-src` 只開送出的那一個路徑（`FEEDBACK_ENDPOINT_CLEARNET`，meta 標籤與標頭都有）。onion 版送到 `form.<onion>` 的同一個路徑（`FEEDBACK_ENDPOINT_ONION`），兩個網址分成兩個常數，建置時沒用到的會被拿掉，onion 版的產物裡沒有 clearnet 的網址
@@ -422,6 +422,25 @@ PDF 的版本紀錄：每一個 `%%EOF` 是一次存檔的結尾，切到那裡�
 - 問卷是草稿或已關閉時伺服器回 403，畫面說明建議與回饋暫時沒有開放。送不出去時填好的內容留著，讀者可以再按一次
 - 收到的需求在社群的工作區整理（`formbricks/`），決定要做的改寫成這個 repo 的 issue，掛 `request` 標籤，不公開讀者寫的原文與聯絡方式。送出之後的畫面連到 `request` 標籤的 issue 列表
 - 瀏覽器測試（`tests/e2e/feedback.spec.ts`）攔下送出的請求，確認內容、成功與 403 的畫面，以及暫存區的檔案留著
+
+## 範例
+
+手邊沒有檔案時試用，對外展示時也用得到（`/gears/samples/`，畫面在 `src/ui/SamplesPage.tsx`）。入口在桌面的使用者區，有範例的工具在工具畫面放一行「沒有檔案？用範例試試」（`SampleLink`，`SAMPLE_TOOLS`），連到範例頁裡那個工具的段落。
+
+| 工具 | 範例 | 工具找得到的東西 |
+|---|---|---|
+| 清除中繼資料 | 帶拍攝位置的手機照片 | 台北 101 附近的 GPS、手機型號、拍攝時間與時區 |
+| 文件開啟前檢查 | 打開時會連線的 Word | 遠端範本、外部圖片、INCLUDEPICTURE 的追蹤圖片 |
+| 信件檢查 | 冒充銀行的釣魚信 | SPF 與 DMARC 沒有通過、顯示名稱裡的另一個信箱、回覆地址換成別的網域、連結文字跟網址不同、HTML 附件 |
+| 查證 | 改過金額的報價單 | 增量更新留下的舊版本，可以比對兩版的差異 |
+| QR code 與條碼讀取 | 22 張 QR code 與條碼 | 見上方「QR code 的內容格式」 |
+
+- 內容都是假的：人名與帳號是虛構的，網域用 `example.*`，IP 用保留給文件的位址，照片的位置用公開的地標。頁面開頭寫明
+- 檔案按下按鈕時才在瀏覽器裡產生，不放進 repo（`src/ui/samples.ts`，位元組由 `src/tools/samples/files.ts` 寫出，pdf-lib 用到時才載入）。照片用 canvas 畫一張圖再插進 EXIF（`src/tools/samples/exif.ts`，測試的 `tests/helpers/fixtures.ts` 也用它），Tor Browser 沒有允許讀取 canvas 時畫出來的是雜訊，照樣帶著 EXIF
+- 範例檔放進暫存區時標成 `sample`（`TrayFile.sample`），檔案畫面標出「範例檔案」。暫存區有範例時，`file-add`、`tool-done`、`tool-fail`、`save` 都不記（`src/ui/analytics.ts` 的 `setSampleGate`），同時有讀者自己的檔案時也一起不記，判斷不了是哪一個檔案的。範例頁的頁面瀏覽照樣記
+- 打開的方式依工具不同（`src/app.tsx` 的 `openSample`）：處理檔案的工具先換到它的網址再加入檔案，編輯畫面直接打開。查證讀整個暫存區，加入之後換到查證。信件檢查用預設值 `tray:<檔案 id>`
+- 瀏覽器測試（`tests/e2e/samples.spec.ts`）逐一打開每份範例，確認工具找到上表的東西
+- 新增範例：在 `FILE_SAMPLES` 加一筆、`files.ts` 寫產生的程式，三個語系加上 `samples.<id>.title` 與 `samples.<id>.desc`，`samples.spec.ts` 加一個測試
 
 ## 離線使用
 
@@ -517,7 +536,7 @@ node scripts/fetch-165.mjs   # 下載並整理成 public/data/165.txt
 
 - 能不用 canvas 輸出圖檔就不用。Brave 預設會擾動 canvas 讀出來的像素，QR code 的 PNG 由 `src/core/png-encode.ts` 直接寫位元組。遮蔽與 QR code 讀取必須解碼影像，只能用 canvas：遮蔽輸出後抽查每個框是否夠黑，門檻容許這點雜訊。QR code 讀取對雜訊不敏感
 - 用到 WebAssembly 的功能（逐字稿、遮蔽的自動尋找、HEIC 的解碼器、QR code 以外的條碼）先用 `src/ui/wasm.ts` 的 `wasmAvailable()` 檢查。iPhone、iPad 與 Mac 的鎖定模式會關掉 Safari 的 WebAssembly，不檢查的話讀者要等模型下載完才失敗，收到的還是「記憶體不夠」這類錯誤的原因。檢查時實際編譯一個 8 個位元組的空模組，只看 `typeof WebAssembly` 不夠。逐字稿一打開就說明、開始的按鈕不能按，自動尋找請讀者手動框選，HEIC 說明載入不了解碼器。瀏覽器測試（`tests/e2e/wasm-unavailable.spec.ts`）把頁面的 `WebAssembly` 拿掉來模擬
-- 工具以外的頁面（`src/pages.ts` 的 `pageIds`：授權與來源、語言模型速度量測、建議與回饋）不顯示暫存區，版面改成單欄（`.workbench.solo`）。暫存區的檔案仍在記憶體裡，回到桌面就看得到
+- 工具以外的頁面（`src/pages.ts` 的 `pageIds`：授權與來源、語言模型速度量測、建議與回饋、範例）不顯示暫存區，版面改成單欄（`.workbench.solo`）。暫存區的檔案仍在記憶體裡，回到桌面就看得到
 - 站內導覽不用一般的 `<a href>`。一般的連結會重新載入頁面，暫存區只在記憶體裡，會整個清空。改用 `src/router.ts` 的 `navigate()`，外觀要像連結時用 `button.link`
 - 解碼圖片一律用 `src/ui/image-decode.ts` 的 `decodeImage()`，不要直接呼叫 `createImageBitmap()`，HEIC 才會在不支援的瀏覽器上改用 libheif
 - 遮蔽畫面分成兩區：會改變框的動作（自動尋找、復原、清除）在圖片上方，套用與取消在圖片下方的完成列，完成列捲動時固定在畫面底部（`position: sticky`）。窄螢幕的復原、清除只顯示圖示，文字留在按鈕裡給讀螢幕軟體

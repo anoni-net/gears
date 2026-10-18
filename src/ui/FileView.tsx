@@ -360,6 +360,11 @@ export function FileView({ file, others, index, busy, preferred, onOpenTool }: P
   return (
     <section class="file" aria-labelledby="file-title">
       <h2 id="file-title">{file.name}</h2>
+      {file.sample ? (
+        <p class="hint" data-testid="sample-note">
+          {t("file.sample")}
+        </p>
+      ) : null}
 
       <ol class="versions" aria-label={t("file.versions")}>
         {file.versions.map((v) => (

@@ -177,7 +177,16 @@ export function trackView() {
   send({});
 }
 
+// 暫存區有範例檔時（src/ui/SamplesPage.tsx），加入、處理、下載都不記，展示時不會把數字灌高。
+// 同時有讀者自己的檔案時也一起不記，判斷不了這一筆是哪一個檔案的
+const SAMPLE_EVENTS = new Set(["file-add", "tool-done", "tool-fail", "save"]);
+let sampleActive = () => false;
+export const setSampleGate = (gate: () => boolean) => {
+  sampleActive = gate;
+};
+
 export function track(name: string, data: Record<string, string>) {
+  if (SAMPLE_EVENTS.has(name) && sampleActive()) return;
   const clean = scrub(name, data);
   if (clean) send({ name, data: clean });
 }
