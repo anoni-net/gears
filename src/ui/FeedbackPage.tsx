@@ -133,12 +133,14 @@ export function FeedbackPage({ from }: { from: string }) {
       <label class="field">
         {t("feedback.contact")}
         <span class="hint">{t("feedback.contact.hint")}</span>
+        {/* email、通訊軟體的帳號都可以，不限定格式 */}
         <input
-          type="email"
+          type="text"
           value={feedback.contact}
           maxLength={FEEDBACK_LIMITS.contact}
-          placeholder="you@example.com"
-          autocomplete="email"
+          placeholder={t("feedback.contact.placeholder")}
+          autocomplete="off"
+          spellcheck={false}
           disabled={status === "sending"}
           onInput={(e) => set({ contact: e.currentTarget.value })}
         />
