@@ -1294,24 +1294,111 @@ button.pick-files .icon {
   margin-bottom: 0.75rem;
 }
 
-.wifi {
+.qr-fields {
   display: grid;
   grid-template-columns: max-content 1fr;
   gap: 0.25rem 1rem;
   margin: 0 0 0.75rem;
 }
 
-.wifi dt {
+.qr-fields dt {
   color: var(--muted);
 }
 
-.wifi dd {
+.qr-fields dd {
   margin: 0;
   overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+
+.qr-content .warn {
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+  background: var(--warn-bg);
+}
+
+/* 產生器：QR code 裡實際放的內容，收起來，要確認時再展開 */
+.qr-raw {
+  margin-top: 0.75rem;
+}
+
+.qr-raw pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 0.85rem;
+  margin: 0.5rem 0 0;
 }
 
 .qr-found {
   margin-top: 1.25rem;
+}
+
+/* 範例頁（src/ui/SamplesPage.tsx） */
+.sample-tool {
+  margin-top: 2rem;
+}
+
+.sample-tool > h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0 0 0.75rem;
+}
+
+.sample-file {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 0.9rem 1rem;
+  background: var(--surface);
+}
+
+.sample-file p {
+  margin: 0.35rem 0 0.75rem;
+}
+
+/* QR code 與條碼的範例：圖片一律放在白底上，深色模式也掃得出來 */
+.qr-samples h4 {
+  font-size: 1rem;
+  margin: 1rem 0 0.5rem;
+}
+
+.qr-samples ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+  gap: 0.75rem;
+}
+
+.qr-samples button {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem;
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.qr-samples button:hover {
+  border-color: var(--accent);
+}
+
+.qr-samples img {
+  width: 100%;
+  height: 6.5rem;
+  object-fit: contain;
+  image-rendering: pixelated;
+  background: #fff;
+  padding: 0.3rem;
+  border-radius: 4px;
 }
 
 /* 遮蔽 */

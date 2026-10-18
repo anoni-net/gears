@@ -26,9 +26,10 @@ anoni.net Gears 檔案工作台，在瀏覽器裡處理要交出去的檔案：�
 - 用密語或 age 公鑰加密任何檔案或一段文字，以及解密
 - 面對面傳送：兩台裝置連上同一個 Wi-Fi 或手機熱點，互掃 QR code 配對，用 WebRTC 直接傳暫存區的檔案，不經過任何伺服器
 - 網址檢查：比對 165 反詐騙的停止解析清單、標出真正的網域、清除追蹤碼
-- QR code 的產生與讀取
+- QR code 的產生與讀取：文字、Wi-Fi、聯絡資料、活動、位置、Email、電話與簡訊，讀取時拆成欄位，也讀得出登機證、商品條碼、台灣的電子發票、Tor bridge、VPN 設定與付款碼，有風險的另外提醒
 - 密語與密碼產生器
 - 一次清除多個檔案，下載成一個壓縮檔
+- 範例：沒有檔案也能試用或展示，有帶拍攝位置的照片、打開時會連線的 Word、釣魚信、改過金額的 PDF 與 22 種 QR code 與條碼，內容都是假的
 - 第一次開啟之後可以離線使用
 - 介面有正體中文、簡體中文與英文
 
@@ -86,9 +87,10 @@ Tools in the first version:
 - Encrypt any file or a piece of text with a passphrase or an age public key, and decrypt
 - Nearby transfer: pair two devices on the same Wi-Fi or phone hotspot by scanning each other's QR code, and send files from the tray directly over WebRTC, without going through any server
 - Check a link against Taiwan's 165 anti-fraud blocklist, show the real domain, and remove tracking parameters
-- Generate and read QR codes
+- Generate and read QR codes: text, Wi-Fi, contacts, events, locations, email, phone and SMS. Scanned codes are broken into fields, including boarding passes, product barcodes, Taiwan e-invoices, Tor bridges, VPN settings and payment codes, with warnings where sharing or scanning carries a risk
 - Generate passphrases and passwords
 - Clean many files at once and download them as one archive
+- Examples to try or demo without files of your own: a photo with its location, a Word file that connects out, a phishing email, an edited PDF and 22 QR codes and barcodes, all made up
 - Works offline after the first visit
 - Interface in Traditional Chinese, Simplified Chinese and English
 

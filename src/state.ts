@@ -2,7 +2,7 @@ import type { Format } from "./core/bytes.ts";
 import { ToolError } from "./core/tool.ts";
 import { createTray } from "./core/tray.ts";
 import { fileTools } from "./tools/index.ts";
-import { type FailReason, fileKind, track, trackFail } from "./ui/analytics.ts";
+import { type FailReason, fileKind, setSampleGate, track, trackFail } from "./ui/analytics.ts";
 
 // 處理完的影像實際解碼一次，解不開就放棄這次的結果。加密檔由加密工具自己驗證
 // （用同一組密語解密一次），其他格式瀏覽器沒有辦法開啟，不在這裡檢查。HEIC 只有
@@ -29,3 +29,6 @@ export const tray = createTray(fileTools, verifyImage, {
   versioned: (tool) => track("tool-done", { tool }),
   failed: (tool, error, large) => trackFail(tool, reason(error, large)),
 });
+
+// 暫存區有範例檔時不記使用統計（analytics.ts 的 SAMPLE_EVENTS）
+setSampleGate(() => tray.get().files.some((f) => f.sample));

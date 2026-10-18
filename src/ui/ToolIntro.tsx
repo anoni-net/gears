@@ -1,9 +1,10 @@
 import { t, tDynamic } from "../i18n/index.ts";
 import { IconCircle } from "./Icon.tsx";
+import { SampleLink } from "./SamplesPage.tsx";
 import { TOOL_META } from "./tool-meta.ts";
 
 // 處理檔案的工具還沒有選檔案時的畫面
-export function ToolIntro({ id, onPick }: { id: string; onPick(): void }) {
+export function ToolIntro({ id, onPick, onSamples }: { id: string; onPick(): void; onSamples(tool: string): void }) {
   return (
     <section class="intro" aria-labelledby="intro-title">
       <h2 id="intro-title" class="tool-title">
@@ -17,6 +18,7 @@ export function ToolIntro({ id, onPick }: { id: string; onPick(): void }) {
         </button>
       </p>
       <p class="hint">{t("intro.orTray")}</p>
+      <SampleLink tool={id} onOpen={onSamples} />
     </section>
   );
 }

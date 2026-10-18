@@ -6,7 +6,7 @@ import { wav } from "../helpers/audio.ts";
 
 test("首頁在根目錄，頁尾連到 onion 的社群首頁，不記錄使用統計", async ({ page }) => {
   await page.goto("./");
-  await expect(page.getByRole("button", { name: /QR code 讀取/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /QR code 與條碼讀取/ })).toBeVisible();
   await expect(page.getByRole("link", { name: "匿名網路社群 anoni.net" })).toHaveAttribute("href", `http://${ONION_HOST}/`);
   await expect(page.getByTestId("analytics")).toHaveText("onion 版不記錄使用統計。");
   // 建議與回饋送到 onion 的表單伺服器，CSP 只開那一個網址

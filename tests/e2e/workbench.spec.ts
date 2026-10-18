@@ -76,7 +76,7 @@ test("桌面的圖示標籤：卡片上的圖示帶著補充說明，最下方�
   // 圖示的名稱是按鈕名稱的一部分，讀螢幕軟體唸得到
   await expect(page.getByRole("button", { name: /^逐字稿 本機模型：辨識用本機模型/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /^遮蔽 本機模型：自動尋找人臉與個資時用到/ })).toBeVisible();
-  await expect(page.getByRole("button", { name: /^QR code 讀取 相機：用相機掃描 QR code/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^QR code 與條碼讀取 相機：用相機掃描 QR code 與條碼/ })).toBeVisible();
   await expect(page.getByRole("img", { name: "相機：用相機掃描對方螢幕上的 QR code" })).toHaveAttribute("title", "相機：用相機掃描對方螢幕上的 QR code");
   await expect(page.locator(".cards .tool-tag")).toHaveCount(4);
 

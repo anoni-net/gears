@@ -13,6 +13,9 @@ test("只送白名單裡的事件、欄位與值", () => {
   expect(scrub("tool-fail", { tool: "pdf-pages" })).toBeNull();
   expect(scrub("tool-done", { tool: "IMG_0001.jpg" })).toBeNull();
   expect(scrub("save", { how: "https://example.com/" })).toBeNull();
+  expect(scrub("qr-make", { format: "contact" })).toEqual({ format: "contact" });
+  expect(scrub("qr-read", { format: "invoice" })).toEqual({ format: "invoice" });
+  expect(scrub("qr-read", { format: "https://example.com/" })).toBeNull();
 });
 
 test("每個工具、任務與模型都在清單上", () => {
