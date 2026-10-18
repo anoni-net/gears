@@ -76,12 +76,29 @@ export async function trackedDocx(): Promise<Uint8Array> {
   );
 }
 
-const b64 = (text: string) => {
+const base64 = (text: string) => {
   let bin = "";
   for (const b of enc.encode(text)) bin += String.fromCharCode(b);
-  return btoa(bin).replace(/.{76}/g, "$&\r\n");
+  return btoa(bin);
 };
-const encodedWord = (text: string) => `=?UTF-8?B?${b64(text)}?=`;
+// 內文的 base64 每 76 個字元換一行
+const b64 = (text: string) => base64(text).replace(/.{76}/g, "$&\r\n");
+
+// 標頭裡的中文寫成 =?UTF-8?B?…?=。一個編碼字最長 75 個字元，長的切成好幾個，
+// 換行之後要縮排（折行），不然下一行會被當成新的標頭，整封信就認不出來
+function encodedWord(text: string): string {
+  const words: string[] = [];
+  let chunk = "";
+  for (const ch of text) {
+    if (enc.encode(chunk + ch).length > 45) {
+      words.push(chunk);
+      chunk = "";
+    }
+    chunk += ch;
+  }
+  words.push(chunk);
+  return words.map((w) => `=?UTF-8?B?${base64(w)}?=`).join("\r\n ");
+}
 
 // 冒充銀行的釣魚信：顯示名稱寫著像銀行的信箱，實際的寄件網域不同，SPF 與 DMARC 沒有通過，
 // 回覆地址換成另一個網域，連結的文字跟實際的網址不同，附件是會要求登入的 HTML。

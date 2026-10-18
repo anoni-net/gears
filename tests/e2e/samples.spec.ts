@@ -57,6 +57,17 @@ test("釣魚信：信件檢查標出寄件驗證沒有通過與回覆地址", as
   await expect(page.getByText(/another-domain\.example/).first()).toBeVisible();
 });
 
+test("範例信回到桌面之後從暫存區點開，檔案畫面建議信件檢查", async ({ page }) => {
+  await page.goto("./samples/");
+  await page.locator('[data-sample="eml"]').click();
+  await expect(page).toHaveURL(/\/gears\/email-check\/$/);
+  await page.getByRole("button", { name: "回到桌面" }).click();
+  await page.locator(".tray .item .pick").first().click();
+  await expect(page.getByRole("heading", { name: "帳戶異常通知.eml" })).toBeVisible();
+  await expect(page.locator(".file").getByText("信件檢查", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("這種檔案還沒有辦法檢查裡面的中繼資料")).toHaveCount(0);
+});
+
 test("改過金額的報價單：查證找到舊版本", async ({ page }) => {
   await page.goto("./samples/");
   await page.locator('[data-sample="pdf"]').click();
