@@ -82,3 +82,14 @@ test("從工具頁的頁尾打開建議與回饋，帶上那個工具。表單�
   await expect(page.getByTestId("feedback-goal")).toHaveValue("The QR code from a long link is too dense to scan");
   expect(sent[0]).toMatchObject({ surveyId: FEEDBACK_SURVEYS.en, data: { kind: "Something went wrong", tool: "qrcode", locale: "en" } });
 });
+
+test("手機上從桌面下方點進建議與回饋，畫面從頂端開始", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 660 });
+  await page.goto("./");
+  const card = page.locator(".desktop").getByRole("button", { name: /^建議與回饋/ });
+  await card.scrollIntoViewIfNeeded();
+  expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(1000);
+  await card.click();
+  await expect(page.getByRole("heading", { name: "建議與回饋" })).toBeInViewport();
+  expect(await page.evaluate(() => window.scrollY)).toBe(0);
+});
