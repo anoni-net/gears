@@ -52,6 +52,10 @@ test("QR code 產生器的聯絡資料與錯誤訊息、讀取的付款提醒沒
   await page.getByTestId("qr-input").setInputFiles({ name: "pay.png", mimeType: "image/png", buffer: Buffer.from(qrPng(encodeQr("monero:4AdUnd?tx_amount=1", "M"), 6)) });
   await expect(page.getByTestId("qr-fields")).toContainText("Monero");
   expect(await audit(page)).toEqual([]);
+  await page.getByText("範例：手邊沒有條碼也能試").click();
+  await page.locator('[data-sample="boarding-pdf417"]').click();
+  await expect(page.getByTestId("qr-fields")).toContainText("登機證");
+  expect(await audit(page)).toEqual([]);
   await page.emulateMedia({ colorScheme: "dark" });
   expect(await audit(page)).toEqual([]);
 });

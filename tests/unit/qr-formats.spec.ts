@@ -3,6 +3,7 @@ import { classify } from "../../src/tools/qr-read/index.ts";
 import { dayOfYear } from "../../src/tools/qr-read/barcode.ts";
 import { crc16 } from "../../src/tools/qr-read/pay.ts";
 import { bcbp } from "../helpers/barcodes.ts";
+import samples from "../../src/tools/qr-read/samples.json" with { type: "json" };
 
 // 讀取端認得的其他格式。位址用保留給文件的 IP（192.0.2.0/24、2001:db8::/32），帳號都是假的
 const FP = "0123456789ABCDEF0123456789ABCDEF01234567";
@@ -109,4 +110,12 @@ test("電子發票的一維條碼：期別、發票號碼與隨機碼", () => {
   expect(classify("11410AB123456789999", "Code39")).toEqual({ kind: "invoice-barcode", year: 2025, months: [9, 10], number: "AB-12345678", random: "9999" });
   expect(classify("11409AB123456789999", "Code39").kind).toBe("text");
   expect(classify("11410AB123456789999", "Code128").kind).toBe("text");
+});
+
+// 讀取工具的範例（scripts/make-qr-samples.mjs 照這份產生圖片）：每一張都要拆成標示的格式
+test("範例的內容都認得出標示的格式", () => {
+  for (const sample of samples) {
+    const text = "bytes" in sample ? new TextDecoder("big5").decode(Buffer.from(sample.bytes, "hex")) : sample.text;
+    expect(classify(text, sample.format).kind, sample.id).toBe(sample.kind);
+  }
 });

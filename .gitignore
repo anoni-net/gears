@@ -6,6 +6,7 @@ playwright-report/
 public/data/
 tests/.generated/
 public/vendor/
+public/samples/
 public/models/whisper/
 public/models/speaker/
 deploy/

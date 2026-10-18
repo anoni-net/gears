@@ -261,6 +261,7 @@ PDF 的版本紀錄：每一個 `%%EOF` 是一次存檔的結尾，切到那裡�
 - 影像解碼（`src/ui/qr-scan.ts`）：先用 jsQR 讀 QR code，讀不到再交給 zxing-wasm 找其他條碼（`src/ui/zxing.ts`）。QR code 留給 jsQR，不需要 WebAssembly，鎖定模式照樣能讀。zxing-wasm 預設從 jsDelivr 下載 WebAssembly，`locateFile` 換成自己網域的 `assets/zxing_reader-*.wasm`（約 950 KB，壓縮後約 420 KB），升級前一樣在套件裡搜尋對外的網址。相機的畫面給 zxing 的是長邊 1600 像素，一維條碼要比較高的解析度
 - 暫存區的圖片自動讀取時只找 QR code、PDF417、Aztec、Data Matrix、Code 128 與 Code 39（`PRIVATE_FORMATS`），登機證、票券與發票這類帶有個資的才列出來。商品條碼不找，照片裡常拍到包裝，列出一串商品編號沒有幫助
 - WebAssembly 被關掉時（`wasmAvailable()`），讀取工具說明只能讀 QR code
+- 讀取工具最下面收著「範例」：22 張 QR code 與條碼，依「分享前要遮住」、「打開之前先看清楚」、「不該外流的連線設定」、「日常」分組，內容都是假的（保留給文件的 IP、`example.org`、虛構的帳號）。點一下就用那張圖走一般的解碼流程，圖片也可以讓另一支手機的相機掃，手邊沒有條碼或對外展示時用。範例不記使用統計。內容與預期的格式寫在 `src/tools/qr-read/samples.json`，圖片由 `scripts/make-qr-samples.mjs` 在建置前（`prebuild`、`predev`）用 zxing-wasm 的完整版產生到 `public/samples/qr/`，不進版控。新增範例時三個語系要加 `qrread.sample.<id>`，`tests/unit/qr-formats.spec.ts` 檢查每張範例拆得出標示的格式，瀏覽器測試逐張點過一次
 - 台灣的電子發票證明聯（`parseInvoice`）：照財政部《電子發票證明聯一維及二維條碼規格說明》Ver 1.9（2022-05-10）。左邊的 QR code 前 77 碼是字軌號碼、民國年月日、隨機碼、未稅與含稅金額（十六進位）、買方與賣方的統一編號與加密驗證，之後以冒號接著品目筆數、中文編碼參數（0 Big5、1 UTF-8、2 Base64、3 境外電商）與「品名:數量:單價」，放不下的接在右邊以 `**` 開頭的 QR code。兩個 QR code 各自讀，左邊列出發票的欄位與讀得到的品項，品項沒讀完時說明其他的在右邊。境外電商的金額是 8 碼整數加 2 碼小數，可能是外幣，不加單位。畫面上提醒發票的 QR code 帶著金額、店家與買了什麼，打了統編時還有買方的統一編號，分享收據的照片前可以先遮蔽
 - Big5 的內容：jsQR 用 `decodeURIComponent` 解開位元組，不是 UTF-8 的那一段會變成空字串，Big5 的電子發票整個讀成空的。`qrText` 發現有位元組沒解出文字時，先用 UTF-8 解整串位元組，不是的話當成 Big5（`TextDecoder("big5")`，三種瀏覽器核心都支援）
 - 格式清單在 `src/tools/qrcode/formats.ts`，產生器、讀取與使用統計共用。跟 `QrContent` 的 `kind` 對不上時型別檢查會失敗

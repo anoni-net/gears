@@ -89,6 +89,10 @@ test("QR code 只記格式，不送內容", async ({ page, baseURL }) => {
   await page.goto(`${home}qr-read/`);
   await page.getByTestId("qr-input").setInputFiles({ name: "pay.png", mimeType: "image/png", buffer: Buffer.from(qrPng(encodeQr("bitcoin:SECRETADDRESS?amount=1", "M"), 6)) });
   await expect(page.getByTestId("qr-fields")).toContainText("Bitcoin");
+  // 範例不記
+  await page.getByText("範例：手邊沒有條碼也能試").click();
+  await page.locator('[data-sample="wifi"]').click();
+  await expect(page.getByTestId("qr-fields")).toContainText("anoni-cafe");
 
   await expect.poll(() => sent.filter((s) => s.name).map((s) => [s.name, s.data])).toEqual([
     ["tool-done", { tool: "qrcode" }],

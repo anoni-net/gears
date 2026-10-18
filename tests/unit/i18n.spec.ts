@@ -3,6 +3,7 @@ import { FINDING_CODES, SEGMENT_CODES } from "../../src/core/tool.ts";
 import { tDynamic } from "../../src/i18n/index.ts";
 import { zhTW } from "../../src/i18n/zh-TW.ts";
 import { createTools, editorTools, fileTools, toolIds } from "../../src/tools/index.ts";
+import qrSamples from "../../src/tools/qr-read/samples.json" with { type: "json" };
 
 // 介面上有些字串的鍵是組出來的（finding.location、tool.qrcode.desc），漏了翻譯不會
 // 在型別檢查時被抓到，畫面上會直接露出鍵名。
@@ -17,6 +18,8 @@ test("每個代碼與工具都有正體中文的字串", () => {
     ...editorTools.map((tool) => `tool.${tool.id}.again`),
     // 會在暫存區留下版本的工具，版本列要有名稱
     ...[...fileTools, ...editorTools, ...createTools.filter((tool) => tool.output === "file")].map((tool) => `file.version.${tool.id}`),
+    // QR code 讀取的範例與分組
+    ...qrSamples.flatMap((sample) => [`qrread.sample.${sample.id}`, `qrread.samples.${sample.group}`]),
   ];
   expect(expected.filter((k) => !keys.has(k))).toEqual([]);
 });

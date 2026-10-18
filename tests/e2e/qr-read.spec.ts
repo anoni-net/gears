@@ -1,6 +1,7 @@
 import { encodeQr, MARGIN, qrPng } from "../../src/tools/qrcode/index.ts";
 import { big5Invoice, encodeBytes } from "../helpers/qr-decode.ts";
 import { barcodePng, bcbp } from "../helpers/barcodes.ts";
+import samples from "../../src/tools/qr-read/samples.json" with { type: "json" };
 import { expect, test } from "./guard.ts";
 
 const png = (text: string) => Buffer.from(qrPng(encodeQr(text, "M"), 6));
@@ -129,6 +130,18 @@ test("電子發票的一維條碼與 Tor bridge 的 QR code", async ({ page }) =
   await page.getByTestId("qr-input").setInputFiles({ name: "fido.png", mimeType: "image/png", buffer: png("FIDO:/1234567890123456789012345678901234567890") });
   await expect(page.getByTestId("qr-fields")).toContainText("passkey 跨裝置登入");
   await expect(page.getByText("掃了等於讓對方用你的帳號登入")).toBeVisible();
+});
+
+test("範例：每一張都用真的解碼流程讀得出來", async ({ page }) => {
+  await page.goto("./qr-read/");
+  await page.getByText("範例：手邊沒有條碼也能試").click();
+  await expect(page.getByRole("heading", { name: "分享前要遮住" })).toBeVisible();
+  for (const sample of samples) {
+    await page.locator(`[data-sample="${sample.id}"]`).click();
+    const text = "bytes" in sample ? new TextDecoder("big5").decode(Buffer.from(sample.bytes, "hex")) : sample.text;
+    await expect(page.getByTestId("qr-text"), sample.id).toHaveText(text);
+  }
+  await expect(page.getByTestId("qr-fields")).toContainText("ISBN");
 });
 
 test("翻拍螢幕的照片，白底上有子像素的直紋也讀得出來", async ({ page }) => {

@@ -1,0 +1,156 @@
+[
+  {
+    "id": "boarding-pdf417",
+    "group": "share",
+    "format": "PDF417",
+    "text": "M1WANG/XIAOMING MR    EABC123 TPENRTCI 0100 293Y012A0025 100",
+    "kind": "boarding-pass"
+  },
+  {
+    "id": "boarding-aztec",
+    "group": "share",
+    "format": "Aztec",
+    "text": "M1LEE/ANNA MS         EXYZ999 KHHHKGBR 0865 005Y003C0025 100",
+    "kind": "boarding-pass"
+  },
+  {
+    "id": "invoice-left",
+    "group": "share",
+    "format": "QRCode",
+    "bytes": "41423131323233333434313032303532333939393930303030303134343030303030313534303030303030303030313233343536377964585a74344c414e3155484e2f6a316a75566352413d3d3a2a2a2a2a2a2a2a2a2a2a3a333a333a303ab0aeb971a6c03a313a3130353a",
+    "kind": "invoice"
+  },
+  {
+    "id": "invoice-right",
+    "group": "share",
+    "format": "QRCode",
+    "text": "**口罩:1:210:牛奶:1:25",
+    "kind": "invoice-more"
+  },
+  {
+    "id": "invoice-barcode",
+    "group": "share",
+    "format": "Code39",
+    "text": "11410AB123456789999",
+    "kind": "invoice-barcode"
+  },
+  {
+    "id": "passkey",
+    "group": "check",
+    "format": "QRCode",
+    "text": "FIDO:/1234567890123456789012345678901234567890",
+    "kind": "passkey"
+  },
+  {
+    "id": "url",
+    "group": "check",
+    "format": "QRCode",
+    "text": "https://scam-shop.example/login?utm_source=sms",
+    "kind": "url"
+  },
+  {
+    "id": "sms",
+    "group": "check",
+    "format": "QRCode",
+    "text": "SMSTO:0204000000:訂閱",
+    "kind": "sms"
+  },
+  {
+    "id": "signal",
+    "group": "check",
+    "format": "QRCode",
+    "text": "https://signal.me/#p/+886912345678",
+    "kind": "invite"
+  },
+  {
+    "id": "twpay",
+    "group": "check",
+    "format": "QRCode",
+    "text": "TWQRP://個人轉帳/158/02/V1?D1=15000&D5=812&D6=0012345678901234&D9=拆帳&D10=901",
+    "kind": "twpay"
+  },
+  {
+    "id": "promptpay",
+    "group": "check",
+    "format": "QRCode",
+    "text": "00020101021229370016A000000677010111011300668123456785303764540555.005802TH5910Anoni Cafe6007Bangkok630429CE",
+    "kind": "merchant-pay"
+  },
+  {
+    "id": "promptpay-bad",
+    "group": "check",
+    "format": "QRCode",
+    "text": "00020101021229370016A000000677010111011300668123456785303764540555.005802TH5910Evil  Cafe6007Bangkok630429CE",
+    "kind": "merchant-pay"
+  },
+  {
+    "id": "bitcoin",
+    "group": "check",
+    "format": "QRCode",
+    "text": "bitcoin:bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq?amount=0.001&label=anoni.net",
+    "kind": "payment"
+  },
+  {
+    "id": "otp",
+    "group": "check",
+    "format": "QRCode",
+    "text": "otpauth://totp/Example:alice?secret=JBSWY3DPEHPK3PXP&issuer=Example",
+    "kind": "otp"
+  },
+  {
+    "id": "bridge",
+    "group": "connect",
+    "format": "QRCode",
+    "text": "obfs4 192.0.2.10:443 0123456789ABCDEF0123456789ABCDEF01234567 cert=AbCdEfGhIjKlMnOpQrStUvWxYz iat-mode=0\nwebtunnel [2001:db8::1]:443 0123456789ABCDEF0123456789ABCDEF01234567 url=https://example.org/x ver=0.0.1",
+    "kind": "bridge"
+  },
+  {
+    "id": "shadowsocks",
+    "group": "connect",
+    "format": "QRCode",
+    "text": "ss://YWVzLTI1Ni1nY206c2VjcmV0@192.0.2.1:8388#Tokyo",
+    "kind": "proxy"
+  },
+  {
+    "id": "wireguard",
+    "group": "connect",
+    "format": "QRCode",
+    "text": "[Interface]\nPrivateKey = aGVsbG8=\nAddress = 10.0.0.2/32\n\n[Peer]\nPublicKey = d29ybGQ=\nEndpoint = 192.0.2.3:51820\n",
+    "kind": "proxy"
+  },
+  {
+    "id": "wifi",
+    "group": "everyday",
+    "format": "QRCode",
+    "text": "WIFI:T:WPA;S:anoni-cafe;P:correct horse battery staple;;",
+    "kind": "wifi"
+  },
+  {
+    "id": "contact",
+    "group": "everyday",
+    "format": "QRCode",
+    "text": "MECARD:N:陳,小明;TEL:0912345678;EMAIL:ming@example.org;;",
+    "kind": "contact"
+  },
+  {
+    "id": "event",
+    "group": "everyday",
+    "format": "QRCode",
+    "text": "BEGIN:VEVENT\nSUMMARY:Tor 節點工作坊\nDTSTART:20261120T190000\nDTEND:20261120T213000\nLOCATION:台北\nEND:VEVENT",
+    "kind": "event"
+  },
+  {
+    "id": "product",
+    "group": "everyday",
+    "format": "EAN13",
+    "text": "4710088412348",
+    "kind": "product"
+  },
+  {
+    "id": "isbn",
+    "group": "everyday",
+    "format": "EAN13",
+    "text": "9789863479505",
+    "kind": "product"
+  }
+]

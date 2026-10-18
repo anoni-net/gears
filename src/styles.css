@@ -1333,6 +1333,60 @@ button.pick-files .icon {
   margin-top: 1.25rem;
 }
 
+/* 讀取的範例：圖片一律放在白底上，深色模式也掃得出來 */
+.qr-samples {
+  margin-top: 1.5rem;
+}
+
+.qr-samples summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.qr-samples h3 {
+  font-size: 1rem;
+  margin: 1rem 0 0.5rem;
+}
+
+.qr-samples ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+  gap: 0.75rem;
+}
+
+.qr-samples button {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem;
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.qr-samples button:hover {
+  border-color: var(--accent);
+}
+
+.qr-samples img {
+  width: 100%;
+  height: 6.5rem;
+  object-fit: contain;
+  image-rendering: pixelated;
+  background: #fff;
+  padding: 0.3rem;
+  border-radius: 4px;
+}
+
 /* 遮蔽 */
 
 /* 最高只佔畫面的 70%，長截圖在手機上也留得下可以捲動的地方。畫布上一根手指框選、
