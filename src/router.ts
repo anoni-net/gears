@@ -23,13 +23,13 @@ export function routeUrl(id: string, locale: Locale = getLocale()): string {
 
 const EVENT = "gears:navigate";
 
-// 換到另一個工具或頁面時回到頁首。不歸零的話，從桌面最下面的卡片打開很長的頁面，
-// 畫面會停在那一頁的中間或底部
+// 換頁時捲回頂端。只換網址與畫面的話，瀏覽器沿用原本的捲動位置：手機上從桌面下方點進比較長的頁面
+// （建議與回饋），畫面會停在新頁面的最底部。上一頁由瀏覽器自己還原捲動位置，換語系留在原處，都不經過這裡
 export function navigate(id: string) {
   if (parseRoute(location.pathname) === id) return;
   history.pushState(null, "", routeUrl(id));
-  window.scrollTo(0, 0);
   window.dispatchEvent(new Event(EVENT));
+  window.scrollTo(0, 0);
 }
 
 // 換語系：留在同一個工具，網址換成那個語系的，不重新載入，暫存區的檔案留著
