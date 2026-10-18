@@ -504,4 +504,25 @@
     <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/licenses/" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/licenses/" />
   </url>
+  <url>
+    <loc>https://anoni.net/gears/feedback/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/feedback/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/feedback/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/feedback/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/feedback/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/zh-cn/feedback/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/feedback/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/feedback/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/feedback/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/feedback/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/en/feedback/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/feedback/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/feedback/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/feedback/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/feedback/" />
+  </url>
 </urlset>
