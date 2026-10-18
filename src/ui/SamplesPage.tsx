@@ -1,4 +1,5 @@
-import { useEffect, useState } from "preact/hooks";
+import { useState } from "preact/hooks";
+import type { JSX } from "preact";
 import { t, tDynamic } from "../i18n/index.ts";
 import qrSamples from "../tools/qr-read/samples.json" with { type: "json" };
 import { IconCircle } from "./Icon.tsx";
@@ -12,7 +13,7 @@ export const qrSampleUrl = (id: string) => `${import.meta.env.BASE_URL}samples/q
 const QR_GROUPS = ["share", "check", "connect", "everyday"] as const;
 
 interface Props {
-  focus?: string; // 從工具的連結過來時，捲到那個工具的段落
+  focus?: string; // 從工具的連結過來時，那個工具的範例排在最前面
   onOpenFile(sample: FileSample): Promise<void>;
   onOpenQr(id: string): void;
 }
@@ -23,10 +24,6 @@ interface Props {
 export function SamplesPage({ focus, onOpenFile, onOpenQr }: Props) {
   const [opening, setOpening] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
-
-  useEffect(() => {
-    if (focus) document.getElementById(`samples-${focus}`)?.scrollIntoView({ block: "start" });
-  }, [focus]);
 
   const open = async (sample: FileSample) => {
     setOpening(sample.id);
@@ -39,36 +36,27 @@ export function SamplesPage({ focus, onOpenFile, onOpenQr }: Props) {
     }
   };
 
-  return (
-    <section class="samples" aria-labelledby="samples-title">
-      <h2 id="samples-title" class="tool-title">
-        <IconCircle name={PAGE_META.samples.icon} cat={PAGE_META.samples.cat} />
-        {t("samples.title")}
-      </h2>
-      <p>{t("samples.intro")}</p>
-      {failed ? (
-        <p class="error" role="alert">
-          {t("samples.failed")}
-        </p>
-      ) : null}
-
-      {FILE_SAMPLES.map((sample) => (
-        <section key={sample.id} id={`samples-${sample.tool}`} class="sample-tool" aria-labelledby={`samples-${sample.id}-title`}>
-          <h3 id={`samples-${sample.id}-title`}>
-            <IconCircle name={TOOL_META[sample.tool]!.icon} cat={TOOL_META[sample.tool]!.cat} />
-            {tDynamic(`tool.${sample.tool}`)}
-          </h3>
-          <div class="sample-file">
-            <strong>{tDynamic(`samples.${sample.id}.title`)}</strong>
-            <p class="hint">{tDynamic(`samples.${sample.id}.desc`)}</p>
-            <button type="button" onClick={() => void open(sample)} disabled={opening !== null} data-sample={sample.id}>
-              {opening === sample.id ? t("app.loading") : t("samples.open", { tool: tDynamic(`tool.${sample.tool}`) })}
-            </button>
-          </div>
-        </section>
-      ))}
-
-      <section id="samples-qr-read" class="sample-tool qr-samples" aria-labelledby="samples-qr-title">
+  // 從工具的連結過來時，那個工具的範例排在最前面，不必往下捲
+  const sections: [string, JSX.Element][] = [
+    ...FILE_SAMPLES.map((sample): [string, JSX.Element] => [
+      sample.tool,
+      <section key={sample.id} id={`samples-${sample.tool}`} class="sample-tool" aria-labelledby={`samples-${sample.id}-title`}>
+        <h3 id={`samples-${sample.id}-title`}>
+          <IconCircle name={TOOL_META[sample.tool]!.icon} cat={TOOL_META[sample.tool]!.cat} />
+          {tDynamic(`tool.${sample.tool}`)}
+        </h3>
+        <div class="sample-file">
+          <strong>{tDynamic(`samples.${sample.id}.title`)}</strong>
+          <p class="hint">{tDynamic(`samples.${sample.id}.desc`)}</p>
+          <button type="button" onClick={() => void open(sample)} disabled={opening !== null} data-sample={sample.id}>
+            {opening === sample.id ? t("app.loading") : t("samples.open", { tool: tDynamic(`tool.${sample.tool}`) })}
+          </button>
+        </div>
+      </section>,
+    ]),
+    [
+      "qr-read",
+      <section key="qr-read" id="samples-qr-read" class="sample-tool qr-samples" aria-labelledby="samples-qr-title">
         <h3 id="samples-qr-title">
           <IconCircle name={TOOL_META["qr-read"]!.icon} cat={TOOL_META["qr-read"]!.cat} />
           {t("tool.qr-read")}
@@ -91,7 +79,25 @@ export function SamplesPage({ focus, onOpenFile, onOpenQr }: Props) {
             </ul>
           </section>
         ))}
-      </section>
+      </section>,
+    ],
+  ];
+  if (focus) sections.sort(([a], [b]) => Number(b === focus) - Number(a === focus));
+
+  return (
+    <section class="samples" aria-labelledby="samples-title">
+      <h2 id="samples-title" class="tool-title">
+        <IconCircle name={PAGE_META.samples.icon} cat={PAGE_META.samples.cat} />
+        {t("samples.title")}
+      </h2>
+      <p>{t("samples.intro")}</p>
+      {failed ? (
+        <p class="error" role="alert">
+          {t("samples.failed")}
+        </p>
+      ) : null}
+
+      {sections.map(([, section]) => section)}
     </section>
   );
 }

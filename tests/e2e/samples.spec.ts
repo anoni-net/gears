@@ -14,6 +14,22 @@ test("從桌面的使用者區打開範例頁", async ({ page }) => {
   await expect(page.getByText("範例的內容都是假的")).toBeVisible();
 });
 
+test("換到範例頁時從頁首開始，從工具的連結過來時那個工具的範例排在最前面", async ({ page }) => {
+  await page.goto("./");
+  const card = page.locator(".desktop").getByRole("button", { name: /^範例/ });
+  await card.scrollIntoViewIfNeeded();
+  expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+  await card.click();
+  await expect(page.getByRole("heading", { name: "範例", exact: true })).toBeInViewport();
+  expect(await page.evaluate(() => window.scrollY)).toBe(0);
+  await expect(page.locator(".sample-tool").first()).toHaveAttribute("id", "samples-strip-metadata");
+
+  await page.goto("./qr-read/");
+  await page.getByTestId("sample-link").click();
+  await expect(page.locator(".sample-tool").first()).toHaveAttribute("id", "samples-qr-read");
+  expect(await page.evaluate(() => window.scrollY)).toBe(0);
+});
+
 test("帶拍攝位置的照片：清除中繼資料找得到位置與手機型號，清除之後不見了", async ({ page }) => {
   await page.goto("./strip-metadata/");
   await page.getByTestId("sample-link").click();

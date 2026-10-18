@@ -23,9 +23,12 @@ export function routeUrl(id: string, locale: Locale = getLocale()): string {
 
 const EVENT = "gears:navigate";
 
+// 換到另一個工具或頁面時回到頁首。不歸零的話，從桌面最下面的卡片打開很長的頁面，
+// 畫面會停在那一頁的中間或底部
 export function navigate(id: string) {
   if (parseRoute(location.pathname) === id) return;
   history.pushState(null, "", routeUrl(id));
+  window.scrollTo(0, 0);
   window.dispatchEvent(new Event(EVENT));
 }
 
