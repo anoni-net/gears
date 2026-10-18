@@ -13,6 +13,7 @@ export const en: Record<MessageKey, string> = {
   "app.home": "Back to desktop",
   "app.loading": "Loading…",
   "app.footer.source": "Source code",
+  "app.footer.request": "Request a feature",
   "app.version": "Version {version}",
   "app.footer.licenses": "Licenses and sources",
   "app.footer.llmBench": "Language model speed test (lab)",

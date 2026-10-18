@@ -13,6 +13,7 @@ export const zhTW = {
   "app.home": "回到桌面",
   "app.loading": "載入中…",
   "app.footer.source": "原始碼",
+  "app.footer.request": "提出需求",
   "app.version": "版本 {version}",
   "app.footer.licenses": "授權與來源",
   "app.footer.llmBench": "語言模型速度量測（實驗）",

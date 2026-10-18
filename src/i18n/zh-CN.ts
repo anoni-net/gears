@@ -14,6 +14,7 @@ export const zhCN: Record<MessageKey, string> = {
   "app.home": "回到桌面",
   "app.loading": "加载中…",
   "app.footer.source": "源代码",
+  "app.footer.request": "提出需求",
   "app.version": "版本 {version}",
   "app.footer.licenses": "授权与来源",
   "app.footer.llmBench": "语言模型速度测量（实验）",

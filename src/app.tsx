@@ -19,6 +19,7 @@ import { Icon, IconCircle } from "./ui/Icon.tsx";
 import { TOOL_META, groupOf } from "./ui/tool-meta.ts";
 import { browserDeclines, optedOut, setOptedOut, track, trackView } from "./ui/analytics.ts";
 import { COMMIT, COMMIT_URL, VERSION } from "./version.ts";
+import { requestUrl } from "./request.ts";
 
 const isCreateTool = (id: string) => createTools.some((tool) => tool.id === id);
 // 處理整個暫存區的工具，加入檔案時留在原畫面（CreateTool 的 tray）
@@ -351,6 +352,16 @@ export function App() {
             <a href={COMMUNITY_URL}>{t("app.footer.community")}</a>
             {" · "}
             <a href="https://github.com/anoni-net/gears">{t("app.footer.source")}</a>
+            {" · "}
+            {/* 新分頁打開，暫存區的檔案留在這一頁 */}
+            <a
+              href={requestUrl(route, getLocale(), `${VERSION} ${COMMIT}`)}
+              target="_blank"
+              rel="noopener noreferrer"
+              data-testid="request-link"
+            >
+              {t("app.footer.request")}
+            </a>
             {" · "}
             {/* 站內的頁面不用一般的連結，避免重新載入、清空暫存區 */}
             <button type="button" class="link" onClick={() => navigate("licenses")}>

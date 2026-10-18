@@ -9,6 +9,7 @@ test("首頁在根目錄，頁尾連到 onion 的社群首頁，不記錄使用�
   await expect(page.getByRole("button", { name: /QR code 讀取/ })).toBeVisible();
   await expect(page.getByRole("link", { name: "匿名網路社群 anoni.net" })).toHaveAttribute("href", `http://${ONION_HOST}/`);
   await expect(page.getByTestId("analytics")).toHaveText("onion 版不記錄使用統計。");
+  await expect(page.getByTestId("request-link")).toHaveAttribute("href", new RegExp(`^http://form\\.${ONION_HOST.replace(/\./g, "\\.")}/s/`));
 });
 
 test("工具的網址在根目錄底下，打開之後可以換工具", async ({ page }) => {

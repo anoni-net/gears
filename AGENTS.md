@@ -368,6 +368,15 @@ PDF 的版本紀錄：每一個 `%%EOF` 是一次存檔的結尾，切到那裡�
 - `tests/e2e/analytics.spec.ts` 在 Chromium 把 `anoni.net` 指到預覽伺服器（`vite.config.ts` 的 `preview.allowedHosts`），攔下送到 Umami 的請求，確認內容與頁尾的開關。其他測試都在 localhost，`tests/e2e/guard.ts` 擋下任何對外連線
 - 看數字用工作區的 `python3 umami/report.py --website gears events --funnel task file-add tool-done save`
 
+## 需求表單
+
+頁尾的「提出需求」連到社群自架的 Formbricks（`form.anoni.net`，onion 版連到 `form.<onion>`），讀者寫下想要的工具、改進或處理不了的檔案（`src/request.ts`）。每個語系一份問卷，id 寫在 `REQUEST_SURVEYS`。
+
+- 用連結在新分頁打開，不嵌進頁面。CSP 不必多開對外連線，暫存區的檔案也留在原本的分頁
+- 網址帶上目前的工具 id（桌面是 `home`）、語系與版本，對應問卷的三個 hidden fields（`tool`、`locale`、`version`），維護者整理時知道需求跟哪個工具、哪一版有關。讀者的檔案與輸入一律不帶，表單的開頭也寫明帶了哪些欄位
+- 表單不記錄 IP，Formbricks 會記下送出時的國家與瀏覽器種類，表單開頭同樣寫明
+- 收到的需求在社群的工作區整理（`formbricks/`），決定要做的改寫成這個 repo 的 issue，掛 `request` 標籤，不公開讀者寫的原文與聯絡方式。表單的結尾頁連到 `request` 標籤的 issue 列表
+
 ## 離線使用
 
 第一次開啟之後，沒有網路也能使用。service worker 的範本在 `src/sw/sw-template.js`，建置時 `vite.config.ts` 的 `serviceWorker()` 列出 `dist/` 的檔案、算出版本（所有檔案內容的雜湊），輸出成 `/gears/sw.js`。
