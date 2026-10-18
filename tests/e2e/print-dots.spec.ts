@@ -36,10 +36,11 @@ async function colorsAt(page: Page, data: Uint8Array, points: [number, number][]
   );
 }
 
-test("從任務選掃描的頁面：找到淡黃色，去掉之後追蹤點變白，螢光筆與字還在", async ({ page }) => {
+test("從桌面的工具選掃描的頁面：找到淡黃色，去掉之後追蹤點變白，螢光筆與字還在", async ({ page }) => {
   await page.goto("./");
   const png = await scannedPage(page);
-  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.getByRole("button", { name: /紙本文件上的追蹤點/ }).click()]);
+  await page.getByRole("button", { name: /^列印追蹤點/ }).click();
+  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.locator(".intro").getByRole("button", { name: "選擇檔案" }).click()]);
   await chooser.setFiles({ name: "scan.png", mimeType: "image/png", buffer: png });
 
   await expect(page.getByTestId("print-dots-status")).toContainText("找到淡黃色的像素");

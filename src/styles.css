@@ -916,17 +916,68 @@ button.pick-files .icon {
   margin-top: 0;
 }
 
-/* 工具依讀者的目的分組，每組一個小標題加一句說明 */
-.tool-group + .tool-group {
-  margin-top: 1.5rem;
+/* 最上面跳到三組的入口 */
+.desk-jump ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.5rem;
 }
 
-.tool-group h3 {
-  margin: 0;
+@media (min-width: 30rem) {
+  .desk-jump ul {
+    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  }
+}
+
+.desk-jump a {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--strong);
+  text-decoration: none;
+}
+
+.desk-jump a span {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+@media (hover: hover) {
+  .desk-jump a:hover {
+    border-color: var(--accent);
+  }
+}
+
+.desk-jump + .hint {
+  margin: 0.75rem 0 0;
+}
+
+/* 工具依讀者的目的分組：標題、一句說明、常見的情況、這一組的全部工具 */
+.desktop .tool-group {
+  margin-top: 2.25rem;
+  scroll-margin-top: 1rem;
 }
 
 .tool-group .hint {
-  margin: 0.2rem 0 0.6rem;
+  margin: 0.2rem 0 0;
+}
+
+.tool-group h3 {
+  margin: 1rem 0 0.4rem;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.tool-group > .hint + .cards {
+  margin-top: 0.75rem;
 }
 
 .cards {
@@ -973,6 +1024,46 @@ button.pick-files .icon {
 /* 任務捷徑用淡底色跟工具卡片區分 */
 .card.task {
   background: var(--fill);
+}
+
+/* 最多兩欄：每欄至少 15rem，也至少一半寬 */
+@media (min-width: 40rem) {
+  .cards.pairs {
+    grid-template-columns: repeat(auto-fill, minmax(max(15rem, calc((100% - 0.5rem) / 2)), 1fr));
+  }
+}
+
+/* 工具卡只有圖示與名稱，手機上排成兩欄，320px 的手機排一欄 */
+.cards.compact {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.4rem;
+}
+
+@media (min-width: 40rem) {
+  .cards.compact {
+    grid-template-columns: repeat(auto-fill, minmax(12.5rem, 1fr));
+  }
+}
+
+@media (max-width: 22.4rem) {
+  .cards.compact {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.cards.compact .card {
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.65rem;
+}
+
+.cards.compact .ic {
+  width: 2rem;
+  height: 2rem;
+}
+
+.cards.compact .card-text strong {
+  font-weight: 500;
 }
 
 .soon {

@@ -43,9 +43,10 @@ test("HEIC 的預覽：瀏覽器不能顯示時用 libheif 解碼，顏色與位
   expect(isRed(await pixel(page, 0.8, 0.8))).toBe(true);
 });
 
-test("從任務把 HEIC 轉成 JPEG，下載的 JPEG 沒有中繼資料", async ({ page }) => {
+test("從桌面的工具把 HEIC 轉成 JPEG，下載的 JPEG 沒有中繼資料", async ({ page }) => {
   await page.goto("./");
-  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.getByRole("button", { name: /打不開的 iPhone 照片/ }).click()]);
+  await page.getByRole("button", { name: /^HEIC 轉 JPEG/ }).click();
+  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.locator(".intro").getByRole("button", { name: "選擇檔案" }).click()]);
   await chooser.setFiles(heic(PHOTO));
   await page.getByRole("button", { name: "轉成 JPEG", exact: true }).click();
   await expect(page.getByText("轉成 JPEG 後", { exact: true })).toBeVisible({ timeout: 30_000 });

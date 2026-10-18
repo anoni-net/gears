@@ -15,9 +15,10 @@ async function threePages(): Promise<Buffer> {
   return Buffer.from(await doc.save({ useObjectStreams: false }));
 }
 
-test("從任務選 PDF，勾選第一頁與第三頁，第二頁與文件資訊不在新檔裡", async ({ page }) => {
+test("從桌面的工具選 PDF，勾選第一頁與第三頁，第二頁與文件資訊不在新檔裡", async ({ page }) => {
   await page.goto("./");
-  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.getByRole("button", { name: /PDF 的其中幾頁/ }).click()]);
+  await page.getByRole("button", { name: /^PDF 頁面選取/ }).click();
+  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.locator(".intro").getByRole("button", { name: "選擇檔案" }).click()]);
   await chooser.setFiles({ name: "statement.pdf", mimeType: "application/pdf", buffer: await threePages() });
 
   const apply = page.getByRole("button", { name: "只留下選中的頁面" });

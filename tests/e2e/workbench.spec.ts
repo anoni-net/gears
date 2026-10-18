@@ -60,16 +60,21 @@ async function previewLoaded(page: Page) {
   expect(await img.evaluate((el: HTMLImageElement) => el.naturalWidth)).toBeGreaterThan(0);
 }
 
-test("桌面有暫存區、任務捷徑與兩組工具，沒有檔案時不顯示清空按鈕", async ({ page }) => {
+test("桌面有暫存區與三組工具，每組先放常見的情況，沒有檔案時不顯示清空按鈕", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "檔案工作台" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "暫存區" })).toBeVisible();
-  await expect(page.getByRole("button", { name: /照片與影片的拍攝位置/ })).toBeVisible();
-  await expect(page.getByRole("button", { name: /給朋友的 Wi-Fi 密碼/ })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "交出去之前" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "安全地傳送" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "檢查收到的" })).toBeVisible();
+  const group = (name: string) => page.getByRole("region", { name });
+  await expect(group("交出去之前").getByRole("button", { name: /照片與影片的拍攝位置/ })).toBeVisible();
+  await expect(group("安全地傳送").getByRole("button", { name: /給朋友的 Wi-Fi 密碼/ })).toBeVisible();
+  await expect(group("檢查收到的").getByRole("button", { name: /可疑的連結/ })).toBeVisible();
+  // 情況卡帶著說明，工具卡只有名稱，說明放在 title
+  await expect(group("交出去之前").getByRole("button", { name: /^遮蔽/ })).toHaveAttribute("title", "在圖片或 PDF 上框出名字、頭像與電話，塗成實心黑色。");
   await expect(page.getByRole("button", { name: "清空暫存區" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "回到桌面" })).toHaveCount(0);
+
+  // 最上面的入口跳到那一組
+  await page.getByRole("navigation", { name: "三組工具" }).getByRole("link", { name: /^檢查收到的/ }).click();
+  await expect(page.getByRole("heading", { name: "檢查收到的", level: 2 })).toBeInViewport();
 });
 
 test("桌面的圖示標籤：卡片上的圖示帶著補充說明，最下方的圖示說明列出用到的標籤", async ({ page }) => {
@@ -91,7 +96,7 @@ test("桌面的圖示標籤：卡片上的圖示帶著補充說明，最下方�
     expect(await color(`.cards .tag-${tag}`), tag).toBe(await color(`#tag-legend .tag-${tag}`));
     expect(await color(`.cards .tag-${tag}`), tag).not.toBe(muted);
   }
-  // 工具標題下方的連結捲到圖示說明
+  // 桌面上方的連結捲到圖示說明
   await page.getByRole("link", { name: "圖示說明" }).click();
   await expect(page.getByRole("heading", { name: "圖示說明" })).toBeInViewport();
 });
@@ -264,7 +269,7 @@ test("手機點過頁首的 logo 之後，名稱底下不會留著底線", async
   test.skip(!isMobile, "觸控裝置點過之後 :hover 會一直留著");
   await page.goto("./qrcode/");
   await page.locator(".site-header__logo").tap();
-  await expect(page.getByRole("heading", { name: "常見的情況" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "交出去之前", level: 2 })).toBeVisible();
   await expect(page.locator(".site-header__product")).toHaveCSS("text-decoration-line", "none");
 });
 

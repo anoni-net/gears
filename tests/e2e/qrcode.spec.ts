@@ -121,5 +121,5 @@ test("每個工具都有自己的網址，可以直接打開，也可以用上�
   await expect(page).toHaveURL(/\/gears\/qrcode\/$/);
   await page.goBack();
   await expect(page).toHaveURL(/\/gears\/$/);
-  await expect(page.getByRole("heading", { name: "常見的情況" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "交出去之前", level: 2 })).toBeVisible();
 });
