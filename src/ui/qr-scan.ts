@@ -1,4 +1,8 @@
-// 從圖片或相機畫面讀出 QR code。jsQR 在第一次用到時才載入。
+// 從圖片或相機畫面讀出 QR code 與條碼。jsQR 在第一次用到時才載入。
+//
+// 先用 jsQR 讀 QR code，讀不到再交給 zxing-wasm 找其他條碼（登機證的 PDF417 與 Aztec、
+// 商品條碼、Code 128 這類，src/ui/zxing.ts）。QR code 留給 jsQR：不需要 WebAssembly，
+// 鎖定模式下照樣能用，下面為翻拍螢幕做的縮小也是針對它調整的。
 //
 // 大張的照片先縮小再讀，1200 萬畫素直接丟給 jsQR 要好幾秒。縮小後讀不到，再減半
 // 讀兩次，最後用比較大的尺寸試一次，照片裡的 QR code 可能只佔一小塊。
@@ -11,6 +15,7 @@
 import { assertCanvasReadable, canvasReadable } from "./canvas-access.ts";
 import { decodeImage } from "./image-decode.ts";
 import { qrText } from "../tools/qr-read/index.ts";
+import { type BarcodeFormats, readBarcode } from "./zxing.ts";
 
 type Decode = (data: Uint8ClampedArray, width: number, height: number) => Parameters<typeof qrText>[0] | null;
 type Pixels = { data: Uint8ClampedArray; width: number; height: number };
@@ -84,31 +89,76 @@ function readHalving(decode: Decode, full: Pixels, max: number): string | null {
   }
 }
 
-// 瀏覽器不讓讀取 canvas 時丟出 CanvasBlockedError（見 canvas-access.ts）
-export async function decodeQrFromBlob(blob: Blob): Promise<string | null> {
-  assertCanvasReadable();
-  const decode = await loadJsQR();
-  let bitmap: ImageBitmap;
-  try {
-    bitmap = await decodeImage(blob);
-  } catch {
-    return null;
-  }
-  let full: Pixels;
-  try {
-    full = capture(bitmap, bitmap.width, bitmap.height, CAPTURE_MAX);
-  } finally {
-    bitmap.close();
-  }
+function readQrFromPixels(decode: Decode, full: Pixels): string | null {
   const found = readHalving(decode, full, 1200);
   const side = Math.max(full.width, full.height);
   if (found || side <= 1200) return found;
   return read(decode, shrink(full, Math.ceil(side / 3000)));
 }
 
+async function pixelsOf(blob: Blob): Promise<Pixels | null> {
+  let bitmap: ImageBitmap;
+  try {
+    bitmap = await decodeImage(blob);
+  } catch {
+    return null;
+  }
+  try {
+    return capture(bitmap, bitmap.width, bitmap.height, CAPTURE_MAX);
+  } finally {
+    bitmap.close();
+  }
+}
+
+// 瀏覽器不讓讀取 canvas 時丟出 CanvasBlockedError（見 canvas-access.ts）
+export async function decodeQrFromBlob(blob: Blob): Promise<string | null> {
+  assertCanvasReadable();
+  const decode = await loadJsQR();
+  const full = await pixelsOf(blob);
+  return full ? readQrFromPixels(decode, full) : null;
+}
+
+// 面對面傳送的配對只用 QR code
 export async function decodeQrFromVideo(video: HTMLVideoElement): Promise<string | null> {
   if (!video.videoWidth || !canvasReadable()) return null;
   const decode = await loadJsQR();
   // 對著螢幕掃描時也會拍到直紋，一樣逐級減半
   return readHalving(decode, capture(video, video.videoWidth, video.videoHeight, 800), 800);
+}
+
+// 讀到的內容與條碼的種類（zxing 的名稱，QR code 是 QRCode）
+export interface Scanned {
+  text: string;
+  format: string;
+}
+
+// 讀取工具找所有的條碼。暫存區的圖片自動讀取時不找商品條碼：照片裡常拍到包裝，
+// 列出一串商品編號沒有幫助
+export const ALL_FORMATS: BarcodeFormats = ["AllReadable"];
+export const PRIVATE_FORMATS: BarcodeFormats = ["PDF417", "Aztec", "DataMatrix", "Code128", "Code39", "QRCode", "MicroQRCode"];
+
+async function readOther(pixels: Pixels, formats: BarcodeFormats): Promise<Scanned | null> {
+  const result = await readBarcode(pixels as ImageData, formats);
+  if (!result) return null;
+  // zxing 不認得 Big5，解出替代字元時改用位元組自己解（同 qrText）
+  const text = result.text.includes("\uFFFD") ? new TextDecoder("big5").decode(result.bytes) : result.text;
+  return text ? { text, format: result.format } : null;
+}
+
+export async function decodeCodeFromBlob(blob: Blob, formats = ALL_FORMATS): Promise<Scanned | null> {
+  assertCanvasReadable();
+  const decode = await loadJsQR();
+  const full = await pixelsOf(blob);
+  if (!full) return null;
+  const qr = readQrFromPixels(decode, full);
+  if (qr) return { text: qr, format: "QRCode" };
+  return readOther(full, formats);
+}
+
+// 一維條碼要比較高的解析度，zxing 用的畫面比 jsQR 大
+export async function decodeCodeFromVideo(video: HTMLVideoElement): Promise<Scanned | null> {
+  const qr = await decodeQrFromVideo(video);
+  if (qr) return { text: qr, format: "QRCode" };
+  if (!video.videoWidth || !canvasReadable()) return null;
+  return readOther(capture(video, video.videoWidth, video.videoHeight, 1600), ALL_FORMATS);
 }

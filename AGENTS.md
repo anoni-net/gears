@@ -7,7 +7,7 @@
 - 預設在瀏覽器裡處理。之後若提供上傳到社群伺服器的選項，上傳前要在畫面上寫清楚檔案送到哪裡、誰看得到、保留多久、伺服器會不會留下紀錄，由讀者決定
 - 上傳端點不經過 Cloudflare。Cloudflare 在邊緣解開 TLS，經過的檔案對它是明文
 - 頁面能連線的對象寫死在 CSP 裡（`vite.config.ts`），新增任何對外連線都要改那裡，並在畫面上標示。頁面的 meta 標籤只有自己的網域、使用統計的送出網址（`https://aa.anoni.net/api/send`，見下方「使用統計」）與建議與回饋的送出網址（見下方「建議與回饋」）。逐字稿的大模型從 Hugging Face 下載（見下方「逐字稿」），只開在伺服器送的 CSP 標頭 <!-- docs-style-lint: disable-line -->
-- 執行期的相依套件只有 `preact`、`qrcode-generator`（QR code 產生）、`jsqr`（QR code 讀取）、`age-encryption`（加密，連同它相依的 noble 系列）、`libheif-js`（HEIC 解碼，LGPL-3.0，見下方「HEIC」）、`pdf-lib`（PDF 的解析與寫出，見下方「文件」）、`pdfjs-dist`（PDF 的遮蔽，見下方「PDF 的遮蔽」），以及遮蔽的自動尋找用的 `onnxruntime-web` 與 `tesseract.js`（見下方「遮蔽的自動尋找」）、逐字稿用的 `@huggingface/transformers` 與 `opencc-js`（見下方「逐字稿」，分辨說話者用的 onnxruntime 是 Transformers.js 帶的那一份），以及查證計算 SHA-256 用的 `@noble/hashes`（age 加密原本就相依它，鎖定同一個版本，見下方「查證」）、下載的軟體驗證用的 `openpgp`（LGPL-3.0，見下方「下載的軟體驗證」）。新增套件前先想能不能自己寫，必要時鎖定確切的版本。工具用到的套件在打開工具時才載入
+- 執行期的相依套件只有 `preact`、`qrcode-generator`（QR code 產生）、`jsqr`（QR code 讀取）、`zxing-wasm`（QR code 以外的條碼，見下方「QR code 的內容格式」）、`age-encryption`（加密，連同它相依的 noble 系列）、`libheif-js`（HEIC 解碼，LGPL-3.0，見下方「HEIC」）、`pdf-lib`（PDF 的解析與寫出，見下方「文件」）、`pdfjs-dist`（PDF 的遮蔽，見下方「PDF 的遮蔽」），以及遮蔽的自動尋找用的 `onnxruntime-web` 與 `tesseract.js`（見下方「遮蔽的自動尋找」）、逐字稿用的 `@huggingface/transformers` 與 `opencc-js`（見下方「逐字稿」，分辨說話者用的 onnxruntime 是 Transformers.js 帶的那一份），以及查證計算 SHA-256 用的 `@noble/hashes`（age 加密原本就相依它，鎖定同一個版本，見下方「查證」）、下載的軟體驗證用的 `openpgp`（LGPL-3.0，見下方「下載的軟體驗證」）。新增套件前先想能不能自己寫，必要時鎖定確切的版本。工具用到的套件在打開工具時才載入
 - 結構有問題的檔案就停下來，不交出一份沒處理乾淨的檔案
 
 ## 支援的瀏覽器
@@ -96,7 +96,7 @@ CI（`.github/workflows/ci.yml`）依瀏覽器拆成四台機器同時執行：C
 | 標籤 | 圖示 | 代表色 | 工具 |
 |---|---|---|---|
 | 本機模型 | `brain` | `--tag-model`，開發與技術的靛藍 | 逐字稿、遮蔽（只有自動尋找人臉與個資用到） |
-| 相機 | `camera-outline` | `--tag-camera`，匿名支付的橘色 | QR code 讀取、面對面傳送 |
+| 相機 | `camera-outline` | `--tag-camera`，匿名支付的橘色 | QR code 與條碼讀取、面對面傳送 |
 
 - 只標讀者在打開之前就該知道的事：會下載大型檔案、會跳出權限詢問、會連到其他網站、還在實驗中。不拿來標功能特色。每張卡片最多兩個（`MAX_TAGS`）
 - 每個標籤只有一個圖示。同一個標籤在不同工具的差別寫在補充說明（`tag.<標籤>.<工具 id>`，例如遮蔽的「自動尋找人臉與個資時用到」），圖示帶著它當名稱，讀螢幕軟體唸按鈕名稱時唸得到，滑鼠移上去也看得到。原本分成「本機模型」與「本機模型輔助」兩個，小尺寸時分不出來，2026-10-18 合併。圖示原本用三顆星（`creation`，科技業常用來代表 AI），不常用這類產品的讀者聯想不到，又帶著「魔法」的意味，2026-10-18 改成大腦
@@ -246,10 +246,25 @@ PDF 的版本紀錄：每一個 `%%EOF` 是一次存檔的結尾，切到那裡�
 - 下載的檔名依格式命名（`contact-qrcode.png`、`event-qrcode.png` 這類）
 - 讀取端（`src/tools/qr-read/index.ts`，畫面在 `src/ui/QrContentView.tsx`）認得上表的格式，另外認得 MECARD、MATMSG、vCard 2.1 的 quoted-printable、`sms:`、包在 `VCALENDAR` 裡的活動（`TZID` 與 UTC 的時間照標示顯示）、兩步驟驗證的 `otpauth://`，以及 `bitcoin:`、`monero:`、`zcash:` 的付款網址。認得的格式拆成欄位，讀者在手機帶出動作之前先看清楚
 - 有風險的格式在畫面上提醒：電話與簡訊可能是付費號碼，付款的 QR code 可能被貼上假的（按鈕改成複製地址），兩步驟驗證的金鑰拍到的人都能產生同一組驗證碼。金鑰本身不拆成欄位顯示，原文照樣列出
+- 跟連線有關的格式（`src/tools/qr-read/network.ts`）：
+    - Tor bridge：一行一個，torrc 的 `Bridge` 寫法與 `['…', '…']` 的清單寫法都認得。沒有傳輸方式的 bridge 要有 40 碼的指紋，否則任何「IP:連接埠」都會被當成 bridge。提醒公開張貼的 bridge 很快會被封鎖，按鈕改成複製 bridge
+    - passkey 的跨裝置登入（`FIDO:/` 接一串數字）：提醒只掃自己正在登入的那台電腦上的，別人傳來的掃了等於讓對方登入。這是 passkey 的新型釣魚手法
+    - VPN 與代理：WireGuard 的設定檔與 Shadowsocks、VMess、VLESS、Trojan、Hysteria 2、TUIC 的分享連結，只拆出伺服器與名稱，密碼、金鑰與 UUID 不顯示成欄位。提醒取得的人都能用這個帳號連線
+    - 通訊軟體的邀請連結：Signal、Matrix、LINE、Telegram、WhatsApp、SimpleX 的加好友與加入群組連結，電話號碼的連結（`signal.me/#p/`、`wa.me/`）另外列出號碼。照樣可以交給網址檢查
+- 付款的格式（`src/tools/qr-read/pay.ts`）：
+    - 台灣 Pay 的共通 QR code（`TWQRP://服務名稱/158/交易類別/V1?…`）：財金公司沒有公開完整的規格，欄位依社群的逆向工程整理（例如 tzing 的〈TWQR 格式解析〉），只取意思確定的幾個：交易類別 01 掃碼付款、02 轉帳、03 繳費，`D1` 金額（以分計），`D5`、`D6` 轉入的銀行代碼與帳號，`D8` 商家，`D9` 附言，`D12` 有效期限。有的銀行把整串網址百分比編碼。只列欄位，不判斷真假
+    - EMVCo 的商家付款碼（`000201` 開頭，PromptPay、PayNow、QRIS、VietQR、DuitNow 這類）：拆出付款網路、商家、城市、國家與金額，算 CRC-16/CCITT-FALSE 核對最後的 `63`，對不上時標出來。國家名稱交給 `Intl.DisplayNames`
+- 條碼（`src/tools/qr-read/barcode.ts`）：
+    - 登機證（IATA BCBP，多半印成 PDF417 或 Aztec）：姓名、訂位代號、航班、日期與座位。日期是一年中的第幾天，條碼沒有記年份，顯示時用今年換算。提醒有了訂位代號與姓氏就能登入航空公司的網站改行程，選用欄位（常客號碼這類）只說明有、不拆
+    - 商品條碼（EAN-13、EAN-8、UPC、ISBN、ISSN）：只看條碼種類是 EAN、UPC 時才認，同樣的數字放在 QR code 裡只是文字。前三碼對到 GS1 的國家代號，說明那是廠商申請條碼的國家、不一定是產地。不連線查商品
+    - 電子發票的一維條碼（Code 39，期別、發票號碼與隨機碼共 19 碼）
+- 影像解碼（`src/ui/qr-scan.ts`）：先用 jsQR 讀 QR code，讀不到再交給 zxing-wasm 找其他條碼（`src/ui/zxing.ts`）。QR code 留給 jsQR，不需要 WebAssembly，鎖定模式照樣能讀。zxing-wasm 預設從 jsDelivr 下載 WebAssembly，`locateFile` 換成自己網域的 `assets/zxing_reader-*.wasm`（約 950 KB，壓縮後約 420 KB），升級前一樣在套件裡搜尋對外的網址。相機的畫面給 zxing 的是長邊 1600 像素，一維條碼要比較高的解析度
+- 暫存區的圖片自動讀取時只找 QR code、PDF417、Aztec、Data Matrix、Code 128 與 Code 39（`PRIVATE_FORMATS`），登機證、票券與發票這類帶有個資的才列出來。商品條碼不找，照片裡常拍到包裝，列出一串商品編號沒有幫助
+- WebAssembly 被關掉時（`wasmAvailable()`），讀取工具說明只能讀 QR code
 - 台灣的電子發票證明聯（`parseInvoice`）：照財政部《電子發票證明聯一維及二維條碼規格說明》Ver 1.9（2022-05-10）。左邊的 QR code 前 77 碼是字軌號碼、民國年月日、隨機碼、未稅與含稅金額（十六進位）、買方與賣方的統一編號與加密驗證，之後以冒號接著品目筆數、中文編碼參數（0 Big5、1 UTF-8、2 Base64、3 境外電商）與「品名:數量:單價」，放不下的接在右邊以 `**` 開頭的 QR code。兩個 QR code 各自讀，左邊列出發票的欄位與讀得到的品項，品項沒讀完時說明其他的在右邊。境外電商的金額是 8 碼整數加 2 碼小數，可能是外幣，不加單位。畫面上提醒發票的 QR code 帶著金額、店家與買了什麼，打了統編時還有買方的統一編號，分享收據的照片前可以先遮蔽
 - Big5 的內容：jsQR 用 `decodeURIComponent` 解開位元組，不是 UTF-8 的那一段會變成空字串，Big5 的電子發票整個讀成空的。`qrText` 發現有位元組沒解出文字時，先用 UTF-8 解整串位元組，不是的話當成 Big5（`TextDecoder("big5")`，三種瀏覽器核心都支援）
 - 格式清單在 `src/tools/qrcode/formats.ts`，產生器、讀取與使用統計共用。跟 `QrContent` 的 `kind` 對不上時型別檢查會失敗
-- 單元測試（`tests/unit/qrcode.spec.ts`、`tests/unit/qr-read.spec.ts`）把每一種格式產生的 QR code 解碼回文字比對，再交給讀取端拆回欄位。電子發票用規格說明的範例，Big5 的那一份由 `tests/helpers/qr-decode.ts` 的 `encodeBytes` 直接把位元組放進 QR code
+- 單元測試（`tests/unit/qrcode.spec.ts`、`tests/unit/qr-read.spec.ts`、`tests/unit/qr-formats.spec.ts`）把每一種格式產生的 QR code 解碼回文字比對，再交給讀取端拆回欄位。電子發票用規格說明的範例，Big5 的那一份由 `tests/helpers/qr-decode.ts` 的 `encodeBytes` 直接把位元組放進 QR code。條碼的測試圖片由 `tests/helpers/barcodes.ts` 用 zxing-wasm 的完整版（含產生條碼）在 Node 裡產生，網頁只載入讀取的那一半
 
 ## 影片的關鍵影格
 
@@ -411,7 +426,7 @@ PDF 的版本紀錄：每一個 `%%EOF` 是一次存檔的結尾，切到那裡�
 
 第一次開啟之後，沒有網路也能使用。service worker 的範本在 `src/sw/sw-template.js`，建置時 `vite.config.ts` 的 `serviceWorker()` 列出 `dist/` 的檔案、算出版本（所有檔案內容的雜湊），輸出成 `/gears/sw.js`。
 
-- 安裝時先存頁面、程式、圖示與 165 清單，約 6 MB，其中 PDF 遮蔽的 pdf.js 約 1.7 MB（壓縮後約 500 KB）。人臉與文字辨識的模型與 WebAssembly、pdf.js 的 CMap 與字型（`vendor/`、`models/`、`assets/ort-wasm-*`）用到時才存
+- 安裝時先存頁面、程式、圖示與 165 清單，約 7 MB，其中 PDF 遮蔽的 pdf.js 約 1.7 MB（壓縮後約 500 KB），條碼的 zxing-wasm 約 950 KB（壓縮後約 420 KB，暫存區的圖片都會用到，所以預先存）。人臉與文字辨識的模型與 WebAssembly、pdf.js 的 CMap 與字型（`vendor/`、`models/`、`assets/ort-wasm-*`）用到時才存
 - 逐字稿的 Whisper 模型存在另一個不隨版本清掉的快取（`gears-models`），換新版本時不必重新下載 80 到 250 MB。網址帶著模型的版本，清單以外的在新版本接手時刪掉。畫面上標出已下載的模型，可以刪除
 - 只存工作台自己的檔案。讀者放進暫存區的檔案只在記憶體裡，不寫進快取，只有換版本的那一刻經過 service worker（見下一項）
 - 換版本要重新載入頁面，暫存區只在記憶體裡，重新載入就沒了（`src/ui/offline.ts`）。暫存區是空的、畫面上也沒有填到一半的東西時（桌面、授權頁、還沒選檔案的工具說明，從空白開始的工具不算），不出現提示，等分頁切到背景（`visibilitychange`）就直接換，讀者回來時已經是新版本。暫存區有檔案時，畫面上方提示，讀者按「重新載入」才換上，避免同一個分頁混用新舊程式
@@ -500,7 +515,7 @@ node scripts/fetch-165.mjs   # 下載並整理成 public/data/165.txt
 ## 介面上的限制
 
 - 能不用 canvas 輸出圖檔就不用。Brave 預設會擾動 canvas 讀出來的像素，QR code 的 PNG 由 `src/core/png-encode.ts` 直接寫位元組。遮蔽與 QR code 讀取必須解碼影像，只能用 canvas：遮蔽輸出後抽查每個框是否夠黑，門檻容許這點雜訊。QR code 讀取對雜訊不敏感
-- 用到 WebAssembly 的功能（逐字稿、遮蔽的自動尋找、HEIC 的解碼器）先用 `src/ui/wasm.ts` 的 `wasmAvailable()` 檢查。iPhone、iPad 與 Mac 的鎖定模式會關掉 Safari 的 WebAssembly，不檢查的話讀者要等模型下載完才失敗，收到的還是「記憶體不夠」這類錯誤的原因。檢查時實際編譯一個 8 個位元組的空模組，只看 `typeof WebAssembly` 不夠。逐字稿一打開就說明、開始的按鈕不能按，自動尋找請讀者手動框選，HEIC 說明載入不了解碼器。瀏覽器測試（`tests/e2e/wasm-unavailable.spec.ts`）把頁面的 `WebAssembly` 拿掉來模擬
+- 用到 WebAssembly 的功能（逐字稿、遮蔽的自動尋找、HEIC 的解碼器、QR code 以外的條碼）先用 `src/ui/wasm.ts` 的 `wasmAvailable()` 檢查。iPhone、iPad 與 Mac 的鎖定模式會關掉 Safari 的 WebAssembly，不檢查的話讀者要等模型下載完才失敗，收到的還是「記憶體不夠」這類錯誤的原因。檢查時實際編譯一個 8 個位元組的空模組，只看 `typeof WebAssembly` 不夠。逐字稿一打開就說明、開始的按鈕不能按，自動尋找請讀者手動框選，HEIC 說明載入不了解碼器。瀏覽器測試（`tests/e2e/wasm-unavailable.spec.ts`）把頁面的 `WebAssembly` 拿掉來模擬
 - 工具以外的頁面（`src/pages.ts` 的 `pageIds`：授權與來源、語言模型速度量測、建議與回饋）不顯示暫存區，版面改成單欄（`.workbench.solo`）。暫存區的檔案仍在記憶體裡，回到桌面就看得到
 - 站內導覽不用一般的 `<a href>`。一般的連結會重新載入頁面，暫存區只在記憶體裡，會整個清空。改用 `src/router.ts` 的 `navigate()`，外觀要像連結時用 `button.link`
 - 解碼圖片一律用 `src/ui/image-decode.ts` 的 `decodeImage()`，不要直接呼叫 `createImageBitmap()`，HEIC 才會在不支援的瀏覽器上改用 libheif
@@ -657,4 +672,5 @@ iPhone 預設拍出來的是 HEIC，在網頁上選照片時交出來的也是�
 - 遮蔽的自動尋找用 [YuNet](https://github.com/opencv/opencv_zoo/tree/main/models/face_detection_yunet) 模型（MIT）與 [onnxruntime-web](https://github.com/microsoft/onnxruntime) 1.30.0（MIT）、[Tesseract.js](https://github.com/naptha/tesseract.js) 7.0.0 與 tessdata_best 的語言資料（Apache-2.0），見 `licenses/redact-detect.txt`
 - 逐字稿用 [Transformers.js](https://github.com/huggingface/transformers.js) 4.3.1（Apache-2.0）、Whisper small 與 base 的 ONNX 檔（onnx-community，原始模型的模型卡標示 Apache-2.0）、讀者選擇之後從 Hugging Face 下載的 large-v3-turbo（模型卡標示 MIT）、分辨說話者用的 3D-Speaker CAM++（Apache-2.0，ONNX 檔取自 sherpa-onnx）、[opencc-js](https://github.com/nk2028/opencc-js) 1.4.2（MIT，字典 Apache-2.0），見 `licenses/transcribe.txt`
 - 下載的軟體驗證用 [OpenPGP.js](https://github.com/openpgpjs/openpgpjs) 6.3.2（LGPL-3.0），內建 Tor Project 與 Tails 公開的簽章公鑰，見 `licenses/openpgp.txt`
+- QR code 以外的條碼用 [zxing-wasm](https://github.com/Sec-ant/zxing-wasm) 3.1.4（MIT），它是 [ZXing-C++](https://github.com/zxing-cpp/zxing-cpp)（Apache-2.0）編譯成的 WebAssembly，見 `licenses/zxing.txt`
 - 165 反詐騙清單見上方，部署時下載，不進版控

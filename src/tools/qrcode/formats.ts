@@ -6,5 +6,28 @@ export const QR_MODES = ["text", "wifi", "contact", "event", "geo", "email", "ph
 export type QrMode = (typeof QR_MODES)[number];
 
 // 讀取時認得的格式，跟 src/tools/qr-read/index.ts 的 QrContent 一致
-export const QR_KINDS = ["url", "wifi", "contact", "email", "phone", "sms", "geo", "event", "otp", "payment", "invoice", "invoice-more", "text"] as const;
+export const QR_KINDS = [
+  "url",
+  "wifi",
+  "contact",
+  "email",
+  "phone",
+  "sms",
+  "geo",
+  "event",
+  "otp",
+  "payment",
+  "invoice",
+  "invoice-more",
+  "bridge",
+  "passkey",
+  "proxy",
+  "invite",
+  "twpay",
+  "merchant-pay",
+  "boarding-pass",
+  "product",
+  "invoice-barcode",
+  "text",
+] as const;
 export type QrKind = (typeof QR_KINDS)[number];

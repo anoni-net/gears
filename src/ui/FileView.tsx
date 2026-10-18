@@ -13,7 +13,7 @@ import { QrContentView } from "./QrContentView.tsx";
 import { canvasReadable } from "./canvas-access.ts";
 import { decodeImage } from "./image-decode.ts";
 import { isWasmUnavailable } from "./wasm.ts";
-import { decodeQrFromBlob } from "./qr-scan.ts";
+import { PRIVATE_FORMATS, type Scanned, decodeCodeFromBlob } from "./qr-scan.ts";
 import { outputName } from "./output-name.ts";
 import { track } from "./analytics.ts";
 import { type Reason, type ShelfEntry, buildShelf } from "./shelf.ts";
@@ -291,24 +291,25 @@ interface Props {
   onOpenTool(id: string, preset?: string): void;
 }
 
-// 圖片裡的 QR code 任何人拍到都讀得出來，登機證、票券上的常帶有個資，所以自動讀一次
+// 圖片裡的 QR code 與條碼任何人拍到都讀得出來，登機證、票券上的常帶有個資，所以自動讀一次。
+// 商品條碼不找（PRIVATE_FORMATS），照片裡常拍到包裝
 function QrInImage({ blob, onOpenTool }: { blob: Blob; onOpenTool: Props["onOpenTool"] }) {
-  const [text, setText] = useState<string | null>(null);
+  const [found, setFound] = useState<Scanned | null>(null);
   useEffect(() => {
     let alive = true;
-    setText(null);
+    setFound(null);
     // 瀏覽器不讓讀取 canvas 時（Tor Browser）不顯示，讀者沒有要求讀 QR code
-    void decodeQrFromBlob(blob).then((found) => alive && setText(found), () => {});
+    void decodeCodeFromBlob(blob, PRIVATE_FORMATS).then((result) => alive && setFound(result), () => {});
     return () => {
       alive = false;
     };
   }, [blob]);
-  if (text === null) return null;
+  if (found === null) return null;
   return (
     <section class="qr-found" aria-labelledby="qr-found-title">
-      <h3 id="qr-found-title">{t("qrread.inImage")}</h3>
+      <h3 id="qr-found-title">{t(found.format === "QRCode" ? "qrread.inImage" : "qrread.inImageBarcode")}</h3>
       <p class="hint">{t("qrread.inImageNote")}</p>
-      <QrContentView text={text} onOpenTool={onOpenTool} />
+      <QrContentView text={found.text} format={found.format} onOpenTool={onOpenTool} />
     </section>
   );
 }

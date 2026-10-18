@@ -52,3 +52,11 @@ test("HEIC：瀏覽器不能直接顯示又沒有 WebAssembly 時，說明載入
   await page.getByTestId("file-input").setInputFiles({ name: "IMG_0001.HEIC", mimeType: "image/heic", buffer: readFileSync(`${GENERATED}/photo.heic`) });
   await expect(page.locator(".preview")).toContainText("又關掉了 WebAssembly");
 });
+
+test("QR code 與條碼讀取：說明只能讀 QR code，QR code 照樣讀得出來", async ({ page }) => {
+  const { encodeQr, qrPng } = await import("../../src/tools/qrcode/index.ts");
+  await page.goto("./qr-read/");
+  await expect(page.getByText("只能讀 QR code，讀不了登機證與商品條碼")).toBeVisible();
+  await page.getByTestId("qr-input").setInputFiles({ name: "q.png", mimeType: "image/png", buffer: Buffer.from(qrPng(encodeQr("https://anoni.net/", "M"), 6)) });
+  await expect(page.getByTestId("qr-text")).toHaveText("https://anoni.net/");
+});

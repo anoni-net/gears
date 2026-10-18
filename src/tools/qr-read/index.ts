@@ -4,6 +4,9 @@
 // 撥給誰、傳什麼簡訊、付款給哪個地址，有風險的格式在畫面上另外提醒。
 
 import type { QrKind } from "../qrcode/formats.ts";
+import { type BoardingPassContent, type InvoiceBarcodeContent, type ProductContent, parseBoardingPass, parseInvoiceBarcode, parseProduct } from "./barcode.ts";
+import { type BridgeContent, type InviteContent, type PasskeyContent, type ProxyContent, parseBridges, parseInvite, parsePasskey, parseProxy } from "./network.ts";
+import { type MerchantPayContent, type TwPayContent, parseMerchantPay, parseTwPay } from "./pay.ts";
 
 export type Coin = "bitcoin" | "monero" | "zcash";
 
@@ -26,6 +29,15 @@ export type QrContent =
   | { kind: "payment"; coin: Coin; address: string; amount: string; label: string; message: string }
   | { kind: "invoice"; number: string; date: string; random: string; total: string; buyer: string; seller: string; items: InvoiceItem[]; itemTotal: number; foreign: boolean }
   | { kind: "invoice-more"; items: InvoiceItem[] }
+  | BridgeContent
+  | PasskeyContent
+  | ProxyContent
+  | InviteContent
+  | TwPayContent
+  | MerchantPayContent
+  | BoardingPassContent
+  | ProductContent
+  | InvoiceBarcodeContent
   | { kind: "text"; text: string };
 
 // 格式清單（使用統計用）要跟 kind 一致，兩個方向都檢查
@@ -380,9 +392,33 @@ function parseInvoice(text: string): QrContent | null {
   };
 }
 
-const PARSERS = [parseInvoice, parseWifi, parseMecard, parseMatmsg, parseVcard, parseEvent, parseMailto, parseTel, parseSms, parseGeo, parseOtp, parsePayment];
+const PARSERS: ((text: string) => QrContent | null)[] = [
+  parseInvoice,
+  parseBoardingPass,
+  parseWifi,
+  parseMecard,
+  parseMatmsg,
+  parseVcard,
+  parseEvent,
+  parseMailto,
+  parseTel,
+  parseSms,
+  parseGeo,
+  parseOtp,
+  parsePayment,
+  parsePasskey,
+  parseTwPay,
+  parseMerchantPay,
+  parseProxy,
+  parseBridges,
+  parseInvite,
+];
 
-export function classify(text: string): QrContent {
+// format 是條碼的種類（zxing 的名稱，例如 EAN13、Code39），QR code 是 QRCode。
+// 商品條碼與發票的一維條碼只有一串數字，要看條碼的種類才分得出來
+export function classify(text: string, format = "QRCode"): QrContent {
+  const barcode = parseProduct(text, format) ?? parseInvoiceBarcode(text, format);
+  if (barcode) return barcode;
   for (const parse of PARSERS) {
     const content = parse(text);
     if (content) return content;

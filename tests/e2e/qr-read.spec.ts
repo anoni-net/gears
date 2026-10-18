@@ -1,5 +1,6 @@
 import { encodeQr, MARGIN, qrPng } from "../../src/tools/qrcode/index.ts";
 import { big5Invoice, encodeBytes } from "../helpers/qr-decode.ts";
+import { barcodePng, bcbp } from "../helpers/barcodes.ts";
 import { expect, test } from "./guard.ts";
 
 const png = (text: string) => Buffer.from(qrPng(encodeQr(text, "M"), 6));
@@ -10,7 +11,7 @@ test.beforeEach(async ({ page }) => {
 
 test("從照片讀出網址，再交給網址檢查", async ({ page }) => {
   await page.goto("./");
-  await page.getByRole("button", { name: /QR code 讀取/ }).click();
+  await page.getByRole("button", { name: /QR code 與條碼讀取/ }).click();
   await expect(page).toHaveURL(/\/gears\/qr-read\/$/);
   await page.getByTestId("qr-input").setInputFiles({ name: "photo.png", mimeType: "image/png", buffer: png("https://scam-shop.cc/login?utm_source=sms") });
   await expect(page.getByTestId("qr-text")).toHaveText("https://scam-shop.cc/login?utm_source=sms");
@@ -76,6 +77,60 @@ test("Big5 編碼的電子發票拆出號碼、金額與品項，暫存區的收
   await expect(page.getByTestId("qr-fields")).toContainText("乾電池");
 });
 
+test("登機證的 PDF417 拆出姓名、訂位代號與航班，暫存區的照片也讀得出來", async ({ page }) => {
+  const photo = await barcodePng(bcbp({ name: "WANG/XIAOMING MR", pnr: "ABC123", from: "TPE", to: "NRT", carrier: "CI", flight: "100", day: 293, seat: "12A" }), "PDF417");
+  await page.goto("./qr-read/");
+  await page.getByTestId("qr-input").setInputFiles({ name: "boarding.png", mimeType: "image/png", buffer: photo });
+  const fields = page.getByTestId("qr-fields");
+  await expect(fields).toContainText("PDF417");
+  await expect(fields).toContainText("登機證");
+  await expect(fields).toContainText("WANG/XIAOMING MR");
+  await expect(fields).toContainText("ABC123");
+  await expect(fields).toContainText("CI100，TPE → NRT");
+  await expect(fields).toContainText("座位 12A");
+  await expect(page.getByText("有了訂位代號與姓氏")).toBeVisible();
+
+  await page.getByRole("button", { name: "回到桌面" }).click();
+  await page.getByTestId("file-input").setInputFiles({ name: "boarding.png", mimeType: "image/png", buffer: photo });
+  await expect(page.getByRole("heading", { name: "圖片裡的條碼" })).toBeVisible();
+  await expect(page.getByTestId("qr-fields")).toContainText("ABC123");
+});
+
+test("商品條碼列出申請國，暫存區的照片不列商品條碼", async ({ page }) => {
+  const photo = await barcodePng("4710088412348", "EAN13");
+  await page.goto("./qr-read/");
+  await page.getByTestId("qr-input").setInputFiles({ name: "product.png", mimeType: "image/png", buffer: photo });
+  const fields = page.getByTestId("qr-fields");
+  await expect(fields).toContainText("EAN-13");
+  await expect(fields).toContainText("商品條碼");
+  await expect(fields).toContainText("台灣");
+  await expect(page.getByText("不一定是產地")).toBeVisible();
+
+  await page.getByRole("button", { name: "回到桌面" }).click();
+  await page.getByTestId("file-input").setInputFiles({ name: "product.png", mimeType: "image/png", buffer: photo });
+  await expect(page.getByRole("heading", { name: "product.png" })).toBeVisible();
+  // 給自動讀取一點時間，確定沒有出現
+  await page.waitForTimeout(1500);
+  await expect(page.getByRole("heading", { name: "圖片裡的條碼" })).toHaveCount(0);
+});
+
+test("電子發票的一維條碼與 Tor bridge 的 QR code", async ({ page }) => {
+  await page.goto("./qr-read/");
+  await page.getByTestId("qr-input").setInputFiles({ name: "invoice.png", mimeType: "image/png", buffer: await barcodePng("11410AB123456789999", "Code39") });
+  await expect(page.getByTestId("qr-fields")).toContainText("電子發票的一維條碼");
+  await expect(page.getByTestId("qr-fields")).toContainText("2025 年 9-10 月");
+
+  const line = "obfs4 192.0.2.10:443 0123456789ABCDEF0123456789ABCDEF01234567 cert=AbCd iat-mode=0";
+  await page.getByTestId("qr-input").setInputFiles({ name: "bridge.png", mimeType: "image/png", buffer: png(line) });
+  await expect(page.getByTestId("qr-fields")).toContainText("Tor bridge（1 個）");
+  await expect(page.getByText("很快會被封鎖")).toBeVisible();
+  await expect(page.getByRole("button", { name: "複製 bridge" })).toBeVisible();
+
+  await page.getByTestId("qr-input").setInputFiles({ name: "fido.png", mimeType: "image/png", buffer: png("FIDO:/1234567890123456789012345678901234567890") });
+  await expect(page.getByTestId("qr-fields")).toContainText("passkey 跨裝置登入");
+  await expect(page.getByText("掃了等於讓對方用你的帳號登入")).toBeVisible();
+});
+
 test("翻拍螢幕的照片，白底上有子像素的直紋也讀得出來", async ({ page }) => {
   await page.goto("./qr-read/");
   // 模擬翻拍螢幕：每三個像素一條灰色直紋，原尺寸 jsQR 讀不出來，縮小之後才讀得到
@@ -115,7 +170,7 @@ test("找不到 QR code 時說明", async ({ page }) => {
     return Array.from(new Uint8Array(await b.arrayBuffer()));
   });
   await page.getByTestId("qr-input").setInputFiles({ name: "blank.png", mimeType: "image/png", buffer: Buffer.from(blank) });
-  await expect(page.getByRole("alert")).toContainText("照片裡找不到 QR code");
+  await expect(page.getByRole("alert")).toContainText("照片裡找不到 QR code 或條碼");
 });
 
 test("暫存區裡的圖片含有 QR code，檔案畫面自動讀出來", async ({ page }) => {

@@ -3,19 +3,20 @@ import { t } from "../i18n/index.ts";
 import { QrContentView } from "./QrContentView.tsx";
 import { track, trackFail } from "./analytics.ts";
 import { isCanvasBlocked } from "./canvas-access.ts";
-import { decodeQrFromBlob, decodeQrFromVideo } from "./qr-scan.ts";
+import { type Scanned, decodeCodeFromBlob, decodeCodeFromVideo } from "./qr-scan.ts";
+import { wasmAvailable } from "./wasm.ts";
 import { classify } from "../tools/qr-read/index.ts";
 
 // 只記讀到哪一種格式，內容不送
-const done = (text: string) => {
+const done = (found: Scanned) => {
   track("tool-done", { tool: "qr-read" });
-  track("qr-read", { format: classify(text).kind });
+  track("qr-read", { format: classify(found.text, found.format).kind });
 };
 import type { CreateToolProps } from "./types.ts";
 
 // 相機畫面與照片都只在瀏覽器裡解讀。相機需要 HTTPS 才能使用。
 export function QrReadTool({ onOpenTool }: CreateToolProps) {
-  const [text, setText] = useState<string | null>(null);
+  const [found, setFound] = useState<Scanned | null>(null);
   const [status, setStatus] = useState<"idle" | "scanning" | "reading" | "notFound" | "cameraError" | "canvasBlocked">("idle");
   const video = useRef<HTMLVideoElement>(null);
   const stream = useRef<MediaStream | null>(null);
@@ -33,12 +34,12 @@ export function QrReadTool({ onOpenTool }: CreateToolProps) {
     let alive = true;
     const tick = async () => {
       if (!alive || !video.current) return;
-      const found = await decodeQrFromVideo(video.current);
+      const result = await decodeCodeFromVideo(video.current);
       if (!alive) return;
-      if (found) {
+      if (result) {
         stop();
-        done(found);
-        setText(found);
+        done(result);
+        setFound(result);
         setStatus("idle");
       } else {
         setTimeout(tick, 250);
@@ -51,7 +52,7 @@ export function QrReadTool({ onOpenTool }: CreateToolProps) {
   }, [status]);
 
   const startCamera = async () => {
-    setText(null);
+    setFound(null);
     try {
       stream.current = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
       setStatus("scanning");
@@ -79,21 +80,21 @@ export function QrReadTool({ onOpenTool }: CreateToolProps) {
     el.value = "";
     if (!file) return;
     stop();
-    setText(null);
+    setFound(null);
     setStatus("reading");
-    let found: string | null;
+    let result: Scanned | null;
     try {
-      found = await decodeQrFromBlob(file);
+      result = await decodeCodeFromBlob(file);
     } catch (error) {
       if (!isCanvasBlocked(error)) throw error;
       trackFail("qr-read", "canvas-blocked");
       setStatus("canvasBlocked");
       return;
     }
-    if (found) done(found);
+    if (result) done(result);
     else trackFail("qr-read", "not-found");
-    setText(found);
-    setStatus(found ? "idle" : "notFound");
+    setFound(result);
+    setStatus(result ? "idle" : "notFound");
   };
 
   return (
@@ -116,6 +117,7 @@ export function QrReadTool({ onOpenTool }: CreateToolProps) {
         <input ref={input} type="file" accept="image/*" hidden onChange={readFile} data-testid="qr-input" />
       </div>
       {!cameraAvailable ? <p class="hint">{t("qrread.noCamera")}</p> : null}
+      {!wasmAvailable() ? <p class="hint">{t("qrread.noWasm")}</p> : null}
 
       {status === "scanning" ? <video ref={video} class="camera" playsInline muted aria-label={t("qrread.camera")} /> : null}
       {status === "reading" ? <p class="hint">{t("qrread.reading")}</p> : null}
@@ -135,7 +137,7 @@ export function QrReadTool({ onOpenTool }: CreateToolProps) {
         </p>
       ) : null}
 
-      {text !== null ? <QrContentView text={text} onOpenTool={onOpenTool} /> : null}
+      {found ? <QrContentView text={found.text} format={found.format} onOpenTool={onOpenTool} /> : null}
       <p class="hint">{t("qrread.privacy")}</p>
     </div>
   );
