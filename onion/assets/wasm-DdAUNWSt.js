@@ -1,1 +1,0 @@
-var e;function t(){if(e===void 0)try{e=typeof WebAssembly==`object`&&new WebAssembly.Module(Uint8Array.of(0,97,115,109,1,0,0,0))instanceof WebAssembly.Module}catch{e=!1}return e}var n=class extends Error{constructor(){super(`wasm-unavailable`)}},r=e=>e instanceof n;export{r as n,t as r,n as t};
