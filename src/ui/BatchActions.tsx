@@ -26,7 +26,9 @@ function save(blob: Blob, name: string) {
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
-export function BatchActions({ files, busy }: { files: TrayFile[]; busy: boolean }) {
+// keep：讀者在檢查收到的檔案（查證這類工具，或檔案都是從那一組加入的），中繼資料是查證的線索，
+// 不放一次清除的按鈕。原本在查證的畫面上，最顯眼的按鈕是清除，跟讀者要保留證據的需求相反
+export function BatchActions({ files, busy, keep }: { files: TrayFile[]; busy: boolean; keep: boolean }) {
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [result, setResult] = useState<{ done: number; failed: string[] } | null>(null);
   const [skipped, setSkipped] = useState<string[]>([]);
@@ -69,9 +71,11 @@ export function BatchActions({ files, busy }: { files: TrayFile[]; busy: boolean
 
   return (
     <div class="batch" data-testid="batch">
-      <button type="button" class={pending ? "primary" : ""} disabled={working || !pending} onClick={stripAll}>
-        {pending ? t("batch.strip", { n: pending }) : t("batch.nothing")}
-      </button>
+      {keep ? null : (
+        <button type="button" class={pending ? "primary" : ""} disabled={working || !pending} onClick={stripAll}>
+          {pending ? t("batch.strip", { n: pending }) : t("batch.nothing")}
+        </button>
+      )}
       <button type="button" disabled={working} onClick={downloadAll}>
         {zipping ? t("batch.zipping") : t("batch.download")}
       </button>

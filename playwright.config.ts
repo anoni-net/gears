@@ -22,6 +22,8 @@ export default defineConfig({
   use: {
     baseURL: BASE,
     serviceWorkers: "block",
+    // 瀏覽器的語言跟正體中文的頁面一致，不出現換語系的建議（src/ui/LocaleHint.tsx），測試換語系建議的另外指定
+    locale: "zh-TW",
     trace: process.env.CI ? "on-first-retry" : "off",
     screenshot: process.env.CI ? "only-on-failure" : "off",
   },

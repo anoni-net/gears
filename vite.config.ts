@@ -4,7 +4,7 @@ import { mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "n
 import { join, relative } from "node:path";
 import { defineConfig, type Plugin } from "vite";
 import { LOCALES, messagesOf } from "./src/i18n/index.ts";
-import { labIds, pageIds } from "./src/pages.ts";
+import { NOT_FOUND, labIds, pageIds } from "./src/pages.ts";
 import { toolIds } from "./src/tools/index.ts";
 import benchModels from "./src/tools/llm-bench/models.json" with { type: "json" };
 import whisper from "./src/tools/transcribe/models.json" with { type: "json" };
@@ -163,7 +163,11 @@ function localized(html: string, locale: Locale, id: string) {
   const description = meta[id ? `meta.${id}.description` : "meta.home.description"]!;
   return html
     .replace(/<html lang="[^"]*">/, `<html lang="${locale.lang}">`)
-    .replace(/<title>[^<]*<\/title>/, `<title>${escape(title)}</title>\n    ${seoTags(locale, id, title, description, meta)}`)
+    // 404.html 沒有自己的網址，不寫 canonical 與分享卡片，也請搜尋引擎不要收錄
+    .replace(
+      /<title>[^<]*<\/title>/,
+      `<title>${escape(title)}</title>\n    ${id === NOT_FOUND ? `<meta name="robots" content="noindex" />` : seoTags(locale, id, title, description, meta)}`,
+    )
     .replace(/<meta name="description" content="[^"]*"/, `<meta name="description" content="${escape(description)}"`)
     .replace(/<noscript>[^<]*<\/noscript>/, `<noscript>${escape(meta["app.noscript"]!)}</noscript>`);
 }
@@ -186,6 +190,8 @@ function toolPages(): Plugin {
           this.emitFile({ type: "asset", fileName: `${locale.prefix}${id ? `${id}/` : ""}index.html`, source: localized(template, locale, id) });
         }
       }
+      // nginx 找不到檔案時送出（tools/nginx-gears.conf），語系由網址決定，打開之後畫面跟著換
+      this.emitFile({ type: "asset", fileName: "404.html", source: localized(template, LOCALES[0], NOT_FOUND) });
       this.emitFile({ type: "asset", fileName: "sitemap.xml", source: sitemap(["", ...toolIds, ...pageIds.filter((id) => !labIds.includes(id))]) });
     },
   };

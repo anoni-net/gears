@@ -8,8 +8,9 @@ import { createTools, editorTools, fileTools } from "./tools/index.ts";
 import { Desktop, type Task } from "./ui/Desktop.tsx";
 import { FileView } from "./ui/FileView.tsx";
 import { Licenses } from "./ui/Licenses.tsx";
-import { pageIds } from "./pages.ts";
+import { NOT_FOUND, pageIds } from "./pages.ts";
 import { ToolIntro } from "./ui/ToolIntro.tsx";
+import { LocaleHint } from "./ui/LocaleHint.tsx";
 import { TrayList } from "./ui/TrayList.tsx";
 import { isReloading, useOffline } from "./ui/offline.ts";
 import { useAnyWorking } from "./ui/working.ts";
@@ -20,13 +21,14 @@ import { TOOL_META, groupOf } from "./ui/tool-meta.ts";
 import { browserDeclines, optedOut, setOptedOut, track, trackView } from "./ui/analytics.ts";
 import { COMMIT, COMMIT_URL, VERSION } from "./version.ts";
 import { FeedbackPage } from "./ui/FeedbackPage.tsx";
+import { NotFoundPage } from "./ui/NotFoundPage.tsx";
 import { SampleLink, SamplesPage } from "./ui/SamplesPage.tsx";
 import { type FileSample, makeSampleFile } from "./ui/samples.ts";
 
 const isCreateTool = (id: string) => createTools.some((tool) => tool.id === id);
 // 處理整個暫存區的工具，加入檔案時留在原畫面（CreateTool 的 tray）
 const usesTray = (id: string) => createTools.some((tool) => tool.id === id && tool.tray);
-const isPage = (id: string) => pageIds.includes(id);
+const isPage = (id: string) => pageIds.includes(id) || id === NOT_FOUND;
 
 // 語言模型速度量測（實驗頁）用到時才載入，桌面維持輕量
 function LlmBenchView() {
@@ -289,6 +291,8 @@ export function App() {
     view = <Licenses />;
   } else if (route === "llm-bench") {
     view = <LlmBenchView />;
+  } else if (route === NOT_FOUND) {
+    view = <NotFoundPage />;
   } else if (route === "feedback") {
     view = <FeedbackPage from={from.current} />;
   } else if (route === "samples") {
@@ -357,6 +361,7 @@ export function App() {
           </div>
         </div>
       ) : null}
+      <LocaleHint />
 
       {/* 授權、建議與回饋這類工具以外的頁面不顯示暫存區，改成單欄。檔案仍在記憶體裡，回到桌面就看得到 */}
       <main class={isPage(route) ? "workbench solo frame" : "workbench frame"}>
@@ -369,6 +374,7 @@ export function App() {
             busy={state.busy}
             failed={state.failed}
             compact={!atHome && !state.files.length}
+            keep={groupOf(route) === "check" || state.files.every((f) => f.intent === "check")}
           />
         )}
         <div class="view">{view}</div>

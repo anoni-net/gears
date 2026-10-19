@@ -34,3 +34,32 @@ test("在英文版打開工具，網址留在英文", async ({ page }) => {
   await expect(page).toHaveURL(/\/gears\/en\/passphrase\/$/);
   await expect(page).toHaveTitle("Passphrase and password generator | Gears");
 });
+
+test.describe("瀏覽器的語言是英文", () => {
+  test.use({ locale: "en-US" });
+
+  test("正體中文的頁面建議換成英文，關掉之後站內換頁不再出現", async ({ page }) => {
+    await page.goto("./");
+    const hint = page.getByTestId("locale-hint");
+    await expect(hint).toContainText("This page is available in English.");
+    await hint.getByRole("button", { name: "Close" }).click();
+    await expect(hint).toHaveCount(0);
+    await page.getByRole("button", { name: /QR code 產生器/ }).first().click();
+    await expect(page).toHaveURL(/\/gears\/qrcode\/$/);
+    await expect(hint).toHaveCount(0);
+  });
+
+  test("按下切換，換成英文的同一頁", async ({ page }) => {
+    await page.goto("./qrcode/");
+    await page.getByTestId("locale-hint").getByRole("button", { name: "Switch to English" }).click();
+    await expect(page).toHaveURL(/\/gears\/en\/qrcode\/$/);
+    await expect(page.getByLabel("Content for the QR code")).toBeVisible();
+    await expect(page.getByTestId("locale-hint")).toHaveCount(0);
+  });
+
+  test("英文的頁面不建議", async ({ page }) => {
+    await page.goto("./en/");
+    await expect(page.getByRole("heading", { name: "Gears" })).toBeVisible();
+    await expect(page.getByTestId("locale-hint")).toHaveCount(0);
+  });
+});

@@ -45,7 +45,8 @@ function Item({ file, selected, onSelect }: ItemProps) {
         )}
         <span class="meta">
           <span class="name">{file.name}</span>
-          <span class={!canInspect ? "status muted" : found ? "status warn" : "status"}>
+          {/* 只有加密完成用綠色。沒有找到中繼資料不代表檔案沒問題（截圖裡的電話、打開時會連線的文件），不用看起來像「安全」的顏色 */}
+          <span class={current.format === "age" ? "status" : found ? "status warn" : "status muted"}>
             {status}
             {file.versions.length > 1 ? ` · ${t("tray.versions", { n: file.versions.length })}` : ""}
           </span>
@@ -66,10 +67,11 @@ interface Props {
   busy: boolean;
   failed: string[];
   compact: boolean; // 在工具裡、暫存區又是空的，手機上收起來，不擋在工具前面
+  keep: boolean; // 檢查收到的檔案，不放一次清除的按鈕（BatchActions）
 }
 
 // 暫存區一直放在桌面上。空的時候就是拖放區。
-export function TrayList({ files, selected, onSelect, onPick, busy, failed, compact }: Props) {
+export function TrayList({ files, selected, onSelect, onPick, busy, failed, compact, keep }: Props) {
   return (
     <section class={compact ? "tray compact" : "tray"} aria-labelledby="tray-title">
       <h2 id="tray-title">{t("tray.title")}</h2>
@@ -89,7 +91,7 @@ export function TrayList({ files, selected, onSelect, onPick, busy, failed, comp
           <button type="button" class="add" onClick={onPick}>
             {t("tray.add")}
           </button>
-          <BatchActions files={files} busy={busy} />
+          <BatchActions files={files} busy={busy} keep={keep} />
         </>
       ) : (
         // 選擇檔案是主要的動作，獨立一行。拖放的說明放在按鈕下方，觸控裝置不能拖放檔案，不顯示

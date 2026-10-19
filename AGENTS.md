@@ -85,7 +85,9 @@ CI（`.github/workflows/ci.yml`）依瀏覽器拆成四台機器同時執行：C
 4. 在三個語系檔加上 `tool.<id>`、`tool.<id>.desc`、`meta.<id>.title` 與 `meta.<id>.description`，會在暫存區留下版本的工具另外加 `file.version.<id>`，用到新的 `FindingCode` 或 `SegmentCode` 時也要加，`tests/unit/i18n.spec.ts` 會檢查
 5. 單元測試放 `tests/unit/`，流程測試放 `tests/e2e/`
 
-暫存區有兩個以上的檔案時，下方可以一次清除全部的中繼資料（`tray.applyAll`，逐一處理，一個失敗不影響其他的），也可以把每個檔案的最新版本下載成一個壓縮檔（`src/ui/BatchActions.tsx`）。壓縮檔裡的檔名跟單檔下載一樣用 `gears-第幾個`（`src/ui/output-name.ts`），在記憶體裡組成，超過 512 MB 的部分請讀者個別下載。
+暫存區有兩個以上的檔案時，下方可以一次清除全部的中繼資料（`tray.applyAll`，逐一處理，一個失敗不影響其他的），也可以把每個檔案的最新版本下載成一個壓縮檔（`src/ui/BatchActions.tsx`）。壓縮檔裡的檔名跟單檔下載一樣用 `gears-第幾個`（`src/ui/output-name.ts`），在記憶體裡組成，超過 512 MB 的部分請讀者個別下載。讀者在檢查收到的檔案時（查證這類「檢查收到的」那一組的工具，或暫存區的檔案都是從那一組加入的），不放一次清除的按鈕：中繼資料是查證的線索，原本在查證的畫面上最顯眼的按鈕就是清除（2026-10-19 的使用回饋）。
+
+加密檔的檔名留著原本的副檔名（`gears-1.csv.age`），解密時拿掉 `.age` 就是原本的格式。原本只寫 `gears-1.age`，解密時從內容判斷不出格式的檔案（CSV、TXT）會變成 `.bin`，手機打不開。加密完成的畫面另有「給對方的說明」，寫著解密工具的網址（目前的網站與語系，onion 版就是 onion 的網址）與打開的步驟，讀者複製之後跟檔案一起傳過去，密語不寫進去（`src/ui/FileView.tsx` 的 `RecipientNote`）。
 
 暫存區每次處理都產生新版本並保留原檔。處理完的影像會先實際解碼一次（`src/state.ts`），解不開就放棄這次的結果。加密檔由加密工具自己驗證，用密語加密時會用同一組密語解密一次。
 
@@ -514,6 +516,8 @@ node scripts/fetch-165.mjs   # 下載並整理成 public/data/165.txt
 
 每個工具有自己的網址，例如 `/gears/qrcode/`，簡體中文與英文在前面加上 `zh-cn/`、`en/`（`/gears/en/qrcode/`）。建置時 `vite.config.ts` 替每個語系、每個工具產生一份 HTML，`lang`、標題、描述與 `noscript` 取自該語系的字串，並列出其他語系的 `hreflang`。內容跟首頁相同，打開之後由 `src/router.ts` 判斷語系與要顯示哪個工具。主機不需要轉址設定。
 
+認不得的網址（`src/pages.ts` 的 `NOT_FOUND`）顯示「找不到這一頁」與回到桌面的按鈕（`src/ui/NotFoundPage.tsx`），不當成桌面，讀者才知道網址打錯了。建置時另外產生 `404.html`（不寫 canonical 與分享卡片，帶 `noindex`），nginx 找不到檔案時送出它，狀態碼仍是 404（`tools/nginx-gears.conf` 的 `error_page`）。原本落到 nginx 預設的英文 404 頁。
+
 ## 搜尋引擎與分享預覽
 
 每一頁由 `vite.config.ts` 的 `localized` 產生（見上方「網址」），`seoTags` 加上：
@@ -538,6 +542,8 @@ node scripts/fetch-165.mjs   # 下載並整理成 public/data/165.txt
 - 用到 WebAssembly 的功能（逐字稿、遮蔽的自動尋找、HEIC 的解碼器、QR code 以外的條碼）先用 `src/ui/wasm.ts` 的 `wasmAvailable()` 檢查。iPhone、iPad 與 Mac 的鎖定模式會關掉 Safari 的 WebAssembly，不檢查的話讀者要等模型下載完才失敗，收到的還是「記憶體不夠」這類錯誤的原因。檢查時實際編譯一個 8 個位元組的空模組，只看 `typeof WebAssembly` 不夠。逐字稿一打開就說明、開始的按鈕不能按，自動尋找請讀者手動框選，HEIC 說明載入不了解碼器。瀏覽器測試（`tests/e2e/wasm-unavailable.spec.ts`）把頁面的 `WebAssembly` 拿掉來模擬
 - 工具以外的頁面（`src/pages.ts` 的 `pageIds`：授權與來源、語言模型速度量測、建議與回饋、範例）不顯示暫存區，版面改成單欄（`.workbench.solo`）。暫存區的檔案仍在記憶體裡，回到桌面就看得到
 - 站內導覽不用一般的 `<a href>`。一般的連結會重新載入頁面，暫存區只在記憶體裡，會整個清空。改用 `src/router.ts` 的 `navigate()`，外觀要像連結時用 `button.link`。`navigate()` 換頁之後捲回頂端，不然瀏覽器會沿用原本的捲動位置，手機上從桌面下方點進比較長的頁面時，畫面停在新頁面的最底部（2026-10-18 建議與回饋遇到）
+- 檔案畫面處理完之後，下載放在工具列表之前，接著是處理報告與退回上一步。原本下載在最後面，手機上要捲過好幾組工具才看得到，最顯眼的按鈕反而是建議的下一個工具。手機上平常先看檢查結果、預覽排在後面，處理完之後預覽排回前面（`.columns.processed`），遮蔽完馬上看得到框有沒有蓋對。編輯畫面套用之後捲回檔案的開頭（2026-10-19 的使用回饋）
+- 沒有找到中繼資料不用綠色：暫存區的狀態寫「沒有中繼資料」、用灰色，檔案畫面另外說明只檢查了中繼資料，截圖裡的電話要用遮蔽、文件打開時會不會連線要用開啟前檢查（`findings.scope`）。綠色讀起來像「這個檔案安全」，只留給加密完成
 - 解碼圖片一律用 `src/ui/image-decode.ts` 的 `decodeImage()`，不要直接呼叫 `createImageBitmap()`，HEIC 才會在不支援的瀏覽器上改用 libheif
 - 遮蔽畫面分成兩區：會改變框的動作（自動尋找、復原、清除）在圖片上方，套用與取消在圖片下方的完成列，完成列捲動時固定在畫面底部（`position: sticky`）。窄螢幕的復原、清除只顯示圖示，文字留在按鈕裡給讀螢幕軟體
 - 不用 `<select>`。Linux 版 WebKit 建立下拉選單時，內部的樣式表會被 CSP 擋下，主控台留下錯誤。選項不多時改用攤開的選項按鈕，手機上也少點一下
@@ -671,6 +677,7 @@ iPhone 預設拍出來的是 HEIC，在網頁上選照片時交出來的也是�
 字串集中在 `src/i18n/`，元件裡不寫死文字。正體中文（`zh-TW.ts`）是原稿，簡體中文（`zh-CN.ts`）與英文（`en.ts`）的鍵與變數必須跟它一致，`tests/unit/i18n.spec.ts` 會檢查。列舉用 `list()`，中文用頓號、英文用逗號。
 
 - 語系由網址決定，不用 cookie 或 localStorage 記住。頁尾切換語系時不重新載入（`switchLocale`），暫存區的檔案留著
+- 瀏覽器的語言清單裡沒有目前的語系時，頁首下方建議換成清單裡第一個認得的語系，文字用建議的那個語系寫（`src/ui/LocaleHint.tsx`，對應規則在 `src/i18n/suggest.ts`，有單元測試）。不自動轉址，關掉的狀態只在記憶體裡：站內換頁不再出現，重新整理或重新打開會再出現一次。只有 `zh` 分不出字系，不猜。onion 版不顯示，Tor Browser 一律回報英文。瀏覽器測試預設把語言設成 `zh-TW`（`playwright.config.ts`），測這個提示的另外指定
 - 文字照社群的[寫作風格規範](https://anoni.net/join/writing-style/)，品牌寫成小寫的 `anoni.net`。三個語系各照各的規則（英文另有一套），檢查時把字串放在 `docs/zh-CN/`、`docs/en/` 這樣的路徑底下，linter 才會套用該語系的規則
 - 簡體版的用詞跟著文件站簡體版：元数据、遮蔽、复制、生成器、识别、个资、截图、社区、账号
 
