@@ -638,6 +638,11 @@ h4 {
     order: -1;
   }
 
+  /* 處理完之後要確認結果，預覽排回前面，下載就在預覽下方（FileView 把下載放在工具列表之前） */
+  .columns.processed .panel {
+    order: 0;
+  }
+
   .preview img {
     max-height: 40vh;
   }
@@ -764,6 +769,19 @@ h4 {
 
 .output {
   margin-top: 1.5rem;
+}
+
+.recipient-note {
+  margin-top: 1rem;
+}
+
+.recipient-note blockquote {
+  margin: 0.5rem 0;
+  padding: 0.75rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow-wrap: anywhere;
 }
 
 footer {
@@ -1966,6 +1984,12 @@ button.link {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--fill);
+}
+
+.locale-hint .buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 /* 查證：總覽與需要留意的地方在最上面，每個檔案一張卡片，技術資訊收在「完整資訊」裡 */

@@ -15,6 +15,8 @@ import { decodeImage } from "./image-decode.ts";
 import { isWasmUnavailable } from "./wasm.ts";
 import { PRIVATE_FORMATS, type Scanned, decodeCodeFromBlob } from "./qr-scan.ts";
 import { outputName } from "./output-name.ts";
+import { CopyButton } from "./CopyButton.tsx";
+import { routeUrl } from "../router.ts";
 import { track } from "./analytics.ts";
 import { type Reason, type ShelfEntry, buildShelf } from "./shelf.ts";
 import { useSignals } from "./shelf-signals.ts";
@@ -168,7 +170,14 @@ function Findings({ version, previous, busy, onApply }: { version: Version; prev
   const content = version.findings.filter((f) => CONTENT_FINDINGS.includes(f.code));
   return (
     <>
-      {metadata.length ? <FindingList findings={metadata} /> : <p class="ok">{t("findings.none")}</p>}
+      {metadata.length ? (
+        <FindingList findings={metadata} />
+      ) : (
+        <>
+          <p>{t("findings.none")}</p>
+          <p class="hint">{t("findings.scope")}</p>
+        </>
+      )}
       <RemovedNote version={version} previous={previous} />
       {content.length ? (
         <div class="content-findings" data-testid="content-findings">
@@ -211,6 +220,21 @@ function ReportView({ report }: { report: Report }) {
   );
 }
 
+// 加密完成之後給對方的說明，跟檔案一起傳過去。收到 .age 檔的人多半不知道要怎麼打開（2026-10-19 的使用回饋）。
+// 網址用目前的網站與語系（onion 版就是 onion 的網址），密語不寫進去
+function RecipientNote({ version }: { version: Version }) {
+  const passphrase = version.report?.notes?.some((n) => n.code === "age-passphrase") ?? false;
+  const text = t(passphrase ? "output.recipient.passphrase" : "output.recipient.key", { url: `${location.origin}${routeUrl("decrypt")}` });
+  return (
+    <div class="recipient-note" data-testid="recipient-note">
+      <h4>{t("output.recipient.title")}</h4>
+      <p class="hint">{t(passphrase ? "output.recipient.hintPassphrase" : "output.recipient.hintKey")}</p>
+      <blockquote>{text}</blockquote>
+      <CopyButton text={text} label={t("output.recipient.copy")} primary={false} />
+    </div>
+  );
+}
+
 function Output({ version, name }: { version: Version; name: string }) {
   const url = useObjectUrl(version.blob);
   const file = new File([version.blob], name, { type: version.blob.type });
@@ -237,6 +261,7 @@ function Output({ version, name }: { version: Version; name: string }) {
         ) : null}
       </div>
       <p class="hint">{t("output.nameNote")}</p>
+      {version.tool === "encrypt" ? <RecipientNote version={version} /> : null}
     </section>
   );
 }
@@ -332,6 +357,7 @@ export function FileView({ file, others, index, busy, preferred, onOpenTool }: P
   // 編輯畫面固定用打開時的那個版本。套用之後新版本先加進暫存區、編輯畫面才關掉，中間把新版本傳進去的話，
   // 編輯畫面會用新的檔案重新開啟一次（PDF 會再建一個 pdf.js 的 Worker，WebKit 在 COEP 底下擋下）
   const base = useRef<Version>(current);
+  const section = useRef<HTMLElement>(null);
   if (!editing) base.current = current;
 
   const run = async (toolId: string, options?: RunOptions) => {
@@ -358,7 +384,7 @@ export function FileView({ file, others, index, busy, preferred, onOpenTool }: P
     entry.kind === "create" ? openCreate(entry.id) : entry.kind === "editor" ? setEditing(entry.id) : void run(entry.id);
 
   return (
-    <section class="file" aria-labelledby="file-title">
+    <section class="file" aria-labelledby="file-title" ref={section}>
       <h2 id="file-title">{file.name}</h2>
       {file.sample ? (
         <p class="hint" data-testid="sample-note">
@@ -389,7 +415,12 @@ export function FileView({ file, others, index, busy, preferred, onOpenTool }: P
               setError(undefined);
               tray
                 .addVersion(file.id, blob, editing, report)
-                .then(() => setEditing(null))
+                .then(() => {
+                  setEditing(null);
+                  // 編輯畫面很長，套用的按鈕在底部。關掉之後畫面變短，停在原處的話看到的是工具列表，
+                  // 捲回檔案的開頭，預覽與下載就在眼前
+                  if ((section.current?.getBoundingClientRect().top ?? 0) < 0) section.current?.scrollIntoView({ block: "start" });
+                })
                 .catch(() => setError(t("tool.error.verify")));
             }}
           />
@@ -400,7 +431,8 @@ export function FileView({ file, others, index, busy, preferred, onOpenTool }: P
           ) : null}
         </section>
       ) : (
-      <div class={isImage || media ? "columns" : "columns single"}>
+      // processed：手機上處理完的預覽排在前面，遮蔽完馬上看得到框有沒有蓋對（styles.css）
+      <div class={`columns${isImage || media ? "" : " single"}${current.tool ? " processed" : ""}`}>
         {isImage ? <Preview url={preview} blob={current.blob} format={current.format} key={preview} /> : null}
         {media ? <MediaPreview blob={current.blob} format={current.format} /> : null}
 
@@ -419,6 +451,18 @@ export function FileView({ file, others, index, busy, preferred, onOpenTool }: P
             <p class="note">{t(noInspectMessage(current, !!signals.signature))}</p>
           )}
 
+          {/* 處理完的下載放在工具列表之前。原本在最後面，手機上要捲過好幾組工具才看得到，
+              最顯眼的按鈕反而是建議的下一個工具（2026-10-19 的使用回饋） */}
+          {current.tool ? <Output version={current} name={outputName(file, index)} /> : null}
+          {current.report ? <ReportView report={current.report} /> : null}
+          {file.versions.length > 1 ? (
+            <p class="actions">
+              <button type="button" onClick={() => tray.undo(file.id)} disabled={busy}>
+                {t("file.undo")}
+              </button>
+            </p>
+          ) : null}
+
           {isImage && file.versions[0]!.tool === null ? <QrInImage blob={current.blob} onOpenTool={onOpenTool} /> : null}
 
           <h3>{t("tools.title")}</h3>
@@ -432,21 +476,11 @@ export function FileView({ file, others, index, busy, preferred, onOpenTool }: P
               </ul>
             </div>
           ))}
-          {file.versions.length > 1 ? (
-            <p class="actions">
-              <button type="button" onClick={() => tray.undo(file.id)} disabled={busy}>
-                {t("file.undo")}
-              </button>
-            </p>
-          ) : null}
           {error ? (
             <p class="error" role="alert">
               {error}
             </p>
           ) : null}
-
-          {current.report ? <ReportView report={current.report} /> : null}
-          {current.tool ? <Output version={current} name={outputName(file, index)} /> : null}
         </div>
       </div>
       )}

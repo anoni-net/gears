@@ -22,7 +22,12 @@ test("加密任何檔案：產生密語、加密、下載，再在工作台裡�
   await expect(page.getByText("用密語加密（age，scrypt）")).toBeVisible();
   await expect(page.locator(".tray .item")).toContainText("已加密");
   const encrypted = await downloadFrom(page, () => page.getByRole("link", { name: "下載" }).click());
-  expect(encrypted.name).toBe("gears-1.age");
+  expect(encrypted.name).toBe("gears-1.pdf.age");
+  // 給對方的說明：解密的網址，密語不在裡面
+  const note = page.getByTestId("recipient-note").locator("blockquote");
+  await expect(note).toContainText("/gears/decrypt/");
+  await expect(note).toContainText("密語");
+  expect(await note.textContent()).not.toContain(passphrase);
   expect(Buffer.from(await decrypt(encrypted.data, passphrase))).toEqual(pdf);
 
   await page.getByRole("button", { name: "開始解密" }).click();
@@ -51,7 +56,9 @@ test("加密給公鑰，輸出成文字格式", async ({ page }) => {
   await expect(page.getByText("加密給公鑰（age）")).toBeVisible();
 
   const out = await downloadFrom(page, () => page.getByRole("link", { name: "下載" }).click());
+  expect(out.name).toBe("gears-1.txt.age");
   expect(isArmored(out.data)).toBe(true);
+  await expect(page.getByTestId("recipient-note")).toContainText("AGE-SECRET-KEY-");
   expect(new TextDecoder().decode(await decrypt(out.data, identity))).toBe("hello");
 });
 

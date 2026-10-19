@@ -21,6 +21,9 @@ test("從任務選照片與 PDF：雜湊值、時間線、裝置、人名、位�
   const cards = page.locator(".verify-card");
   await expect(cards.getByRole("heading", { name: "photo.jpg" })).toBeVisible();
   await expect(cards.getByRole("heading", { name: "report.pdf" })).toBeVisible();
+  // 查證要保留中繼資料，暫存區不放一次清除的按鈕，壓縮檔照樣可以下載
+  await expect(page.getByTestId("batch").getByRole("button", { name: "全部下載成一個壓縮檔" })).toBeVisible();
+  await expect(page.getByTestId("batch").getByRole("button", { name: /清除/ })).toHaveCount(0);
   // 雜湊值收在完整資訊裡
   await expect(page.getByTestId("verify-hash")).toHaveCount(2, { timeout: 15000 });
   await expect(page.getByTestId("verify-hash").first()).toHaveText(sha256(photo));

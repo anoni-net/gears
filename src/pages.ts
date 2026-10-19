@@ -3,5 +3,9 @@
 // feedback 是建議與回饋（src/ui/FeedbackPage.tsx），samples 是範例（src/ui/SamplesPage.tsx）
 export const pageIds = ["licenses", "llm-bench", "feedback", "samples"];
 
+// 網址打錯時的頁面（src/router.ts 的 parseRoute 認不得的網址）。沒有自己的網址，建置時另外產生
+// 404.html，nginx 找不到檔案時送出它（tools/nginx-gears.conf），打開之後畫面說明找不到這一頁
+export const NOT_FOUND = "not-found";
+
 // 實驗頁：桌面不放入口，不進 sitemap，也請搜尋引擎不要收錄。llm-bench 是語言模型速度量測（src/ui/LlmBench.tsx）
 export const labIds = ["llm-bench"];

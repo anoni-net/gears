@@ -1,6 +1,6 @@
 import { useEffect, useState } from "preact/hooks";
 import { type Locale, getLocale, localeFromPath, localeInfo, setLocale } from "./i18n/index.ts";
-import { pageIds } from "./pages.ts";
+import { NOT_FOUND, pageIds } from "./pages.ts";
 import { toolIds } from "./tools/index.ts";
 
 // 每個工具有自己的網址（/gears/qrcode/），可以被搜尋到，也可以直接分享。
@@ -9,12 +9,14 @@ import { toolIds } from "./tools/index.ts";
 
 const BASE = import.meta.env.BASE_URL; // "/gears/"
 
-// "" 是桌面，其他是工具的 id。網址前面可能有語系（/gears/en/qrcode/）
+// "" 是桌面，其他是工具的 id。網址前面可能有語系（/gears/en/qrcode/）。
+// 認不得的網址是 NOT_FOUND（nginx 送出 404.html 時），不當成桌面，讀者才知道網址打錯了
 export function parseRoute(pathname: string): string {
   const prefix = localeInfo(localeFromPath(pathname)).prefix;
   const rest = pathname.startsWith(BASE + prefix) ? pathname.slice(BASE.length + prefix.length) : "";
   const id = rest.replace(/\/+$/, "").split("/")[0] ?? "";
-  return toolIds.includes(id) || pageIds.includes(id) ? id : "";
+  if (id === "" || id === "index.html") return "";
+  return toolIds.includes(id) || pageIds.includes(id) ? id : NOT_FOUND;
 }
 
 export function routeUrl(id: string, locale: Locale = getLocale()): string {
@@ -35,7 +37,8 @@ export function navigate(id: string) {
 // 換語系：留在同一個工具，網址換成那個語系的，不重新載入，暫存區的檔案留著
 export function switchLocale(locale: Locale) {
   if (locale === getLocale()) return;
-  const id = parseRoute(location.pathname);
+  // 找不到的頁面沒有其他語系的網址，換到那個語系的桌面
+  const id = parseRoute(location.pathname).replace(NOT_FOUND, "");
   setLocale(locale);
   history.pushState(null, "", routeUrl(id, locale));
   window.dispatchEvent(new Event(EVENT));

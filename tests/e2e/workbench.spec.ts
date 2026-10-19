@@ -355,3 +355,30 @@ test("首頁沒有檔案時，頁首沒有空白的操作列", async ({ page }) 
   const title = (await page.locator(".site-header__title").boundingBox())!;
   expect(header.height - title.height).toBeLessThan(8);
 });
+
+test("網址打錯時說明找不到這一頁，可以回到桌面", async ({ page }) => {
+  await page.goto("./no-such-tool/");
+  await expect(page.getByRole("heading", { name: "找不到這一頁" })).toBeVisible();
+  await expect(page).toHaveTitle("找不到頁面 | Gears 檔案工作台");
+  await expect(page.locator(".tray")).toHaveCount(0);
+  await page.locator(".not-found").getByRole("button", { name: "回到桌面" }).click();
+  await expect(page).toHaveURL(/\/gears\/$/);
+  await expect(page.locator(".tray")).toBeVisible();
+});
+
+test("處理完之後下載在工具列表之前，窄螢幕上預覽排在下載前面", async ({ page }) => {
+  const jpeg = insertIntoJpeg(await canvasImage(page, "image/jpeg"), exifSegment(sampleTiff()));
+  await addFile(page, "photo.jpg", "image/jpeg", jpeg);
+  await page.getByRole("button", { name: "清除", exact: true }).click();
+  await previewLoaded(page);
+  const file = page.locator("section.file");
+  const downloadY = (await file.getByRole("link", { name: "下載" }).boundingBox())!.y;
+  const toolsY = (await file.getByRole("heading", { name: "工具", exact: true }).boundingBox())!.y;
+  expect(downloadY).toBeLessThan(toolsY);
+  // 手機上處理完要先確認結果，預覽在下載上方
+  const previewY = (await file.locator(".preview").boundingBox())!.y;
+  if ((page.viewportSize()?.width ?? 1280) < 1024) expect(previewY).toBeLessThan(downloadY);
+  // 沒有找到中繼資料不用綠色，說明只檢查了中繼資料
+  await expect(page.getByText("只檢查了中繼資料。")).toBeVisible();
+  await expect(page.locator(".tray .item .status")).toHaveClass(/muted/);
+});

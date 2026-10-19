@@ -14,7 +14,18 @@ function extension(name: string, format: Format): string {
   return ext ? ext.toLowerCase() : EXTENSION.unknown;
 }
 
+// 加密檔留著原本的副檔名（gears-1.csv.age）。只寫 .age 的話，解密時看不出原本是什麼檔案，
+// CSV、TXT 這類從內容判斷不出格式的會變成 .bin，手機打不開（2026-10-19 的使用回饋）
+function encryptedExtension(file: TrayFile): string {
+  const before = file.versions.at(-2);
+  if (before) return `${extension(file.name, before.format)}.age`;
+  // 加入時就是加密檔，名稱裡有原本的副檔名才留著
+  const inner = /\.([a-z0-9]{1,5})\.age$/i.exec(file.name)?.[1];
+  return inner ? `${inner.toLowerCase()}.age` : EXTENSION.age;
+}
+
 // 暫存區裡第幾個檔案就叫 gears-第幾個，單檔下載與一次下載的壓縮檔用同一套名稱
 export function outputName(file: TrayFile, index: number): string {
-  return `gears-${index + 1}.${extension(file.name, file.versions.at(-1)!.format)}`;
+  const format = file.versions.at(-1)!.format;
+  return `gears-${index + 1}.${format === "age" ? encryptedExtension(file) : extension(file.name, format)}`;
 }
