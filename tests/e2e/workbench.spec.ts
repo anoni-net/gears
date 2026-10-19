@@ -60,11 +60,11 @@ async function previewLoaded(page: Page) {
   expect(await img.evaluate((el: HTMLImageElement) => el.naturalWidth)).toBeGreaterThan(0);
 }
 
-test("桌面有暫存區、任務捷徑與兩組工具，沒有檔案時不顯示清空按鈕", async ({ page }) => {
+test("桌面有暫存區與三組工具，工具名稱下面寫著情況，沒有檔案時不顯示清空按鈕", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "檔案工作台" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "暫存區" })).toBeVisible();
-  await expect(page.getByRole("button", { name: /照片與影片的拍攝位置/ })).toBeVisible();
-  await expect(page.getByRole("button", { name: /給朋友的 Wi-Fi 密碼/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /照片的拍攝位置/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^QR code 產生器 網址、Wi-Fi 密碼、聯絡資料/ })).toBeVisible();
   await expect(page.getByRole("heading", { name: "交出去之前" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "安全地傳送" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "檢查收到的" })).toBeVisible();
@@ -78,7 +78,7 @@ test("桌面的圖示標籤：卡片上的圖示帶著補充說明，最下方�
   await expect(page.getByRole("button", { name: /^遮蔽 本機模型：自動尋找人臉與個資時用到/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /^QR code 與條碼讀取 相機：用相機掃描 QR code 與條碼/ })).toBeVisible();
   await expect(page.getByRole("img", { name: "相機：用相機掃描對方螢幕上的 QR code" })).toHaveAttribute("title", "相機：用相機掃描對方螢幕上的 QR code");
-  await expect(page.locator(".cards .tool-tag")).toHaveCount(4);
+  await expect(page.locator(".tool-rows .tool-tag")).toHaveCount(4);
 
   const legend = page.getByTestId("tag-legend");
   await expect(legend.locator("dt")).toHaveText(["本機模型", "相機"]);
@@ -86,14 +86,14 @@ test("桌面的圖示標籤：卡片上的圖示帶著補充說明，最下方�
   await expect(legend).toContainText("瀏覽器會先詢問是否允許");
   // 每個標籤一個代表色，卡片與圖示說明一致，也不會被卡片的灰色文字蓋掉
   const color = (selector: string) => page.locator(selector).first().evaluate((el) => getComputedStyle(el).color);
-  const muted = await color(".card-text > span");
+  const muted = await color(".tool-row-when");
   for (const tag of ["model", "camera"]) {
-    expect(await color(`.cards .tag-${tag}`), tag).toBe(await color(`#tag-legend .tag-${tag}`));
-    expect(await color(`.cards .tag-${tag}`), tag).not.toBe(muted);
+    expect(await color(`.tool-rows .tag-${tag}`), tag).toBe(await color(`#tag-legend .tag-${tag}`));
+    expect(await color(`.tool-rows .tag-${tag}`), tag).not.toBe(muted);
   }
-  // 工具標題下方的連結捲到圖示說明
-  await page.getByRole("link", { name: "圖示說明" }).click();
-  await expect(page.getByRole("heading", { name: "圖示說明" })).toBeInViewport();
+  // 範例與建議與回饋在最下面同一區
+  await expect(page.locator(".desk-more").getByRole("button", { name: "範例" })).toBeVisible();
+  await expect(page.locator(".desk-more").getByRole("button", { name: "建議與回饋" })).toBeVisible();
 });
 
 test("JPEG：找出位置、清除、下載，旋轉方向保留", async ({ page }) => {
@@ -134,7 +134,7 @@ test("退回上一步，再清空暫存區", async ({ page }) => {
   await page.getByRole("button", { name: "清空暫存區" }).click();
   await expect(page.locator(".tray .item")).toHaveCount(1);
   await page.getByRole("button", { name: "再按一次清空" }).click();
-  await expect(page.getByRole("button", { name: /照片與影片的拍攝位置/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /照片的拍攝位置/ })).toBeVisible();
   await expect(page.locator(".tray .item")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "選擇檔案" })).toBeVisible();
 });
@@ -264,7 +264,7 @@ test("手機點過頁首的 logo 之後，名稱底下不會留著底線", async
   test.skip(!isMobile, "觸控裝置點過之後 :hover 會一直留著");
   await page.goto("./qrcode/");
   await page.locator(".site-header__logo").tap();
-  await expect(page.getByRole("heading", { name: "常見的情況" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "交出去之前" })).toBeVisible();
   await expect(page.locator(".site-header__product")).toHaveCSS("text-decoration-line", "none");
 });
 

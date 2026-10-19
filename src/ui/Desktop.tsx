@@ -30,103 +30,79 @@ function ToolTags({ id }: { id: string }) {
   );
 }
 
-function ToolCard({ id }: { id: string }) {
+// 點工具時的動作：在 src/ui/tasks.ts 有一筆的照它打開（處理檔案的工具直接請讀者選檔案，使用統計記成 task），
+// 沒有的就打開工具頁
+const taskOf = (id: string) => TASKS.find((task) => task.tool === id);
+
+function ToolRow({ id, onTask }: { id: string; onTask(task: Task): void }) {
+  const task = taskOf(id);
   return (
     <li>
-      <button type="button" class="card" onClick={() => navigate(id)}>
+      <button type="button" class="tool-row" title={tDynamic(`tool.${id}.desc`)} onClick={() => (task ? onTask(task) : navigate(id))}>
         <IconCircle name={TOOL_META[id]!.icon} cat={TOOL_META[id]!.cat} />
-        <span class="card-text">
+        <span class="tool-row-text">
           <strong>
             {tDynamic(`tool.${id}`)}
             <ToolTags id={id} />
           </strong>
-          <span>{tDynamic(`tool.${id}.desc`)}</span>
+          <span class="tool-row-when">{tDynamic(`desk.when.${id}`)}</span>
         </span>
       </button>
     </li>
   );
 }
 
-// 桌面：任務捷徑，加上依讀者的目的分成三組的工具，最後是使用者區。暫存區在旁邊一直看得到。
+// 桌面：依讀者的目的分成三組的工具，每個工具一列，名稱下面一行寫讀者會遇到的情況。
+// 2026-10-19 以前上面另有 12 張「常見的情況」卡片，其中 11 張跟下面的工具卡打開同一個工具，
+// 首頁有 36 張卡片、手機要捲 8 個畫面。情況改寫進每個工具的那一行（desk.when.*），
+// 點了照情況打開（taskOf）。範例、建議與回饋與圖示說明收在最下面一行。暫存區在旁邊一直看得到
 export function Desktop({ onTask }: Props) {
   // 圖示說明只列出有工具用到的標籤
   const used = TAG_ORDER.filter((tag) => Object.values(TOOL_META).some((meta) => meta.tags?.includes(tag)));
   return (
     <div class="desktop">
-      <section aria-labelledby="tasks-title">
-        <h2 id="tasks-title">{t("desk.tasks")}</h2>
-        <ul class="cards">
-          {TASKS.map((task) => (
-            <li key={task.id}>
-              <button type="button" class="card task" onClick={() => onTask(task)}>
-                <IconCircle name={TOOL_META[task.tool]!.icon} cat={TOOL_META[task.tool]!.cat} />
-                <span class="card-text">
-                  <strong>{tDynamic(`task.${task.id}`)}</strong>
-                  <span>{tDynamic(`task.${task.id}.desc`)}</span>
-                </span>
+      {TOOL_GROUPS.map((group) => (
+        <section class="tool-group" key={group.id} aria-labelledby={`group-${group.id}`}>
+          <h2 id={`group-${group.id}`}>{tDynamic(`desk.group.${group.id}`)}</h2>
+          <p class="hint">{tDynamic(`desk.group.${group.id}.desc`)}</p>
+          <ul class="tool-rows">
+            {group.tools.map((id) => (
+              <ToolRow key={id} id={id} onTask={onTask} />
+            ))}
+          </ul>
+        </section>
+      ))}
+
+      <div class="desk-more">
+        <ul class="desk-user" aria-label={t("desk.group.user")}>
+          {USER_PAGES.map((id) => (
+            <li key={id}>
+              <button type="button" class="link" onClick={() => navigate(id)}>
+                <Icon name={PAGE_META[id].icon} />
+                {tDynamic(`${id}.title`)}
               </button>
             </li>
           ))}
         </ul>
-      </section>
-
-      <section aria-labelledby="tools-title">
-        <h2 id="tools-title">{t("desk.tools")}</h2>
         {used.length ? (
-          <p class="hint">
-            {t("desk.tags.pointer")}
-            <a href="#tag-legend">{t("desk.tags.title")}</a>
-            {t("desk.tags.pointerEnd")}
-          </p>
-        ) : null}
-        {TOOL_GROUPS.map((group) => (
-          <div class="tool-group" key={group.id}>
-            <h3>{tDynamic(`desk.group.${group.id}`)}</h3>
-            <p class="hint">{tDynamic(`desk.group.${group.id}.desc`)}</p>
-            <ul class="cards">
-              {group.tools.map((id) => (
-                <ToolCard key={id} id={id} />
+          <section id="tag-legend" class="tag-legend" aria-labelledby="tag-legend-title">
+            <h2 id="tag-legend-title">{t("desk.tags.title")}</h2>
+            <dl data-testid="tag-legend">
+              {used.map((tag: TagId) => (
+                <div key={tag}>
+                  <dt>
+                    <span class={`tool-tag tag-${tag}`} aria-hidden="true">
+                      <Icon name={TAGS[tag].icon} />
+                    </span>
+                    {tDynamic(`tag.${tag}`)}
+                  </dt>
+                  <dd>{tDynamic(`tag.${tag}.desc`)}</dd>
+                </div>
               ))}
-            </ul>
-          </div>
-        ))}
-        <div class="tool-group">
-          <h3>{t("desk.group.user")}</h3>
-          <p class="hint">{t("desk.group.user.desc")}</p>
-          <ul class="cards">
-            {USER_PAGES.map((id) => (
-              <li key={id}>
-                <button type="button" class="card" onClick={() => navigate(id)}>
-                  <IconCircle name={PAGE_META[id].icon} cat={PAGE_META[id].cat} />
-                  <span class="card-text">
-                    <strong>{tDynamic(`${id}.title`)}</strong>
-                    <span>{tDynamic(`${id}.desc`)}</span>
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
-
-      {used.length ? (
-        <section id="tag-legend" class="tag-legend" aria-labelledby="tag-legend-title">
-          <h2 id="tag-legend-title">{t("desk.tags.title")}</h2>
-          <dl data-testid="tag-legend">
-            {used.map((tag: TagId) => (
-              <div key={tag}>
-                <dt>
-                  <span class={`tool-tag tag-${tag}`} aria-hidden="true">
-                    <Icon name={TAGS[tag].icon} />
-                  </span>
-                  {tDynamic(`tag.${tag}`)}
-                </dt>
-                <dd>{tDynamic(`tag.${tag}.desc`)}</dd>
-              </div>
-            ))}
-          </dl>
-        </section>
-      ) : null}
+            </dl>
+          </section>
+        ) : null}
+      </div>
     </div>
   );
 }

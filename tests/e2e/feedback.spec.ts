@@ -38,7 +38,7 @@ test("從桌面的使用者區打開建議與回饋，送出之後顯示收到�
   await page.getByTestId("file-input").setInputFiles({ name: "notes.txt", mimeType: "text/plain", buffer: Buffer.from("hello") });
   await page.getByRole("button", { name: "回到桌面" }).click();
 
-  await expect(page.getByRole("heading", { name: "使用者區" })).toBeVisible();
+  await expect(page.getByRole("list", { name: "使用者區" })).toBeVisible();
   await page.locator(".desktop").getByRole("button", { name: /^建議與回饋/ }).click();
   await expect(page).toHaveURL(/\/gears\/feedback\/$/);
   await expect(page.getByRole("heading", { name: "建議與回饋" })).toBeVisible();
