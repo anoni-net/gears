@@ -15,6 +15,12 @@ import type { Ice } from "./relay.ts";
 
 export const DIRECT_TIMEOUT = 10_000;
 
+// 檔案要不要改走資料通道。2026-10-21 在正式站量（Chromium，每種條件 3 次的中位數）：經過
+// Cloudflare 的 TURN 每秒約 2.8 MB（走 TCP、TLS 只有 0.4 到 0.5 MB），經過轉送服務約 6.9 MB，
+// 調整訊息大小、緩衝門檻與多條連線並行都沒有穩定的改善。所以檔案預設走轉送服務，資料通道
+// 留給視訊。自架的 TURN 上線、量過比較快之後再打開
+export const FILES_OVER_DIRECT = false;
+
 export type Signal =
   | { t: "offer" | "answer"; sdp: string }
   | { t: "cand"; c: RTCIceCandidateInit | null }

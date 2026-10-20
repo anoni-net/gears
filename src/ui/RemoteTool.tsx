@@ -5,7 +5,7 @@ import { IS_ONION } from "../site.ts";
 import { tray } from "../state.ts";
 import { type FileMeta, MAX_TOTAL } from "../tools/nearby/protocol.ts";
 import { type Incoming, TooLargeError, receiveFiles, sendFiles } from "../tools/nearby/transfer.ts";
-import { type Direct, Signals, connectDirect } from "../tools/remote/direct.ts";
+import { type Direct, FILES_OVER_DIRECT, Signals, connectDirect } from "../tools/remote/direct.ts";
 import { type Invite, inviteHash, onionLink, parseInvite } from "../tools/remote/invite.ts";
 import { type Lanes, MAX_MESSAGE, split } from "../tools/remote/mux.ts";
 import { type Ice, NO_ICE } from "../tools/remote/relay.ts";
@@ -91,7 +91,7 @@ export function RemoteTool(_props: CreateToolProps) {
   const [messages, setMessages] = useState<{ mine: boolean; text: string }[]>([]);
   const [draft, setDraft] = useState("");
   const [ended, setEnded] = useState<"" | "self" | "peer">("");
-  // A 版：檔案經過 TURN 的 WebRTC 資料通道（direct.ts），打不開時走轉送服務
+  // A 版：經過 TURN 的 WebRTC（direct.ts）。檔案要不要改走資料通道見 FILES_OVER_DIRECT
   const signals = useRef<Signals | null>(null);
   const direct = useRef<Direct | null>(null);
   const [via, setVia] = useState<"" | "direct" | "relay">("");
@@ -219,8 +219,9 @@ export function RemoteTool(_props: CreateToolProps) {
       await link.paired;
       setPhase({ kind: "connecting" });
       await s.confirm;
-      // 先試資料通道，送出端決定檔案走哪一條，用 via 告訴接收端
-      const d = await connectDirect(signals.current!, await iceOf(link), "opener");
+      // 送出端決定檔案走哪一條，用 via 告訴接收端。檔案預設走轉送服務，不建立資料通道，
+      // 雙方的 IP 只在開始視訊時才交給 TURN
+      const d = FILES_OVER_DIRECT ? await connectDirect(signals.current!, await iceOf(link), "opener") : null;
       direct.current = d;
       signals.current!.send({ t: "via", rtc: !!d });
       setVia(d ? "direct" : "relay");
@@ -253,7 +254,7 @@ export function RemoteTool(_props: CreateToolProps) {
       const s = new RemoteSession(link, invite.key, "joiner");
       const files = watch(s);
       await s.confirm;
-      const d = await connectDirect(signals.current!, await iceOf(link), "joiner");
+      const d = FILES_OVER_DIRECT ? await connectDirect(signals.current!, await iceOf(link), "joiner") : null;
       const v = await signals.current!.next((m) => m.t === "via", 30_000);
       if (v?.t !== "via" || (v.rtc && !d)) throw new Error("failed");
       if (v.rtc) direct.current = d;
@@ -339,7 +340,7 @@ export function RemoteTool(_props: CreateToolProps) {
           <li>{t("remote.privacy.keeps")}</li>
           <li>{t("remote.privacy.link")}</li>
           <li>{t("remote.privacy.limits")}</li>
-          {IS_ONION ? null : <li>{t("remote.privacy.direct")}</li>}
+          {IS_ONION || !FILES_OVER_DIRECT ? null : <li>{t("remote.privacy.direct")}</li>}
         </ul>
       </details>
     </div>
