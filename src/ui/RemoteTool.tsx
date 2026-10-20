@@ -161,7 +161,9 @@ export function RemoteTool(_props: CreateToolProps) {
     lanes.current = l;
     const sig = new Signals(l.signals);
     signals.current = sig;
-    void iceOf(link).then((ice) => {
+    // 伺服器配對之後才發 TURN 設定。送出端在產生連結時就呼叫這裡，對方可能幾分鐘後才加入，
+    // 要等配對完成才開始計時，否則 5 秒一到就被當成不能視訊
+    void link.paired.then(() => iceOf(link)).then((ice) => {
       if (lanes.current !== l) return;
       const d = new CallDesk(sig, ice);
       desk.current = d;

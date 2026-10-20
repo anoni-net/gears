@@ -7,13 +7,16 @@ import { startSender } from "./remote-helpers.ts";
 test.use({ launchOptions: { args: ["--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream"] } });
 test.skip(({ browserName }) => browserName !== "chromium", "假的相機與麥克風只在 Chromium 設定");
 
-async function connected(browser: Browser, baseURL: string) {
+// late：對方過一陣子才加入。伺服器配對之後才發 TURN 設定，送出端要等到配對完成
+async function connected(browser: Browser, baseURL: string, late = false) {
   const permissions = ["camera", "microphone"];
   const a = await browser.newContext({ baseURL, permissions });
   const b = await browser.newContext({ baseURL, permissions });
   const sender = await a.newPage();
   const receiver = await b.newPage();
-  await receiver.goto(await startSender(sender));
+  const link = await startSender(sender);
+  if (late) await sender.waitForTimeout(6000);
+  await receiver.goto(link);
   await receiver.getByRole("button", { name: "加入", exact: true }).click();
   await expect(receiver.getByTestId("remote-call-start")).toBeVisible({ timeout: 20_000 });
   await expect(sender.getByTestId("remote-call-start")).toBeVisible();
@@ -57,7 +60,8 @@ test("一端邀請、另一端接聽，兩端都看得到對方的畫面，關�
 });
 
 test("兩端同時按下視訊通話，只接通一通", async ({ browser, baseURL }) => {
-  const { sender, receiver, close } = await connected(browser, baseURL!);
+  // 對方超過 5 秒才加入，送出端一樣可以視訊
+  const { sender, receiver, close } = await connected(browser, baseURL!, true);
   await Promise.all([sender.getByTestId("remote-call-start").click(), receiver.getByTestId("remote-call-start").click()]);
   for (const page of [sender, receiver]) {
     await expect(page.getByTestId("remote-call-status")).toHaveAttribute("data-state", "live", { timeout: 20_000 });
