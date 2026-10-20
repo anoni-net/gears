@@ -2712,6 +2712,40 @@ button.link {
   padding-left: 1.25rem;
 }
 
+/* 遠端傳送：分享連結與經過伺服器的說明（src/ui/RemoteTool.tsx） */
+.remote-link textarea {
+  display: block;
+  width: 100%;
+  margin: 0.5rem 0;
+  font-family: var(--mono, monospace);
+  font-size: 0.85rem;
+  word-break: break-all;
+}
+
+.remote-link label {
+  display: block;
+}
+
+.remote-link + details {
+  margin-top: 0.75rem;
+}
+
+.remote-privacy {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  border-left: 3px solid var(--cat-secure);
+  background: var(--surface);
+}
+
+.remote-privacy p {
+  margin: 0 0 0.5rem;
+}
+
+.remote-privacy ul {
+  margin: 0.5rem 0 0;
+  padding-left: 1.25rem;
+}
+
 /* 桌面工具名稱後面的圖示標籤（src/ui/tool-tags.ts），顏色用 --link：淺色與深色模式都有足夠的對比 */
 .tool-row-text strong:has(.tool-tags) {
   display: flex;

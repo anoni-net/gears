@@ -284,7 +284,13 @@ export default defineConfig({
   // 預覽伺服器另外用標頭送 CSP：Web Worker 不受頁面 meta 標籤的 CSP 約束，要靠標頭。
   // 部署時 nginx 也要送一樣的 CSP 標頭（開發伺服器需要內嵌腳本，不加）
   // anoni.net：使用統計的測試把這個主機名指到預覽伺服器（tests/e2e/analytics.spec.ts）
-  preview: { headers: { ...isolation, "Content-Security-Policy": HEADER_CSP }, allowedHosts: ["anoni.net"] },
+  preview: {
+    headers: { ...isolation, "Content-Security-Policy": HEADER_CSP },
+    allowedHosts: ["anoni.net"],
+    // 遠端傳送的轉送服務（server/）。正式環境由 nginx 轉過去，瀏覽器測試由 playwright.config.ts
+    // 另外起一個轉送服務，網址跟正式環境一樣在網站底下，CSP 的 'self' 就涵蓋
+    proxy: { [`${BASE}relay/`]: { target: `http://127.0.0.1:${process.env.RELAY_PORT ?? 8791}`, ws: true } },
+  },
   // Worker 裡用 import() 延後載入 Transformers.js 與 OpenCC，要輸出成 ES 模組
   worker: { format: "es" },
   define: { __GEARS_COMMIT__: JSON.stringify(commit()), __GEARS_VERSION__: JSON.stringify(version()), __GEARS_ONION__: JSON.stringify(ONION) },

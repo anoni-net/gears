@@ -5,7 +5,7 @@
 ## 原則
 
 - 預設在瀏覽器裡處理。之後若提供上傳到社群伺服器的選項，上傳前要在畫面上寫清楚檔案送到哪裡、誰看得到、保留多久、伺服器會不會留下紀錄，由讀者決定
-- 上傳端點不經過 Cloudflare。Cloudflare 在邊緣解開 TLS，經過的檔案對它是明文
+- 上傳端點不經過 Cloudflare。Cloudflare 在邊緣解開 TLS，經過的檔案對它是明文。兩端之間另有加密、Cloudflare 只經手密文的通道可以經過，畫面上要寫明 Cloudflare 看得到 IP 與時間（遠端傳送的 clearnet 入口，見下方「遠端傳送的轉送服務」）
 - 伺服器不保存讀者的檔案，加密過的也一樣。遠端傳送的轉送服務只在轉給對方的途中經手，對方不在時直接丟掉，兩端一律同時在線（見下方「遠端傳送的轉送服務」）
 - 頁面能連線的對象寫死在 CSP 裡（`vite.config.ts`），新增任何對外連線都要改那裡，並在畫面上標示。頁面的 meta 標籤只有自己的網域、使用統計的送出網址（`https://aa.anoni.net/api/send`，見下方「使用統計」）與建議與回饋的送出網址（見下方「建議與回饋」）。逐字稿的大模型從 Hugging Face 下載（見下方「逐字稿」），只開在伺服器送的 CSP 標頭 <!-- docs-style-lint: disable-line -->
 - 執行期的相依套件只有 `preact`、`qrcode-generator`（QR code 產生）、`jsqr`（QR code 讀取）、`zxing-wasm`（QR code 以外的條碼，見下方「QR code 的內容格式」）、`age-encryption`（加密，連同它相依的 noble 系列）、`libheif-js`（HEIC 解碼，LGPL-3.0，見下方「HEIC」）、`pdf-lib`（PDF 的解析與寫出，見下方「文件」）、`pdfjs-dist`（PDF 的遮蔽，見下方「PDF 的遮蔽」），以及遮蔽的自動尋找用的 `onnxruntime-web` 與 `tesseract.js`（見下方「遮蔽的自動尋找」）、逐字稿用的 `@huggingface/transformers` 與 `opencc-js`（見下方「逐字稿」，分辨說話者用的 onnxruntime 是 Transformers.js 帶的那一份），以及查證計算 SHA-256 用的 `@noble/hashes`（age 加密原本就相依它，鎖定同一個版本，見下方「查證」）、遠端傳送的加密用的 `@noble/curves` 與 `@noble/ciphers`（同樣是 age 加密已經帶進來的版本，見下方「遠端傳送的轉送服務」）、下載的軟體驗證用的 `openpgp`（LGPL-3.0，見下方「下載的軟體驗證」）。新增套件前先想能不能自己寫，必要時鎖定確切的版本。工具用到的套件在打開工具時才載入
@@ -57,7 +57,7 @@ CI（`.github/workflows/ci.yml`）依瀏覽器拆成四台機器同時執行：C
 
 | | 處理檔案的工具（`fileTools`） | 需要編輯畫面的工具（`editorTools`） | 從空白開始的工具（`createTools`） |
 |---|---|---|---|
-| 例子 | 清除中繼資料 | 遮蔽、縮成常見尺寸、列印追蹤點、HEIC 轉 JPEG、PDF 頁面選取、加密、解密、逐字稿、影片的關鍵影格、文件開啟前檢查 | QR code 產生器與讀取、網址檢查、密語與密碼產生器、age 金鑰產生器、加密文字、查證、信件檢查、寫作習慣檢查、下載的軟體驗證、面對面傳送 |
+| 例子 | 清除中繼資料 | 遮蔽、縮成常見尺寸、列印追蹤點、HEIC 轉 JPEG、PDF 頁面選取、加密、解密、逐字稿、影片的關鍵影格、文件開啟前檢查 | QR code 產生器與讀取、網址檢查、密語與密碼產生器、age 金鑰產生器、加密文字、查證、信件檢查、寫作習慣檢查、下載的軟體驗證、面對面傳送、遠端傳送 |
 | 介面 | `src/core/tool.ts` 的 `Tool` | `EditorTool`，編輯畫面登記在 `src/ui/registry.tsx` | `CreateTool`，元件登記在 `src/ui/registry.tsx` |
 | 結果 | 暫存區裡那個檔案的新版本 | 同左，由 `tray.addVersion` 加入 | 產出檔案的放進暫存區，產出文字的只顯示在畫面上 |
 
@@ -67,7 +67,7 @@ CI（`.github/workflows/ci.yml`）依瀏覽器拆成四台機器同時執行：C
 
 從空白開始的工具，元件與它用到的函式庫在打開工具時才下載（`import()`），桌面維持輕量。產出的檔案用 `tray.add(files, 工具 id)` 放進暫存區，版本列會標出是哪個工具建立的。要打開另一個工具並帶入內容（例如把讀到的網址交給網址檢查）用 `onOpenTool`。
 
-處理整個暫存區的工具（查證、面對面傳送）在 `src/tools/index.ts` 設 `tray: true`，在它的畫面加入檔案時留在原畫面，其他從空白開始的工具會回到桌面、打開加入的檔案（`src/app.tsx` 的 `addFiles`）。
+處理整個暫存區的工具（查證、面對面傳送、遠端傳送）在 `src/tools/index.ts` 設 `tray: true`，在它的畫面加入檔案時留在原畫面，其他從空白開始的工具會回到桌面、打開加入的檔案（`src/app.tsx` 的 `addFiles`）。
 
 ### 檔案畫面的工具列表
 
@@ -237,13 +237,18 @@ PDF 的版本紀錄：每一個 `%%EOF` 是一次存檔的結尾，切到那裡�
 - 通道（`src/tools/nearby/channel.ts`）：傳輸的流程只認 `Channel` 介面（送出、等緩衝降下來、依序取出下一則、關閉），不管底下是什麼連線。WebRTC 的資料通道由 `src/ui/nearby.ts` 的 `rtcChannel` 包成 `Channel`，之後的遠端傳送接 WebSocket 轉送（#104），同一套流程與單元測試都沿用。單元測試（`tests/unit/nearby-transfer.spec.ts`）用記憶體裡的一對通道走完整個傳送流程，涵蓋拒絕、內容被改、超過上限、不合格的訊息與中途關閉
 - 傳輸（`src/tools/nearby/transfer.ts`）：一條有序、可靠的通道，先送檔案清單與每個檔案的 SHA-256，接收端的讀者按「接收」才開始傳，別人不能把檔案直接塞過來。64 KB 一塊，`bufferedAmount` 超過 4 MB 就等。接收端邊收邊算 SHA-256，對不上的不放進暫存區。檔名預設跟下載一樣改成 `gears-第幾個`，讀者可以勾選保留原本的檔名（傳給自己的其他裝置時）。接收端的檔案放在記憶體裡，合計上限先抓 1 GB
 - 自己這一側一個可用的位址都沒有時（沒連上網路，或只剩被濾掉的位址），說明要先連上 Wi-Fi 或熱點
-- 15 秒內連不上時說明公共 Wi-Fi 與訪客網路常擋裝置互連，建議開手機熱點。Tor Browser 把 WebRTC 整個關掉，onion 版說明並建議改用 OnionShare。傳送時用 Wake Lock 不讓螢幕關掉
+- 15 秒內連不上時說明公共 Wi-Fi 與訪客網路常擋裝置互連，建議開手機熱點。Tor Browser 把 WebRTC 整個關掉，onion 版說明並建議改用遠端傳送，或完全不經過伺服器的 OnionShare。選檔案、檔案大小與 Wake Lock 跟遠端傳送共用（`src/ui/transfer-ui.tsx`）。傳送時用 Wake Lock 不讓螢幕關掉
 - 瀏覽器測試（`tests/e2e/nearby.spec.ts`）在同一個瀏覽器開兩個分頁互傳，走複製貼上與「打開送出端的網址」兩條路。Firefox 不處理背景分頁的輸入，操作哪個分頁之前先 `bringToFront()`。CI 的機器沒有 mDNS 解析，Chromium 與 WebKit 給相機權限。GitHub 機器上的 Firefox 蒐集不到任何候選（2026-10-17 確認，位址隱藏關掉也一樣），測試先探測，蒐集不到就略過，所以 Firefox 的配對只在本機驗證。鏡頭掃 QR code 那一條跟 QR code 讀取共用解碼，沒有自動測試
 - 還沒做的：文件站實測過多條並行連線能讓 iPhone 送出從每秒約 5 MB 提高到 37 MB，第一版只用一條連線。接收大檔案時 iPhone 的記憶體上限、切到背景與鎖屏之後連線是否還在，都要在實機上量
 
 ## 遠端傳送的轉送服務
 
-兩個人不在同一個地方時，經過社群的伺服器傳暫存區的檔案（anoni-net/gears#104，畫面還沒做）。轉送服務在 `server/relay.ts`，瀏覽器端在 `src/tools/remote/relay-client.ts`，兩邊共用的控制訊息在 `src/tools/remote/relay.ts`。
+兩個人不在同一個地方時，經過社群的伺服器傳暫存區的檔案（anoni-net/gears#104）。畫面在 `src/ui/RemoteTool.tsx`，轉送服務在 `server/relay.ts`，瀏覽器端在 `src/tools/remote/relay-client.ts`，兩邊共用的控制訊息在 `src/tools/remote/relay.ts`。
+
+- 畫面：送出端選檔案、看過經過伺服器的說明（clearnet 與 onion 各一段，另有收起來的「伺服器記下什麼」），按「產生連結」開房，分享連結的 `#` 後面是房間代碼與連結金鑰（`r`、`k`，`src/tools/remote/invite.ts`）。接收端打開連結時讀完 `#` 就用 `history.replaceState` 清掉，按「加入」才連線：通訊軟體的預覽可能在伺服器端打開連結，自動加入的話一次性的房間會先被用掉。之後跟面對面傳送一樣顯示確認碼、清單，讀者按「接收」才開始傳，收到的檔案放進暫存區（來源記成 `remote`）。手機切回前景時呼叫 `reconnectNow()`，斷線接回去與對方暫時離線另外顯示一行狀態
+- 連結只讀 `#` 後面，clearnet 與 onion 的連結都能貼到任何一邊的 Gears。clearnet 的頁面另外給 onion 的連結，onion 的頁面不給 clearnet 的（onion 版的產物不放 clearnet 的網址，`scripts/check-site.mjs`），改說明請對方把連結貼進一般瀏覽器的 Gears
+- 轉送服務跟網頁在同一個網域（clearnet 的 `/gears/relay/`、onion 的 `/relay/`），CSP 的 `'self'` 就涵蓋。瀏覽器測試由 `playwright.config.ts` 另外起打包好的轉送服務（port 8791），預覽伺服器把 `/gears/relay/` 轉過去（`vite.config.ts` 的 `preview.proxy`）
+- 瀏覽器測試（`tests/e2e/remote.spec.ts`）用兩個 context 當作兩個人：打開連結按加入、確認碼相同、接收之後放進暫存區，貼上連結（包括 onion 的）加入與拒絕，金鑰不對時說明連結不完整，用過的連結不能再用。斷線接回來的情境在單元測試
 
 - 流程：一端開房間取得房間代碼與 token，另一端用房間代碼加入，配對之後兩端送的二進位訊息由伺服器原樣轉給對方。伺服器送來的文字仍是控制訊息（`away`、`back`、`gone`、`error`），兩端要送文字時包成框（第一個位元組分文字與二進位）。`RelayLink` 實作 `Channel`，面對面傳送的 `transfer.ts` 直接用
 - 這一層不加密，送出的內容伺服器看得到，傳檔案一律包上兩端之間的加密（`src/tools/remote/secure.ts` 的 `secure()`）
@@ -255,7 +260,7 @@ PDF 的版本紀錄：每一個 `%%EOF` 是一次存檔的結尾，切到那裡�
 - 限制（`DEFAULTS`）：一則訊息 256 KB、沒人加入的房間 30 分鐘、配對之後最長 6 小時、同時 200 個房間、每個房間轉送 3 GB、同一個鍵 10 分鐘內開 20 個房間（onion 共用一個鍵，300 個）。連上之後 10 秒內沒送控制訊息、版本不對、配對之後送文字都會被斷線
 - 不保存、不記錄：訊息只在轉給對方的途中經過記憶體，不寫進磁碟。房間只在記憶體裡，開房次數時間到就清掉，log 只寫啟動與程式的錯誤，nginx 的這兩個 location 也不記 access log
 - 部署：`vite.server.config.ts` 連同 `ws` 打包成單一個 `dist-server/relay.mjs`，`deploy.yml` 推到 `build` 分支的 `server/`，推送前用 `scripts/check-relay.mjs` 實際開房、配對、轉送一次。m6 用 docker compose 在 `node:24-slim`（鎖定 digest）的容器裡執行（`tools/relay-compose.yml`，主機用 apt 裝的 Node.js 是 18，不拿來執行），只聽本機的 8790，根目錄唯讀。拉取腳本發現 `server/` 有更新時重建容器。`ws` 只給轉送服務用，放在 devDependencies，不進網頁的執行期相依
-- nginx：clearnet 是 `/gears/relay/`，經過 Cloudflare（內容由兩端另外加密，Cloudflare 只經手密文，告知畫面要寫明），onion 是 `gears.<onion>/relay/`，兩個入口接到同一個程序，一端走 clearnet、一端走 onion 也配得起來。`X-Relay-Client` 帶計算開房次數用的鍵：clearnet 用 Cloudflare 的 `CF-Connecting-IP`，onion 一律是 `onion`（`tools/nginx-gears.conf`）。畫面接上之前不加進 m6 的設定
+- nginx：clearnet 是 `/gears/relay/`，經過 Cloudflare（內容由兩端另外加密，Cloudflare 只經手密文，告知畫面要寫明），onion 是 `gears.<onion>/relay/`，兩個入口接到同一個程序，一端走 clearnet、一端走 onion 也配得起來。`X-Relay-Client` 帶計算開房次數用的鍵：clearnet 用 Cloudflare 的 `CF-Connecting-IP`，onion 一律是 `onion`（`tools/nginx-gears.conf`）。上線時把這兩個 location 加進 m6 的設定
 - 單元測試（`tests/unit/relay.spec.ts`）在 Node 裡起轉送服務、用真的 WebSocket 連線：配對與轉送、面對面傳送的傳輸流程經過轉送（含 24 MB 的檔案）、斷線重連、等太久關閉、各種拒絕與限制
 
 ## QR code 的內容格式
@@ -713,7 +718,7 @@ iPhone 預設拍出來的是 HEIC，在網頁上選照片時交出來的也是�
 
 ## 規劃
 
-產品規劃記錄在社群的工作區，還沒有公開。目前完成第一階段：桌面、檔案暫存區，以及清除中繼資料（JPEG、PNG、HEIC、AVIF、WebP、GIF、TIFF、SVG、BMP、PNM、JPEG XL，Word、Excel、PowerPoint、LibreOffice 文件與 PDF，MP3、M4A、MP4、MOV、WAV、AVI、FLAC、Ogg、Opus、MKV、WebM，ZIP、TAR、gzip、EPUB、種子檔、HTML）、遮蔽（圖片與 PDF，可以自動找人臉與個資）、縮成常見尺寸、列印追蹤點、PDF 頁面選取、查證收到的檔案、影片的關鍵影格、文件開啟前檢查、信件檢查、下載的軟體驗證、寫作習慣檢查、逐字稿、加密與解密（檔案與一段文字）、面對面傳送、age 金鑰產生器、QR code 產生器與讀取、網址檢查、密語與密碼產生器，可以下載與系統分享，一次處理多個檔案，也可以離線使用。2026-10 起部署在 `anoni.net/gears/`（見上方「部署」）。
+產品規劃記錄在社群的工作區，還沒有公開。目前完成第一階段：桌面、檔案暫存區，以及清除中繼資料（JPEG、PNG、HEIC、AVIF、WebP、GIF、TIFF、SVG、BMP、PNM、JPEG XL，Word、Excel、PowerPoint、LibreOffice 文件與 PDF，MP3、M4A、MP4、MOV、WAV、AVI、FLAC、Ogg、Opus、MKV、WebM，ZIP、TAR、gzip、EPUB、種子檔、HTML）、遮蔽（圖片與 PDF，可以自動找人臉與個資）、縮成常見尺寸、列印追蹤點、PDF 頁面選取、查證收到的檔案、影片的關鍵影格、文件開啟前檢查、信件檢查、下載的軟體驗證、寫作習慣檢查、逐字稿、加密與解密（檔案與一段文字）、面對面傳送、遠端傳送、age 金鑰產生器、QR code 產生器與讀取、網址檢查、密語與密碼產生器，可以下載與系統分享，一次處理多個檔案，也可以離線使用。2026-10 起部署在 `anoni.net/gears/`（見上方「部署」）。
 
 ## 第三方資料
 
