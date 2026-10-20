@@ -1,7 +1,13 @@
-// 遠端傳送的 A 版：向 Cloudflare Realtime 申請 TURN 的短效帳密，配對之後發給兩端（anoni-net/gears#104）。
-// TURN key 與 API token 只放在主機上的環境變數檔（tools/relay-compose.yml 的 env_file），不進 repo。
-// 申請失敗時回傳 off，兩端照舊只用轉送服務。
+// 遠端傳送的 A 版：TURN 的短效帳密，配對之後發給兩端（anoni-net/gears#104）。兩種來源：
+//
+// - Cloudflare Realtime（試行）：向它的 API 申請，申請失敗時回傳 off，兩端照舊只用轉送服務
+// - 自架的 coturn（tools/coturn/）：coturn 的 TURN REST API，用跟 coturn 共用的密鑰在這裡簽，
+//   不必連線。username 是「到期時間的 Unix 時間戳:gears」，credential 是用密鑰對 username 算
+//   HMAC-SHA1 再轉 base64
+//
+// 金鑰與密鑰只放在主機上的環境變數檔（tools/relay-compose.yml 的 env_file），不進 repo。
 
+import { createHmac } from "node:crypto";
 import { type Ice, type IceServer, NO_ICE } from "../src/tools/remote/relay.ts";
 
 const API = "https://rtc.live.cloudflare.com/v1/turn/keys";
@@ -37,5 +43,15 @@ export function cloudflareIce(keyId: string, token: string, ttl: number): () => 
       console.error(`TURN credentials failed: ${(error as Error).message}`);
       return NO_ICE;
     }
+  };
+}
+
+// urls 是 coturn 對外的網址，例如 turn:turn.example:3478?transport=udp 與 turns:turn.example:443?transport=tcp
+export function coturnIce(secret: string, urls: string[], ttl: number, now = () => Date.now()): () => Promise<Ice> {
+  const turn = urls.filter((u) => /^turns?:/.test(u));
+  return async () => {
+    const username = `${Math.floor(now() / 1000) + ttl}:gears`;
+    const credential = createHmac("sha1", secret).update(username).digest("base64");
+    return turn.length ? { policy: "relay", servers: [{ urls: turn, username, credential }] } : NO_ICE;
   };
 }

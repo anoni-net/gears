@@ -1,0 +1,20 @@
+# 遠端傳送自架的 TURN（tools/coturn/turnserver.conf）。在 VPS 上用 docker compose 執行，
+# /srv/gears-turn/ 放 turnserver.conf 與 certs/（Let's Encrypt 的 fullchain.pem、privkey.pem）。
+# 中繼用的是一整段 UDP port，用主機的網路，不做 port 對應
+name: gears-turn
+services:
+  coturn:
+    # coturn 4.15.0（2026-07-22）
+    image: coturn/coturn:4.15.0@sha256:0feee4fc1f45c7c053c8fee3e1ab941b1a1b9a0429bc01e18126735410770bfd
+    network_mode: host
+    read_only: true
+    tmpfs: [/var/lib/coturn, /tmp]
+    volumes:
+      - /srv/gears-turn/turnserver.conf:/etc/coturn/turnserver.conf:ro
+      - /srv/gears-turn/certs:/etc/coturn/certs:ro
+    restart: unless-stopped
+    logging:
+      driver: local
+      options:
+        max-size: 1m
+        max-file: "2"
