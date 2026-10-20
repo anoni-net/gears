@@ -567,4 +567,25 @@
     <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/samples/" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/samples/" />
   </url>
+  <url>
+    <loc>https://anoni.net/gears/remote-server/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/remote-server/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/remote-server/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/remote-server/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/remote-server/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/zh-cn/remote-server/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/remote-server/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/remote-server/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/remote-server/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/remote-server/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/en/remote-server/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/remote-server/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/remote-server/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/remote-server/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/remote-server/" />
+  </url>
 </urlset>

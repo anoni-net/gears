@@ -567,4 +567,25 @@
     <xhtml:link rel="alternate" hreflang="en" href="http://gears.anoninetru5tflukgfaehun7q6khowgmymcff3gtk5oyesqazhmfxtyd.onion/en/samples/" />
     <xhtml:link rel="alternate" hreflang="x-default" href="http://gears.anoninetru5tflukgfaehun7q6khowgmymcff3gtk5oyesqazhmfxtyd.onion/samples/" />
   </url>
+  <url>
+    <loc>http://gears.anoninetru5tflukgfaehun7q6khowgmymcff3gtk5oyesqazhmfxtyd.onion/remote-server/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="http://gears.anoninetru5tflukgfaehun7q6khowgmymcff3gtk5oyesqazhmfxtyd.onion/remote-server/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="http://gears.anoninetru5tflukgfaehun7q6khowgmymcff3gtk5oyesqazhmfxtyd.onion/zh-cn/remote-server/" />
+    <xhtml:link rel="alternate" hreflang="en" href="http://gears.anoninetru5tflukgfaehun7q6khowgmymcff3gtk5oyesqazhmfxtyd.onion/en/remote-server/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="http://gears.anoninetru5tflukgfaehun7q6khowgmymcff3gtk5oyesqazhmfxtyd.onion/remote-server/" />
+  </url>
+  <url>
+    <loc>http://gears.anoninetru5tflukgfaehun7q6khowgmymcff3gtk5oyesqazhmfxtyd.onion/zh-cn/remote-server/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="http://gears.anoninetru5tflukgfaehun7q6khowgmymcff3gtk5oyesqazhmfxtyd.onion/remote-server/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="http://gears.anoninetru5tflukgfaehun7q6khowgmymcff3gtk5oyesqazhmfxtyd.onion/zh-cn/remote-server/" />
+    <xhtml:link rel="alternate" hreflang="en" href="http://gears.anoninetru5tflukgfaehun7q6khowgmymcff3gtk5oyesqazhmfxtyd.onion/en/remote-server/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="http://gears.anoninetru5tflukgfaehun7q6khowgmymcff3gtk5oyesqazhmfxtyd.onion/remote-server/" />
+  </url>
+  <url>
+    <loc>http://gears.anoninetru5tflukgfaehun7q6khowgmymcff3gtk5oyesqazhmfxtyd.onion/en/remote-server/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="http://gears.anoninetru5tflukgfaehun7q6khowgmymcff3gtk5oyesqazhmfxtyd.onion/remote-server/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="http://gears.anoninetru5tflukgfaehun7q6khowgmymcff3gtk5oyesqazhmfxtyd.onion/zh-cn/remote-server/" />
+    <xhtml:link rel="alternate" hreflang="en" href="http://gears.anoninetru5tflukgfaehun7q6khowgmymcff3gtk5oyesqazhmfxtyd.onion/en/remote-server/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="http://gears.anoninetru5tflukgfaehun7q6khowgmymcff3gtk5oyesqazhmfxtyd.onion/remote-server/" />
+  </url>
 </urlset>
