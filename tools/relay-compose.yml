@@ -1,0 +1,31 @@
+# 遠端傳送的轉送服務（server/，anoni-net/gears#104），在 m6 用 docker compose 執行。
+# 本檔是範本，複製到 m6 的 /srv/anoni-net-gears/relay-compose.yml，第一次用 `docker compose -f … up -d` 啟動。
+# 之後 build 分支的 server/ 有更新時，拉取腳本（tools/m6-pull.sh）重建容器。
+#
+# 主機用 apt 裝的 Node.js 是 18，不拿來執行新的程式，跟 m6 上其他 Node.js 服務一樣放進容器。
+# 映像鎖定 digest，升級時查新的 digest 再換。容器只讀打包好的 relay.mjs，不需要 npm install，
+# 只聽本機的 8790，由 nginx 反向代理（tools/nginx-gears.conf）。轉送服務不寫檔案，根目錄唯讀。
+services:
+  relay:
+    # node:24-slim，Node.js 24.22.0（2026-10-14）
+    image: node:24-slim@sha256:a5f4366e834695d5f363b920c104953a535d3a9864d1bdf74566a0ebe01daee5
+    command: ["node", "/srv/relay/relay.mjs"]
+    user: node
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    environment:
+      RELAY_HOST: 0.0.0.0
+      RELAY_PORT: "8790"
+    volumes:
+      - /srv/anoni-net-gears/build/server:/srv/relay:ro
+    ports:
+      - "127.0.0.1:8790:8790"
+    mem_limit: 512m
+    restart: unless-stopped
+    # 只有啟動與程式的錯誤，不含 IP 與房間
+    logging:
+      driver: local
+      options:
+        max-size: 1m
+        max-file: "2"

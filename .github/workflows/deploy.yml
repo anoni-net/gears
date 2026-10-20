@@ -5,6 +5,7 @@ name: deploy
 #
 # - site/：網站本身，nginx 的 /gears/ 讀這裡
 # - onion/：onion 版（GEARS_TARGET=onion），網站放在 gears.<onion> 的根目錄
+# - server/relay.mjs：遠端傳送的轉送服務（vite.server.config.ts），m6 在容器裡執行（tools/relay-compose.yml）
 # - deploy/models.txt：逐字稿的模型清單。Whisper small 的單一檔案超過 GitHub 的 100 MB，
 #   模型不進 build 分支，由 m6 照清單下載
 # - deploy/nginx-headers.conf、nginx-headers-onion.conf：nginx 送的 CSP 與其他標頭，m6 比對有變才換上
@@ -70,6 +71,7 @@ jobs:
 
       - run: npm run build
       - run: GEARS_TARGET=onion npm run build
+      - run: npm run build:server && node scripts/check-relay.mjs
       - run: node scripts/fetch-whisper.mjs --manifest deploy/models.txt
 
       # assets/ 的檔名帶雜湊。上一版的檔案多留一輪：已經開著舊頁面的讀者，之後才載入的
@@ -102,6 +104,8 @@ jobs:
           }
           publish dist ../out/site assets.txt
           publish dist-onion ../out/onion assets-onion.txt
+          mkdir -p ../out/server
+          cp dist-server/relay.mjs ../out/server/relay.mjs
           cp deploy/models.txt deploy/nginx-headers.conf deploy/nginx-headers-onion.conf ../out/deploy/
           node scripts/check-site.mjs ../out/site
           node scripts/check-site.mjs ../out/onion / --onion
