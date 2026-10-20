@@ -467,6 +467,8 @@ export const en: Record<MessageKey, string> = {
   "remote.chat.label": "Message to the other person",
   "remote.chat.send": "Send",
   "remote.chat.end": "End connection",
+  "remote.chat.endAsk": "End the connection? The other person will be disconnected too, any video call will end, and you'll need a new link to connect again.",
+  "remote.chat.keep": "Stay connected",
   "remote.chat.endedSelf": "The connection has ended.",
   "remote.chat.endedPeer": "The other person ended the connection.",
   "remote.privacy.title": "Goes through the community's relay server",

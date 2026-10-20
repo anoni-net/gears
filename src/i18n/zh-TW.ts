@@ -476,6 +476,8 @@ export const zhTW = {
   "remote.chat.label": "要傳給對方的訊息",
   "remote.chat.send": "送出",
   "remote.chat.end": "結束連線",
+  "remote.chat.endAsk": "要結束連線嗎？對方會一起斷線，進行中的視訊通話也會結束，之後要再連線需要重新產生連結。",
+  "remote.chat.keep": "繼續連線",
   "remote.chat.endedSelf": "連線已經結束。",
   "remote.chat.endedPeer": "對方已經結束連線。",
   "remote.privacy.title": "經過社群的中繼伺服器",

@@ -2783,6 +2783,21 @@ button.link {
   display: block;
 }
 
+/* 「結束連線」放在送出那一列的最右邊，離「送出」遠一點 */
+.remote-compose .remote-end {
+  margin-left: auto;
+}
+
+.remote-end-ask {
+  padding: 0.75rem 1rem;
+  border-left: 3px solid var(--danger);
+  background: var(--surface);
+}
+
+.remote-end-ask p {
+  margin: 0 0 0.5rem;
+}
+
 .remote-pending {
   margin-bottom: 1rem;
   padding: 0.75rem 1rem;
