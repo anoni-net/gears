@@ -3622,6 +3622,10 @@ function randomId() {
 	for (const b of bytes) text += String.fromCharCode(b);
 	return btoa(text).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
+var NO_ICE = {
+	policy: "off",
+	servers: []
+};
 function parseJson(text) {
 	let m;
 	try {
@@ -3636,22 +3640,26 @@ function parseClientControl(text) {
 	const m = parseJson(text);
 	if (m.t !== "open" && m.t !== "join" && m.t !== "resume") throw new Error("bad-message");
 	if (m.v !== 1) throw new Error("version");
+	const ice = m.ice === true ? { ice: true } : {};
 	if (m.t === "open") return {
 		t: "open",
-		v: 1
+		v: 1,
+		...ice
 	};
 	if (!isId(m.room)) throw new Error("bad-message");
 	if (m.t === "join") return {
 		t: "join",
 		v: 1,
-		room: m.room
+		room: m.room,
+		...ice
 	};
 	if (!isId(m.token)) throw new Error("bad-message");
 	return {
 		t: "resume",
 		v: 1,
 		room: m.room,
-		token: m.token
+		token: m.token,
+		...ice
 	};
 }
 //#endregion
@@ -3668,7 +3676,8 @@ var DEFAULTS = {
 	roomBytes: 3 * 1024 ** 3,
 	openWindowMs: 6e5,
 	opensPerClient: 20,
-	opensOnion: 300
+	opensOnion: 300,
+	ice: async () => NO_ICE
 };
 var HIGH_WATER = 4194304;
 var LOW_WATER = 1048576;
@@ -3753,7 +3762,8 @@ async function startRelay(overrides = {}) {
 				id: randomId(),
 				sides: [{
 					ws: null,
-					token: randomId()
+					token: randomId(),
+					ice: m.ice
 				}, null],
 				bytes: 0,
 				epoch: 0,
@@ -3774,7 +3784,8 @@ async function startRelay(overrides = {}) {
 			if (room.sides[1]) return refuse(ws, "room-full");
 			room.sides[1] = {
 				ws: null,
-				token: randomId()
+				token: randomId(),
+				ice: m.ice
 			};
 			clearTimeout(room.timer);
 			room.timer = setTimeout(() => closeRoom(room, { t: "gone" }), o.maxAgeMs);
@@ -3785,11 +3796,21 @@ async function startRelay(overrides = {}) {
 			});
 			control(room.sides[0].ws, { t: "paired" });
 			if (!room.sides[0].ws) control(ws, { t: "away" });
+			o.ice().then((ice) => {
+				if (room.closed) return;
+				room.ice = ice;
+				for (const side of room.sides) if (side?.ice) control(side.ws, {
+					t: "ice",
+					...ice
+				});
+			});
 			return;
 		}
 		const index = room.sides.findIndex((s) => s?.token === m.token);
 		if (index < 0) return refuse(ws, "no-room");
-		const old = room.sides[index].ws;
+		const side = room.sides[index];
+		side.ice = m.ice;
+		const old = side.ws;
 		if (old) {
 			seats.delete(old);
 			old.terminate();
@@ -3801,6 +3822,10 @@ async function startRelay(overrides = {}) {
 			t: "resumed",
 			paired: !!peer,
 			epoch
+		});
+		if (room.ice && side.ice) control(ws, {
+			t: "ice",
+			...room.ice
 		});
 		if (peer?.ws) control(peer.ws, {
 			t: "back",
@@ -3897,6 +3922,47 @@ async function startRelay(overrides = {}) {
 	};
 }
 //#endregion
+//#region server/turn.ts
+var API = "https://rtc.live.cloudflare.com/v1/turn/keys";
+function filterIce(servers) {
+	if (!Array.isArray(servers)) return [];
+	const out = [];
+	for (const s of servers) {
+		const urls = (Array.isArray(s?.urls) ? s.urls : [s?.urls]).filter((u) => typeof u === "string" && /^turns?:/.test(u) && !/:53(\?|$)/.test(u));
+		if (!urls.length || typeof s.username !== "string" || typeof s.credential !== "string") continue;
+		out.push({
+			urls,
+			username: s.username,
+			credential: s.credential
+		});
+	}
+	return out;
+}
+function cloudflareIce(keyId, token, ttl) {
+	return async () => {
+		try {
+			const res = await fetch(`${API}/${encodeURIComponent(keyId)}/credentials/generate-ice-servers`, {
+				method: "POST",
+				headers: {
+					authorization: `Bearer ${token}`,
+					"content-type": "application/json"
+				},
+				body: JSON.stringify({ ttl }),
+				signal: AbortSignal.timeout(5e3)
+			});
+			if (!res.ok) throw new Error(`HTTP ${res.status}`);
+			const servers = filterIce((await res.json()).iceServers);
+			return servers.length ? {
+				policy: "relay",
+				servers
+			} : NO_ICE;
+		} catch (error) {
+			console.error(`TURN credentials failed: ${error.message}`);
+			return NO_ICE;
+		}
+	};
+}
+//#endregion
 //#region server/main.ts
 var env = (name) => process.env[name];
 var number = (name, fallback) => {
@@ -3906,7 +3972,7 @@ var number = (name, fallback) => {
 	if (!Number.isFinite(n) || n < 0) throw new Error(`${name} 不是正數：${v}`);
 	return n;
 };
-var relay = await startRelay({
+var options = {
 	...DEFAULTS,
 	host: env("RELAY_HOST") || DEFAULTS.host,
 	port: number("RELAY_PORT", DEFAULTS.port),
@@ -3914,8 +3980,16 @@ var relay = await startRelay({
 	roomBytes: number("RELAY_ROOM_BYTES", DEFAULTS.roomBytes),
 	opensPerClient: number("RELAY_OPENS_PER_CLIENT", DEFAULTS.opensPerClient),
 	opensOnion: number("RELAY_OPENS_ONION", DEFAULTS.opensOnion)
+};
+var keyId = env("CF_TURN_KEY_ID");
+var token = env("CF_TURN_KEY_TOKEN");
+if (keyId && token) options.ice = cloudflareIce(keyId, token, Math.round(DEFAULTS.maxAgeMs / 1e3));
+else if (env("RELAY_TEST_ICE") === "all") options.ice = async () => ({
+	policy: "all",
+	servers: []
 });
-console.log(`gears relay listening on ${relay.url}`);
+var relay = await startRelay(options);
+console.log(`gears relay listening on ${relay.url}${keyId && token ? " (TURN on)" : ""}`);
 for (const signal of ["SIGTERM", "SIGINT"]) process.on(signal, () => {
 	relay.close().then(() => process.exit(0));
 });
