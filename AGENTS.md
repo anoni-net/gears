@@ -8,7 +8,7 @@
 - 上傳端點不經過 Cloudflare。Cloudflare 在邊緣解開 TLS，經過的檔案對它是明文
 - 伺服器不保存讀者的檔案，加密過的也一樣。遠端傳送的轉送服務只在轉給對方的途中經手，對方不在時直接丟掉，兩端一律同時在線（見下方「遠端傳送的轉送服務」）
 - 頁面能連線的對象寫死在 CSP 裡（`vite.config.ts`），新增任何對外連線都要改那裡，並在畫面上標示。頁面的 meta 標籤只有自己的網域、使用統計的送出網址（`https://aa.anoni.net/api/send`，見下方「使用統計」）與建議與回饋的送出網址（見下方「建議與回饋」）。逐字稿的大模型從 Hugging Face 下載（見下方「逐字稿」），只開在伺服器送的 CSP 標頭 <!-- docs-style-lint: disable-line -->
-- 執行期的相依套件只有 `preact`、`qrcode-generator`（QR code 產生）、`jsqr`（QR code 讀取）、`zxing-wasm`（QR code 以外的條碼，見下方「QR code 的內容格式」）、`age-encryption`（加密，連同它相依的 noble 系列）、`libheif-js`（HEIC 解碼，LGPL-3.0，見下方「HEIC」）、`pdf-lib`（PDF 的解析與寫出，見下方「文件」）、`pdfjs-dist`（PDF 的遮蔽，見下方「PDF 的遮蔽」），以及遮蔽的自動尋找用的 `onnxruntime-web` 與 `tesseract.js`（見下方「遮蔽的自動尋找」）、逐字稿用的 `@huggingface/transformers` 與 `opencc-js`（見下方「逐字稿」，分辨說話者用的 onnxruntime 是 Transformers.js 帶的那一份），以及查證計算 SHA-256 用的 `@noble/hashes`（age 加密原本就相依它，鎖定同一個版本，見下方「查證」）、下載的軟體驗證用的 `openpgp`（LGPL-3.0，見下方「下載的軟體驗證」）。新增套件前先想能不能自己寫，必要時鎖定確切的版本。工具用到的套件在打開工具時才載入
+- 執行期的相依套件只有 `preact`、`qrcode-generator`（QR code 產生）、`jsqr`（QR code 讀取）、`zxing-wasm`（QR code 以外的條碼，見下方「QR code 的內容格式」）、`age-encryption`（加密，連同它相依的 noble 系列）、`libheif-js`（HEIC 解碼，LGPL-3.0，見下方「HEIC」）、`pdf-lib`（PDF 的解析與寫出，見下方「文件」）、`pdfjs-dist`（PDF 的遮蔽，見下方「PDF 的遮蔽」），以及遮蔽的自動尋找用的 `onnxruntime-web` 與 `tesseract.js`（見下方「遮蔽的自動尋找」）、逐字稿用的 `@huggingface/transformers` 與 `opencc-js`（見下方「逐字稿」，分辨說話者用的 onnxruntime 是 Transformers.js 帶的那一份），以及查證計算 SHA-256 用的 `@noble/hashes`（age 加密原本就相依它，鎖定同一個版本，見下方「查證」）、遠端傳送的加密用的 `@noble/curves` 與 `@noble/ciphers`（同樣是 age 加密已經帶進來的版本，見下方「遠端傳送的轉送服務」）、下載的軟體驗證用的 `openpgp`（LGPL-3.0，見下方「下載的軟體驗證」）。新增套件前先想能不能自己寫，必要時鎖定確切的版本。工具用到的套件在打開工具時才載入
 - 結構有問題的檔案就停下來，不交出一份沒處理乾淨的檔案
 
 ## 支援的瀏覽器
@@ -246,7 +246,9 @@ PDF 的版本紀錄：每一個 `%%EOF` 是一次存檔的結尾，切到那裡�
 兩個人不在同一個地方時，經過社群的伺服器傳暫存區的檔案（anoni-net/gears#104，畫面還沒做）。轉送服務在 `server/relay.ts`，瀏覽器端在 `src/tools/remote/relay-client.ts`，兩邊共用的控制訊息在 `src/tools/remote/relay.ts`。
 
 - 流程：一端開房間取得房間代碼與 token，另一端用房間代碼加入，配對之後兩端送的二進位訊息由伺服器原樣轉給對方。伺服器送來的文字仍是控制訊息（`away`、`back`、`gone`、`error`），兩端要送文字時包成框（第一個位元組分文字與二進位）。`RelayLink` 實作 `Channel`，面對面傳送的 `transfer.ts` 直接用
-- 這一層不加密，送出的內容伺服器看得到。畫面接上之前要先加上兩端之間的加密（#104 的 B 版），不要直接拿這一層傳檔案
+- 這一層不加密，送出的內容伺服器看得到，傳檔案一律包上兩端之間的加密（`src/tools/remote/secure.ts` 的 `secure()`）
+- 兩端之間的加密：連結金鑰 K（32 位元組）由開房的一端產生，放在分享連結的 `#` 後面。配對之後兩端用明文交換暫時的 X25519 公鑰，共同推出的值當輸入、K 當 salt，用 HKDF-SHA256 導出每個方向一把金鑰（info 帶版本與兩端的公鑰），之後每則訊息包成框再用 AES-256-GCM 加密，nonce 是遞增的序號。第一則加密的訊息是 ready，K 不對時兩端都在這裡停下來。確認碼由兩端的公鑰算出（沿用面對面傳送的 `confirmCode`）。順序不對、被丟掉、重送或被改過的訊息都解不開，通道關閉。斷線重連之後序號對不上，要重新握手（同一個 K、新的暫時金鑰）。只用純 JavaScript，Tor Browser 關掉 WebAssembly 的安全等級也能用，Node 上每秒約加密 100 MB
+- 加密的單元測試（`tests/unit/remote-secure.spec.ts`）：確認碼相同、途中只看得到公鑰與密文、K 不對、內容被改丟重送、知道 K 的中間人讓確認碼對不上、不知道 K 的中間人換掉公鑰，以及經過轉送服務加密傳完一份檔案
 - 斷線：用 1000 關閉代表離開，房間跟著關閉。其他的斷線（手機切到背景、網路中斷）對方收到 `away`，5 分鐘內用房間代碼與自己的 token 接回來（`resume`），對方收到 `back`。對方不在時送的直接丟掉，要靠上層的續傳補回來。伺服器每 20 秒 ping 一次，找出斷了卻沒有送出關閉的連線，也讓 Cloudflare 不會把閒置的 WebSocket 關掉
 - 限制（`DEFAULTS`）：一則訊息 256 KB、沒人加入的房間 30 分鐘、配對之後最長 6 小時、同時 200 個房間、每個房間轉送 3 GB、同一個鍵 10 分鐘內開 20 個房間（onion 共用一個鍵，300 個）。連上之後 10 秒內沒送控制訊息、版本不對、配對之後送文字都會被斷線
 - 不保存、不記錄：訊息只在轉給對方的途中經過記憶體，不寫進磁碟。房間只在記憶體裡，開房次數時間到就清掉，log 只寫啟動與程式的錯誤，nginx 的這兩個 location 也不記 access log

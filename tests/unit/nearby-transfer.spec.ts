@@ -1,25 +1,8 @@
 import { expect, test } from "@playwright/test";
-import { type Channel, type Data, Inbox } from "../../src/tools/nearby/channel.ts";
+import { type Data, Inbox } from "../../src/tools/nearby/channel.ts";
 import { CHUNK, MAX_TOTAL, parseMessage } from "../../src/tools/nearby/protocol.ts";
 import { TooLargeError, receiveFiles, sendFiles } from "../../src/tools/nearby/transfer.ts";
-
-// 記憶體裡的一對通道，送出的訊息複製一份、在下一個 microtask 交給對方，跟真的通道一樣不同步
-function pair(tamper: (data: Data) => Data = (d) => d): [Channel, Channel] {
-  const boxes = [new Inbox(), new Inbox()] as const;
-  const end = (mine: Inbox, theirs: Inbox, outgoing: (d: Data) => Data): Channel => ({
-    send(data) {
-      const copy = outgoing(typeof data === "string" ? data : data.slice(0));
-      queueMicrotask(() => theirs.push(copy));
-    },
-    drained: () => Promise.resolve(),
-    next: () => mine.next(),
-    close() {
-      mine.end();
-      theirs.end();
-    },
-  });
-  return [end(boxes[0], boxes[1], tamper), end(boxes[1], boxes[0], (d) => d)];
-}
+import { pair } from "../helpers/channel-pair.ts";
 
 const bytes = (n: number, seed = 1) => Uint8Array.from({ length: n }, (_, i) => (i * 31 + seed) & 255);
 
