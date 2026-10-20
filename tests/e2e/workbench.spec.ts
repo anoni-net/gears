@@ -382,3 +382,16 @@ test("處理完之後下載在工具列表之前，窄螢幕上預覽排在下�
   await expect(page.getByText("只檢查了中繼資料。")).toBeVisible();
   await expect(page.locator(".tray .item .status")).toHaveClass(/muted/);
 });
+
+test("首頁與範例頁來回切換，頁首的 logo 不會左右移動", async ({ page, isMobile }) => {
+  test.skip(isMobile, "手機的捲軸不佔寬度");
+  // 夠高的視窗讓首頁不需要捲動、範例頁需要，捲軸出現與否不能改變版面的寬度
+  await page.setViewportSize({ width: 1440, height: 1400 });
+  await page.goto("./");
+  const logo = page.locator(".site-header__logo");
+  const home = (await logo.boundingBox())!.x;
+  await page.locator(".desk-more").getByRole("button", { name: "範例" }).click();
+  await expect(page.getByRole("heading", { name: "範例", exact: true })).toBeVisible();
+  expect((await logo.boundingBox())!.x).toBe(home);
+  expect(await page.evaluate(() => getComputedStyle(document.documentElement).overflowY)).toBe("scroll");
+});

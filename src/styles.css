@@ -95,6 +95,13 @@ body {
 }
 
 /* 暫存區有檔案時，手機上不會因為往下拉而重新整理、清空暫存區（src/app.tsx 的 useKeepTray） */
+/* 一律顯示捲軸。首頁不長，高一點的螢幕不需要捲動，範例頁需要，捲軸出現時置中的頁首會往左移半個捲軸寬，
+   兩頁來回切換時 logo 左右跳（2026-10-20）。scrollbar-gutter: stable 也能固定位置，但不捲動的頁面
+   會在頁首右邊留一條白色的空位。手機與 macOS 預設的浮動捲軸不佔寬度，不受影響 */
+html {
+  overflow-y: scroll;
+}
+
 html.has-files,
 html.has-files body {
   overscroll-behavior-y: none;
