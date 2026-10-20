@@ -2948,19 +2948,73 @@ button.link {
   object-fit: contain;
 }
 
-.remote-videos video.self {
+.remote-videos .self {
+  position: relative;
   width: 30%;
   max-width: 10rem;
+}
+
+.remote-videos .self video {
+  width: 100%;
   aspect-ratio: 4 / 3;
   object-fit: cover;
   transform: scaleX(-1);
 }
 
-.remote-videos video.peer + video.self {
+.remote-videos video.peer + .self {
   position: absolute;
   right: 0.5rem;
   bottom: 0.5rem;
+}
+
+.remote-videos video.peer + .self video {
   border: 2px solid var(--bg, #fff);
+}
+
+/* 自己的畫面上標出關掉了什麼 */
+.remote-call-off {
+  position: absolute;
+  left: 0.25rem;
+  bottom: 0.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.75rem;
+}
+
+.remote-call-off li {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  margin-top: 0.15rem;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  background: rgb(0 0 0 / 75%);
+  color: #fff;
+}
+
+.remote-call-off .icon {
+  width: 1em;
+  height: 1em;
+}
+
+.remote-call-controls button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* 關掉的麥克風與鏡頭整顆紅底，掛斷放在最右邊、紅字 */
+.remote-call-controls button.off {
+  background: var(--danger-text);
+  border-color: var(--danger-text);
+  color: var(--bg);
+}
+
+.remote-call-controls .hang-up {
+  margin-left: auto;
+  color: var(--danger-text);
+  border-color: var(--danger-text);
 }
 
 

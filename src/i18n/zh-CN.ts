@@ -501,6 +501,8 @@ export const zhCN: Record<MessageKey, string> = {
   "remote.call.micOn": "开启麦克风",
   "remote.call.camOff": "关闭摄像头",
   "remote.call.camOn": "开启摄像头",
+  "remote.call.micIsOff": "麦克风已关闭",
+  "remote.call.camIsOff": "摄像头已关闭",
   "remote.call.local": "你的画面",
   "remote.call.remote": "对方的画面",
   "remote.call.end.self": "通话已经结束。",
