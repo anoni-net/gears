@@ -3756,6 +3756,7 @@ async function startRelay(overrides = {}) {
 					token: randomId()
 				}, null],
 				bytes: 0,
+				epoch: 0,
 				timer: setTimeout(() => closeRoom(room, { t: "gone" }), o.waitMs),
 				closed: false
 			};
@@ -3795,13 +3796,17 @@ async function startRelay(overrides = {}) {
 		}
 		seat(ws, room, index);
 		const peer = room.sides[index === 0 ? 1 : 0];
+		const epoch = ++room.epoch;
 		control(ws, {
 			t: "resumed",
-			paired: !!peer
+			paired: !!peer,
+			epoch
 		});
-		if (!peer?.ws) {
-			if (peer) control(ws, { t: "away" });
-		} else if (!old) control(peer.ws, { t: "back" });
+		if (peer?.ws) control(peer.ws, {
+			t: "back",
+			epoch
+		});
+		else if (peer) control(ws, { t: "away" });
 	}
 	function forward(from, seated, data) {
 		const { room } = seated;
