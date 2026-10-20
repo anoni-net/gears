@@ -656,7 +656,6 @@ export function RemoteTool(_props: CreateToolProps) {
           ))}
         </ul>
         {total > MAX_TOTAL ? <p class="error">{t("nearby.error.tooLarge")}</p> : null}
-        <p class="hint">{t("remote.confirmNote")}</p>
       </div>
     );
     actions = (
@@ -715,9 +714,17 @@ export function RemoteTool(_props: CreateToolProps) {
         </p>
       ) : null}
       {confirm && phase.kind !== "error" ? (
-        <p data-testid="remote-confirm">
-          {t("nearby.confirm")} <strong>{confirm}</strong>
-        </p>
+        <>
+          <p data-testid="remote-confirm">
+            {t("nearby.confirm")} <strong>{confirm}</strong>
+          </p>
+          {/* 搶先用了連結的人跟你算出同一組確認碼，在這裡的文字訊息問等於沒有核對 */}
+          {ended ? null : (
+            <p class="hint" data-testid="remote-confirm-note">
+              {t("remote.confirmNote")}
+            </p>
+          )}
+        </>
       ) : null}
       {body}
       {actions ? <div class="buttons nearby-actions">{actions}</div> : null}

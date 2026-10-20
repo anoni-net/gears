@@ -37,6 +37,8 @@ test("打開分享連結、按加入，兩端的確認碼相同，接收之後�
   const code = await receiver.getByTestId("remote-confirm").locator("strong").innerText();
   expect(code).toMatch(/^\d{3} \d{3}$/);
   await expect(sender.getByTestId("remote-confirm").locator("strong")).toHaveText(code);
+  // 兩端都看得到核對的方式，提醒不要在這裡的文字訊息核對
+  for (const page of [sender, receiver]) await expect(page.getByTestId("remote-confirm-note")).toContainText("不要在這裡的文字訊息核對");
   await expect(sender.getByTestId("remote-status")).toContainText("等對方決定");
   // 檔案預設走轉送服務。改走資料通道時，測試的轉送服務允許區網的位址（RELAY_TEST_ICE=all），
   // Chromium 打得開資料通道，其他核心在 CI 上可能蒐集不到候選，逾時之後走轉送服務，一樣要傳得完
