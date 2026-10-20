@@ -22,6 +22,7 @@ import { browserDeclines, optedOut, setOptedOut, track, trackView } from "./ui/a
 import { COMMIT, COMMIT_URL, VERSION } from "./version.ts";
 import { FeedbackPage } from "./ui/FeedbackPage.tsx";
 import { NotFoundPage } from "./ui/NotFoundPage.tsx";
+import { RemoteServerPage } from "./ui/RemoteServerPage.tsx";
 import { SampleLink, SamplesPage } from "./ui/SamplesPage.tsx";
 import { type FileSample, makeSampleFile } from "./ui/samples.ts";
 
@@ -295,6 +296,8 @@ export function App() {
     view = <NotFoundPage />;
   } else if (route === "feedback") {
     view = <FeedbackPage from={from.current} />;
+  } else if (route === "remote-server") {
+    view = <RemoteServerPage />;
   } else if (route === "samples") {
     view = <SamplesPage focus={preset} onOpenFile={openSample} onOpenQr={(id) => openTool("qr-read", `sample:${id}`)} />;
   } else if (selected) {
