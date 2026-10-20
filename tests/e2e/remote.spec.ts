@@ -2,27 +2,10 @@ import AxeBuilder from "@axe-core/playwright";
 import type { Browser, Page } from "@playwright/test";
 import { FILES_OVER_DIRECT } from "../../src/tools/remote/direct.ts";
 import { expect, test } from "./guard.ts";
+import { startSender } from "./remote-helpers.ts";
 
 // 遠端傳送：送出端與接收端各開一個 context（不同的人），經過 playwright.config.ts 起的轉送服務，
 // 預覽伺服器把 /gears/relay/ 轉過去。斷線接回來的情境在單元測試（tests/unit/remote-session.spec.ts）
-
-const random = Buffer.from(Array.from({ length: 300_000 }, (_, i) => (i * 7919 + (i >> 8)) & 255));
-
-// 送出端：暫存區放兩個檔案，打開遠端傳送，產生連結，回傳分享連結
-async function startSender(page: Page): Promise<string> {
-  await page.goto("./");
-  await page.getByTestId("file-input").setInputFiles([
-    { name: "notes.txt", mimeType: "text/plain", buffer: Buffer.from("遠端傳送的測試\n".repeat(50)) },
-    { name: "data.bin", mimeType: "application/octet-stream", buffer: random },
-  ]);
-  await page.getByRole("button", { name: "回到桌面" }).click();
-  await page.getByRole("button", { name: /^遠端傳送/ }).click();
-  await page.getByRole("button", { name: "送出暫存區的檔案" }).click();
-  await expect(page.getByTestId("remote-privacy")).toContainText("Cloudflare");
-  await page.getByRole("button", { name: "產生連結（2 個檔案）" }).click();
-  await expect(page.getByTestId("remote-status")).toContainText("等對方打開連結");
-  return page.getByTestId("remote-link").inputValue();
-}
 
 // 給相機權限：Chromium 與 WebKit 有了權限才交出區網位址，CI 的機器沒有 mDNS 解析，
 // 只有 mDNS 名稱的話資料通道打不開（同面對面傳送的測試）。Firefox 不支援這項權限
@@ -214,3 +197,4 @@ test("資料通道傳到一半斷掉，改用轉送服務重傳，接收端不�
   await expect(receiver.getByTestId("remote-via")).toHaveAttribute("data-via", "relay");
   await close();
 });
+

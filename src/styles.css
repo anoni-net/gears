@@ -2901,3 +2901,47 @@ button.link {
 .feedback .buttons {
   margin-top: 0.5rem;
 }
+
+.remote-call {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+}
+
+.remote-call h3 {
+  margin: 0 0 0.25rem;
+  font-size: 1rem;
+}
+
+/* 對方的畫面放大，自己的畫面縮小疊在右下角 */
+.remote-videos {
+  position: relative;
+  margin: 0.75rem 0;
+}
+
+.remote-videos video {
+  display: block;
+  background: #000;
+  border-radius: 0.5rem;
+}
+
+.remote-videos video.peer {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: contain;
+}
+
+.remote-videos video.self {
+  width: 30%;
+  max-width: 10rem;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  transform: scaleX(-1);
+}
+
+.remote-videos video.peer + video.self {
+  position: absolute;
+  right: 0.5rem;
+  bottom: 0.5rem;
+  border: 2px solid var(--bg, #fff);
+}
