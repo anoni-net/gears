@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { startRelay } from "../../server/relay.ts";
-import { filterIce } from "../../server/turn.ts";
+import { coturnIce, filterIce } from "../../server/turn.ts";
 import { Signals, connectDirect, parseSignal } from "../../src/tools/remote/direct.ts";
 import { NO_ICE, parseServerControl } from "../../src/tools/remote/relay.ts";
 import { RelayLink } from "../../src/tools/remote/relay-client.ts";
@@ -18,6 +18,18 @@ test("Cloudflare 回傳的伺服器只留 TURN，拿掉 STUN 與 port 53", () =>
   ]);
   expect(servers).toEqual([{ urls: ["turn:turn.cloudflare.com:3478?transport=udp", "turns:turn.cloudflare.com:443?transport=tcp"], username: "u", credential: "c" }]);
   expect(filterIce(undefined)).toEqual([]);
+});
+
+test("coturn 的帳密：到期時間加上 gears，用共用密鑰算 HMAC-SHA1", async () => {
+  const ice = await coturnIce("s3cret", ["turn:turn.example:3478?transport=udp", "stun:turn.example:3478", "turns:turn.example:443?transport=tcp"], 3600, () => 1_700_000_000_000)();
+  expect(ice.policy).toBe("relay");
+  expect(ice.servers).toHaveLength(1);
+  const [server] = ice.servers;
+  expect(server!.urls).toEqual(["turn:turn.example:3478?transport=udp", "turns:turn.example:443?transport=tcp"]);
+  expect(server!.username).toBe("1700003600:gears");
+  // coturn 的 TURN REST API：base64(HMAC-SHA1(密鑰, username))，用 openssl 算出的對照值
+  expect(server!.credential).toBe("PMix7hcNbZsDwehFMrYLo39QAIs=");
+  expect(await coturnIce("s3cret", ["stun:only.example"], 60)()).toEqual(NO_ICE);
 });
 
 test("ice 控制訊息：只收 turn: 與 turns:，policy 要認得", () => {
