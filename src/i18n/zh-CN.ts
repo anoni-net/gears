@@ -455,7 +455,7 @@ export const zhCN: Record<MessageKey, string> = {
   "remote.waiting": "等对方打开链接。链接只能用一次，30 分钟内没有人加入就失效。",
   "remote.invite": "有人用远程传送邀请你连接，对方可能要交文件给你，连上之后也能互传文字消息、视频通话。按「加入」之后才会连接。",
   "remote.join": "加入",
-  "remote.confirmNote": "两端的确认码要相同。传的是敏感的文件时，打电话或用通讯软件跟对方核对，不同就不要接收。",
+  "remote.confirmNote": "两端的确认码要相同。请打电话或用你们平常联系的通讯软件，问对方画面上的确认码，不要在这里的文字消息核对。不同就结束连接，也不要接收文件。",
   "remote.reconnecting": "连接中断，正在接回去。接回来之后从断掉的地方接着传。",
   "remote.peerAway": "对方暂时离线，等对方回来，最多等 5 分钟。",
   "remote.pendingInvite": "收到另一个远程传送的链接。目前的传送还在进行，要放弃它、改用新的链接吗？",

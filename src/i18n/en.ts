@@ -454,7 +454,7 @@ export const en: Record<MessageKey, string> = {
   "remote.waiting": "Waiting for the other person to open the link. It works once and expires if nobody joins within 30 minutes.",
   "remote.invite": "Someone is inviting you to connect with remote transfer. They may send you files, and once connected you can also exchange messages or make a video call. Nothing connects until you press Join.",
   "remote.join": "Join",
-  "remote.confirmNote": "The confirmation code must match on both ends. For sensitive files, compare it with the other person by phone or a messaging app, and don't accept if it differs.",
+  "remote.confirmNote": "The confirmation code must match on both ends. Call the other person or use the messaging app you usually use to ask what code they see. Don't check it in the messages here. If it differs, end the connection and don't accept any files.",
   "remote.reconnecting": "The connection dropped. Reconnecting, then the transfer continues where it stopped.",
   "remote.peerAway": "The other person is temporarily offline. Waiting up to 5 minutes for them to come back.",
   "remote.pendingInvite": "You opened another remote transfer link while the current transfer is still going. Drop the current one and use the new link?",
