@@ -157,7 +157,17 @@ test("連上之後兩端可以互傳文字訊息，傳完檔案之後也可以�
     expect(result.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).join(" | ")}`)).toEqual([]);
   }
 
+  // 結束連線先問一次，焦點停在「繼續連線」，按 Enter 不會斷線
   await receiver.getByRole("button", { name: "結束連線" }).click();
+  await expect(receiver.getByTestId("remote-end-ask")).toContainText("要結束連線嗎？");
+  await expect(receiver.getByRole("button", { name: "繼續連線" })).toBeFocused();
+  await receiver.keyboard.press("Enter");
+  await expect(receiver.getByTestId("remote-end-ask")).toHaveCount(0);
+  await receiver.getByTestId("remote-chat-input").fill("還在");
+  await receiver.getByTestId("remote-chat-input").press("Enter");
+  await expect(sender.getByTestId("remote-messages")).toContainText("還在");
+  await receiver.getByRole("button", { name: "結束連線" }).click();
+  await receiver.getByTestId("remote-end-ask").getByRole("button", { name: "結束連線" }).click();
   await expect(receiver.getByTestId("remote-ended")).toHaveText("連線已經結束。");
   await expect(sender.getByTestId("remote-ended")).toHaveText("對方已經結束連線。", { timeout: 20_000 });
   await close();
@@ -220,6 +230,7 @@ test("暫存區沒有檔案也能產生連結，連上之後只互傳文字訊�
   // 連線中只有「結束連線」，結束之後才出現重新開始
   await expect(receiver.getByRole("button", { name: "重新開始" })).toHaveCount(0);
   await receiver.getByRole("button", { name: "結束連線" }).click();
+  await receiver.getByTestId("remote-end-ask").getByRole("button", { name: "結束連線" }).click();
   await expect(sender.getByTestId("remote-ended")).toHaveText("對方已經結束連線。");
   await expect(sender.getByTestId("remote-status")).toHaveCount(0);
   await receiver.getByRole("button", { name: "重新開始" }).click();

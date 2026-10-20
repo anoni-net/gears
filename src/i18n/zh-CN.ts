@@ -468,6 +468,8 @@ export const zhCN: Record<MessageKey, string> = {
   "remote.chat.label": "要传给对方的消息",
   "remote.chat.send": "发送",
   "remote.chat.end": "结束连接",
+  "remote.chat.endAsk": "要结束连接吗？对方会一起断线，进行中的视频通话也会结束，之后要再连接需要重新生成链接。",
+  "remote.chat.keep": "继续连接",
   "remote.chat.endedSelf": "连接已经结束。",
   "remote.chat.endedPeer": "对方已经结束连接。",
   "remote.privacy.title": "经过社区的中继服务器",

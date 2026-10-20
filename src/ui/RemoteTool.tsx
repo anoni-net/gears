@@ -93,6 +93,12 @@ export function RemoteTool(_props: CreateToolProps) {
   const [messages, setMessages] = useState<{ mine: boolean; text: string }[]>([]);
   const [draft, setDraft] = useState("");
   const [ended, setEnded] = useState<"" | "self" | "peer">("");
+  // 「結束連線」跟「送出」在同一列，很容易按錯，按下時先問一次，焦點停在「繼續連線」
+  const [askEnd, setAskEnd] = useState(false);
+  const keepButton = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (askEnd) keepButton.current?.focus();
+  }, [askEnd]);
   // A 版：經過 TURN 的 WebRTC（direct.ts）。檔案要不要改走資料通道見 FILES_OVER_DIRECT
   const signals = useRef<Signals | null>(null);
   const direct = useRef<Direct | null>(null);
@@ -223,6 +229,7 @@ export function RemoteTool(_props: CreateToolProps) {
   };
 
   const hangUp = () => {
+    setAskEnd(false);
     closeCall();
     dropDirect();
     lanes.current = null;
@@ -344,6 +351,7 @@ export function RemoteTool(_props: CreateToolProps) {
     setMessages([]);
     setDraft("");
     setEnded("");
+    setAskEnd(false);
     finished.current = false;
     setConn(null);
     setConfirm("");
@@ -718,16 +726,30 @@ export function RemoteTool(_props: CreateToolProps) {
                 }}
                 data-testid="remote-chat-input"
               />
-              <div class="buttons">
-                <button type="submit" disabled={!draft.trim()}>
-                  {t("remote.chat.send")}
-                </button>
-                {finished.current || phase.kind === "sent" || phase.kind === "received" || phase.kind === "declined" ? (
-                  <button type="button" onClick={hangUp}>
-                    {t("remote.chat.end")}
+              {askEnd ? (
+                <div class="remote-end-ask" role="group" aria-labelledby="remote-end-ask" data-testid="remote-end-ask">
+                  <p id="remote-end-ask">{t("remote.chat.endAsk")}</p>
+                  <div class="buttons">
+                    <button type="button" ref={keepButton} onClick={() => setAskEnd(false)}>
+                      {t("remote.chat.keep")}
+                    </button>
+                    <button type="button" class="danger" onClick={hangUp}>
+                      {t("remote.chat.end")}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div class="buttons">
+                  <button type="submit" disabled={!draft.trim()}>
+                    {t("remote.chat.send")}
                   </button>
-                ) : null}
-              </div>
+                  {finished.current || phase.kind === "sent" || phase.kind === "received" || phase.kind === "declined" ? (
+                    <button type="button" class="danger remote-end" onClick={() => setAskEnd(true)}>
+                      {t("remote.chat.end")}
+                    </button>
+                  ) : null}
+                </div>
+              )}
             </form>
           )}
         </section>
