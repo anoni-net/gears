@@ -1,5 +1,6 @@
 import { createRequire } from "node:module";
 import { createServer } from "node:http";
+import { createHmac } from "node:crypto";
 //#region \0rolldown/runtime.js
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -3962,6 +3963,21 @@ function cloudflareIce(keyId, token, ttl) {
 		}
 	};
 }
+function coturnIce(secret, urls, ttl, now = () => Date.now()) {
+	const turn = urls.filter((u) => /^turns?:/.test(u));
+	return async () => {
+		const username = `${Math.floor(now() / 1e3) + ttl}:gears`;
+		const credential = createHmac("sha1", secret).update(username).digest("base64");
+		return turn.length ? {
+			policy: "relay",
+			servers: [{
+				urls: turn,
+				username,
+				credential
+			}]
+		} : NO_ICE;
+	};
+}
 //#endregion
 //#region server/main.ts
 var env = (name) => process.env[name];
@@ -3981,15 +3997,20 @@ var options = {
 	opensPerClient: number("RELAY_OPENS_PER_CLIENT", DEFAULTS.opensPerClient),
 	opensOnion: number("RELAY_OPENS_ONION", DEFAULTS.opensOnion)
 };
+var ttl = Math.round(DEFAULTS.maxAgeMs / 1e3);
+var turnSecret = env("TURN_SECRET");
+var turnUrls = (env("TURN_URLS") ?? "").split(",").map((u) => u.trim()).filter(Boolean);
 var keyId = env("CF_TURN_KEY_ID");
 var token = env("CF_TURN_KEY_TOKEN");
-if (keyId && token) options.ice = cloudflareIce(keyId, token, Math.round(DEFAULTS.maxAgeMs / 1e3));
+var turn = turnSecret && turnUrls.length ? "coturn" : keyId && token ? "Cloudflare" : "";
+if (turn === "coturn") options.ice = coturnIce(turnSecret, turnUrls, ttl);
+else if (turn === "Cloudflare") options.ice = cloudflareIce(keyId, token, ttl);
 else if (env("RELAY_TEST_ICE") === "all") options.ice = async () => ({
 	policy: "all",
 	servers: []
 });
 var relay = await startRelay(options);
-console.log(`gears relay listening on ${relay.url}${keyId && token ? " (TURN on)" : ""}`);
+console.log(`gears relay listening on ${relay.url}${turn ? ` (TURN: ${turn})` : ""}`);
 for (const signal of ["SIGTERM", "SIGINT"]) process.on(signal, () => {
 	relay.close().then(() => process.exit(0));
 });
