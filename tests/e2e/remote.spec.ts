@@ -93,3 +93,45 @@ test("連結的金鑰不對時說明連結不完整，用過的連結不能再�
   await third.context().close();
   await close();
 });
+
+// 在網址列貼上連結：頁面已經開著時只有 # 後面變了，不會重新載入
+const pasteInAddressBar = (page: Page, link: string) => page.evaluate((url) => (location.href = url), link);
+
+test("上一個連結出錯之後，在同一個分頁貼上新的連結也接得住", async ({ browser, baseURL }) => {
+  const { sender, receiver, close } = await people(browser, baseURL!);
+  await receiver.goto(`./remote/#r=${"A".repeat(22)}&k=${"A".repeat(43)}`);
+  await receiver.getByRole("button", { name: "加入", exact: true }).click();
+  await expect(receiver.getByTestId("remote-status")).toContainText("連結已經用過");
+  const link = await startSender(sender);
+  await pasteInAddressBar(receiver, link);
+  await expect(receiver.getByTestId("remote-status")).toContainText("按「加入」之後才會連線");
+  expect(new URL(receiver.url()).hash).toBe("");
+  await receiver.getByRole("button", { name: "加入", exact: true }).click();
+  await expect(receiver.getByTestId("remote-incoming").locator("li")).toHaveCount(2, { timeout: 20_000 });
+  await close();
+});
+
+test("傳送進行中貼上另一個連結時先問讀者，可以改用新的連結", async ({ browser, baseURL }) => {
+  const { sender, receiver, close } = await people(browser, baseURL!);
+  const first = await startSender(sender);
+  await receiver.goto(first);
+  await receiver.getByRole("button", { name: "加入", exact: true }).click();
+  await expect(receiver.getByTestId("remote-incoming").locator("li")).toHaveCount(2, { timeout: 20_000 });
+
+  const other = await browser.newContext({ baseURL });
+  const second = await startSender(await other.newPage());
+  await pasteInAddressBar(receiver, second);
+  await expect(receiver.getByTestId("remote-pending")).toBeVisible();
+  // 先選繼續，畫面留在原本的清單
+  await receiver.getByRole("button", { name: "繼續目前的傳送" }).click();
+  await expect(receiver.getByTestId("remote-pending")).toHaveCount(0);
+  await expect(receiver.getByTestId("remote-incoming")).toBeVisible();
+  // 再貼一次，改用新的連結
+  await pasteInAddressBar(receiver, second);
+  await receiver.getByRole("button", { name: "改用新的連結" }).click();
+  await expect(receiver.getByTestId("remote-status")).toContainText("按「加入」之後才會連線");
+  // 原本的送出端收到對方離開
+  await expect(sender.getByTestId("remote-status")).toContainText("對方已經離開", { timeout: 20_000 });
+  await other.close();
+  await close();
+});

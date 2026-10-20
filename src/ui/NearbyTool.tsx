@@ -137,8 +137,11 @@ export function NearbyTool(_props: CreateToolProps) {
     const hash = location.hash.slice(1);
     if (!hash || !rtcAvailable()) return;
     history.replaceState(history.state, "", location.pathname + location.search);
-    if (phase.kind !== "idle" && phase.kind !== "scanning") return; // 正在配對或傳送時不打斷
+    // 正在配對或傳送時不打斷。上一次傳完、拒絕或出錯之後要接得住新的代碼
+    if (!["idle", "scanning", "sent", "received", "declined", "error"].includes(phase.kind)) return;
     close(pending.current);
+    setConfirm("");
+    setCode("");
     setMode("receive");
     void receive(hash);
   };
