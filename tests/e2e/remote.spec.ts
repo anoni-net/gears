@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import type { Browser, Page } from "@playwright/test";
+import { FILES_OVER_DIRECT } from "../../src/tools/remote/direct.ts";
 import { expect, test } from "./guard.ts";
 
 // 遠端傳送：送出端與接收端各開一個 context（不同的人），經過 playwright.config.ts 起的轉送服務，
@@ -54,9 +55,10 @@ test("打開分享連結、按加入，兩端的確認碼相同，接收之後�
   expect(code).toMatch(/^\d{3} \d{3}$/);
   await expect(sender.getByTestId("remote-confirm").locator("strong")).toHaveText(code);
   await expect(sender.getByTestId("remote-status")).toContainText("等對方決定");
-  // 測試的轉送服務允許區網的位址（RELAY_TEST_ICE=all），Chromium 打得開資料通道。
-  // 其他核心在 CI 上可能蒐集不到候選，逾時之後走轉送服務，一樣要傳得完
-  if (browser.browserType().name() === "chromium") await expect(receiver.getByTestId("remote-via")).toHaveAttribute("data-via", "direct");
+  // 檔案預設走轉送服務。改走資料通道時，測試的轉送服務允許區網的位址（RELAY_TEST_ICE=all），
+  // Chromium 打得開資料通道，其他核心在 CI 上可能蒐集不到候選，逾時之後走轉送服務，一樣要傳得完
+  if (!FILES_OVER_DIRECT) await expect(receiver.getByTestId("remote-via")).toHaveAttribute("data-via", "relay");
+  else if (browser.browserType().name() === "chromium") await expect(receiver.getByTestId("remote-via")).toHaveAttribute("data-via", "direct");
 
   await receiver.getByRole("button", { name: "接收", exact: true }).click();
   await expect(receiver.getByTestId("remote-status")).toHaveText("收到 2 個檔案，SHA-256 都對得上，已經放進暫存區。", { timeout: 30_000 });
@@ -179,6 +181,7 @@ test("連上之後兩端可以互傳文字訊息，傳完檔案之後也可以�
 });
 
 test("資料通道傳到一半斷掉，改用轉送服務重傳，接收端不必再按一次接收", async ({ browser, baseURL }) => {
+  test.skip(!FILES_OVER_DIRECT, "檔案預設走轉送服務");
   test.skip(browser.browserType().name() !== "chromium", "資料通道只在 Chromium 一定打得開");
   const { sender, receiver, close } = await people(browser, baseURL!);
   // 記下送出端建立的 RTCPeerConnection，傳到一半把它關掉
