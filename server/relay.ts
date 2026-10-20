@@ -10,7 +10,7 @@
 import { type IncomingMessage, type Server, createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import { type RawData, type WebSocket, WebSocketServer } from "ws";
-import { MAX_FRAME, type RelayErrorCode, type ServerControl, parseClientControl, randomId } from "../src/tools/remote/relay.ts";
+import { type Ice, MAX_FRAME, NO_ICE, type RelayErrorCode, type ServerControl, parseClientControl, randomId } from "../src/tools/remote/relay.ts";
 
 export interface RelayOptions {
   host: string;
@@ -25,6 +25,8 @@ export interface RelayOptions {
   openWindowMs: number;
   opensPerClient: number; // 同一個鍵在 openWindowMs 內最多開幾個房間
   opensOnion: number; // onion 的讀者共用一個鍵，上限另外設
+  // 配對之後發給兩端的 TURN 伺服器與帳密（server/turn.ts）。沒有設定時是 off，兩端只用這裡轉送
+  ice: () => Promise<Ice>;
 }
 
 export const DEFAULTS: RelayOptions = {
@@ -41,6 +43,7 @@ export const DEFAULTS: RelayOptions = {
   openWindowMs: 10 * 60_000,
   opensPerClient: 20,
   opensOnion: 300,
+  ice: async () => NO_ICE,
 };
 
 // 對方的緩衝超過這個量就暫停讀送出端，降下來再繼續
@@ -50,6 +53,8 @@ const LOW_WATER = 1024 * 1024;
 interface Side {
   ws: WebSocket | null;
   token: string;
+  // 這一端的頁面認得 ice 控制訊息（舊版的頁面不認得，不發）
+  ice?: boolean;
   away?: NodeJS.Timeout;
 }
 
@@ -58,6 +63,7 @@ interface Room {
   sides: [Side, Side | null];
   bytes: number;
   epoch: number;
+  ice?: Ice;
   timer: NodeJS.Timeout;
   closed: boolean;
 }
@@ -144,7 +150,7 @@ export async function startRelay(overrides: Partial<RelayOptions> = {}): Promise
       if (rooms.size >= o.maxRooms) return refuse(ws, "busy");
       const room: Room = {
         id: randomId(),
-        sides: [{ ws: null, token: randomId() }, null],
+        sides: [{ ws: null, token: randomId(), ice: m.ice }, null],
         bytes: 0,
         epoch: 0,
         timer: setTimeout(() => closeRoom(room, { t: "gone" }), o.waitMs),
@@ -158,18 +164,25 @@ export async function startRelay(overrides: Partial<RelayOptions> = {}): Promise
     if (!room) return refuse(ws, "no-room");
     if (m.t === "join") {
       if (room.sides[1]) return refuse(ws, "room-full");
-      room.sides[1] = { ws: null, token: randomId() };
+      room.sides[1] = { ws: null, token: randomId(), ice: m.ice };
       clearTimeout(room.timer);
       room.timer = setTimeout(() => closeRoom(room, { t: "gone" }), o.maxAgeMs);
       seat(ws, room, 1);
       control(ws, { t: "paired", token: room.sides[1].token });
       control(room.sides[0].ws, { t: "paired" });
       if (!room.sides[0].ws) control(ws, { t: "away" });
+      // TURN 的帳密兩端共用一組，效期跟房間配對之後的上限相同
+      void o.ice().then((ice) => {
+        if (room.closed) return;
+        room.ice = ice;
+        for (const side of room.sides) if (side?.ice) control(side.ws, { t: "ice", ...ice });
+      });
       return;
     }
     const index = room.sides.findIndex((s) => s?.token === m.token);
     if (index < 0) return refuse(ws, "no-room");
     const side = room.sides[index]!;
+    side.ice = m.ice;
     const old = side.ws;
     if (old) {
       // 伺服器還沒發現舊的連線斷了，讀者已經接回來
@@ -180,6 +193,8 @@ export async function startRelay(overrides: Partial<RelayOptions> = {}): Promise
     const peer = room.sides[index === 0 ? 1 : 0];
     const epoch = ++room.epoch;
     control(ws, { t: "resumed", paired: !!peer, epoch });
+    // 配對時不在的一端接回來時補上 TURN 的帳密
+    if (room.ice && side.ice) control(ws, { t: "ice", ...room.ice });
     // 對方一律收到 back，就算它沒發現這一端斷過：接回來的一端會重新握手，對方也要跟著換
     if (peer?.ws) control(peer.ws, { t: "back", epoch });
     else if (peer) control(ws, { t: "away" });

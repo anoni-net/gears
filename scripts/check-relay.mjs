@@ -33,11 +33,14 @@ function connect(hello) {
   return { ws, next: () => (queue.length ? Promise.resolve(queue.shift()) : new Promise((r) => waiting.push(r))) };
 }
 
-const a = connect({ t: "open", v: 1 });
+const a = connect({ t: "open", v: 1, ice: true });
 const room = JSON.parse(await a.next());
 if (room.t !== "room") fail(`開房失敗：${JSON.stringify(room)}`);
-const b = connect({ t: "join", v: 1, room: room.room });
+const b = connect({ t: "join", v: 1, room: room.room, ice: true });
 if (JSON.parse(await b.next()).t !== "paired" || JSON.parse(await a.next()).t !== "paired") fail("沒有配對");
+// 配對之後伺服器另外發一則 ice（TURN 的設定，沒有設定時是 off），之後才是轉送的內容
+const ice = JSON.parse(await b.next());
+if (ice.t !== "ice") fail(`沒有收到 ice：${JSON.stringify(ice)}`);
 a.ws.send(Uint8Array.from([1, 4, 2]));
 const got = new Uint8Array(await b.next());
 if (got.join() !== "1,4,2") fail(`轉送的內容不對：${got.join()}`);

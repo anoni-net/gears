@@ -3,13 +3,14 @@
 // 連線描述的編碼在 src/tools/nearby/codec.ts，傳輸的流程在 transfer.ts。這裡負責：
 // - 送出端建立發起描述，接收端回應，送出端套上回應，等資料通道打開
 // - 不設 STUN 與 TURN（iceServers 是空的），候選只有區網裡的位址，連線不會走到網際網路
-// - 把資料通道包成 Channel（channel.ts），bufferedAmount 超過門檻就等
+// - 把資料通道包成 Channel（rtc-channel.ts）
 //
 // Tor Browser 把 WebRTC 整個關掉（RTCPeerConnection 不存在），呼叫的人先用 rtcAvailable() 檢查。
 
-import { type Channel, Inbox } from "../tools/nearby/channel.ts";
+import type { Channel } from "../tools/nearby/channel.ts";
 import { CodecError, type Description, buildSdp, decode, encode, fromText, offerTag, parseSdp, toText } from "../tools/nearby/codec.ts";
 import { confirmCode } from "../tools/nearby/protocol.ts";
+import { rtcChannel } from "../tools/nearby/rtc-channel.ts";
 
 export const rtcAvailable = () => typeof RTCPeerConnection === "function";
 
@@ -18,9 +19,6 @@ export const rtcAvailable = () => typeof RTCPeerConnection === "function";
 export const CONNECT_TIMEOUT = 15_000;
 // 蒐集候選最多等這麼久。區網的 host 候選通常幾十毫秒就到齊
 const GATHER_TIMEOUT = 3_000;
-// 送出端的緩衝超過這個量就停下來等
-const HIGH_WATER = 4 * 1024 * 1024;
-const LOW_WATER = 1024 * 1024;
 
 // 找不到任何區網裡連得到的位址（沒有連上 Wi-Fi，或只剩 loopback 與 Tailscale 這類被濾掉的位址）
 export class NoNetworkError extends Error {
@@ -72,34 +70,6 @@ interface Link {
 function link(dc: RTCDataChannel): Link {
   dc.binaryType = "arraybuffer";
   return { dc, channel: rtcChannel(dc) };
-}
-
-function rtcChannel(dc: RTCDataChannel): Channel {
-  const inbox = new Inbox();
-  dc.addEventListener("message", (e) => inbox.push(e.data));
-  dc.addEventListener("close", () => inbox.end());
-  dc.addEventListener("error", () => inbox.end());
-  return {
-    send: (data) => (typeof data === "string" ? dc.send(data) : dc.send(data)),
-    drained: () => drained(dc),
-    next: () => inbox.next(),
-    close: () => dc.close(),
-  };
-}
-
-function drained(dc: RTCDataChannel): Promise<void> {
-  if (dc.bufferedAmount <= HIGH_WATER) return Promise.resolve();
-  return new Promise((resolve, reject) => {
-    dc.bufferedAmountLowThreshold = LOW_WATER;
-    const done = () => {
-      dc.removeEventListener("bufferedamountlow", done);
-      dc.removeEventListener("close", gone);
-      resolve();
-    };
-    const gone = () => reject(new Error("closed"));
-    dc.addEventListener("bufferedamountlow", done);
-    dc.addEventListener("close", gone);
-  });
 }
 
 export interface Pending {

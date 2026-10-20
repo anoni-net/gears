@@ -14,6 +14,10 @@
 // 暫時離開，對方收到 away，在 GRACE 之內用房間代碼與自己的 token 接回來，對方收到 back（就算它沒收到 away）。伺服器不替不在的那一端
 // 留著訊息，對方不在時送的會被丟掉，要靠上層的續傳補回來（anoni-net/gears#104）。
 //
+// 配對之後伺服器另外送一則 ice：經過 TURN 建立 WebRTC 資料通道用的伺服器與帳密（A 版，direct.ts）。
+// policy 是 relay 時只能經過 TURN，兩端看不到彼此的 IP。沒有設定 TURN 時是 off。all 只給測試用，
+// 允許區網的位址，在沒有 TURN 的機器上也能建立資料通道。
+//
 // epoch 是這個房間第幾段連線，每次有一端接回來就加一，兩端收到同一個數字。接回來之後兩端重新握手
 // （secure.ts），握手時用它認出上一段連線還在路上的訊息。
 
@@ -33,10 +37,11 @@ export function randomId(): string {
   return btoa(text).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
+// ice：這一端認得伺服器發的 ice 控制訊息。舊版的頁面不帶，伺服器就不發，免得當成不合格的訊息斷線
 export type ClientControl =
-  | { t: "open"; v: number }
-  | { t: "join"; v: number; room: string }
-  | { t: "resume"; v: number; room: string; token: string };
+  | { t: "open"; v: number; ice?: boolean }
+  | { t: "join"; v: number; room: string; ice?: boolean }
+  | { t: "resume"; v: number; room: string; token: string; ice?: boolean };
 
 export type RelayErrorCode =
   | "version" // 協定版本對不上，請讀者重新整理
@@ -47,6 +52,19 @@ export type RelayErrorCode =
   | "rate-limited" // 開房太頻繁
   | "quota"; // 這個房間的流量用完了
 
+export interface IceServer {
+  urls: string[];
+  username?: string;
+  credential?: string;
+}
+
+export interface Ice {
+  policy: "relay" | "all" | "off";
+  servers: IceServer[];
+}
+
+export const NO_ICE: Ice = { policy: "off", servers: [] };
+
 export type ServerControl =
   | { t: "room"; room: string; token: string }
   | { t: "paired"; token?: string }
@@ -54,7 +72,25 @@ export type ServerControl =
   | { t: "away" }
   | { t: "back"; epoch: number }
   | { t: "gone" }
+  | ({ t: "ice" } & Ice)
   | { t: "error"; code: RelayErrorCode };
+
+// TURN 的網址只收 turn: 與 turns:，帳密是短字串
+function parseIce(m: Record<string, unknown>): Ice {
+  if (m.policy !== "relay" && m.policy !== "all" && m.policy !== "off") throw new Error("bad-message");
+  if (!Array.isArray(m.servers) || m.servers.length > 4) throw new Error("bad-message");
+  const short = (v: unknown) => v === undefined || (typeof v === "string" && v.length <= 512);
+  const servers = m.servers.map((s: Record<string, unknown>) => {
+    if (!s || !Array.isArray(s.urls) || !s.urls.length || s.urls.length > 8) throw new Error("bad-message");
+    if (!s.urls.every((u: unknown) => typeof u === "string" && /^turns?:[^\s]{1,200}$/.test(u))) throw new Error("bad-message");
+    if (!short(s.username) || !short(s.credential)) throw new Error("bad-message");
+    const out: IceServer = { urls: s.urls as string[] };
+    if (s.username !== undefined) out.username = s.username as string;
+    if (s.credential !== undefined) out.credential = s.credential as string;
+    return out;
+  });
+  return { policy: m.policy, servers };
+}
 
 const isEpoch = (v: unknown): v is number => Number.isSafeInteger(v) && (v as number) > 0;
 
@@ -76,11 +112,12 @@ export function parseClientControl(text: string): ClientControl {
   const m = parseJson(text);
   if (m.t !== "open" && m.t !== "join" && m.t !== "resume") throw new Error("bad-message");
   if (m.v !== RELAY_VERSION) throw new Error("version");
-  if (m.t === "open") return { t: "open", v: RELAY_VERSION };
+  const ice = m.ice === true ? { ice: true } : {};
+  if (m.t === "open") return { t: "open", v: RELAY_VERSION, ...ice };
   if (!isId(m.room)) throw new Error("bad-message");
-  if (m.t === "join") return { t: "join", v: RELAY_VERSION, room: m.room };
+  if (m.t === "join") return { t: "join", v: RELAY_VERSION, room: m.room, ...ice };
   if (!isId(m.token)) throw new Error("bad-message");
-  return { t: "resume", v: RELAY_VERSION, room: m.room, token: m.token };
+  return { t: "resume", v: RELAY_VERSION, room: m.room, token: m.token, ...ice };
 }
 
 // 瀏覽器讀伺服器送來的控制訊息
@@ -102,6 +139,8 @@ export function parseServerControl(text: string): ServerControl {
     case "away":
     case "gone":
       return { t: m.t };
+    case "ice":
+      return { t: "ice", ...parseIce(m) };
     case "error":
       if (!ERRORS.includes(m.code as RelayErrorCode)) throw new Error("bad-message");
       return { t: "error", code: m.code as RelayErrorCode };
