@@ -40,8 +40,15 @@ test("一端邀請、另一端接聽，兩端都看得到對方的畫面，關�
   await expect(sender.getByTestId("remote-call-cam")).toHaveText("關閉鏡頭");
   await sender.getByTestId("remote-call-cam").click();
   await expect(sender.getByTestId("remote-call-cam")).toHaveText("開啟鏡頭");
+  // 關掉的按鈕整顆紅底，自己的畫面上標出關掉了什麼
+  await expect(sender.getByTestId("remote-call-cam")).toHaveClass("off");
+  await expect(sender.getByTestId("remote-call-off")).toHaveText("鏡頭已關閉");
   await sender.getByTestId("remote-call-mic").click();
   await expect(sender.getByTestId("remote-call-mic")).toHaveText("開啟麥克風");
+  await expect(sender.getByTestId("remote-call-off").locator("li")).toHaveText(["麥克風已關閉", "鏡頭已關閉"]);
+  await sender.getByTestId("remote-call-cam").click();
+  await expect(sender.getByTestId("remote-call-cam")).not.toHaveClass("off");
+  await expect(sender.getByTestId("remote-call-off")).toHaveText("麥克風已關閉");
   // 通話中文字訊息照樣送得到
   await receiver.getByTestId("remote-chat-input").fill("聽得到嗎");
   await receiver.getByTestId("remote-chat-input").press("Enter");

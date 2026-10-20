@@ -500,6 +500,8 @@ export const en: Record<MessageKey, string> = {
   "remote.call.micOn": "Unmute microphone",
   "remote.call.camOff": "Turn off camera",
   "remote.call.camOn": "Turn on camera",
+  "remote.call.micIsOff": "Microphone off",
+  "remote.call.camIsOff": "Camera off",
   "remote.call.local": "Your video",
   "remote.call.remote": "The other person's video",
   "remote.call.end.self": "The call has ended.",

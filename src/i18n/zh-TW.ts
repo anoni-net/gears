@@ -509,6 +509,8 @@ export const zhTW = {
   "remote.call.micOn": "開啟麥克風",
   "remote.call.camOff": "關閉鏡頭",
   "remote.call.camOn": "開啟鏡頭",
+  "remote.call.micIsOff": "麥克風已關閉",
+  "remote.call.camIsOff": "鏡頭已關閉",
   "remote.call.local": "你的畫面",
   "remote.call.remote": "對方的畫面",
   "remote.call.end.self": "通話已經結束。",

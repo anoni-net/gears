@@ -15,6 +15,7 @@ import { SecureError, newLinkKey } from "../tools/remote/secure.ts";
 import { RemoteSession, type SessionState } from "../tools/remote/session.ts";
 import { track, trackFail } from "./analytics.ts";
 import { useTray } from "./hooks.ts";
+import { Icon } from "./Icon.tsx";
 import { size, useOutgoing, useWakeLock } from "./transfer-ui.tsx";
 import type { CreateToolProps } from "./types.ts";
 import { useWorking } from "./working.ts";
@@ -413,6 +414,8 @@ export function RemoteTool(_props: CreateToolProps) {
           {callButtons([t("remote.call.accept"), () => void d.accept(), "remote-call-accept"], [t("remote.call.decline"), () => d.decline(), "remote-call-decline"])}
         </>
       );
+    // 找不到相機時只用麥克風通話，不顯示鏡頭的開關
+    const hasCam = !!call.local?.getVideoTracks().length;
     return (
       <>
         <p role="status" data-testid="remote-call-status" data-state={call.state}>
@@ -420,15 +423,49 @@ export function RemoteTool(_props: CreateToolProps) {
         </p>
         <div class="remote-videos">
           {call.remote ? <CallVideo stream={call.remote} label={t("remote.call.remote")} testid="remote-video-peer" /> : null}
-          {call.local ? <CallVideo stream={call.local} label={t("remote.call.local")} testid="remote-video-self" muted /> : null}
+          {call.local ? (
+            <div class="self">
+              <CallVideo stream={call.local} label={t("remote.call.local")} testid="remote-video-self" muted />
+              {!call.mic || (hasCam && !call.cam) ? (
+                <ul class="remote-call-off" data-testid="remote-call-off">
+                  {call.mic ? null : (
+                    <li>
+                      <Icon name="microphone-off" />
+                      {t("remote.call.micIsOff")}
+                    </li>
+                  )}
+                  {hasCam && !call.cam ? (
+                    <li>
+                      <Icon name="video-off-outline" />
+                      {t("remote.call.camIsOff")}
+                    </li>
+                  ) : null}
+                </ul>
+              ) : null}
+            </div>
+          ) : null}
         </div>
-        {call.state === "live"
-          ? callButtons(
-              [t(call.mic ? "remote.call.micOff" : "remote.call.micOn"), () => d.toggle("audio"), "remote-call-mic"],
-              [t(call.cam ? "remote.call.camOff" : "remote.call.camOn"), () => d.toggle("video"), "remote-call-cam"],
-              [t("remote.call.hangUp"), () => d.hangUp(), "remote-call-hangup"],
-            )
-          : callButtons([t(call.state === "ringing" ? "remote.call.cancel" : "remote.call.hangUp"), () => d.hangUp(), "remote-call-hangup"])}
+        {call.state === "live" ? (
+          <div class="buttons remote-call-controls">
+            {/* 關掉的時候換成有斜線的圖示、整顆變成紅底，一眼看得出目前是關閉的 */}
+            <button type="button" class={call.mic ? "" : "off"} onClick={() => d.toggle("audio")} data-testid="remote-call-mic">
+              <Icon name={call.mic ? "microphone-outline" : "microphone-off"} />
+              {t(call.mic ? "remote.call.micOff" : "remote.call.micOn")}
+            </button>
+            {hasCam ? (
+              <button type="button" class={call.cam ? "" : "off"} onClick={() => d.toggle("video")} data-testid="remote-call-cam">
+                <Icon name={call.cam ? "video-outline" : "video-off-outline"} />
+                {t(call.cam ? "remote.call.camOff" : "remote.call.camOn")}
+              </button>
+            ) : null}
+            <button type="button" class="hang-up" onClick={() => d.hangUp()} data-testid="remote-call-hangup">
+              <Icon name="phone-hangup-outline" />
+              {t("remote.call.hangUp")}
+            </button>
+          </div>
+        ) : (
+          callButtons([t(call.state === "ringing" ? "remote.call.cancel" : "remote.call.hangUp"), () => d.hangUp(), "remote-call-hangup"])
+        )}
       </>
     );
   };
