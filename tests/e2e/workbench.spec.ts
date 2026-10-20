@@ -78,7 +78,8 @@ test("桌面的圖示標籤：卡片上的圖示帶著補充說明，最下方�
   await expect(page.getByRole("button", { name: /^遮蔽 本機模型：自動尋找人臉與個資時用到/ })).toBeVisible();
   await expect(page.getByRole("button", { name: /^QR code 與條碼讀取 相機：用相機掃描 QR code 與條碼/ })).toBeVisible();
   await expect(page.getByRole("img", { name: "相機：用相機掃描對方螢幕上的 QR code" })).toHaveAttribute("title", "相機：用相機掃描對方螢幕上的 QR code");
-  await expect(page.locator(".tool-rows .tool-tag")).toHaveCount(4);
+  await expect(page.getByRole("img", { name: "相機：視訊通話時用相機與麥克風" })).toBeVisible();
+  await expect(page.locator(".tool-rows .tool-tag")).toHaveCount(5);
 
   const legend = page.getByTestId("tag-legend");
   await expect(legend.locator("dt")).toHaveText(["本機模型", "相機"]);

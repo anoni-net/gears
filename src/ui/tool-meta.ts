@@ -28,7 +28,7 @@ export const TOOL_META: Record<string, { icon: IconName; cat: Category; tags?: T
   "writing-style": { icon: "text-box-edit-outline", cat: "privacy" },
   "video-frames": { icon: "movie-search-outline", cat: "secure" },
   nearby: { icon: "cellphone-link", cat: "secure", tags: ["camera"] },
-  remote: { icon: "send-lock-outline", cat: "secure" },
+  remote: { icon: "send-lock-outline", cat: "secure", tags: ["camera"] },
 };
 
 // 桌面的工具依讀者的目的分組（2026-10-16 起）。原本依操作方式分成「處理檔案」與「從空白開始」，

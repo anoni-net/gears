@@ -11,7 +11,7 @@
 
 import type { Channel } from "../nearby/channel.ts";
 import { rtcChannel } from "../nearby/rtc-channel.ts";
-import type { Ice } from "./relay.ts";
+import { type Ice, isId } from "./relay.ts";
 
 export const DIRECT_TIMEOUT = 10_000;
 
@@ -25,7 +25,11 @@ export type Signal =
   | { t: "offer" | "answer"; sdp: string }
   | { t: "cand"; c: RTCIceCandidateInit | null }
   | { t: "no" }
-  | { t: "via"; rtc: boolean; retry?: boolean };
+  | { t: "via"; rtc: boolean; retry?: boolean }
+  // 視訊通話（call.ts）：n 是這一通的編號，SDP 與候選跟資料通道的分開
+  | { t: "ring" | "pick" | "bye"; n: string; why?: "unsupported" }
+  | { t: "coffer" | "canswer"; n: string; sdp: string }
+  | { t: "ccand"; n: string; c: RTCIceCandidateInit | null };
 
 // 對方送來的信令先檢查格式，不合的丟掉
 export function parseSignal(text: string): Signal | null {
@@ -36,22 +40,27 @@ export function parseSignal(text: string): Signal | null {
     return null;
   }
   if (!m || typeof m !== "object") return null;
+  const sdp = (v: unknown) => (typeof v === "string" && v.length < 20_000 ? v : null);
+  const n = typeof m.n === "string" && isId(m.n) ? m.n : null;
   switch (m.t) {
     case "offer":
     case "answer":
-      return typeof m.sdp === "string" && m.sdp.length < 20_000 ? { t: m.t, sdp: m.sdp } : null;
+      return sdp(m.sdp) ? { t: m.t, sdp: m.sdp as string } : null;
     case "cand": {
-      if (m.c === null) return { t: "cand", c: null };
-      const c = m.c as Record<string, unknown>;
-      if (!c || typeof c.candidate !== "string" || c.candidate.length > 1000) return null;
-      return {
-        t: "cand",
-        c: {
-          candidate: c.candidate,
-          sdpMid: typeof c.sdpMid === "string" ? c.sdpMid : null,
-          sdpMLineIndex: typeof c.sdpMLineIndex === "number" ? c.sdpMLineIndex : null,
-        },
-      };
+      const c = candidate(m.c);
+      return c === undefined ? null : { t: "cand", c };
+    }
+    case "ring":
+    case "pick":
+      return n ? { t: m.t, n } : null;
+    case "bye":
+      return n ? (m.why === "unsupported" ? { t: "bye", n, why: "unsupported" } : { t: "bye", n }) : null;
+    case "coffer":
+    case "canswer":
+      return n && sdp(m.sdp) ? { t: m.t, n, sdp: m.sdp as string } : null;
+    case "ccand": {
+      const c = candidate(m.c);
+      return n && c !== undefined ? { t: "ccand", n, c } : null;
     }
     case "no":
       return { t: "no" };
@@ -62,15 +71,29 @@ export function parseSignal(text: string): Signal | null {
   }
 }
 
+// 候選：null 代表蒐集完了，格式不對是 undefined
+function candidate(v: unknown): RTCIceCandidateInit | null | undefined {
+  if (v === null) return null;
+  const c = v as Record<string, unknown>;
+  if (!c || typeof c !== "object" || typeof c.candidate !== "string" || c.candidate.length > 1000) return undefined;
+  return {
+    candidate: c.candidate,
+    sdpMid: typeof c.sdpMid === "string" ? c.sdpMid : null,
+    sdpMLineIndex: typeof c.sdpMLineIndex === "number" ? c.sdpMLineIndex : null,
+  };
+}
+
 interface Waiter {
   match: (s: Signal) => boolean;
   resolve: (s: Signal | null) => void;
 }
 
-// 信令那一條的收發。候選另外交給 onCandidate，其他的依序交給 next() 等著的人，沒人等的先排著
+// 信令那一條的收發。候選另外交給 onCandidate，listen() 的人先挑，其他的依序交給 next() 等著的人，
+// 沒人等的先排著
 export class Signals {
   private queue: Signal[] = [];
   private waiters: Waiter[] = [];
+  private listeners: ((s: Signal | null) => boolean)[] = [];
   private candidates: (RTCIceCandidateInit | null)[] = [];
   private onCand: ((c: RTCIceCandidateInit | null) => void) | null = null;
   private ended = false;
@@ -86,6 +109,7 @@ export class Signals {
       } catch {
         this.ended = true;
         for (const w of this.waiters.splice(0)) w.resolve(null);
+        for (const fn of this.listeners.splice(0)) fn(null);
       }
     })();
   }
@@ -101,6 +125,20 @@ export class Signals {
   onCandidate(fn: (c: RTCIceCandidateInit | null) => void) {
     this.onCand = fn;
     for (const c of this.candidates.splice(0)) fn(c);
+  }
+
+  // 一直收下去，fn 回傳 true 的就是它收走了。連線結束時收到 null。已經排著的先交給它
+  listen(fn: (s: Signal | null) => boolean): () => void {
+    if (this.ended) {
+      fn(null);
+      return () => {};
+    }
+    this.listeners.push(fn);
+    this.queue = this.queue.filter((s) => !fn(s));
+    return () => {
+      const at = this.listeners.indexOf(fn);
+      if (at >= 0) this.listeners.splice(at, 1);
+    };
   }
 
   // 等下一則符合的信令，逾時或連線結束時是 null
@@ -126,6 +164,7 @@ export class Signals {
       else this.candidates.push(s.c);
       return;
     }
+    if (this.listeners.some((fn) => fn(s))) return;
     const at = this.waiters.findIndex((w) => w.match(s));
     if (at >= 0) this.waiters.splice(at, 1)[0]!.resolve(s);
     else this.queue.push(s);

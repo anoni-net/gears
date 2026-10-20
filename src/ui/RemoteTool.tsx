@@ -5,6 +5,7 @@ import { IS_ONION } from "../site.ts";
 import { tray } from "../state.ts";
 import { type FileMeta, MAX_TOTAL } from "../tools/nearby/protocol.ts";
 import { type Incoming, TooLargeError, receiveFiles, sendFiles } from "../tools/nearby/transfer.ts";
+import { type CallEnd, CallDesk, type CallView } from "../tools/remote/call.ts";
 import { type Direct, FILES_OVER_DIRECT, Signals, connectDirect } from "../tools/remote/direct.ts";
 import { type Invite, inviteHash, onionLink, parseInvite } from "../tools/remote/invite.ts";
 import { type Lanes, MAX_MESSAGE, split } from "../tools/remote/mux.ts";
@@ -95,12 +96,17 @@ export function RemoteTool(_props: CreateToolProps) {
   const signals = useRef<Signals | null>(null);
   const direct = useRef<Direct | null>(null);
   const [via, setVia] = useState<"" | "direct" | "relay">("");
+  // 視訊通話（call.ts）：伺服器發了 TURN 之後才知道能不能打
+  const desk = useRef<CallDesk | null>(null);
+  const [canCall, setCanCall] = useState<boolean | null>(null);
+  const [call, setCall] = useState<CallView | null>(null);
+  const [callEnd, setCallEnd] = useState<CallEnd | null>(null);
 
   const busy = phase.kind === "creating" || phase.kind === "connecting" || phase.kind === "awaiting" || phase.kind === "transfer";
   const open = busy || phase.kind === "sharing" || phase.kind === "review";
   const chatting = !!confirm && !ended && phase.kind !== "error";
   useWorking(open || chatting);
-  useWakeLock(open);
+  useWakeLock(open || !!call);
 
   useEffect(() => {
     // 手機切回前景時馬上接回去，不等下一次重試
@@ -111,6 +117,7 @@ export function RemoteTool(_props: CreateToolProps) {
     return () => {
       document.removeEventListener("visibilitychange", onVisible);
       direct.current?.close();
+      desk.current?.close();
       session.current?.close();
     };
   }, []);
@@ -143,15 +150,26 @@ export function RemoteTool(_props: CreateToolProps) {
     setPhase({ kind: "error", reason });
   };
 
-  // 連線分成檔案與文字訊息兩條（mux.ts），回傳檔案那一條給傳輸的流程用
-  const watch = (s: RemoteSession) => {
+  // 連線分成檔案、文字訊息與信令三條（mux.ts），回傳檔案那一條給傳輸的流程用
+  const watch = (s: RemoteSession, link: RelayLink) => {
     session.current = s;
     finished.current = false;
     s.onState(setConn);
     void s.confirm.then(setConfirm, () => {});
     const l = split(s);
     lanes.current = l;
-    signals.current = new Signals(l.signals);
+    const sig = new Signals(l.signals);
+    signals.current = sig;
+    void iceOf(link).then((ice) => {
+      if (lanes.current !== l) return;
+      const d = new CallDesk(sig, ice);
+      desk.current = d;
+      setCanCall(d.supported);
+      d.onChange((view, end) => {
+        setCall(view);
+        setCallEnd(end ?? null);
+      });
+    });
     void (async () => {
       try {
         for (;;) {
@@ -193,7 +211,16 @@ export function RemoteTool(_props: CreateToolProps) {
   const iceOf = (link: RelayLink): Promise<Ice> =>
     IS_ONION ? Promise.resolve(NO_ICE) : Promise.race([link.ice, new Promise<Ice>((r) => setTimeout(() => r(NO_ICE), 5000))]);
 
+  const closeCall = () => {
+    desk.current?.close();
+    desk.current = null;
+    setCall(null);
+    setCallEnd(null);
+    setCanCall(null);
+  };
+
   const hangUp = () => {
+    closeCall();
     dropDirect();
     lanes.current = null;
     session.current?.close();
@@ -209,7 +236,7 @@ export function RemoteTool(_props: CreateToolProps) {
       const link = await RelayLink.open(relayUrl());
       const invite = { room: link.room, key: newLinkKey() };
       const s = new RemoteSession(link, invite.key, "opener");
-      const files = watch(s);
+      const files = watch(s, link);
       const route = routeUrl("remote");
       setPhase({
         kind: "sharing",
@@ -252,7 +279,7 @@ export function RemoteTool(_props: CreateToolProps) {
     try {
       const link = await RelayLink.join(relayUrl(), invite.room);
       const s = new RemoteSession(link, invite.key, "joiner");
-      const files = watch(s);
+      const files = watch(s, link);
       await s.confirm;
       const d = FILES_OVER_DIRECT ? await connectDirect(signals.current!, await iceOf(link), "joiner") : null;
       const v = await signals.current!.next((m) => m.t === "via", 30_000);
@@ -293,6 +320,7 @@ export function RemoteTool(_props: CreateToolProps) {
   };
 
   const reset = () => {
+    closeCall();
     dropDirect();
     signals.current = null;
     setVia("");
@@ -327,6 +355,69 @@ export function RemoteTool(_props: CreateToolProps) {
       () => {},
     );
 
+  // 視訊通話。onion 版、瀏覽器不支援或伺服器沒有發 TURN 時只說明不能打
+  const callButtons = (...items: [string, () => void, string?][]) => (
+    <div class="buttons">
+      {items.map(([label, run, testid]) => (
+        <button type="button" key={label} onClick={run} data-testid={testid}>
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+  const callBody = () => {
+    const d = desk.current;
+    if (canCall === null || !d) return null;
+    if (!canCall) return <p class="hint">{t(IS_ONION ? "remote.call.onion" : "remote.call.unsupported")}</p>;
+    if (!call)
+      return (
+        <>
+          <p class="hint">{t("remote.call.note")}</p>
+          {callEnd ? (
+            <p role="status" data-testid="remote-call-ended">
+              {t(`remote.call.end.${callEnd}`)}
+            </p>
+          ) : null}
+          {callButtons([t("remote.call.start"), () => void d.start(), "remote-call-start"])}
+        </>
+      );
+    if (call.state === "incoming")
+      return (
+        <>
+          <p role="status" data-testid="remote-call-status">
+            {t("remote.call.incoming")}
+          </p>
+          <p class="hint">{t("remote.call.note")}</p>
+          {callButtons([t("remote.call.accept"), () => void d.accept(), "remote-call-accept"], [t("remote.call.decline"), () => d.decline(), "remote-call-decline"])}
+        </>
+      );
+    return (
+      <>
+        <p role="status" data-testid="remote-call-status" data-state={call.state}>
+          {t(`remote.call.${call.state}`)}
+        </p>
+        <div class="remote-videos">
+          {call.remote ? <CallVideo stream={call.remote} label={t("remote.call.remote")} testid="remote-video-peer" /> : null}
+          {call.local ? <CallVideo stream={call.local} label={t("remote.call.local")} testid="remote-video-self" muted /> : null}
+        </div>
+        {call.state === "live"
+          ? callButtons(
+              [t(call.mic ? "remote.call.micOff" : "remote.call.micOn"), () => d.toggle("audio"), "remote-call-mic"],
+              [t(call.cam ? "remote.call.camOff" : "remote.call.camOn"), () => d.toggle("video"), "remote-call-cam"],
+              [t("remote.call.hangUp"), () => d.hangUp(), "remote-call-hangup"],
+            )
+          : callButtons([t(call.state === "ringing" ? "remote.call.cancel" : "remote.call.hangUp"), () => d.hangUp(), "remote-call-hangup"])}
+      </>
+    );
+  };
+  const callSection =
+    canCall === null ? null : (
+      <section class="remote-call" aria-labelledby="remote-call-title" data-testid="remote-call">
+        <h3 id="remote-call-title">{t("remote.call.title")}</h3>
+        {callBody()}
+      </section>
+    );
+
   const privacy = (
     <div class="remote-privacy" data-testid="remote-privacy">
       <p>
@@ -341,6 +432,7 @@ export function RemoteTool(_props: CreateToolProps) {
           <li>{t("remote.privacy.link")}</li>
           <li>{t("remote.privacy.limits")}</li>
           {IS_ONION || !FILES_OVER_DIRECT ? null : <li>{t("remote.privacy.direct")}</li>}
+          {IS_ONION ? null : <li>{t("remote.privacy.call")}</li>}
         </ul>
       </details>
     </div>
@@ -545,6 +637,7 @@ export function RemoteTool(_props: CreateToolProps) {
       ) : null}
       {body}
       {actions ? <div class="buttons nearby-actions">{actions}</div> : null}
+      {confirm && phase.kind !== "error" && !ended ? callSection : null}
       {confirm && phase.kind !== "error" ? (
         <section class="remote-chat" aria-labelledby="remote-chat-title">
           <h3 id="remote-chat-title">{t("remote.chat.title")}</h3>
@@ -602,4 +695,17 @@ export function RemoteTool(_props: CreateToolProps) {
       ) : null}
     </div>
   );
+}
+
+// 通話的畫面。同一個 MediaStream 之後加進來的軌道會自動播放，不必重設
+function CallVideo({ stream, label, testid, muted = false }: { stream: MediaStream; label: string; testid: string; muted?: boolean }) {
+  const ref = useRef<HTMLVideoElement>(null);
+  useEffect(() => {
+    const video = ref.current;
+    if (!video || video.srcObject === stream) return;
+    video.srcObject = stream;
+    // autoplay 不一定會動（Chromium 在畫面還沒有軌道時設定的就不會），另外叫一次
+    void video.play().catch(() => {});
+  }, [stream]);
+  return <video ref={ref} class={muted ? "self" : "peer"} autoPlay playsInline muted={muted} aria-label={label} data-testid={testid} />;
 }
