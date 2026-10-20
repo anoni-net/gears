@@ -4,24 +4,21 @@ import { routeUrl } from "../router.ts";
 import { tray } from "../state.ts";
 import { CodecError, decode, fromText, offerTag } from "../tools/nearby/codec.ts";
 import { MAX_TOTAL, type FileMeta } from "../tools/nearby/protocol.ts";
+import { type Incoming, TooLargeError, receiveFiles, sendFiles } from "../tools/nearby/transfer.ts";
 import { MARGIN, encodeQr, qrPath } from "../tools/qrcode/index.ts";
 import { track, trackFail } from "./analytics.ts";
 import { useTray } from "./hooks.ts";
 import {
   ConnectTimeoutError,
-  type Incoming,
   NoNetworkError,
   type Pending,
-  TooLargeError,
   answerOffer,
   applyAnswer,
   close,
   confirmOf,
   createOffer,
   opened,
-  receiveFiles,
   rtcAvailable,
-  sendFiles,
 } from "./nearby.ts";
 import { outputName } from "./output-name.ts";
 import { decodeQrFromVideo } from "./qr-scan.ts";
@@ -221,11 +218,11 @@ export function NearbyTool(_props: CreateToolProps) {
     void (async () => {
       await applyAnswer(p, text);
       setPhase({ kind: "connecting" });
-      const link = await opened(p);
+      const channel = await opened(p);
       setConfirm(confirmOf(p));
       setPhase({ kind: "awaiting" });
       const outgoing = files.map((f) => ({ name: nameOf(f), blob: f.versions.at(-1)!.blob }));
-      const result = await sendFiles(link, outgoing, (done, total) => setPhase({ kind: "transfer", done, total }));
+      const result = await sendFiles(channel, outgoing, (done, total) => setPhase({ kind: "transfer", done, total }));
       if (result.declined) return setPhase({ kind: "declined" });
       track("tool-done", { tool: "nearby" });
       setPhase({ kind: "sent", ok: result.ok });
@@ -242,10 +239,10 @@ export function NearbyTool(_props: CreateToolProps) {
       setCode(p.code);
       setPhase({ kind: "answering" });
       setNotCode(false);
-      const link = await opened(p);
+      const channel = await opened(p);
       setConfirm(confirmOf(p));
       setPhase({ kind: "connecting" });
-      const incoming = await receiveFiles(link);
+      const incoming = await receiveFiles(channel);
       setPhase({ kind: "review", incoming });
       return true;
     } catch (error) {

@@ -1,17 +1,15 @@
 // 面對面傳送：兩台裝置在同一個網路裡用 WebRTC 直接連線，不經過任何伺服器。
 //
-// 連線描述的編碼在 src/tools/nearby/codec.ts，訊息格式在 protocol.ts。這裡負責：
+// 連線描述的編碼在 src/tools/nearby/codec.ts，傳輸的流程在 transfer.ts。這裡負責：
 // - 送出端建立發起描述，接收端回應，送出端套上回應，等資料通道打開
 // - 不設 STUN 與 TURN（iceServers 是空的），候選只有區網裡的位址，連線不會走到網際網路
-// - 傳輸：64 KB 一塊，bufferedAmount 超過門檻就等，接收端邊收邊算 SHA-256
+// - 把資料通道包成 Channel（channel.ts），bufferedAmount 超過門檻就等
 //
 // Tor Browser 把 WebRTC 整個關掉（RTCPeerConnection 不存在），呼叫的人先用 rtcAvailable() 檢查。
 
-import { sha256 } from "@noble/hashes/sha2.js";
-import { bytesToHex } from "@noble/hashes/utils.js";
+import { type Channel, Inbox } from "../tools/nearby/channel.ts";
 import { CodecError, type Description, buildSdp, decode, encode, fromText, offerTag, parseSdp, toText } from "../tools/nearby/codec.ts";
-import { CHUNK, type FileMeta, MAX_TOTAL, type Message, confirmCode, parseMessage, totalSize } from "../tools/nearby/protocol.ts";
-import { sha256Blob } from "../tools/verify/hash.ts";
+import { confirmCode } from "../tools/nearby/protocol.ts";
 
 export const rtcAvailable = () => typeof RTCPeerConnection === "function";
 
@@ -65,16 +63,44 @@ function gathered(pc: RTCPeerConnection): Promise<void> {
   });
 }
 
-// 資料通道與它的訊息佇列。佇列在拿到通道的當下就掛上，對方早一步送來的訊息不會漏掉
-export interface Link {
-  channel: RTCDataChannel;
-  box: ReturnType<typeof inbox>;
+// 資料通道與包好的 Channel。在拿到通道的當下就包，對方早一步送來的訊息才會排進佇列
+interface Link {
+  dc: RTCDataChannel;
+  channel: Channel;
 }
 
-const link = (channel: RTCDataChannel): Link => {
-  channel.binaryType = "arraybuffer";
-  return { channel, box: inbox(channel) };
-};
+function link(dc: RTCDataChannel): Link {
+  dc.binaryType = "arraybuffer";
+  return { dc, channel: rtcChannel(dc) };
+}
+
+function rtcChannel(dc: RTCDataChannel): Channel {
+  const inbox = new Inbox();
+  dc.addEventListener("message", (e) => inbox.push(e.data));
+  dc.addEventListener("close", () => inbox.end());
+  dc.addEventListener("error", () => inbox.end());
+  return {
+    send: (data) => (typeof data === "string" ? dc.send(data) : dc.send(data)),
+    drained: () => drained(dc),
+    next: () => inbox.next(),
+    close: () => dc.close(),
+  };
+}
+
+function drained(dc: RTCDataChannel): Promise<void> {
+  if (dc.bufferedAmount <= HIGH_WATER) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    dc.bufferedAmountLowThreshold = LOW_WATER;
+    const done = () => {
+      dc.removeEventListener("bufferedamountlow", done);
+      dc.removeEventListener("close", gone);
+      resolve();
+    };
+    const gone = () => reject(new Error("closed"));
+    dc.addEventListener("bufferedamountlow", done);
+    dc.addEventListener("close", gone);
+  });
+}
 
 export interface Pending {
   pc: RTCPeerConnection;
@@ -117,17 +143,17 @@ export async function applyAnswer(p: Pending, text: string): Promise<void> {
 }
 
 // 等資料通道打開，超過 CONNECT_TIMEOUT 就判定連不上
-export async function opened(p: Pending): Promise<Link> {
+export async function opened(p: Pending): Promise<Channel> {
   const deadline = Date.now() + CONNECT_TIMEOUT;
   const ready = await Promise.race([p.link, new Promise<never>((_, reject) => setTimeout(() => reject(new ConnectTimeoutError()), CONNECT_TIMEOUT))]);
-  if (ready.channel.readyState === "open") return ready;
+  if (ready.dc.readyState === "open") return ready.channel;
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new ConnectTimeoutError()), Math.max(0, deadline - Date.now()));
-    ready.channel.addEventListener("open", () => {
+    ready.dc.addEventListener("open", () => {
       clearTimeout(timer);
-      resolve(ready);
+      resolve(ready.channel);
     });
-    ready.channel.addEventListener("error", () => {
+    ready.dc.addEventListener("error", () => {
       clearTimeout(timer);
       reject(new ConnectTimeoutError());
     });
@@ -138,154 +164,4 @@ export const confirmOf = (p: Pending) => (p.remote ? confirmCode(p.local.fingerp
 
 export function close(p: Pending | null) {
   p?.pc.close();
-}
-
-// ── 傳輸 ────────────────────────────────────────────────────────────────────
-
-// 依序取出通道上的訊息。文字是 JSON，二進位是檔案的內容
-function inbox(channel: RTCDataChannel) {
-  const queue: (string | ArrayBuffer)[] = [];
-  const waiting: ((v: string | ArrayBuffer) => void)[] = [];
-  let closed: Error | null = null;
-  const fail: ((e: Error) => void)[] = [];
-  channel.addEventListener("message", (e) => {
-    const w = waiting.shift();
-    if (w) w(e.data);
-    else queue.push(e.data);
-  });
-  const onClose = () => {
-    closed = new Error("closed");
-    for (const f of fail.splice(0)) f(closed);
-  };
-  channel.addEventListener("close", onClose);
-  channel.addEventListener("error", onClose);
-  return {
-    next(): Promise<string | ArrayBuffer> {
-      const item = queue.shift();
-      if (item !== undefined) return Promise.resolve(item);
-      if (closed) return Promise.reject(closed);
-      return new Promise((resolve, reject) => {
-        waiting.push(resolve);
-        fail.push(reject);
-      });
-    },
-    async message(): Promise<Message> {
-      const item = await this.next();
-      if (typeof item !== "string") throw new Error("bad-message");
-      return parseMessage(item);
-    },
-  };
-}
-
-const send = (channel: RTCDataChannel, m: Message) => channel.send(JSON.stringify(m));
-
-function drained(channel: RTCDataChannel): Promise<void> {
-  if (channel.bufferedAmount <= HIGH_WATER) return Promise.resolve();
-  return new Promise((resolve, reject) => {
-    channel.bufferedAmountLowThreshold = LOW_WATER;
-    const done = () => {
-      channel.removeEventListener("bufferedamountlow", done);
-      channel.removeEventListener("close", gone);
-      resolve();
-    };
-    const gone = () => reject(new Error("closed"));
-    channel.addEventListener("bufferedamountlow", done);
-    channel.addEventListener("close", gone);
-  });
-}
-
-export interface Outgoing {
-  name: string;
-  blob: Blob;
-}
-
-export type SendResult = { declined: true } | { declined: false; ok: boolean[] };
-
-// 送出端：先送清單與每個檔案的 SHA-256，對方接受之後依序送出
-export async function sendFiles({ channel, box }: Link, files: Outgoing[], onProgress: (sent: number, total: number) => void): Promise<SendResult> {
-  const metas: FileMeta[] = [];
-  for (const f of files) metas.push({ name: f.name, size: f.blob.size, type: f.blob.type, sha256: await sha256Blob(f.blob) });
-  send(channel, { t: "files", files: metas });
-  const reply = await box.message();
-  if (reply.t === "decline") return { declined: true };
-  if (reply.t !== "accept") throw new Error("bad-message");
-  const total = totalSize(metas);
-  let sent = 0;
-  for (const [i, f] of files.entries()) {
-    send(channel, { t: "file", i });
-    for (let at = 0; at < f.blob.size; at += CHUNK) {
-      await drained(channel);
-      channel.send(await f.blob.slice(at, at + CHUNK).arrayBuffer());
-      sent += Math.min(CHUNK, f.blob.size - at);
-      onProgress(sent, total);
-    }
-    send(channel, { t: "end", i });
-  }
-  const done = await box.message();
-  if (done.t !== "done" || done.ok.length !== files.length) throw new Error("bad-message");
-  return { declined: false, ok: done.ok };
-}
-
-export interface Incoming {
-  files: FileMeta[];
-  // 讀者決定接收之後呼叫，回傳收到的檔案（SHA-256 對不上的不放進來）
-  accept(onProgress: (received: number, total: number) => void): Promise<{ files: File[]; ok: boolean[] }>;
-  decline(): void;
-}
-
-export class TooLargeError extends Error {
-  constructor() {
-    super("too-large");
-  }
-}
-
-// 接收端：等對方送來清單，由讀者決定要不要接收
-export async function receiveFiles({ channel, box }: Link): Promise<Incoming> {
-  const offer = await box.message();
-  if (offer.t !== "files") throw new Error("bad-message");
-  const metas = offer.files;
-  return {
-    files: metas,
-    decline() {
-      send(channel, { t: "decline" });
-    },
-    async accept(onProgress) {
-      const total = totalSize(metas);
-      if (total > MAX_TOTAL) {
-        send(channel, { t: "decline" });
-        throw new TooLargeError();
-      }
-      send(channel, { t: "accept" });
-      let received = 0;
-      const out: File[] = [];
-      const ok: boolean[] = [];
-      for (const [i, meta] of metas.entries()) {
-        const start = await box.message();
-        if (start.t !== "file" || start.i !== i) throw new Error("bad-message");
-        const buffer = new Uint8Array(meta.size);
-        const hash = sha256.create();
-        let at = 0;
-        for (;;) {
-          const item = await box.next();
-          if (typeof item === "string") {
-            const end = parseMessage(item);
-            if (end.t !== "end" || end.i !== i) throw new Error("bad-message");
-            break;
-          }
-          const chunk = new Uint8Array(item);
-          if (at + chunk.length > meta.size) throw new Error("bad-message");
-          buffer.set(chunk, at);
-          hash.update(chunk);
-          at += chunk.length;
-          received += chunk.length;
-          onProgress(received, total);
-        }
-        const good = at === meta.size && bytesToHex(hash.digest()) === meta.sha256;
-        ok.push(good);
-        if (good) out.push(new File([buffer], meta.name, { type: meta.type }));
-      }
-      send(channel, { t: "done", ok });
-      return { files: out, ok };
-    },
-  };
 }
