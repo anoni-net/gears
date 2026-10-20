@@ -22,11 +22,11 @@ test("從桌面打開 QR code 產生器，中文內容下載成 PNG 與 SVG", as
   expect(Buffer.from(svg.data).toString("utf8")).toMatch(/^<svg xmlns="http:\/\/www\.w3\.org\/2000\/svg"/);
 });
 
-test("Wi-Fi 任務：產生的檔案放進暫存區，接著可以下載", async ({ page }) => {
+test("Wi-Fi 的 QR code：產生的檔案放進暫存區，接著可以下載", async ({ page }) => {
   await page.goto("./");
-  await page.getByRole("button", { name: /給朋友的 Wi-Fi 密碼/ }).click();
+  await page.getByRole("button", { name: /^QR code 產生器/ }).click();
   await expect(page).toHaveURL(/\/gears\/qrcode\/$/);
-  await expect(page.getByLabel("Wi-Fi")).toBeChecked();
+  await page.getByLabel("Wi-Fi").check();
 
   await page.getByLabel("網路名稱（SSID）").fill("Cafe;5G");
   await page.getByLabel("密碼", { exact: true }).fill("p@ss:word");
@@ -121,5 +121,5 @@ test("每個工具都有自己的網址，可以直接打開，也可以用上�
   await expect(page).toHaveURL(/\/gears\/qrcode\/$/);
   await page.goBack();
   await expect(page).toHaveURL(/\/gears\/$/);
-  await expect(page.getByRole("heading", { name: "常見的情況" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "交出去之前" })).toBeVisible();
 });

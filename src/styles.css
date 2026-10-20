@@ -95,6 +95,13 @@ body {
 }
 
 /* 暫存區有檔案時，手機上不會因為往下拉而重新整理、清空暫存區（src/app.tsx 的 useKeepTray） */
+/* 一律顯示捲軸。首頁不長，高一點的螢幕不需要捲動，範例頁需要，捲軸出現時置中的頁首會往左移半個捲軸寬，
+   兩頁來回切換時 logo 左右跳（2026-10-20）。scrollbar-gutter: stable 也能固定位置，但不捲動的頁面
+   會在頁首右邊留一條白色的空位。手機與 macOS 預設的浮動捲軸不佔寬度，不受影響 */
+html {
+  overflow-y: scroll;
+}
+
 html.has-files,
 html.has-files body {
   overscroll-behavior-y: none;
@@ -490,9 +497,10 @@ h4 {
     align-items: start;
   }
 
-  /* 工具以外的頁面沒有暫存區（src/app.tsx） */
+  /* 工具以外的頁面沒有暫存區（src/app.tsx）。內容的寬度跟首頁暫存區旁邊那一欄相同（1440 寬時約 830 px），
+     靠左對齊頁首的 logo。原本撐滿整個版面，從桌面點進範例時內容突然變寬三百多 px，長的說明一行也太長 */
   .workbench.solo {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: minmax(0, 52rem);
   }
 }
 
@@ -923,74 +931,116 @@ button.pick-files .icon {
   margin: 0;
 }
 
-/* 桌面 */
-
-.desktop section + section {
-  margin-top: 2rem;
-}
+/* 桌面：三組工具，每個工具一列（src/ui/Desktop.tsx）。原本是一張張有外框的卡片，36 張排下來
+   手機要捲 8 個畫面，改成清單，列與列之間只留細線 */
 
 .desktop h2:first-child,
 .view > section > h2:first-child {
   margin-top: 0;
 }
 
-/* 工具依讀者的目的分組，每組一個小標題加一句說明 */
 .tool-group + .tool-group {
-  margin-top: 1.5rem;
+  margin-top: 1.75rem;
 }
 
-.tool-group h3 {
+.tool-group h2 {
   margin: 0;
+  font-size: 1.15rem;
 }
 
 .tool-group .hint {
-  margin: 0.2rem 0 0.6rem;
+  margin: 0.15rem 0 0.5rem;
 }
 
-.cards {
+.tool-rows {
   list-style: none;
   padding: 0;
   margin: 0;
   display: grid;
-  gap: 0.5rem;
+  column-gap: 1.25rem;
+  border-top: 1px solid var(--hair);
 }
 
+/* 寬一點的畫面排成兩欄，暫存區在旁邊時每欄約 22 個字寬 */
 @media (min-width: 40rem) {
-  .cards {
-    grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  .tool-rows {
+    grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
   }
 }
 
-.card {
+.tool-rows li {
+  border-bottom: 1px solid var(--hair);
+}
+
+.tool-row {
   width: 100%;
   height: 100%;
-  align-items: flex-start;
   justify-content: flex-start;
+  gap: 0.75rem;
+  padding: 0.45rem 0.4rem;
+  line-height: 1.35;
+  border: 0;
+  border-radius: 0;
+  background: none;
   text-align: left;
-  gap: 0.8rem;
-  padding: 0.9rem 1rem;
-  border-radius: var(--radius);
-  border-color: var(--line);
 }
 
-.card-text {
+.tool-row:hover:not(:disabled) {
+  background: var(--fill);
+}
+
+.tool-row .ic {
+  width: 2rem;
+  height: 2rem;
+}
+
+.tool-row .ic .icon {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+
+.tool-row-text {
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
+  gap: 0.05rem;
+  min-width: 0;
 }
 
-.card-text strong {
+.tool-row-text strong {
   color: var(--strong);
 }
 
-.card-text span {
+.tool-row-when {
   color: var(--muted);
+  font-size: 0.875rem;
+}
+
+/* 最下面一行：範例、建議與回饋，接著是圖示說明 */
+.desk-more {
+  margin-top: 2rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--line);
   font-size: 0.9rem;
 }
 
-/* 任務捷徑用淡底色跟工具卡片區分 */
-.card.task {
-  background: var(--fill);
+.desk-user {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 0.75rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+}
+
+.desk-user button.link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.desk-user .icon {
+  width: 1.1rem;
+  height: 1.1rem;
 }
 
 .soon {
@@ -2662,8 +2712,8 @@ button.link {
   padding-left: 1.25rem;
 }
 
-/* 桌面工具卡片上的圖示標籤（src/ui/tool-tags.ts），顏色用 --link：淺色與深色模式都有足夠的對比 */
-.card-text strong:has(.tool-tags) {
+/* 桌面工具名稱後面的圖示標籤（src/ui/tool-tags.ts），顏色用 --link：淺色與深色模式都有足夠的對比 */
+.tool-row-text strong:has(.tool-tags) {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -2688,8 +2738,8 @@ button.link {
   color: var(--tag-color);
 }
 
-/* 卡片的 .card-text span 把文字設成灰色，標籤也是 span，要用比它高的優先順序蓋回代表色 */
-.card-text .tool-tags .tool-tag {
+/* 標籤也是 span，要用比工具列的文字高的優先順序蓋回代表色 */
+.tool-row-text .tool-tags .tool-tag {
   color: var(--tag-color);
 }
 
@@ -2706,33 +2756,41 @@ button.link {
   height: 1.1rem;
 }
 
-/* 桌面最下方的圖示說明 */
+/* 桌面最下面的圖示說明，跟範例、建議與回饋放在同一區，一個標籤一行 */
 .tag-legend {
-  margin-top: 2rem;
   scroll-margin-top: 1rem;
 }
 
+.tag-legend h2 {
+  margin: 0 0 0.25rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+/* 標籤名稱一欄、說明一欄，兩行對齊 */
 .tag-legend dl {
   margin: 0;
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.35rem 0.75rem;
+  align-items: baseline;
 }
 
 .tag-legend dl > div {
-  padding: 0.6rem 0;
-  border-top: 1px solid var(--line);
+  display: contents;
 }
 
 .tag-legend dt {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 0.55rem;
+  gap: 0.4rem;
   font-weight: 600;
   color: var(--strong);
 }
 
 .tag-legend dd {
-  margin: 0.25rem 0 0 2.1rem;
+  margin: 0;
   color: var(--muted);
-  font-size: 0.9rem;
 }
 
 /* 建議與回饋（src/ui/FeedbackPage.tsx）：說明文字放在欄位名稱底下，不跟著加粗 */

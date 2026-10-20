@@ -3,6 +3,7 @@ import { FINDING_CODES, SEGMENT_CODES } from "../../src/core/tool.ts";
 import { tDynamic } from "../../src/i18n/index.ts";
 import { zhTW } from "../../src/i18n/zh-TW.ts";
 import { createTools, editorTools, fileTools, toolIds } from "../../src/tools/index.ts";
+import { TOOL_GROUPS } from "../../src/ui/tool-meta.ts";
 import qrSamples from "../../src/tools/qr-read/samples.json" with { type: "json" };
 
 // 介面上有些字串的鍵是組出來的（finding.location、tool.qrcode.desc），漏了翻譯不會
@@ -13,6 +14,8 @@ test("每個代碼與工具都有正體中文的字串", () => {
     ...FINDING_CODES.map((c) => `finding.${c}`),
     ...SEGMENT_CODES.map((c) => `segment.${c}`),
     ...toolIds.flatMap((id) => [`tool.${id}`, `tool.${id}.desc`, `meta.${id}.title`, `meta.${id}.description`]),
+    // 桌面每個工具一列，名稱下面一行寫讀者會遇到的情況（src/ui/Desktop.tsx）
+    ...TOOL_GROUPS.flatMap((group) => group.tools.map((id) => `desk.when.${id}`)),
     // 檔案畫面的工具列：按鈕用動詞，需要編輯畫面的工具還有「再做一次」
     ...[...fileTools, ...editorTools].map((tool) => `tool.${tool.id}.action`),
     ...editorTools.map((tool) => `tool.${tool.id}.again`),
