@@ -2730,6 +2730,57 @@ button.link {
   margin-top: 0.75rem;
 }
 
+.remote-chat {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+}
+
+.remote-chat h3 {
+  margin: 0 0 0.25rem;
+  font-size: 1rem;
+}
+
+.remote-messages {
+  list-style: none;
+  margin: 0.75rem 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.remote-messages li {
+  max-width: 36rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.remote-messages li.mine {
+  justify-self: end;
+  border-color: var(--header-line);
+  background: var(--header-bg);
+}
+
+.remote-messages .who {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.remote-compose label {
+  display: block;
+}
+
+.remote-compose textarea {
+  display: block;
+  width: 100%;
+  margin: 0.5rem 0;
+}
+
 .remote-pending {
   margin-bottom: 1rem;
   padding: 0.75rem 1rem;
