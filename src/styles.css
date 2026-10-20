@@ -2880,13 +2880,15 @@ button.link {
   color: var(--muted);
 }
 
-/* 標籤名稱一欄、說明一欄，兩行對齊 */
+/* 標籤名稱一欄、說明一欄，從頂端對齊。不用 baseline：名稱一欄的第一個元素是沒有文字的圖示，
+   瀏覽器拿圖示的底邊當基線，說明的第一行會比名稱低（說明折成好幾行的小螢幕最明顯）。
+   圖示跟一行文字差不多高，名稱在那一欄垂直置中，就跟說明的第一行對齊 */
 .tag-legend dl {
   margin: 0;
   display: grid;
   grid-template-columns: max-content 1fr;
   gap: 0.35rem 0.75rem;
-  align-items: baseline;
+  align-items: start;
 }
 
 .tag-legend dl > div {
