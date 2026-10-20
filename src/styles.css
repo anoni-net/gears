@@ -2673,11 +2673,28 @@ button.link {
   }
 }
 
+/* 面對面與遠端傳送的輸入框，跟 .field 的輸入框同一個樣子 */
 .nearby-code textarea,
-.nearby-paste textarea {
+.nearby-paste textarea,
+.remote-link textarea,
+.remote-compose textarea {
   display: block;
+  box-sizing: border-box;
   width: 100%;
   margin: 0.5rem 0;
+  padding: 0.5rem 0.6rem;
+  font: inherit;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  resize: vertical;
+}
+
+/* 連線描述與連結是一長串代碼，用等寬字、隨處斷行 */
+.nearby-code textarea,
+.nearby-paste textarea,
+.remote-link textarea {
   font-family: var(--mono, monospace);
   font-size: 0.85rem;
   word-break: break-all;
@@ -2713,15 +2730,6 @@ button.link {
 }
 
 /* 遠端傳送：分享連結與經過伺服器的說明（src/ui/RemoteTool.tsx） */
-.remote-link textarea {
-  display: block;
-  width: 100%;
-  margin: 0.5rem 0;
-  font-family: var(--mono, monospace);
-  font-size: 0.85rem;
-  word-break: break-all;
-}
-
 .remote-link label {
   display: block;
 }
@@ -2773,12 +2781,6 @@ button.link {
 
 .remote-compose label {
   display: block;
-}
-
-.remote-compose textarea {
-  display: block;
-  width: 100%;
-  margin: 0.5rem 0;
 }
 
 .remote-pending {
@@ -2944,4 +2946,18 @@ button.link {
   right: 0.5rem;
   bottom: 0.5rem;
   border: 2px solid var(--bg, #fff);
+}
+
+
+/* 觸控裝置上輸入框的字至少 16px：iOS 的 Safari 遇到比較小的字，點下去會放大整個畫面 */
+@media (pointer: coarse) {
+  input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="color"]),
+  select,
+  textarea,
+  .nearby-code textarea,
+  .nearby-paste textarea,
+  .remote-link textarea,
+  .email-check .field textarea {
+    font-size: max(1rem, 16px);
+  }
 }
