@@ -57,6 +57,7 @@ interface Room {
   id: string;
   sides: [Side, Side | null];
   bytes: number;
+  epoch: number;
   timer: NodeJS.Timeout;
   closed: boolean;
 }
@@ -145,6 +146,7 @@ export async function startRelay(overrides: Partial<RelayOptions> = {}): Promise
         id: randomId(),
         sides: [{ ws: null, token: randomId() }, null],
         bytes: 0,
+        epoch: 0,
         timer: setTimeout(() => closeRoom(room, { t: "gone" }), o.waitMs),
         closed: false,
       };
@@ -176,10 +178,11 @@ export async function startRelay(overrides: Partial<RelayOptions> = {}): Promise
     }
     seat(ws, room, index as 0 | 1);
     const peer = room.sides[index === 0 ? 1 : 0];
-    control(ws, { t: "resumed", paired: !!peer });
-    if (!peer?.ws) {
-      if (peer) control(ws, { t: "away" });
-    } else if (!old) control(peer.ws, { t: "back" });
+    const epoch = ++room.epoch;
+    control(ws, { t: "resumed", paired: !!peer, epoch });
+    // 對方一律收到 back，就算它沒發現這一端斷過：接回來的一端會重新握手，對方也要跟著換
+    if (peer?.ws) control(peer.ws, { t: "back", epoch });
+    else if (peer) control(ws, { t: "away" });
   }
 
   function forward(from: WebSocket, seated: Seat, data: Buffer) {

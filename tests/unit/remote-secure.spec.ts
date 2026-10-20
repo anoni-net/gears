@@ -42,7 +42,7 @@ test("途中看得到的只有公鑰與密文", async () => {
   // 明文的只有交換公鑰的 hello
   const plain = seen.filter((d) => typeof d === "string");
   expect(plain).toHaveLength(2);
-  for (const m of plain) expect(Object.keys(JSON.parse(m as string)).sort()).toEqual(["key", "t", "v"]);
+  for (const m of plain) expect(Object.keys(JSON.parse(m as string)).sort()).toEqual(["e", "key", "t", "v"]);
   const all = seen.map(text).join("\n");
   for (const leak of ["A123456789", "0912-345-678", "名單.csv", '"t":"files"', "sha256"]) expect(all).not.toContain(leak);
 });
@@ -109,8 +109,9 @@ test("對方送來的不是合格的 hello", async () => {
   for (const [hello, code] of [
     ["not json", "bad-hello"],
     ['{"t":"hello","v":2,"key":"x"}', "version"],
-    ['{"t":"hello","v":1,"key":"short"}', "bad-hello"],
-    [JSON.stringify({ t: "hello", v: 1, key: encodeKey(new Uint8Array(32)) }), "bad-hello"],
+    ['{"t":"hello","v":1,"e":0,"key":"short"}', "bad-hello"],
+    [JSON.stringify({ t: "hello", v: 1, e: 0, key: encodeKey(new Uint8Array(32)) }), "bad-hello"],
+    [JSON.stringify({ t: "hello", v: 1, e: 3, key: encodeKey(newLinkKey()) }), "bad-hello"],
   ] as const) {
     const [a, b] = wire();
     b.send(hello);

@@ -8,7 +8,8 @@
 import { type Channel, type Data, Inbox } from "../nearby/channel.ts";
 import { type ClientControl, RELAY_VERSION, type RelayErrorCode, type ServerControl, frame, parseServerControl, unframe } from "./relay.ts";
 
-export type LinkErrorCode = RelayErrorCode | "connect" | "closed" | "gone";
+// epoch：自己接回來或對方接回來，上一段連線的訊息作廢，要重新握手（RelayLink.epoch）
+export type LinkErrorCode = RelayErrorCode | "connect" | "closed" | "gone" | "epoch";
 
 export class RelayError extends Error {
   constructor(readonly code: LinkErrorCode) {
@@ -42,6 +43,8 @@ export class RelayLink implements Channel {
   private listeners = new Set<(state: LinkState) => void>();
   private waiter: Waiter | null = null;
   private ended = false;
+  // 第幾段連線（relay.ts 的 epoch），配對時是 0
+  private epochId = 0;
 
   private constructor(private readonly url: string) {
     this.paired = new Promise((resolve, reject) => {
@@ -110,6 +113,31 @@ export class RelayLink implements Channel {
     return this.inbox.next();
   }
 
+  // 目前這一段連線的 Channel。自己或對方接回來之後，這一段還沒讀的訊息作廢，next() 丟出 epoch，
+  // 呼叫的人再取一次 epoch() 重新握手（secure.ts）。斷線之前收到、還沒讀的訊息也算在作廢的裡面，
+  // 由續傳的一層重送（session.ts）
+  epoch(): Channel & { id: number } {
+    const inbox = this.inbox;
+    return {
+      id: this.epochId,
+      // 換了一段連線之後，這一段的訊息不能再送出去：對方已經在跟新的一段握手
+      send: (data) => {
+        if (this.inbox !== inbox) throw new RelayError("epoch");
+        this.send(data);
+      },
+      drained: () => this.drained(),
+      next: () => inbox.next(),
+      close: () => this.close(),
+    };
+  }
+
+  private nextEpoch(id: number) {
+    this.epochId = id;
+    const old = this.inbox;
+    this.inbox = new Inbox();
+    old.end(new RelayError("epoch"));
+  }
+
   // 結束，房間跟著關閉，對方收到 gone
   close() {
     const ws = this.ws;
@@ -169,13 +197,17 @@ export class RelayLink implements Channel {
         this.resolvePaired();
         break;
       case "resumed":
+        this.nextEpoch(m.epoch);
         if (m.paired) this.resolvePaired();
         break;
       case "gone":
         this.emit("gone");
         return this.fail(new RelayError("gone"));
-      case "away":
       case "back":
+        this.nextEpoch(m.epoch);
+        this.emit(m.t);
+        break;
+      case "away":
         this.emit(m.t);
         break;
     }
