@@ -239,3 +239,20 @@ test("暫存區沒有檔案也能產生連結，連上之後只互傳文字訊�
   await expect(receiver.getByRole("button", { name: "只傳文字訊息或視訊通話" })).toBeVisible();
   await close();
 });
+
+test("告知畫面連到遠端傳送的伺服器說明，在新分頁打開，看完回到遠端傳送", async ({ page }) => {
+  await page.goto("./remote/");
+  await page.getByRole("button", { name: "只傳文字訊息或視訊通話" }).click();
+  const link = page.getByTestId("remote-server-link");
+  await expect(link).toHaveAttribute("target", "_blank");
+  await expect(link).toHaveAttribute("href", "/gears/remote-server/");
+
+  await page.goto("./remote-server/");
+  await expect(page).toHaveTitle("遠端傳送的伺服器 | Gears 檔案工作台");
+  const section = page.getByTestId("remote-server");
+  await expect(section.getByRole("heading", { level: 3 })).toHaveText(["經過的伺服器", "伺服器看得到與看不到的內容", "保存的資料", "加密的方式", "使用的限制", "濫用的回報"]);
+  await expect(section).toContainText("不保存檔案");
+  await expect(section).toContainText("whisper@anoni.net");
+  await page.getByRole("button", { name: "回到遠端傳送" }).click();
+  await expect(page).toHaveURL(/\/gears\/remote\/$/);
+});

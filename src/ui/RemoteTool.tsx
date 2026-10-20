@@ -493,6 +493,12 @@ export function RemoteTool(_props: CreateToolProps) {
           {IS_ONION || !FILES_OVER_DIRECT ? null : <li>{t("remote.privacy.direct")}</li>}
           {IS_ONION ? null : <li>{t("remote.privacy.call")}</li>}
         </ul>
+        {/* 開新分頁：接收端讀完 # 就從網址清掉，在同一個分頁換頁會弄丟連結，連線中換頁也會中斷 */}
+        <p>
+          <a href={routeUrl("remote-server")} target="_blank" rel="noopener" data-testid="remote-server-link">
+            {t("remote.privacy.page")}
+          </a>
+        </p>
       </details>
     </div>
   );
