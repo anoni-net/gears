@@ -85,6 +85,17 @@ test("桌面的圖示標籤：卡片上的圖示帶著補充說明，最下方�
   await expect(legend.locator("dt")).toHaveText(["本機模型", "相機"]);
   await expect(legend).toContainText("模型第一次使用時才下載");
   await expect(legend).toContainText("瀏覽器會先詢問是否允許");
+  // 標籤名稱跟說明的第一行對齊，說明折成好幾行時也一樣
+  const offsets = await legend.evaluate((dl) =>
+    [...dl.querySelectorAll(":scope > div")].map((row) => {
+      const range = document.createRange();
+      range.selectNodeContents(row.querySelector("dt")!.lastChild!);
+      const label = range.getBoundingClientRect();
+      const dd = row.querySelector("dd")!;
+      return Math.abs(label.top + label.height / 2 - (dd.getBoundingClientRect().top + parseFloat(getComputedStyle(dd).lineHeight) / 2));
+    }),
+  );
+  for (const offset of offsets) expect(offset).toBeLessThanOrEqual(2);
   // 每個標籤一個代表色，卡片與圖示說明一致，也不會被卡片的灰色文字蓋掉
   const color = (selector: string) => page.locator(selector).first().evaluate((el) => getComputedStyle(el).color);
   const muted = await color(".tool-row-when");
