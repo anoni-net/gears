@@ -33,6 +33,7 @@ type Phase =
   | { kind: "sent"; ok: boolean[] }
   | { kind: "declined" }
   | { kind: "received"; count: number; failed: number }
+  | { kind: "talk" } // 不傳檔案，連上之後只互傳文字訊息與視訊通話
   | { kind: "error"; reason: Reason };
 
 // 轉送服務跟網頁在同一個網域（clearnet 的 /gears/relay/、onion 的 /relay/），CSP 的 'self' 就涵蓋
@@ -74,7 +75,7 @@ function reasonOf(error: unknown): Reason {
 export function RemoteTool(_props: CreateToolProps) {
   const state = useTray();
   const out = useOutgoing(state);
-  const [mode, setMode] = useState<"choose" | "send" | "receive">("choose");
+  const [mode, setMode] = useState<"choose" | "send" | "talk" | "receive">("choose");
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
   const [confirm, setConfirm] = useState("");
   const [conn, setConn] = useState<SessionState | null>(null);
@@ -230,7 +231,8 @@ export function RemoteTool(_props: CreateToolProps) {
   };
 
   // ── 送出端 ──
-  const startSend = async () => {
+  // withFiles 是 false 時不傳檔案，連上之後只互傳文字訊息與視訊通話
+  const startSend = async (withFiles = true) => {
     setPhase({ kind: "creating" });
     try {
       const link = await RelayLink.open(relayUrl());
@@ -246,6 +248,12 @@ export function RemoteTool(_props: CreateToolProps) {
       await link.paired;
       setPhase({ kind: "connecting" });
       await s.confirm;
+      if (!withFiles) {
+        // 接收端在檔案改走資料通道時會先等 offer，告訴它不必等
+        if (FILES_OVER_DIRECT) signals.current!.send({ t: "no" });
+        signals.current!.send({ t: "via", rtc: false, files: false });
+        return done({ kind: "talk" });
+      }
       // 送出端決定檔案走哪一條，用 via 告訴接收端。檔案預設走轉送服務，不建立資料通道，
       // 雙方的 IP 只在開始視訊時才交給 TURN
       const d = FILES_OVER_DIRECT ? await connectDirect(signals.current!, await iceOf(link), "opener") : null;
@@ -284,6 +292,10 @@ export function RemoteTool(_props: CreateToolProps) {
       const d = FILES_OVER_DIRECT ? await connectDirect(signals.current!, await iceOf(link), "joiner") : null;
       const v = await signals.current!.next((m) => m.t === "via", 30_000);
       if (v?.t !== "via" || (v.rtc && !d)) throw new Error("failed");
+      if (v.files === false) {
+        d?.close();
+        return done({ kind: "talk" });
+      }
       if (v.rtc) direct.current = d;
       else d?.close();
       setVia(v.rtc ? "direct" : "relay");
@@ -475,6 +487,8 @@ export function RemoteTool(_props: CreateToolProps) {
         return t("nearby.declined");
       case "received":
         return phase.failed ? t("nearby.receivedPartly", { n: phase.count, m: phase.failed }) : t("nearby.received", { n: phase.count });
+      case "talk":
+        return ended ? "" : t("remote.talking");
       case "error":
         return t(`remote.error.${phase.reason}`);
       default:
@@ -488,7 +502,7 @@ export function RemoteTool(_props: CreateToolProps) {
 
   const cancel = (
     <button type="button" onClick={restart}>
-      {["sent", "received", "declined", "error"].includes(phase.kind) ? t("nearby.again") : t("redact.cancel")}
+      {["sent", "received", "declined", "talk", "error"].includes(phase.kind) ? t("nearby.again") : t("redact.cancel")}
     </button>
   );
 
@@ -497,7 +511,7 @@ export function RemoteTool(_props: CreateToolProps) {
   if (mode === "choose") {
     body = (
       <>
-        {!state.files.length ? <p class="hint">{t("nearby.emptyTray")}</p> : null}
+        {!state.files.length ? <p class="hint">{t("remote.emptyTray")}</p> : null}
         <form
           class="nearby-paste"
           onSubmit={(e) => {
@@ -517,9 +531,14 @@ export function RemoteTool(_props: CreateToolProps) {
       </>
     );
     actions = (
-      <button type="button" class="primary" disabled={!state.files.length} onClick={() => setMode("send")}>
-        {t("nearby.send")}
-      </button>
+      <>
+        <button type="button" class="primary" disabled={!state.files.length} onClick={() => setMode("send")}>
+          {t("nearby.send")}
+        </button>
+        <button type="button" class={state.files.length ? "" : "primary"} onClick={() => setMode("talk")}>
+          {t("remote.talk")}
+        </button>
+      </>
     );
   } else if (mode === "send" && phase.kind === "idle") {
     body = (
@@ -532,6 +551,21 @@ export function RemoteTool(_props: CreateToolProps) {
       <>
         <button type="button" class="primary" disabled={!out.files.length} onClick={() => void startSend()}>
           {t("remote.start", { n: out.files.length })}
+        </button>
+        {cancel}
+      </>
+    );
+  } else if (mode === "talk" && phase.kind === "idle") {
+    body = (
+      <>
+        <p>{t("remote.talkNote")}</p>
+        {privacy}
+      </>
+    );
+    actions = (
+      <>
+        <button type="button" class="primary" onClick={() => void startSend(false)}>
+          {t("remote.startTalk")}
         </button>
         {cancel}
       </>
@@ -596,6 +630,9 @@ export function RemoteTool(_props: CreateToolProps) {
     );
   } else if (phase.kind === "transfer") {
     body = <progress max={phase.total} value={phase.done} />;
+  } else if (phase.kind === "talk") {
+    // 連線中用文字訊息底下的「結束連線」，結束之後才能重新開始
+    actions = ended ? cancel : null;
   } else if (!busy) {
     actions = cancel;
   }

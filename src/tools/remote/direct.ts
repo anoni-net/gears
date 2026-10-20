@@ -25,7 +25,8 @@ export type Signal =
   | { t: "offer" | "answer"; sdp: string }
   | { t: "cand"; c: RTCIceCandidateInit | null }
   | { t: "no" }
-  | { t: "via"; rtc: boolean; retry?: boolean }
+  // files 是 false：這次不傳檔案，只互傳文字訊息與視訊通話
+  | { t: "via"; rtc: boolean; retry?: boolean; files?: false }
   // 視訊通話（call.ts）：n 是這一通的編號，SDP 與候選跟資料通道的分開
   | { t: "ring" | "pick" | "bye"; n: string; why?: "unsupported" }
   | { t: "coffer" | "canswer"; n: string; sdp: string }
@@ -65,7 +66,8 @@ export function parseSignal(text: string): Signal | null {
     case "no":
       return { t: "no" };
     case "via":
-      return typeof m.rtc === "boolean" ? { t: "via", rtc: m.rtc, retry: m.retry === true } : null;
+      if (typeof m.rtc !== "boolean") return null;
+      return m.files === false ? { t: "via", rtc: m.rtc, retry: m.retry === true, files: false } : { t: "via", rtc: m.rtc, retry: m.retry === true };
     default:
       return null;
   }

@@ -198,3 +198,31 @@ test("資料通道傳到一半斷掉，改用轉送服務重傳，接收端不�
   await close();
 });
 
+
+test("暫存區沒有檔案也能產生連結，連上之後只互傳文字訊息", async ({ browser, baseURL }) => {
+  const { sender, receiver, close } = await people(browser, baseURL!);
+  await sender.goto("./");
+  await sender.getByRole("button", { name: /^遠端傳送/ }).click();
+  await expect(sender.getByRole("button", { name: "送出暫存區的檔案" })).toBeDisabled();
+  await sender.getByRole("button", { name: "只傳文字訊息或視訊通話" }).click();
+  await expect(sender.getByTestId("remote-privacy")).toBeVisible();
+  await sender.getByRole("button", { name: "產生連結", exact: true }).click();
+  await receiver.goto(await sender.getByTestId("remote-link").inputValue());
+  await expect(receiver.getByTestId("remote-status")).toContainText("連上之後也能互傳文字訊息、視訊通話");
+  await receiver.getByRole("button", { name: "加入", exact: true }).click();
+  for (const page of [sender, receiver]) await expect(page.getByTestId("remote-status")).toHaveText("已經連上，可以互傳文字訊息或視訊通話。", { timeout: 20_000 });
+  await expect(receiver.getByTestId("remote-confirm").locator("strong")).toHaveText(await sender.getByTestId("remote-confirm").locator("strong").innerText());
+  await expect(receiver.getByTestId("remote-incoming")).toHaveCount(0);
+
+  await sender.getByTestId("remote-chat-input").fill("只想跟你說幾句話");
+  await sender.getByTestId("remote-chat-input").press("Enter");
+  await expect(receiver.getByTestId("remote-messages")).toContainText("只想跟你說幾句話");
+  // 連線中只有「結束連線」，結束之後才出現重新開始
+  await expect(receiver.getByRole("button", { name: "重新開始" })).toHaveCount(0);
+  await receiver.getByRole("button", { name: "結束連線" }).click();
+  await expect(sender.getByTestId("remote-ended")).toHaveText("對方已經結束連線。");
+  await expect(sender.getByTestId("remote-status")).toHaveCount(0);
+  await receiver.getByRole("button", { name: "重新開始" }).click();
+  await expect(receiver.getByRole("button", { name: "只傳文字訊息或視訊通話" })).toBeVisible();
+  await close();
+});
