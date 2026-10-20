@@ -10,3 +10,4 @@ public/samples/
 public/models/whisper/
 public/models/speaker/
 deploy/
+dist-server/

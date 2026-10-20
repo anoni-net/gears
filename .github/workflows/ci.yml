@@ -43,6 +43,9 @@ jobs:
       - uses: astral-sh/setup-uv@v10.3.0
       - if: matrix.name == 'chromium'
         run: npm run typecheck
+      # 遠端傳送的轉送服務打包成單一個檔案，確認跑得起來（開房、配對、轉送）
+      - if: matrix.name == 'chromium'
+        run: npm run build:server && node scripts/check-relay.mjs
       # 逐字稿的瀏覽器測試要 Whisper base、分辨說話者的 CAM++ 與 sherpa-onnx 的 WebAssembly（約 80、28、14 MB，不進 repo），依清單快取
       - uses: actions/cache@v6.1.0
         with:

@@ -6,6 +6,7 @@
 
 - 預設在瀏覽器裡處理。之後若提供上傳到社群伺服器的選項，上傳前要在畫面上寫清楚檔案送到哪裡、誰看得到、保留多久、伺服器會不會留下紀錄，由讀者決定
 - 上傳端點不經過 Cloudflare。Cloudflare 在邊緣解開 TLS，經過的檔案對它是明文
+- 伺服器不保存讀者的檔案，加密過的也一樣。遠端傳送的轉送服務只在轉給對方的途中經手，對方不在時直接丟掉，兩端一律同時在線（見下方「遠端傳送的轉送服務」）
 - 頁面能連線的對象寫死在 CSP 裡（`vite.config.ts`），新增任何對外連線都要改那裡，並在畫面上標示。頁面的 meta 標籤只有自己的網域、使用統計的送出網址（`https://aa.anoni.net/api/send`，見下方「使用統計」）與建議與回饋的送出網址（見下方「建議與回饋」）。逐字稿的大模型從 Hugging Face 下載（見下方「逐字稿」），只開在伺服器送的 CSP 標頭 <!-- docs-style-lint: disable-line -->
 - 執行期的相依套件只有 `preact`、`qrcode-generator`（QR code 產生）、`jsqr`（QR code 讀取）、`zxing-wasm`（QR code 以外的條碼，見下方「QR code 的內容格式」）、`age-encryption`（加密，連同它相依的 noble 系列）、`libheif-js`（HEIC 解碼，LGPL-3.0，見下方「HEIC」）、`pdf-lib`（PDF 的解析與寫出，見下方「文件」）、`pdfjs-dist`（PDF 的遮蔽，見下方「PDF 的遮蔽」），以及遮蔽的自動尋找用的 `onnxruntime-web` 與 `tesseract.js`（見下方「遮蔽的自動尋找」）、逐字稿用的 `@huggingface/transformers` 與 `opencc-js`（見下方「逐字稿」，分辨說話者用的 onnxruntime 是 Transformers.js 帶的那一份），以及查證計算 SHA-256 用的 `@noble/hashes`（age 加密原本就相依它，鎖定同一個版本，見下方「查證」）、下載的軟體驗證用的 `openpgp`（LGPL-3.0，見下方「下載的軟體驗證」）。新增套件前先想能不能自己寫，必要時鎖定確切的版本。工具用到的套件在打開工具時才載入
 - 結構有問題的檔案就停下來，不交出一份沒處理乾淨的檔案
@@ -25,6 +26,7 @@ npm run build        # 建置到 dist/
 npm run typecheck    # TypeScript 型別檢查
 npm test             # 單元測試與三種瀏覽器核心的測試
 npm run test:unit    # 只執行單元測試，不需要瀏覽器
+npm run build:server # 轉送服務打包成 dist-server/relay.mjs，node scripts/check-relay.mjs 確認跑得起來
 ```
 
 第一次執行瀏覽器測試前要下載核心：`npx playwright install chromium webkit firefox`。Linux 上的 WebKit 另外需要系統函式庫，有 sudo 權限時用 `npx playwright install-deps webkit` 安裝，CI 用 `--with-deps` 一併處理。
@@ -41,6 +43,7 @@ CI（`.github/workflows/ci.yml`）依瀏覽器拆成四台機器同時執行：C
 | `src/tools/` | 各個工具的純邏輯，一個工具一個目錄，在 `src/tools/index.ts` 登記 |
 | `src/ui/`、`src/app.tsx` | 介面元件。`src/ui/registry.tsx` 登記從空白開始的工具用的元件，`src/ui/tool-meta.ts` 是每個工具的圖示與類別 |
 | `src/router.ts` | 每個工具的網址 |
+| `server/` | 遠端傳送的轉送服務，在主機的容器裡執行（見下方「遠端傳送的轉送服務」） |
 | `src/i18n/` | 介面字串：正體中文、簡體中文、英文 |
 | `tests/unit/` | 在 Node 裡測純邏輯 |
 | `tests/e2e/` | 在 Chromium、WebKit、Firefox 與 iPhone 尺寸上測整個流程 |
@@ -237,6 +240,19 @@ PDF 的版本紀錄：每一個 `%%EOF` 是一次存檔的結尾，切到那裡�
 - 15 秒內連不上時說明公共 Wi-Fi 與訪客網路常擋裝置互連，建議開手機熱點。Tor Browser 把 WebRTC 整個關掉，onion 版說明並建議改用 OnionShare。傳送時用 Wake Lock 不讓螢幕關掉
 - 瀏覽器測試（`tests/e2e/nearby.spec.ts`）在同一個瀏覽器開兩個分頁互傳，走複製貼上與「打開送出端的網址」兩條路。Firefox 不處理背景分頁的輸入，操作哪個分頁之前先 `bringToFront()`。CI 的機器沒有 mDNS 解析，Chromium 與 WebKit 給相機權限。GitHub 機器上的 Firefox 蒐集不到任何候選（2026-10-17 確認，位址隱藏關掉也一樣），測試先探測，蒐集不到就略過，所以 Firefox 的配對只在本機驗證。鏡頭掃 QR code 那一條跟 QR code 讀取共用解碼，沒有自動測試
 - 還沒做的：文件站實測過多條並行連線能讓 iPhone 送出從每秒約 5 MB 提高到 37 MB，第一版只用一條連線。接收大檔案時 iPhone 的記憶體上限、切到背景與鎖屏之後連線是否還在，都要在實機上量
+
+## 遠端傳送的轉送服務
+
+兩個人不在同一個地方時，經過社群的伺服器傳暫存區的檔案（anoni-net/gears#104，畫面還沒做）。轉送服務在 `server/relay.ts`，瀏覽器端在 `src/tools/remote/relay-client.ts`，兩邊共用的控制訊息在 `src/tools/remote/relay.ts`。
+
+- 流程：一端開房間取得房間代碼與 token，另一端用房間代碼加入，配對之後兩端送的二進位訊息由伺服器原樣轉給對方。伺服器送來的文字仍是控制訊息（`away`、`back`、`gone`、`error`），兩端要送文字時包成框（第一個位元組分文字與二進位）。`RelayLink` 實作 `Channel`，面對面傳送的 `transfer.ts` 直接用
+- 這一層不加密，送出的內容伺服器看得到。畫面接上之前要先加上兩端之間的加密（#104 的 B 版），不要直接拿這一層傳檔案
+- 斷線：用 1000 關閉代表離開，房間跟著關閉。其他的斷線（手機切到背景、網路中斷）對方收到 `away`，5 分鐘內用房間代碼與自己的 token 接回來（`resume`），對方收到 `back`。對方不在時送的直接丟掉，要靠上層的續傳補回來。伺服器每 20 秒 ping 一次，找出斷了卻沒有送出關閉的連線，也讓 Cloudflare 不會把閒置的 WebSocket 關掉
+- 限制（`DEFAULTS`）：一則訊息 256 KB、沒人加入的房間 30 分鐘、配對之後最長 6 小時、同時 200 個房間、每個房間轉送 3 GB、同一個鍵 10 分鐘內開 20 個房間（onion 共用一個鍵，300 個）。連上之後 10 秒內沒送控制訊息、版本不對、配對之後送文字都會被斷線
+- 不保存、不記錄：訊息只在轉給對方的途中經過記憶體，不寫進磁碟。房間只在記憶體裡，開房次數時間到就清掉，log 只寫啟動與程式的錯誤，nginx 的這兩個 location 也不記 access log
+- 部署：`vite.server.config.ts` 連同 `ws` 打包成單一個 `dist-server/relay.mjs`，`deploy.yml` 推到 `build` 分支的 `server/`，推送前用 `scripts/check-relay.mjs` 實際開房、配對、轉送一次。m6 用 docker compose 在 `node:24-slim`（鎖定 digest）的容器裡執行（`tools/relay-compose.yml`，主機用 apt 裝的 Node.js 是 18，不拿來執行），只聽本機的 8790，根目錄唯讀。拉取腳本發現 `server/` 有更新時重建容器。`ws` 只給轉送服務用，放在 devDependencies，不進網頁的執行期相依
+- nginx：clearnet 是 `/gears/relay/`，經過 Cloudflare（內容由兩端另外加密，Cloudflare 只經手密文，告知畫面要寫明），onion 是 `gears.<onion>/relay/`，兩個入口接到同一個程序，一端走 clearnet、一端走 onion 也配得起來。`X-Relay-Client` 帶計算開房次數用的鍵：clearnet 用 Cloudflare 的 `CF-Connecting-IP`，onion 一律是 `onion`（`tools/nginx-gears.conf`）。畫面接上之前不加進 m6 的設定
+- 單元測試（`tests/unit/relay.spec.ts`）在 Node 裡起轉送服務、用真的 WebSocket 連線：配對與轉送、面對面傳送的傳輸流程經過轉送（含 24 MB 的檔案）、斷線重連、等太久關閉、各種拒絕與限制
 
 ## QR code 的內容格式
 
@@ -482,6 +498,7 @@ PDF 的版本紀錄：每一個 `%%EOF` 是一次存檔的結尾，切到那裡�
 - m6：`/srv/anoni-net-gears/build` 是 `build` 分支的 clone，ubuntu 的 crontab `*/5 * * * * /home/ubuntu/gears-pull.sh`（原始檔 `tools/m6-pull.sh`，改了要再複製一次），log 在 `/home/ubuntu/gears-pull.log`。新版本上線前先把模型下載齊、把標頭換上（`/etc/nginx/snippets/gears-headers.conf`，`nginx -t` 通過才 reload），service worker 預先存的檔案連當時的標頭一起存，順序反過來的話，讀者的 Worker 會一直帶著舊的 CSP
 - nginx 的 location 與快取標頭的範本在 `tools/nginx-gears.conf`，實際設定在 m6 的 `/etc/nginx/conf.d/anoninet.conf`，改了要手動同步。頁面與圖片帶 `no-transform`，Cloudflare 不在頁面注入 Web Analytics 與 JS Detections 的 script，也不用 Polish 重新壓縮圖片。其他檔案不能帶：帶了 `no-transform` 的回應 Cloudflare 完全不壓縮，連 nginx 送出的 gzip 也會解開，讀者取得的是原始大小（`.wasm` 用 `application/wasm` 送出，onnxruntime 的 WebAssembly 壓縮後約小四分之三）。pdf.js 的 `.mjs` 另外指定 JavaScript 的 MIME
 - Cloudflare：Cache Rule「gears respect origin」讓 `/gears/` 的邊緣與瀏覽器都照 nginx 的快取標頭，頁面、manifest 與 165 清單是 `no-cache`，每次回來確認，`sw.js` 另由「docs sw.js no-cache」整個不快取。Transform Rule `onion-anoni.net` 排除 `/gears`，`onion-gears` 對 `/gears/` 送 `Onion-Location`，指到 onion 版的同一頁（見下方「onion 版與 Tor Browser」）
+- 轉送服務：`build` 分支的 `server/relay.mjs`，m6 在容器裡執行，見上方「遠端傳送的轉送服務」
 - 自己建置時（例如本機預覽）先執行 `node scripts/fetch-165.mjs` 與 `node scripts/fetch-whisper.mjs`
 
 ## onion 版與 Tor Browser

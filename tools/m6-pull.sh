@@ -5,7 +5,7 @@
 #
 # 本檔是那支腳本的原始檔，改了之後要複製到 m6 的 /home/ubuntu/gears-pull.sh。
 #
-# build 分支由 .github/workflows/deploy.yml 推上來：site/ 是網站，onion/ 是 onion 版，deploy/ 是
+# build 分支由 .github/workflows/deploy.yml 推上來：site/ 是網站，onion/ 是 onion 版，server/ 是轉送服務，deploy/ 是
 # 這裡要用的模型清單（models.txt）與 nginx 標頭（nginx-headers.conf、nginx-headers-onion.conf）。新的版本上線之前先做兩件事，
 # 新頁面用得到的模型與標頭要先就位：
 #
@@ -96,4 +96,14 @@ if ! git -C "$REPO" merge --ff-only -q "$target" 2>>"$LOG"; then
 fi
 if [ "$before" != "$target" ]; then
     log "$before -> $target $(git -C "$REPO" log -1 --format=%s)"
+fi
+
+# 4. 轉送服務：server/ 有變才重建容器（tools/relay-compose.yml）。m6 還沒設定容器時略過
+RELAY_COMPOSE=$BASE/relay-compose.yml
+if [ "$before" != "$target" ] && [ -f "$RELAY_COMPOSE" ] && ! git -C "$REPO" diff --quiet "$before" "$target" -- server/; then
+    if docker compose -f "$RELAY_COMPOSE" up -d --force-recreate relay >>"$LOG" 2>&1; then
+        log "重建轉送服務的容器"
+    else
+        log "轉送服務的容器重建失敗"
+    fi
 fi
