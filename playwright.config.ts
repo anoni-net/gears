@@ -39,7 +39,8 @@ export default defineConfig({
     {
       command: "npm run build:server && node dist-server/relay.mjs",
       port: 8791,
-      env: { RELAY_PORT: "8791", RELAY_OPENS_PER_CLIENT: "100000" },
+      // RELAY_TEST_ICE=all：不發 TURN、允許區網的位址，遠端傳送的資料通道在同一台機器上也打得開
+      env: { RELAY_PORT: "8791", RELAY_OPENS_PER_CLIENT: "100000", RELAY_TEST_ICE: "all" },
       reuseExistingServer: !process.env.CI,
       timeout: 60_000,
     },

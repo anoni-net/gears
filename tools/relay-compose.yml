@@ -19,6 +19,11 @@ services:
     environment:
       RELAY_HOST: 0.0.0.0
       RELAY_PORT: "8790"
+    # A 版的 TURN：Cloudflare Realtime 的 CF_TURN_KEY_ID 與 CF_TURN_KEY_TOKEN，只放在主機上（權限 600）。
+    # 沒有這個檔案時不發 TURN，遠端傳送只用轉送服務
+    env_file:
+      - path: /srv/anoni-net-gears/relay.env
+        required: false
     volumes:
       - /srv/anoni-net-gears/build/server:/srv/relay:ro
     ports:

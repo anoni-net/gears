@@ -23,9 +23,12 @@ async function startSender(page: Page): Promise<string> {
   return page.getByTestId("remote-link").inputValue();
 }
 
+// 給相機權限：Chromium 與 WebKit 有了權限才交出區網位址，CI 的機器沒有 mDNS 解析，
+// 只有 mDNS 名稱的話資料通道打不開（同面對面傳送的測試）。Firefox 不支援這項權限
 async function people(browser: Browser, baseURL: string) {
-  const a = await browser.newContext({ baseURL });
-  const b = await browser.newContext({ baseURL });
+  const permissions = browser.browserType().name() === "firefox" ? [] : ["camera"];
+  const a = await browser.newContext({ baseURL, permissions });
+  const b = await browser.newContext({ baseURL, permissions });
   return { sender: await a.newPage(), receiver: await b.newPage(), close: () => Promise.all([a.close(), b.close()]) };
 }
 
@@ -51,6 +54,9 @@ test("打開分享連結、按加入，兩端的確認碼相同，接收之後�
   expect(code).toMatch(/^\d{3} \d{3}$/);
   await expect(sender.getByTestId("remote-confirm").locator("strong")).toHaveText(code);
   await expect(sender.getByTestId("remote-status")).toContainText("等對方決定");
+  // 測試的轉送服務允許區網的位址（RELAY_TEST_ICE=all），Chromium 打得開資料通道。
+  // 其他核心在 CI 上可能蒐集不到候選，逾時之後走轉送服務，一樣要傳得完
+  if (browser.browserType().name() === "chromium") await expect(receiver.getByTestId("remote-via")).toHaveAttribute("data-via", "direct");
 
   await receiver.getByRole("button", { name: "接收", exact: true }).click();
   await expect(receiver.getByTestId("remote-status")).toHaveText("收到 2 個檔案，SHA-256 都對得上，已經放進暫存區。", { timeout: 30_000 });
@@ -169,5 +175,39 @@ test("連上之後兩端可以互傳文字訊息，傳完檔案之後也可以�
   await receiver.getByRole("button", { name: "結束連線" }).click();
   await expect(receiver.getByTestId("remote-ended")).toHaveText("連線已經結束。");
   await expect(sender.getByTestId("remote-ended")).toHaveText("對方已經結束連線。", { timeout: 20_000 });
+  await close();
+});
+
+test("資料通道傳到一半斷掉，改用轉送服務重傳，接收端不必再按一次接收", async ({ browser, baseURL }) => {
+  test.skip(browser.browserType().name() !== "chromium", "資料通道只在 Chromium 一定打得開");
+  const { sender, receiver, close } = await people(browser, baseURL!);
+  // 記下送出端建立的 RTCPeerConnection，傳到一半把它關掉
+  await sender.addInitScript(() => {
+    const Native = window.RTCPeerConnection;
+    const all: RTCPeerConnection[] = [];
+    (window as unknown as { __pcs: RTCPeerConnection[] }).__pcs = all;
+    window.RTCPeerConnection = class extends Native {
+      constructor(config?: RTCConfiguration) {
+        super(config);
+        all.push(this);
+      }
+    } as typeof RTCPeerConnection;
+  });
+  await sender.goto("./");
+  const big = Buffer.from(Array.from({ length: 24 * 1024 * 1024 }, (_, i) => (i * 131 + (i >> 10)) & 255));
+  await sender.getByTestId("file-input").setInputFiles([{ name: "big.bin", mimeType: "application/octet-stream", buffer: big }]);
+  await sender.getByRole("button", { name: "回到桌面" }).click();
+  await sender.getByRole("button", { name: /^遠端傳送/ }).click();
+  await sender.getByRole("button", { name: "送出暫存區的檔案" }).click();
+  await sender.getByRole("button", { name: "產生連結（1 個檔案）" }).click();
+  await expect(sender.getByTestId("remote-status")).toContainText("等對方打開連結");
+  await receiver.goto(await sender.getByTestId("remote-link").inputValue());
+  await receiver.getByRole("button", { name: "加入", exact: true }).click();
+  await expect(receiver.getByTestId("remote-via")).toHaveAttribute("data-via", "direct", { timeout: 20_000 });
+  await receiver.getByRole("button", { name: "接收", exact: true }).click();
+  await expect(sender.getByTestId("remote-status")).toContainText("已傳", { timeout: 20_000 });
+  await sender.evaluate(() => (window as unknown as { __pcs: RTCPeerConnection[] }).__pcs.forEach((pc) => pc.close()));
+  await expect(receiver.getByTestId("remote-status")).toHaveText("收到 1 個檔案，SHA-256 都對得上，已經放進暫存區。", { timeout: 60_000 });
+  await expect(receiver.getByTestId("remote-via")).toHaveAttribute("data-via", "relay");
   await close();
 });

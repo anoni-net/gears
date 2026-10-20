@@ -5,8 +5,10 @@ import { IS_ONION } from "../site.ts";
 import { tray } from "../state.ts";
 import { type FileMeta, MAX_TOTAL } from "../tools/nearby/protocol.ts";
 import { type Incoming, TooLargeError, receiveFiles, sendFiles } from "../tools/nearby/transfer.ts";
+import { type Direct, Signals, connectDirect } from "../tools/remote/direct.ts";
 import { type Invite, inviteHash, onionLink, parseInvite } from "../tools/remote/invite.ts";
 import { type Lanes, MAX_MESSAGE, split } from "../tools/remote/mux.ts";
+import { type Ice, NO_ICE } from "../tools/remote/relay.ts";
 import { RelayError, RelayLink } from "../tools/remote/relay-client.ts";
 import { SecureError, newLinkKey } from "../tools/remote/secure.ts";
 import { RemoteSession, type SessionState } from "../tools/remote/session.ts";
@@ -89,6 +91,10 @@ export function RemoteTool(_props: CreateToolProps) {
   const [messages, setMessages] = useState<{ mine: boolean; text: string }[]>([]);
   const [draft, setDraft] = useState("");
   const [ended, setEnded] = useState<"" | "self" | "peer">("");
+  // A 版：檔案經過 TURN 的 WebRTC 資料通道（direct.ts），打不開時走轉送服務
+  const signals = useRef<Signals | null>(null);
+  const direct = useRef<Direct | null>(null);
+  const [via, setVia] = useState<"" | "direct" | "relay">("");
 
   const busy = phase.kind === "creating" || phase.kind === "connecting" || phase.kind === "awaiting" || phase.kind === "transfer";
   const open = busy || phase.kind === "sharing" || phase.kind === "review";
@@ -104,6 +110,7 @@ export function RemoteTool(_props: CreateToolProps) {
     document.addEventListener("visibilitychange", onVisible);
     return () => {
       document.removeEventListener("visibilitychange", onVisible);
+      direct.current?.close();
       session.current?.close();
     };
   }, []);
@@ -144,6 +151,7 @@ export function RemoteTool(_props: CreateToolProps) {
     void s.confirm.then(setConfirm, () => {});
     const l = split(s);
     lanes.current = l;
+    signals.current = new Signals(l.signals);
     void (async () => {
       try {
         for (;;) {
@@ -176,7 +184,17 @@ export function RemoteTool(_props: CreateToolProps) {
     setDraft("");
   };
 
+  const dropDirect = () => {
+    direct.current?.close();
+    direct.current = null;
+  };
+
+  // 伺服器配對之後發的 TURN 設定。onion 版不用：TURN 走 UDP、不經過 Tor
+  const iceOf = (link: RelayLink): Promise<Ice> =>
+    IS_ONION ? Promise.resolve(NO_ICE) : Promise.race([link.ice, new Promise<Ice>((r) => setTimeout(() => r(NO_ICE), 5000))]);
+
   const hangUp = () => {
+    dropDirect();
     lanes.current = null;
     session.current?.close();
     session.current = null;
@@ -201,8 +219,24 @@ export function RemoteTool(_props: CreateToolProps) {
       await link.paired;
       setPhase({ kind: "connecting" });
       await s.confirm;
+      // 先試資料通道，送出端決定檔案走哪一條，用 via 告訴接收端
+      const d = await connectDirect(signals.current!, await iceOf(link), "opener");
+      direct.current = d;
+      signals.current!.send({ t: "via", rtc: !!d });
+      setVia(d ? "direct" : "relay");
       setPhase({ kind: "awaiting" });
-      const result = await sendFiles(files, out.outgoing(), (sent, total) => setPhase({ kind: "transfer", done: sent, total }));
+      const progress = (sent: number, total: number) => setPhase({ kind: "transfer", done: sent, total });
+      let result;
+      try {
+        result = await sendFiles(d?.channel ?? files, out.outgoing(), progress);
+      } catch (error) {
+        // 資料通道傳到一半斷掉時改用轉送服務重傳，接收端不必再按一次接收
+        if (!d || !lanes.current) throw error;
+        dropDirect();
+        setVia("relay");
+        signals.current!.send({ t: "via", rtc: false, retry: true });
+        result = await sendFiles(files, out.outgoing(), progress);
+      }
       if (result.declined) return done({ kind: "declined" });
       track("tool-done", { tool: "remote" });
       done({ kind: "sent", ok: result.ok });
@@ -219,7 +253,13 @@ export function RemoteTool(_props: CreateToolProps) {
       const s = new RemoteSession(link, invite.key, "joiner");
       const files = watch(s);
       await s.confirm;
-      const incoming = await receiveFiles(files);
+      const d = await connectDirect(signals.current!, await iceOf(link), "joiner");
+      const v = await signals.current!.next((m) => m.t === "via", 30_000);
+      if (v?.t !== "via" || (v.rtc && !d)) throw new Error("failed");
+      if (v.rtc) direct.current = d;
+      else d?.close();
+      setVia(v.rtc ? "direct" : "relay");
+      const incoming = await receiveFiles(v.rtc ? d!.channel : files);
       setPhase({ kind: "review", incoming });
     } catch (error) {
       fail(error);
@@ -228,7 +268,21 @@ export function RemoteTool(_props: CreateToolProps) {
   const accept = async (incoming: Incoming) => {
     setPhase({ kind: "transfer", done: 0, total: incoming.files.reduce((s, f) => s + f.size, 0) });
     try {
-      const result = await incoming.accept((received, total) => setPhase({ kind: "transfer", done: received, total }));
+      const progress = (received: number, total: number) => setPhase({ kind: "transfer", done: received, total });
+      let result;
+      try {
+        result = await incoming.accept(progress);
+      } catch (error) {
+        // 資料通道傳到一半斷掉：等送出端改用轉送服務重傳，清單相同就直接接收
+        if (error instanceof TooLargeError || !direct.current || !lanes.current) throw error;
+        dropDirect();
+        const retry = await signals.current?.next((m) => m.t === "via" && m.retry === true, 20_000);
+        if (!retry) throw error;
+        setVia("relay");
+        const again = await receiveFiles(lanes.current.files);
+        if (JSON.stringify(again.files) !== JSON.stringify(incoming.files)) throw new Error("failed");
+        result = await again.accept(progress);
+      }
       if (result.files.length) await tray.add(result.files, "remote");
       track("tool-done", { tool: "remote" });
       done({ kind: "received", count: result.files.length, failed: result.ok.filter((ok) => !ok).length });
@@ -238,6 +292,9 @@ export function RemoteTool(_props: CreateToolProps) {
   };
 
   const reset = () => {
+    dropDirect();
+    signals.current = null;
+    setVia("");
     lanes.current = null;
     session.current?.close();
     session.current = null;
@@ -282,6 +339,7 @@ export function RemoteTool(_props: CreateToolProps) {
           <li>{t("remote.privacy.keeps")}</li>
           <li>{t("remote.privacy.link")}</li>
           <li>{t("remote.privacy.limits")}</li>
+          {IS_ONION ? null : <li>{t("remote.privacy.direct")}</li>}
         </ul>
       </details>
     </div>
@@ -472,6 +530,11 @@ export function RemoteTool(_props: CreateToolProps) {
       {connNote ? (
         <p class="hint" role="status" data-testid="remote-conn">
           {connNote}
+        </p>
+      ) : null}
+      {via && ["awaiting", "review", "transfer", "sent", "received"].includes(phase.kind) ? (
+        <p class="hint" data-testid="remote-via" data-via={via}>
+          {t(via === "direct" ? "remote.via.direct" : "remote.via.relay")}
         </p>
       ) : null}
       {confirm && phase.kind !== "error" ? (

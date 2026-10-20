@@ -6,7 +6,7 @@
 // 不要直接拿這一層傳檔案。
 
 import { type Channel, type Data, Inbox } from "../nearby/channel.ts";
-import { type ClientControl, RELAY_VERSION, type RelayErrorCode, type ServerControl, frame, parseServerControl, unframe } from "./relay.ts";
+import { type ClientControl, type Ice, NO_ICE, RELAY_VERSION, type RelayErrorCode, type ServerControl, frame, parseServerControl, unframe } from "./relay.ts";
 
 // epoch：自己接回來或對方接回來，上一段連線的訊息作廢，要重新握手（RelayLink.epoch）
 export type LinkErrorCode = RelayErrorCode | "connect" | "closed" | "gone" | "epoch";
@@ -36,6 +36,9 @@ export class RelayLink implements Channel {
   room = "";
   token = "";
   readonly paired: Promise<void>;
+  // 配對之後伺服器發的 TURN 設定。沒有收到就結束時是 off
+  readonly ice: Promise<Ice>;
+  private resolveIce!: (ice: Ice) => void;
   private resolvePaired!: () => void;
   private rejectPaired!: (e: Error) => void;
   private ws: WebSocket | null = null;
@@ -52,12 +55,13 @@ export class RelayLink implements Channel {
       this.rejectPaired = reject;
     });
     this.paired.catch(() => {});
+    this.ice = new Promise((resolve) => (this.resolveIce = resolve));
   }
 
   // 開房間，拿到房間代碼就回傳，對方加入時 paired 才完成
   static async open(url: string): Promise<RelayLink> {
     const link = new RelayLink(url);
-    const m = await link.connect({ t: "open", v: RELAY_VERSION }, ["room"]);
+    const m = await link.connect({ t: "open", v: RELAY_VERSION, ice: true }, ["room"]);
     if (m.t === "room") {
       link.room = m.room;
       link.token = m.token;
@@ -69,7 +73,7 @@ export class RelayLink implements Channel {
   static async join(url: string, room: string): Promise<RelayLink> {
     const link = new RelayLink(url);
     link.room = room;
-    await link.connect({ t: "join", v: RELAY_VERSION, room }, ["paired"]);
+    await link.connect({ t: "join", v: RELAY_VERSION, room, ice: true }, ["paired"]);
     return link;
   }
 
@@ -79,7 +83,7 @@ export class RelayLink implements Channel {
     const old = this.ws;
     this.ws = null;
     old?.close(REPLACED);
-    await this.connect({ t: "resume", v: RELAY_VERSION, room: this.room, token: this.token }, ["resumed"]);
+    await this.connect({ t: "resume", v: RELAY_VERSION, room: this.room, token: this.token, ice: true }, ["resumed"]);
   }
 
   onState(listener: (state: LinkState) => void): () => void {
@@ -210,6 +214,9 @@ export class RelayLink implements Channel {
       case "away":
         this.emit(m.t);
         break;
+      case "ice":
+        this.resolveIce({ policy: m.policy, servers: m.servers });
+        break;
     }
     if (this.waiter?.types.includes(m.t)) this.waiter.resolve(m);
   }
@@ -226,6 +233,7 @@ export class RelayLink implements Channel {
     this.ws = null;
     this.inbox.end(error);
     this.rejectPaired(error);
+    this.resolveIce(NO_ICE);
   }
 
   private emit(state: LinkState) {
