@@ -77,6 +77,8 @@ export function RemoteTool(_props: CreateToolProps) {
   const [pasted, setPasted] = useState("");
   const [notLink, setNotLink] = useState(false);
   const [copied, setCopied] = useState("");
+  // 傳送進行中又打開另一個連結時先留著，問讀者要不要改用
+  const [pendingInvite, setPendingInvite] = useState<Invite | null>(null);
   const session = useRef<RemoteSession | null>(null);
   // 傳完之後對方關掉連線是正常的，不當成錯誤
   const finished = useRef(false);
@@ -100,14 +102,15 @@ export function RemoteTool(_props: CreateToolProps) {
 
   // 從分享連結打開時讀 # 後面，讀完就從網址清掉，不留在瀏覽紀錄裡。不自動連線：通訊軟體的預覽
   // 可能在伺服器端打開連結，自動加入的話一次性的房間會先被用掉，讀者按「加入」才連
+  // 頁面已經開著、在網址列貼上連結時只有 # 後面變了，瀏覽器不會重新載入，另外聽 hashchange。
+  // 上一次傳完或出錯之後也要接得住新的連結，傳送進行中則先問讀者
   const fromHash = useRef<() => void>(() => {});
   fromHash.current = () => {
     const invite = parseInvite(location.hash);
     if (!invite) return;
     history.replaceState(history.state, "", location.pathname + location.search);
-    if (phase.kind !== "idle" && phase.kind !== "invited") return;
-    setMode("receive");
-    setPhase({ kind: "invited", invite });
+    if (open) setPendingInvite(invite);
+    else openInvite(invite);
   };
   useEffect(() => {
     fromHash.current();
@@ -193,7 +196,7 @@ export function RemoteTool(_props: CreateToolProps) {
     }
   };
 
-  const restart = () => {
+  const reset = () => {
     session.current?.close();
     session.current = null;
     finished.current = false;
@@ -202,9 +205,18 @@ export function RemoteTool(_props: CreateToolProps) {
     setPasted("");
     setNotLink(false);
     setCopied("");
+    setPendingInvite(null);
+  };
+  const restart = () => {
+    reset();
     setPhase({ kind: "idle" });
     setMode("choose");
   };
+  function openInvite(invite: Invite) {
+    reset();
+    setMode("receive");
+    setPhase({ kind: "invited", invite });
+  }
 
   const copy = (text: string) =>
     void navigator.clipboard.writeText(text).then(
@@ -296,9 +308,7 @@ export function RemoteTool(_props: CreateToolProps) {
             e.preventDefault();
             const invite = parseInvite(pasted);
             setNotLink(!invite);
-            if (!invite) return;
-            setMode("receive");
-            setPhase({ kind: "invited", invite });
+            if (invite) openInvite(invite);
           }}
         >
           <label for="remote-paste">{t("remote.paste")}</label>
@@ -400,6 +410,19 @@ export function RemoteTool(_props: CreateToolProps) {
         <p class={phase.kind === "error" ? "error" : "hint"} role="status" data-testid="remote-status">
           {status}
         </p>
+      ) : null}
+      {pendingInvite ? (
+        <div class="remote-pending" role="status" data-testid="remote-pending">
+          <p>{t("remote.pendingInvite")}</p>
+          <div class="buttons">
+            <button type="button" onClick={() => openInvite(pendingInvite)}>
+              {t("remote.switchInvite")}
+            </button>
+            <button type="button" onClick={() => setPendingInvite(null)}>
+              {t("remote.keepCurrent")}
+            </button>
+          </div>
+        </div>
       ) : null}
       {connNote ? (
         <p class="hint" role="status" data-testid="remote-conn">
