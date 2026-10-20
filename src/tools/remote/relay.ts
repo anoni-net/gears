@@ -4,15 +4,18 @@
 //
 //   開房的一端 → {"t":"open","v":1}                          ← {"t":"room","room":…,"token":…}
 //   加入的一端 → {"t":"join","v":1,"room":…}                 ← {"t":"paired","token":…}，開房的一端收到 {"t":"paired"}
-//   斷線重連   → {"t":"resume","v":1,"room":…,"token":…}     ← {"t":"resumed","paired":…}，對方收到 {"t":"back"}
+//   斷線重連   → {"t":"resume","v":1,"room":…,"token":…}     ← {"t":"resumed","paired":…,"epoch":n}，對方收到 {"t":"back","epoch":n}
 //
 // 配對之後，兩端送的一律是二進位，伺服器原樣轉給對方，不看內容、不保存。伺服器送來的文字仍然是
 // 控制訊息（away、back、gone、error），所以兩者不會混在一起。要送文字時包成一個框（frame）：
 // 第一個位元組 0 是文字（UTF-8）、1 是二進位，接著是內容。遠端傳送的加密之後也套在框外面。
 //
 // 斷線：用 close 的 1000 關掉代表離開，房間跟著關閉。其他的斷線（手機切到背景、網路中斷）先當成
-// 暫時離開，對方收到 away，在 GRACE 之內用房間代碼與自己的 token 接回來。伺服器不替不在的那一端
+// 暫時離開，對方收到 away，在 GRACE 之內用房間代碼與自己的 token 接回來，對方收到 back（就算它沒收到 away）。伺服器不替不在的那一端
 // 留著訊息，對方不在時送的會被丟掉，要靠上層的續傳補回來（anoni-net/gears#104）。
+//
+// epoch 是這個房間第幾段連線，每次有一端接回來就加一，兩端收到同一個數字。接回來之後兩端重新握手
+// （secure.ts），握手時用它認出上一段連線還在路上的訊息。
 
 export const RELAY_VERSION = 1;
 
@@ -47,11 +50,13 @@ export type RelayErrorCode =
 export type ServerControl =
   | { t: "room"; room: string; token: string }
   | { t: "paired"; token?: string }
-  | { t: "resumed"; paired: boolean }
+  | { t: "resumed"; paired: boolean; epoch: number }
   | { t: "away" }
-  | { t: "back" }
+  | { t: "back"; epoch: number }
   | { t: "gone" }
   | { t: "error"; code: RelayErrorCode };
+
+const isEpoch = (v: unknown): v is number => Number.isSafeInteger(v) && (v as number) > 0;
 
 const ERRORS: RelayErrorCode[] = ["version", "bad-message", "no-room", "room-full", "busy", "rate-limited", "quota"];
 
@@ -89,10 +94,12 @@ export function parseServerControl(text: string): ServerControl {
       if (m.token !== undefined && !isId(m.token)) throw new Error("bad-message");
       return m.token === undefined ? { t: "paired" } : { t: "paired", token: m.token };
     case "resumed":
-      if (typeof m.paired !== "boolean") throw new Error("bad-message");
-      return { t: "resumed", paired: m.paired };
-    case "away":
+      if (typeof m.paired !== "boolean" || !isEpoch(m.epoch)) throw new Error("bad-message");
+      return { t: "resumed", paired: m.paired, epoch: m.epoch };
     case "back":
+      if (!isEpoch(m.epoch)) throw new Error("bad-message");
+      return { t: "back", epoch: m.epoch };
+    case "away":
     case "gone":
       return { t: m.t };
     case "error":

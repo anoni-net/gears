@@ -3,7 +3,7 @@
 //
 // 連結金鑰 K（32 位元組）由開房的一端產生，放在分享連結的 # 後面，不會送到伺服器。配對之後：
 //
-// 1. 兩端各產生一組暫時的 X25519 金鑰，用明文交換公鑰：{"t":"hello","v":1,"key":…}
+// 1. 兩端各產生一組暫時的 X25519 金鑰，用明文交換公鑰：{"t":"hello","v":1,"e":epoch,"key":…}
 // 2. 共同推出的值當輸入、K 當 salt，用 HKDF-SHA256 導出兩把金鑰，每個方向一把。info 帶協定版本與
 //    兩端的公鑰（開房的一端在前），公鑰在途中被換掉的話，兩邊導出的金鑰就不同
 // 3. 之後每則訊息先包成框（relay.ts 的 frame，分文字與二進位），用 AES-256-GCM 加密。nonce 是遞增的
@@ -81,20 +81,28 @@ function nonce(counter: number): Uint8Array {
 const asBuffer = (u8: Uint8Array): ArrayBuffer =>
   u8.byteOffset === 0 && u8.byteLength === u8.buffer.byteLength ? (u8.buffer as ArrayBuffer) : (u8.slice().buffer as ArrayBuffer);
 
-async function readHello(inner: Channel): Promise<Uint8Array> {
-  const item = await inner.next();
-  if (typeof item !== "string") throw new SecureError("bad-hello");
-  let m: Record<string, unknown>;
-  try {
-    m = JSON.parse(item);
-  } catch {
-    throw new SecureError("bad-hello");
+// 對方的 hello。斷線重連之後，上一段連線還在路上的訊息可能先到：二進位的與 epoch 比較舊的 hello 略過
+async function readHello(inner: Channel, epoch: number): Promise<Uint8Array> {
+  for (;;) {
+    const item = await inner.next();
+    if (typeof item !== "string") {
+      if (epoch > 0) continue;
+      throw new SecureError("bad-hello");
+    }
+    let m: Record<string, unknown>;
+    try {
+      m = JSON.parse(item);
+    } catch {
+      throw new SecureError("bad-hello");
+    }
+    if (!m || m.t !== "hello") throw new SecureError("bad-hello");
+    if (m.v !== SECURE_VERSION) throw new SecureError("version");
+    if (typeof m.e === "number" && m.e < epoch) continue;
+    if (m.e !== epoch) throw new SecureError("bad-hello");
+    const key = typeof m.key === "string" ? fromB64url(m.key, 32) : null;
+    if (!key) throw new SecureError("bad-hello");
+    return key;
   }
-  if (!m || m.t !== "hello") throw new SecureError("bad-hello");
-  if (m.v !== SECURE_VERSION) throw new SecureError("version");
-  const key = typeof m.key === "string" ? fromB64url(m.key, 32) : null;
-  if (!key) throw new SecureError("bad-hello");
-  return key;
 }
 
 export interface Secured {
@@ -103,12 +111,13 @@ export interface Secured {
   confirm: string;
 }
 
-// 在 inner 上握手，回傳加密過的通道。K 不對時丟出 wrong-key，對方送來的不是合格的公鑰時丟出 bad-hello
-export async function secure(inner: Channel, linkKey: Uint8Array, role: Role): Promise<Secured> {
+// 在 inner 上握手，回傳加密過的通道。K 不對時丟出 wrong-key，對方送來的不是合格的公鑰時丟出 bad-hello。
+// epoch 是轉送服務給的連線編號（RelayLink.epoch），沒有斷過線時是 0
+export async function secure(inner: Channel, linkKey: Uint8Array, role: Role, epoch = 0): Promise<Secured> {
   const secret = x25519.utils.randomSecretKey();
   const mine = x25519.getPublicKey(secret);
-  inner.send(JSON.stringify({ t: "hello", v: SECURE_VERSION, key: b64url(mine) }));
-  const theirs = await readHello(inner);
+  inner.send(JSON.stringify({ t: "hello", v: SECURE_VERSION, e: epoch, key: b64url(mine) }));
+  const theirs = await readHello(inner, epoch);
 
   let shared: Uint8Array;
   try {

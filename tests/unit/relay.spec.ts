@@ -25,9 +25,9 @@ test("控制訊息：合格的讀出來，版本不同另外標出，其他一�
     expect(() => parseClientControl(bad), bad).toThrow("bad-message");
 
   expect(parseServerControl(JSON.stringify({ t: "paired" }))).toEqual({ t: "paired" });
-  expect(parseServerControl(JSON.stringify({ t: "resumed", paired: true }))).toEqual({ t: "resumed", paired: true });
+  expect(parseServerControl(JSON.stringify({ t: "resumed", paired: true, epoch: 2 }))).toEqual({ t: "resumed", paired: true, epoch: 2 });
   expect(parseServerControl(JSON.stringify({ t: "error", code: "no-room" }))).toEqual({ t: "error", code: "no-room" });
-  for (const bad of ['{"t":"error","code":"boom"}', '{"t":"resumed"}', '{"t":"room","room":"x","token":"y"}'])
+  for (const bad of ['{"t":"error","code":"boom"}', '{"t":"resumed","paired":true}', '{"t":"back","epoch":0}', '{"t":"room","room":"x","token":"y"}'])
     expect(() => parseServerControl(bad), bad).toThrow("bad-message");
 });
 
