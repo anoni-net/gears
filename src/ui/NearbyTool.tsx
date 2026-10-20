@@ -20,8 +20,8 @@ import {
   opened,
   rtcAvailable,
 } from "./nearby.ts";
-import { outputName } from "./output-name.ts";
 import { decodeQrFromVideo } from "./qr-scan.ts";
+import { size, useOutgoing, useWakeLock } from "./transfer-ui.tsx";
 import type { CreateToolProps } from "./types.ts";
 import { useWorking } from "./working.ts";
 
@@ -39,8 +39,6 @@ type Phase =
   | { kind: "declined" }
   | { kind: "received"; count: number; failed: number }
   | { kind: "error"; reason: "timeout" | "closed" | "tooLarge" | "noNetwork" | "failed" };
-
-const size = (n: number) => (n >= 1024 ** 2 ? `${(n / 1024 ** 2).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
 
 function QrCode({ text, label }: { text: string; label: string }) {
   const matrix = encodeQr(text, "M");
@@ -95,20 +93,6 @@ function useScanner(stream: MediaStream | null, active: boolean, onCode: (text: 
   return video;
 }
 
-// 傳送的時候不讓螢幕關掉，手機鎖屏之後連線可能斷掉
-function useWakeLock(active: boolean) {
-  useEffect(() => {
-    if (!active || !("wakeLock" in navigator)) return;
-    let lock: WakeLockSentinel | null = null;
-    let alive = true;
-    void navigator.wakeLock.request("screen").then((l) => (alive ? (lock = l) : void l.release()), () => {});
-    return () => {
-      alive = false;
-      void lock?.release();
-    };
-  }, [active]);
-}
-
 // 面對面傳送：兩台裝置在同一個網路裡，用 WebRTC 直接傳暫存區的檔案，不經過任何伺服器。
 // 連線描述用 QR code 交換：送出端的 QR code 是工作台的網址，連線描述放在 # 後面（不會送到伺服器），
 // 手機用系統的相機掃也能直接打開。接收端的回應由送出端頁面裡的相機掃。沒有相機時複製貼上
@@ -116,18 +100,7 @@ export function NearbyTool(_props: CreateToolProps) {
   const state = useTray();
   const [mode, setMode] = useState<"choose" | "send" | "receive">("choose");
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
-  // 要送出的檔案：預設全選，打開工具之後才加入暫存區的檔案也勾上（seen 記著已經處理過的檔案）
-  const [picked, setPicked] = useState<Set<number>>(() => new Set(state.files.map((f) => f.id)));
-  const seen = useRef(new Set(state.files.map((f) => f.id)));
-  useEffect(() => {
-    const added = state.files.filter((f) => !seen.current.has(f.id)).map((f) => f.id);
-    if (!added.length) return;
-    for (const id of added) seen.current.add(id);
-    setPicked((s) => new Set([...s, ...added]));
-  }, [state.files]);
-  // 檔名預設跟下載一樣改成 gears 加編號，原本的檔名常帶著日期或人名。傳給自己的其他裝置時可以保留
-  const [keepNames, setKeepNames] = useState(false);
-  const nameOf = (f: (typeof state.files)[number]) => (keepNames ? f.name : outputName(f, state.files.indexOf(f)));
+  const out = useOutgoing(state);
   const [code, setCode] = useState(""); // 自己這一側要給對方的代碼
   const [confirm, setConfirm] = useState("");
   const [pasted, setPasted] = useState("");
@@ -190,7 +163,7 @@ export function NearbyTool(_props: CreateToolProps) {
   };
 
   // ── 送出端 ──
-  const files = state.files.filter((f) => picked.has(f.id));
+  const files = out.files;
   const startSend = async () => {
     setPhase({ kind: "preparing" });
     try {
@@ -221,8 +194,7 @@ export function NearbyTool(_props: CreateToolProps) {
       const channel = await opened(p);
       setConfirm(confirmOf(p));
       setPhase({ kind: "awaiting" });
-      const outgoing = files.map((f) => ({ name: nameOf(f), blob: f.versions.at(-1)!.blob }));
-      const result = await sendFiles(channel, outgoing, (done, total) => setPhase({ kind: "transfer", done, total }));
+      const result = await sendFiles(channel, out.outgoing(), (done, total) => setPhase({ kind: "transfer", done, total }));
       if (result.declined) return setPhase({ kind: "declined" });
       track("tool-done", { tool: "nearby" });
       setPhase({ kind: "sent", ok: result.ok });
@@ -413,33 +385,7 @@ export function NearbyTool(_props: CreateToolProps) {
       </>
     );
   } else if (mode === "send" && phase.kind === "idle") {
-    body = (
-      <>
-        <fieldset class="choices">
-          <legend>{t("nearby.pick")}</legend>
-          {state.files.map((f) => (
-            <label key={f.id} class="check">
-              <input
-                type="checkbox"
-                checked={picked.has(f.id)}
-                onChange={() => setPicked((s) => (s.has(f.id) ? new Set([...s].filter((x) => x !== f.id)) : new Set([...s, f.id])))}
-              />
-              <span>
-                {nameOf(f)}
-                <small class="hint">{size(f.versions.at(-1)!.blob.size)}</small>
-              </span>
-            </label>
-          ))}
-        </fieldset>
-        <label class="check">
-          <input type="checkbox" checked={keepNames} onChange={(e) => setKeepNames(e.currentTarget.checked)} data-testid="nearby-keep-names" />
-          <span>
-            {t("nearby.keepNames")}
-            <small class="hint">{t("nearby.keepNamesNote")}</small>
-          </span>
-        </label>
-      </>
-    );
+    body = out.picker;
     actions = (
       <>
         <button type="button" class="primary" disabled={!files.length} onClick={() => void startSend()}>

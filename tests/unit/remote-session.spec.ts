@@ -38,6 +38,28 @@ async function transfer(a: RemoteSession, b: RemoteSession, data: Uint8Array<Arr
   return { result, file: new Uint8Array(await received.files[0]!.arrayBuffer()), ok: received.ok };
 }
 
+test("開房之後馬上建立 session，等對方加入才握手", async () => {
+  await withRelay({}, async (relay) => {
+    const key = newLinkKey();
+    const opener = await RelayLink.open(relay.url);
+    const a = new RemoteSession(opener, key, "opener");
+    await new Promise((r) => setTimeout(r, 100));
+    const joiner = await RelayLink.join(relay.url, opener.room);
+    const b = new RemoteSession(joiner, key, "joiner");
+    expect(await a.confirm).toBe(await b.confirm);
+    a.send("hi");
+    expect(await b.next()).toBe("hi");
+    a.close();
+  });
+});
+
+test("開房之後沒人加入，房間過期時 session 跟著結束", async () => {
+  await withRelay({ waitMs: 150 }, async (relay) => {
+    const a = new RemoteSession(await RelayLink.open(relay.url), newLinkKey(), "opener");
+    await expect(a.confirm).rejects.toMatchObject({ code: "gone" });
+  });
+});
+
 test("沒有斷線：確認碼相同，檔案完整", async () => {
   await withRelay({}, async (relay) => {
     const { a, b, ca, cb } = await sessions(relay);

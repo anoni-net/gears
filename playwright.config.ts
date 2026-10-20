@@ -27,12 +27,23 @@ export default defineConfig({
     trace: process.env.CI ? "on-first-retry" : "off",
     screenshot: process.env.CI ? "only-on-failure" : "off",
   },
-  webServer: {
-    command: "npm run build && npm run preview",
-    url: BASE,
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
-  },
+  webServer: [
+    {
+      command: "npm run build && npm run preview",
+      url: BASE,
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+    },
+    // 遠端傳送的轉送服務，預覽伺服器把 /gears/relay/ 轉過來（vite.config.ts 的 preview.proxy）。
+    // 用打包好的檔案，跟正式環境相同。所有測試都從本機開房，開房次數的上限放寬
+    {
+      command: "npm run build:server && node dist-server/relay.mjs",
+      port: 8791,
+      env: { RELAY_PORT: "8791", RELAY_OPENS_PER_CLIENT: "100000" },
+      reuseExistingServer: !process.env.CI,
+      timeout: 60_000,
+    },
+  ],
   projects: [
     { name: "unit", testDir: "tests/unit" },
     { name: "chromium", testDir: "tests/e2e", use: { ...devices["Desktop Chrome"] } },

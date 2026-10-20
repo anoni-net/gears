@@ -232,6 +232,13 @@ export class RemoteSession implements Channel {
   }
 
   private async run() {
+    // 開房的一端在對方加入之前不能送任何東西，轉送服務會當成不合格的訊息
+    try {
+      await this.link.paired;
+    } catch (error) {
+      this.end(error as Error);
+      return;
+    }
     while (!this.ended) {
       const view = this.link.epoch();
       let channel: Channel;

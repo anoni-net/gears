@@ -5,6 +5,8 @@
 # 主機用 apt 裝的 Node.js 是 18，不拿來執行新的程式，跟 m6 上其他 Node.js 服務一樣放進容器。
 # 映像鎖定 digest，升級時查新的 digest 再換。容器只讀打包好的 relay.mjs，不需要 npm install，
 # 只聽本機的 8790，由 nginx 反向代理（tools/nginx-gears.conf）。轉送服務不寫檔案，根目錄唯讀。
+# 專案名稱寫死，拉取腳本不帶 -p 也操作同一個容器
+name: gears-relay
 services:
   relay:
     # node:24-slim，Node.js 24.22.0（2026-10-14）
