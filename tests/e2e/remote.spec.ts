@@ -1,3 +1,4 @@
+import AxeBuilder from "@axe-core/playwright";
 import type { Browser, Page } from "@playwright/test";
 import { expect, test } from "./guard.ts";
 
@@ -133,5 +134,40 @@ test("傳送進行中貼上另一個連結時先問讀者，可以改用新的�
   // 原本的送出端收到對方離開
   await expect(sender.getByTestId("remote-status")).toContainText("對方已經離開", { timeout: 20_000 });
   await other.close();
+  await close();
+});
+
+test("連上之後兩端可以互傳文字訊息，傳完檔案之後也可以，結束連線之後對方看得到", async ({ browser, baseURL }) => {
+  const { sender, receiver, close } = await people(browser, baseURL!);
+  const link = await startSender(sender);
+  await receiver.goto(link);
+  await receiver.getByRole("button", { name: "加入", exact: true }).click();
+  await expect(receiver.getByTestId("remote-incoming").locator("li")).toHaveCount(2, { timeout: 20_000 });
+
+  // 接收之前先問一句
+  await receiver.getByTestId("remote-chat-input").fill("這兩個檔案是什麼？");
+  await receiver.getByRole("button", { name: "送出", exact: true }).click();
+  await expect(sender.getByTestId("remote-messages")).toContainText("這兩個檔案是什麼？");
+  // Enter 也能送出
+  await sender.getByTestId("remote-chat-input").fill("上次說的資料");
+  await sender.getByTestId("remote-chat-input").press("Enter");
+  await expect(receiver.getByTestId("remote-messages")).toContainText("上次說的資料");
+  await expect(receiver.getByTestId("remote-chat-input")).toHaveValue("");
+
+  await receiver.getByRole("button", { name: "接收", exact: true }).click();
+  await expect(receiver.getByTestId("remote-status")).toContainText("收到 2 個檔案", { timeout: 30_000 });
+  // 傳完之後連線還在
+  await sender.getByTestId("remote-chat-input").fill("收到了嗎");
+  await sender.getByRole("button", { name: "送出", exact: true }).click();
+  await expect(receiver.getByTestId("remote-messages")).toContainText("收到了嗎");
+  // 確認碼、清單與文字訊息都在畫面上時的無障礙檢查，結果跟瀏覽器無關，只在 Chromium 跑
+  if (browser.browserType().name() === "chromium") {
+    const result = await new AxeBuilder({ page: receiver }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
+    expect(result.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).join(" | ")}`)).toEqual([]);
+  }
+
+  await receiver.getByRole("button", { name: "結束連線" }).click();
+  await expect(receiver.getByTestId("remote-ended")).toHaveText("連線已經結束。");
+  await expect(sender.getByTestId("remote-ended")).toHaveText("對方已經結束連線。", { timeout: 20_000 });
   await close();
 });

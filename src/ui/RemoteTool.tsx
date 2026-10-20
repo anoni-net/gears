@@ -6,6 +6,7 @@ import { tray } from "../state.ts";
 import { type FileMeta, MAX_TOTAL } from "../tools/nearby/protocol.ts";
 import { type Incoming, TooLargeError, receiveFiles, sendFiles } from "../tools/nearby/transfer.ts";
 import { type Invite, inviteHash, onionLink, parseInvite } from "../tools/remote/invite.ts";
+import { type Lanes, MAX_MESSAGE, split } from "../tools/remote/mux.ts";
 import { RelayError, RelayLink } from "../tools/remote/relay-client.ts";
 import { SecureError, newLinkKey } from "../tools/remote/secure.ts";
 import { RemoteSession, type SessionState } from "../tools/remote/session.ts";
@@ -82,10 +83,17 @@ export function RemoteTool(_props: CreateToolProps) {
   const session = useRef<RemoteSession | null>(null);
   // 傳完之後對方關掉連線是正常的，不當成錯誤
   const finished = useRef(false);
+  // 文字訊息：連上之後兩端都能送，傳完檔案之後連線留著，讀者按「結束連線」或換一個連結才關掉。
+  // 訊息只在這個元件的記憶體裡，不寫進任何儲存空間
+  const lanes = useRef<Lanes | null>(null);
+  const [messages, setMessages] = useState<{ mine: boolean; text: string }[]>([]);
+  const [draft, setDraft] = useState("");
+  const [ended, setEnded] = useState<"" | "self" | "peer">("");
 
   const busy = phase.kind === "creating" || phase.kind === "connecting" || phase.kind === "awaiting" || phase.kind === "transfer";
   const open = busy || phase.kind === "sharing" || phase.kind === "review";
-  useWorking(open);
+  const chatting = !!confirm && !ended && phase.kind !== "error";
+  useWorking(open || chatting);
   useWakeLock(open);
 
   useEffect(() => {
@@ -128,19 +136,52 @@ export function RemoteTool(_props: CreateToolProps) {
     setPhase({ kind: "error", reason });
   };
 
+  // 連線分成檔案與文字訊息兩條（mux.ts），回傳檔案那一條給傳輸的流程用
   const watch = (s: RemoteSession) => {
     session.current = s;
     finished.current = false;
     s.onState(setConn);
     void s.confirm.then(setConfirm, () => {});
+    const l = split(s);
+    lanes.current = l;
+    void (async () => {
+      try {
+        for (;;) {
+          const text = await l.messages.next();
+          if (typeof text !== "string" || !text.trim() || text.length > MAX_MESSAGE) continue;
+          setMessages((m) => [...m, { mine: false, text }]);
+        }
+      } catch {
+        if (lanes.current === l) setEnded((e) => e || "peer");
+      }
+    })();
+    return l.files;
   };
 
+  // 檔案傳完、拒絕之後連線留著，兩端還能互傳文字訊息
   const done = (next: Phase) => {
     finished.current = true;
+    setPhase(next);
+  };
+
+  const sendMessage = () => {
+    const text = draft.trim();
+    if (!text || !lanes.current || ended) return;
+    try {
+      lanes.current.messages.send(text.slice(0, MAX_MESSAGE));
+    } catch {
+      return;
+    }
+    setMessages((m) => [...m, { mine: true, text: text.slice(0, MAX_MESSAGE) }]);
+    setDraft("");
+  };
+
+  const hangUp = () => {
+    lanes.current = null;
     session.current?.close();
     session.current = null;
     setConn(null);
-    setPhase(next);
+    setEnded("self");
   };
 
   // ── 送出端 ──
@@ -150,7 +191,7 @@ export function RemoteTool(_props: CreateToolProps) {
       const link = await RelayLink.open(relayUrl());
       const invite = { room: link.room, key: newLinkKey() };
       const s = new RemoteSession(link, invite.key, "opener");
-      watch(s);
+      const files = watch(s);
       const route = routeUrl("remote");
       setPhase({
         kind: "sharing",
@@ -161,7 +202,7 @@ export function RemoteTool(_props: CreateToolProps) {
       setPhase({ kind: "connecting" });
       await s.confirm;
       setPhase({ kind: "awaiting" });
-      const result = await sendFiles(s, out.outgoing(), (sent, total) => setPhase({ kind: "transfer", done: sent, total }));
+      const result = await sendFiles(files, out.outgoing(), (sent, total) => setPhase({ kind: "transfer", done: sent, total }));
       if (result.declined) return done({ kind: "declined" });
       track("tool-done", { tool: "remote" });
       done({ kind: "sent", ok: result.ok });
@@ -176,9 +217,9 @@ export function RemoteTool(_props: CreateToolProps) {
     try {
       const link = await RelayLink.join(relayUrl(), invite.room);
       const s = new RemoteSession(link, invite.key, "joiner");
-      watch(s);
+      const files = watch(s);
       await s.confirm;
-      const incoming = await receiveFiles(s);
+      const incoming = await receiveFiles(files);
       setPhase({ kind: "review", incoming });
     } catch (error) {
       fail(error);
@@ -197,8 +238,12 @@ export function RemoteTool(_props: CreateToolProps) {
   };
 
   const reset = () => {
+    lanes.current = null;
     session.current?.close();
     session.current = null;
+    setMessages([]);
+    setDraft("");
+    setEnded("");
     finished.current = false;
     setConn(null);
     setConfirm("");
@@ -287,7 +332,7 @@ export function RemoteTool(_props: CreateToolProps) {
   })();
 
   // 連上之後的連線狀態：自己斷線正在接回去，或對方暫時離線
-  const live = open && phase.kind !== "creating";
+  const live = (open || chatting) && phase.kind !== "creating";
   const connNote = live && conn === "reconnecting" ? t("remote.reconnecting") : live && conn === "peer-away" ? t("remote.peerAway") : "";
 
   const cancel = (
@@ -436,6 +481,61 @@ export function RemoteTool(_props: CreateToolProps) {
       ) : null}
       {body}
       {actions ? <div class="buttons nearby-actions">{actions}</div> : null}
+      {confirm && phase.kind !== "error" ? (
+        <section class="remote-chat" aria-labelledby="remote-chat-title">
+          <h3 id="remote-chat-title">{t("remote.chat.title")}</h3>
+          <p class="hint">{t("remote.chat.note")}</p>
+          {messages.length ? (
+            <ol class="remote-messages" aria-live="polite" data-testid="remote-messages">
+              {messages.map((m, i) => (
+                <li key={i} class={m.mine ? "mine" : "theirs"}>
+                  <span class="who">{m.mine ? t("remote.chat.me") : t("remote.chat.them")}</span>
+                  <span class="text">{m.text}</span>
+                </li>
+              ))}
+            </ol>
+          ) : null}
+          {ended ? (
+            <p class="hint" role="status" data-testid="remote-ended">
+              {t(ended === "self" ? "remote.chat.endedSelf" : "remote.chat.endedPeer")}
+            </p>
+          ) : (
+            <form
+              class="remote-compose"
+              onSubmit={(e) => {
+                e.preventDefault();
+                sendMessage();
+              }}
+            >
+              <label for="remote-chat-input">{t("remote.chat.label")}</label>
+              <textarea
+                id="remote-chat-input"
+                rows={2}
+                maxLength={MAX_MESSAGE}
+                value={draft}
+                onInput={(e) => setDraft(e.currentTarget.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey && !e.isComposing) {
+                    e.preventDefault();
+                    sendMessage();
+                  }
+                }}
+                data-testid="remote-chat-input"
+              />
+              <div class="buttons">
+                <button type="submit" disabled={!draft.trim()}>
+                  {t("remote.chat.send")}
+                </button>
+                {finished.current || phase.kind === "sent" || phase.kind === "received" || phase.kind === "declined" ? (
+                  <button type="button" onClick={hangUp}>
+                    {t("remote.chat.end")}
+                  </button>
+                ) : null}
+              </div>
+            </form>
+          )}
+        </section>
+      ) : null}
     </div>
   );
 }
