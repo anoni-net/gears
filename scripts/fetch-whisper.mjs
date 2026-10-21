@@ -17,7 +17,7 @@
 // 來源是 Hugging Face 的 onnx-community，Whisper 的權重是 MIT 授權（OpenAI）。
 // 網頁從 anoni.net 自己的網域載入這些檔案（models.json 的 host 是 self）。其他的由網頁直接下載，
 // 這裡不下載：hf 是讀者選擇之後從 Hugging Face 下載，assets 是社群轉檔、放在 assets.anoni.net 的
-// 模型（src/tools/transcribe/remote.ts，上傳方式見 AGENTS.md）。
+// 模型（src/core/models.ts，上傳方式見 AGENTS.md）。
 // 分辨說話者的 CAM++（3D-Speaker，Apache-2.0）取自 sherpa-onnx 的 release，來源與 SHA-256 寫在
 // src/tools/transcribe/speaker-model.json，放在 public/models/speaker/。
 import { createHash } from "node:crypto";

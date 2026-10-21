@@ -1,4 +1,4 @@
-// 把超過 Cloudflare 快取上限的模型檔切成固定大小的段（src/tools/transcribe/parts.ts），
+// 把超過 Cloudflare 快取上限的模型檔切成固定大小的段（src/core/models.ts），
 // 印出要填進 src/tools/transcribe/models.json 的 parts。原本的檔案留著，自己決定要不要刪。
 //
 //   node scripts/split-model.mjs <檔案> [每段的 MB，預設 400]

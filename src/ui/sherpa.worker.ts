@@ -1,5 +1,5 @@
 /// <reference lib="webworker" />
-import { REMOTE_ERROR, assetsUrl, readVerified } from "../tools/transcribe/remote.ts";
+import { assetsUrl, cachedModel, downloadVerified, forgetDownloads } from "../core/models.ts";
 import { MODELS, type ModelId, type RawChunk, SAMPLE_RATE, cleanSegments, speechPieces } from "../tools/transcribe/segments.ts";
 import type { Reply, Request } from "./transcribe.worker.ts";
 
@@ -14,7 +14,6 @@ import type { Reply, Request } from "./transcribe.worker.ts";
 // 語音偵測、長錄音分段與接縫的處理也一樣。
 
 const post = (reply: Reply) => (self as unknown as DedicatedWorkerGlobalScope).postMessage(reply);
-const MODEL_CACHE = "gears-models";
 
 interface Stream {
   acceptWaveform(sampleRate: number, samples: Float32Array): void;
@@ -41,33 +40,18 @@ let files: Record<string, number> = {};
 let total = 0;
 const report = () => post({ type: "download", loaded: Object.values(files).reduce((a, b) => a + b, 0), total });
 
-// 模型檔：先找快取，沒有就從 assets.anoni.net 下載、比對 SHA-256、存進快取。快取的網址跟
-// Whisper 一樣用自己網域的路徑，畫面判斷「已下載」與刪除模型時不必分開處理
+// 模型檔：先找快取，沒有就從 assets.anoni.net 下載、比對 SHA-256、存進快取（src/core/models.ts）。
+// 快取的網址跟 Whisper 一樣用自己網域的路徑，畫面判斷「已下載」與刪除模型時不必分開處理
 async function modelFile(model: ModelId, file: string, base: string): Promise<Uint8Array> {
   const info = MODELS[model];
   const sha256 = (info.files as Record<string, string>)[file]!;
-  const key = `${base}models/whisper/${info.dir}/${file}`;
-  // Firefox 的無痕視窗不能用 Cache API，那時每次都重新下載
-  const cache = await caches.open(MODEL_CACHE).catch(() => null);
-  const hit = await cache?.match(key);
-  if (hit) {
-    const data = new Uint8Array(await hit.arrayBuffer());
-    files[file] = data.length;
-    report();
-    return data;
-  }
-  const response = await fetch(assetsUrl(info.dir, file), { credentials: "omit", referrerPolicy: "no-referrer", cache: "no-store" }).catch((error: Error) => {
-    throw new Error(`${REMOTE_ERROR}: ${error.message}`);
-  });
-  if (!response.ok) throw new Error(`${REMOTE_ERROR}: HTTP ${response.status} (${file})`);
-  const data = await readVerified(response, sha256, (n) => {
+  const onBytes = (n: number) => {
     files[file] = n;
     report();
-  });
-  // 儲存空間不夠時（無痕視窗的配額很小）這次照樣使用，下次再重新下載
-  await cache
-    ?.put(key, new Response(data, { headers: { "content-type": "application/octet-stream", "content-length": String(data.length) } }))
-    .catch((error: Error) => console.warn("[gears] 模型存不進快取：", file, error.message));
+  };
+  const response = await cachedModel(`${base}models/whisper/${info.dir}/${file}`, () => downloadVerified({ url: (name) => assetsUrl(info.dir, name), file, sha256 }, onBytes));
+  const data = new Uint8Array(await response.arrayBuffer());
+  onBytes(data.length);
   return data;
 }
 
@@ -97,6 +81,7 @@ async function load(model: ModelId, base: string): Promise<Recognizer> {
   Module.FS.mkdirTree(dir);
   const names = Object.keys(MODELS[model].files);
   for (const name of names) Module.FS.writeFile(dir + name, await modelFile(model, name, base));
+  forgetDownloads();
   const recognizer = new OfflineRecognizer(
     { featConfig: { sampleRate: SAMPLE_RATE, featureDim: 80 }, modelConfig: { ...config(dir), numThreads: 1, provider: "cpu", debug: 0 }, decodingMethod: "greedy_search" },
     Module,

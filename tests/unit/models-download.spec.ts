@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { expect, test } from "@playwright/test";
 import models from "../../src/tools/transcribe/models.json" with { type: "json" };
-import { REMOTE_ERROR, hfUrl, readVerified } from "../../src/tools/transcribe/remote.ts";
+import { REMOTE_ERROR, hfUrl, readVerified } from "../../src/core/models.ts";
 
 const sha256 = (data: Uint8Array) => createHash("sha256").update(data).digest("hex");
 
