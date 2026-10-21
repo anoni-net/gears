@@ -21,6 +21,8 @@ export const FINDING_CODES = [
   "path",
   "printer",
   "signature",
+  "c2pa",
+  "aigc",
   "system-files",
   "other",
   // 以下是文件的內容，清除中繼資料不會改動，列出來提醒讀者
@@ -49,6 +51,8 @@ export const SEGMENT_CODES = [
   "trailer",
   "jfif-thumbnail",
   "app",
+  "c2pa",
+  "aigc",
   "text",
   "time",
   "other",

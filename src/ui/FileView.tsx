@@ -15,6 +15,7 @@ import { decodeImage } from "./image-decode.ts";
 import { isWasmUnavailable } from "./wasm.ts";
 import { PRIVATE_FORMATS, type Scanned, decodeCodeFromBlob } from "./qr-scan.ts";
 import { outputName } from "./output-name.ts";
+import { providerText } from "./provider-text.ts";
 import { CopyButton } from "./CopyButton.tsx";
 import { routeUrl } from "../router.ts";
 import { track } from "./analytics.ts";
@@ -119,7 +120,7 @@ function FindingList({ findings }: { findings: Version["findings"] }) {
       {findings.map((f) => (
         <li key={f.code}>
           <span>{tDynamic(`finding.${f.code}`)}</span>
-          {f.value ? <code>{f.value}</code> : null}
+          {f.value ? <code>{f.code === "aigc" ? f.value.split("\n").map(providerText).join("\n") : f.value}</code> : null}
         </li>
       ))}
     </ul>

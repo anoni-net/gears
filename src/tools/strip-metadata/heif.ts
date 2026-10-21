@@ -1,5 +1,7 @@
 import { ascii, indexOf, isHeifBrand, u16be, u32be } from "../../core/bytes.ts";
 import { type Finding, type RunResult, ToolError } from "../../core/tool.ts";
+import { isC2paUuid } from "../verify/provenance.ts";
+import { xmpAigc } from "./aigc.ts";
 import { exifFindings, parseExif, tiffStart } from "./exif.ts";
 
 // HEIC（HEIF）的中繼資料。iPhone 預設拍出來的就是這個格式。
@@ -174,9 +176,21 @@ export function inspectHeif(bytes: Uint8Array): Finding[] {
       if (new TextDecoder().decode(xmp).trim() === EMPTY_XMP_TEXT) continue;
       findings.push({ code: "xmp" });
       if (indexOf(xmp, "GPSLatitude") >= 0) findings.push({ code: "location" });
+      findings.push(...xmpAigc(xmp));
     }
   }
+  if (c2paBoxes(bytes).length) findings.push({ code: "c2pa" });
   return findings;
+}
+
+// C2PA 內容憑證放在最上層、類型是 C2PA 的 uuid box，不是 item，iloc 不會指到它。可能帶著
+// 創作者的名字與身分聲明。原本的清除只換掉 EXIF 與 XMP，內容憑證會原封留在檔案裡
+function c2paBoxes(bytes: Uint8Array): Box[] {
+  try {
+    return readBoxes(bytes, 0, bytes.length).filter((b) => b.type === "uuid" && isC2paUuid(bytes, b.start + b.header));
+  } catch {
+    return [];
+  }
 }
 
 export function stripHeif(bytes: Uint8Array): RunResult {
@@ -202,6 +216,12 @@ export function stripHeif(bytes: Uint8Array): RunResult {
       if (EMPTY_XMP.length <= item.length) region.set(EMPTY_XMP, 0);
       removed.push({ code: "xmp", bytes: item.length });
     }
+  }
+  // 改成同樣長度的 free box、內容清成零，後面的位移都不變
+  for (const box of c2paBoxes(bytes)) {
+    out.set([0x66, 0x72, 0x65, 0x65], box.start + 4);
+    out.fill(0, box.start + box.header, box.end);
+    removed.push({ code: "c2pa", bytes: box.end - box.start });
   }
   return { data: out, report: { removed, kept: [{ code: "heif-image" }] } };
 }

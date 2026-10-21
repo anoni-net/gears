@@ -1,5 +1,7 @@
 import { ascii, concat, startsWith, u32be } from "../../core/bytes.ts";
 import { type Finding, type ReportItem, type RunResult, type SegmentCode, ToolError } from "../../core/tool.ts";
+import { parseTc260 } from "../verify/provenance.ts";
+import { aigcFindings, xmpAigc } from "./aigc.ts";
 import { exifFindings, parseExif } from "./exif.ts";
 import { other } from "./preview.ts";
 
@@ -42,9 +44,15 @@ function isXmp(bytes: Uint8Array, c: Chunk) {
   return c.type === "iTXt" && startsWith(bytes, c.data, "XML:com.adobe.xmp\0");
 }
 
+// GB 45438 的替代寫法：關鍵字為 AIGC 的 tEXt
+const isAigc = (bytes: Uint8Array, c: Chunk) => c.type === "tEXt" && startsWith(bytes, c.data, "AIGC\0");
+
 function removedCode(bytes: Uint8Array, c: Chunk): SegmentCode {
   if (isXmp(bytes, c)) return "xmp";
+  if (isAigc(bytes, c)) return "aigc";
   switch (c.type) {
+    case "caBX":
+      return "c2pa";
     case "tEXt":
     case "zTXt":
     case "iTXt":
@@ -94,7 +102,16 @@ export function inspectPng(bytes: Uint8Array): Finding[] {
   for (const c of result.chunks) {
     if (KEEP.has(c.type)) continue;
     if (isXmp(bytes, c)) {
-      findings.push({ code: "xmp" });
+      findings.push({ code: "xmp" }, ...xmpAigc(bytes.subarray(c.data, c.data + c.length)));
+      continue;
+    }
+    if (isAigc(bytes, c)) {
+      const found = aigcFindings([parseTc260(new TextDecoder("latin1").decode(bytes.subarray(c.data + 5, c.data + c.length)), "png")]);
+      findings.push(...(found.length ? found : [{ code: "aigc" as const }]));
+      continue;
+    }
+    if (c.type === "caBX") {
+      findings.push({ code: "c2pa" });
       continue;
     }
     switch (c.type) {

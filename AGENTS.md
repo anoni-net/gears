@@ -239,7 +239,9 @@ PDF 的版本紀錄：每一個 `%%EOF` 是一次存檔的結尾，切到那裡�
 
 GB 45438 的服務提供者編碼（TC260-PG-20252A，27 碼）拆成主體類型、綁定方式、號碼與服務擴展碼。個人的編碼以明文帶著身分證號、手機號碼、護照號碼或網號，查證照實列出，不遮起來：讀者手上可能是收到別人的檔案，也可能是自己的檔案，兩種情況都要先看到檔案裡實際有什麼，再決定要不要清除中繼資料。`Label` 的 1 由實踐指南的範例確認，2 與 3 的意思取自廠商的實作說明，標準的附錄 E 讀過之後再核對。TC260 的實踐指南聲明未經授權不得抄襲或翻譯，程式與文件只寫相容實作需要的欄位名稱與位置。
 
-單元測試在 `tests/unit/verify-provenance.spec.ts`，服務提供者編碼與號碼都是編出來的，不沿用指南裡的範例。
+清除中繼資料的檢查與報告把這兩種標示列成單獨的一項（`c2pa`、`aigc`），讀者看得到拿掉的是什麼。內容憑證可能帶著創作者的名字與身分聲明，原本除了 HEIF 都已經清掉（見下方「HEIC」），只是報告裡歸成其他區段或其他程式自訂的區段。GB 45438 的標識照查證的原則，服務提供者編碼在檢查結果裡拆開列出（`src/ui/provider-text.ts`），個人的號碼完整顯示，讀者看過再決定要不要清除。XMP 與 EXIF 本來就整段拿掉，標識跟著拿掉，PNG 的 `tEXt` 也是。
+
+單元測試在 `tests/unit/verify-provenance.spec.ts` 與 `tests/unit/strip-provenance.spec.ts`，服務提供者編碼與號碼都是編出來的，不沿用指南裡的範例。
 
 ## 面對面傳送
 
@@ -636,7 +638,7 @@ QR code 讀取（`src/ui/qr-scan.ts`）要能讀翻拍螢幕的照片。白底�
 |---|---|
 | JPEG | 拿掉 APP 區段與註解，接在影像後面的資料一併拿掉，只把旋轉方向寫回去 |
 | PNG | 保留影像需要的 chunk，文字、時間與 eXIf 拿掉 |
-| HEIC、AVIF | 原地把 EXIF 與 XMP 換成空白的內容，長度與結構不變 |
+| HEIC、AVIF | 原地把 EXIF 與 XMP 換成空白的內容，最上層的 C2PA 內容憑證改成同樣長度的 `free` box，長度與結構不變 |
 | WebP | 拿掉 EXIF 與 XMP chunk，清掉 VP8X 的旗標，重算 RIFF 長度 |
 | GIF | 拿掉註解與不認得的應用程式延伸，保留迴圈與色彩描述檔 |
 | TIFF | 用白名單保留解碼需要的標籤，原地改寫 IFD，拿掉的標籤與 EXIF、GPS 子 IFD 的資料清成零 |
@@ -713,7 +715,7 @@ CSS 沒有可靠的檔頭可以判斷格式，暫時不處理。
 
 iPhone 預設拍出來的是 HEIC，在網頁上選照片時交出來的也是原本的 HEIC，不會自動轉成 JPEG。
 
-- 中繼資料：`src/tools/strip-metadata/heif.ts` 解析 HEIF 的 box 結構，原地把 EXIF 與 XMP 換成空白的內容，長度與結構不變，所有瀏覽器都能用
+- 中繼資料：`src/tools/strip-metadata/heif.ts` 解析 HEIF 的 box 結構，原地把 EXIF 與 XMP 換成空白的內容，長度與結構不變，所有瀏覽器都能用。C2PA 內容憑證不是 item，放在最上層的 `uuid` box，2026-10-21 以前會原封留在清除後的檔案裡，現在改成同樣長度的 `free` box、內容清成零
 - 解碼：Safari 能直接顯示。Brave、Chrome、Firefox 不能，`decodeImage()` 在內建解碼失敗、而且檔案是 HEIC 時，才下載 libheif（`src/ui/heif-wasm.ts`，WASM 壓縮後約 490 KB）。預覽、遮蔽、讀取 QR code 與轉成 JPEG 都靠它
 - 授權：libheif 與 HEVC 解碼器 libde265 都是 LGPL-3.0。原封不動使用，打包成獨立的檔案，跟工作台的程式分開，授權與原始碼來源寫在 `licenses/libheif.txt`
 - CSP：編譯 WebAssembly 需要 `script-src` 加上 `'wasm-unsafe-eval'`，它不會開放 JavaScript 的 `eval`

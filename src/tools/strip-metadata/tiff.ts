@@ -1,5 +1,6 @@
 import { ascii } from "../../core/bytes.ts";
 import { type Finding, type ReportItem, type RunResult, ToolError } from "../../core/tool.ts";
+import { xmpAigc } from "./aigc.ts";
 import { exifFindings, parseExif } from "./exif.ts";
 import { other } from "./preview.ts";
 
@@ -150,7 +151,10 @@ export function inspectTiff(bytes: Uint8Array): Finding[] {
       if (code && e.type === 2) {
         const value = ascii(bytes, e.at, Math.min(80, e.count)).replace(/\0.*$/s, "").trim();
         if (value) findings.push({ code, value });
-      } else if (e.tag === 700) findings.push({ code: "xmp" });
+      } else if (e.tag === 700) {
+        findings.push({ code: "xmp" });
+        if (e.at + e.size <= bytes.length) findings.push(...xmpAigc(bytes.subarray(e.at, e.at + e.size)));
+      } else if (e.tag === 0xcd41) findings.push({ code: "c2pa" });
       else if (e.tag === 33723) findings.push({ code: "iptc" });
       else if (![271, 272, 305, 306, 315, 33432, 34665, 34853].includes(e.tag))
         findings.push(other(`tag ${e.tag}`, e.at + e.size <= bytes.length ? bytes.subarray(e.at, e.at + Math.min(e.size, 4096)) : undefined));

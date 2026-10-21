@@ -1,5 +1,6 @@
 import { ascii, concat, indexOf, startsWith, u32le } from "../../core/bytes.ts";
 import { type Finding, type ReportItem, type RunResult, ToolError } from "../../core/tool.ts";
+import { xmpAigc } from "./aigc.ts";
 import { exifFindings, parseExif } from "./exif.ts";
 import { other } from "./preview.ts";
 
@@ -45,7 +46,7 @@ export function stripWebp(bytes: Uint8Array): RunResult {
   const removed: ReportItem[] = [];
   for (const c of chunks) {
     if (!KEEP.has(c.type)) {
-      removed.push({ code: c.type === "EXIF" ? "exif" : c.type === "XMP " ? "xmp" : "other", bytes: c.end - c.start });
+      removed.push({ code: c.type === "EXIF" ? "exif" : c.type === "XMP " ? "xmp" : c.type === "C2PA" ? "c2pa" : "other", bytes: c.end - c.start });
       continue;
     }
     const chunk = bytes.slice(c.start, c.end);
@@ -74,7 +75,9 @@ export function inspectWebp(bytes: Uint8Array): Finding[] {
     else if (c.type === "XMP ") {
       findings.push({ code: "xmp" });
       if (indexOf(bytes.subarray(c.data, c.data + c.size), "GPSLatitude") >= 0) findings.push({ code: "location" });
-    } else findings.push(other(c.type.trim(), bytes.subarray(c.data, c.data + c.size)));
+      findings.push(...xmpAigc(bytes.subarray(c.data, c.data + c.size)));
+    } else if (c.type === "C2PA") findings.push({ code: "c2pa" });
+    else findings.push(other(c.type.trim(), bytes.subarray(c.data, c.data + c.size)));
   }
   return findings;
 }

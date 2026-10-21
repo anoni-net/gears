@@ -3,7 +3,7 @@ import { downloadFrom, expect, test } from "./guard.ts";
 import { indexOf, sniff } from "../../src/core/bytes.ts";
 import { parseExif } from "../../src/tools/strip-metadata/exif.ts";
 import { stripMetadata } from "../../src/tools/strip-metadata/index.ts";
-import { exifSegment, insertIntoJpeg, insertIntoPng, metadataChunks, sampleTiff, bytes as text } from "../helpers/fixtures.ts";
+import { c2paJumbf, chunk, exifSegment, insertIntoJpeg, insertIntoPng, metadataChunks, sampleTiff, bytes as text } from "../helpers/fixtures.ts";
 import { concat } from "../../src/core/bytes.ts";
 
 // 在遮蔽的畫布上框出一個範圍。用鍵盤操作，跟版面的高度無關：用滑鼠拖拉時，畫布底下可能被
@@ -176,6 +176,23 @@ test("PNG：文字欄位與 eXIf 一起拿掉", async ({ page }) => {
   expect(sniff(out)).toBe("png");
   expect((await stripMetadata.inspect(out, "png"))).toEqual([]);
   expect(Buffer.from(out).includes("Jane Doe")).toBe(false);
+});
+
+test("PNG：內容憑證與 GB 45438 的標識列成單獨的一項，個人的號碼拆開列出", async ({ page }) => {
+  // 編出來的服務提供者編碼：個人、綁手機號碼
+  const producer = `0022${"19900001111"}${"0".repeat(7)}00000`;
+  const aigc = JSON.stringify({ AIGC: { Label: "1", ContentProducer: producer, ProduceID: "pid-e2e-2" } });
+  const png = insertIntoPng(await canvasImage(page, "image/png"), chunk("caBX", c2paJumbf()), chunk("tEXt", text(`AIGC\0${aigc}`)));
+  await addFile(page, "generated.png", "image/png", png);
+  await expect(page.getByText("C2PA 內容憑證，可能帶有創作者的名字、拍攝的裝置與編輯紀錄")).toBeVisible();
+  await expect(page.getByText(/GB 45438 的 AI 生成標識/)).toBeVisible();
+  await expect(page.getByText(`個人，手機號碼 19900001111（${producer}）`)).toBeVisible();
+
+  await page.getByRole("button", { name: "清除", exact: true }).click();
+  await expect(page.getByText("沒有找到可能透露身分的中繼資料。")).toBeVisible();
+  const out = await download(page);
+  expect(await stripMetadata.inspect(out, "png")).toEqual([]);
+  expect(Buffer.from(out).includes("19900001111")).toBe(false);
 });
 
 test("一次加入多個檔案，可以在暫存區切換", async ({ page }) => {

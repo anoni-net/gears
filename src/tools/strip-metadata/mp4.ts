@@ -26,6 +26,7 @@ import { other } from "./preview.ts";
 const CONTAINERS = new Set(["moov", "trak", "mdia", "minf", "stbl", "edts", "dinf", "mvex"]);
 const XMP_UUID = "be7acfcb97a942e89c71999491e3afac";
 const SPHERICAL_UUID = "ffcc8263f8554a938814587a02521fdd"; // 360 度影片的標記，播放需要
+const C2PA_UUID_HEX = "d8fec3d61b0e483c92975828877ec481"; // C2PA 內容憑證，跟其他 uuid 一樣拿掉，報告裡分開列
 const TIMED_HANDLERS = new Set(["meta", "camm"]);
 const TIME_BOXES = new Set(["mvhd", "tkhd", "mdhd"]);
 const EPOCH_1904 = Date.UTC(1904, 0, 1);
@@ -144,7 +145,7 @@ function walkStrip(bytes: Uint8Array, start: number, end: number, tally: Tally, 
       const uuid = uuidOf(bytes, box);
       if (uuid === SPHERICAL_UUID) continue;
       freeBox(bytes, box);
-      tally.add(uuid === XMP_UUID ? "xmp" : "other");
+      tally.add(uuid === XMP_UUID ? "xmp" : uuid === C2PA_UUID_HEX ? "c2pa" : "other");
     } else if (type === "free" || type === "skip") {
       if (!hasContent(bytes, box)) continue;
       bytes.fill(0, payload(box), box.end);
@@ -268,6 +269,7 @@ function walkInspect(bytes: Uint8Array, start: number, end: number, findings: Fi
     else if (type === "uuid") {
       const uuid = uuidOf(bytes, box);
       if (uuid === XMP_UUID) findings.push({ code: "xmp" });
+      else if (uuid === C2PA_UUID_HEX) findings.push({ code: "c2pa" });
       else if (uuid !== SPHERICAL_UUID) findings.push(other(`uuid ${uuid.slice(0, 8)}`, bytes.subarray(payload(box) + 16, box.end)));
     } else if ((type === "free" || type === "skip") && box.end - payload(box) > 16 && hasContent(bytes, box)) {
       findings.push(other(type, bytes.subarray(payload(box), box.end)));

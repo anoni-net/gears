@@ -67,7 +67,7 @@ export function stripGif(bytes: Uint8Array): RunResult {
   const removed: ReportItem[] = [];
   for (const b of blocks) {
     if (keep(b)) parts.push(bytes.subarray(b.start, b.end));
-    else removed.push({ code: b.kind === "comment" ? "comment" : b.app?.startsWith("XMP Data") ? "xmp" : "app", bytes: b.end - b.start });
+    else removed.push({ code: b.kind === "comment" ? "comment" : b.app?.startsWith("XMP Data") ? "xmp" : b.app?.startsWith("C2PA_GIF") ? "c2pa" : "app", bytes: b.end - b.start });
   }
   parts.push(new Uint8Array([0x3b]));
   if (trailer < bytes.length) removed.push({ code: "trailer", bytes: bytes.length - trailer });
@@ -89,6 +89,8 @@ export function inspectGif(bytes: Uint8Array): Finding[] {
       findings.push({ code: "comment", value: text || undefined });
     } else if (b.app?.startsWith("XMP Data")) {
       findings.push({ code: "xmp" });
+    } else if (b.app?.startsWith("C2PA_GIF")) {
+      findings.push({ code: "c2pa" });
     } else {
       findings.push(other(b.app?.trim() || "extension", bytes.subarray(b.start, b.end)));
     }
