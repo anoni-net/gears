@@ -98,7 +98,7 @@ test.describe("換上新版本", () => {
   });
   test.use({ baseURL: async ({}, use) => use(`http://127.0.0.1:${port}/gears/`) });
 
-  // 暫存區有檔案時才出現換版本的提示，空的時候等分頁切到背景直接換
+  // 暫存區有檔案時才出現換版本的提示，空的時候自動換（讀者還沒操作過就直接換，已經在操作的等分頁切到背景）
   async function addFile(page: Page, name = "keep.txt", body = "KEEP-ME") {
     await page.getByTestId("file-input").setInputFiles({ name, mimeType: "text/plain", buffer: Buffer.from(body) });
     await expect(page.getByText(name).first()).toBeVisible();
@@ -146,13 +146,27 @@ test.describe("換上新版本", () => {
     await expect(page.getByText(/已換上新版本/)).toBeHidden();
   });
 
-  test("暫存區是空的時候不出現提示，分頁切到背景就換上新版本", async ({ page }) => {
+  test("暫存區是空的、讀者還沒操作過：新版本裝好就直接換上，顯示已換上新版本", async ({ page }) => {
     await page.goto("./");
     await expect(page.getByTestId("offline-ready")).toBeVisible({ timeout: 30_000 });
+    const loaded = page.waitForEvent("load", { timeout: 30_000 });
+    await serveNewVersion(page, "e2e-fresh");
+    await loaded;
+    await expect.poll(() => page.evaluate(() => caches.keys())).toEqual(["gears-e2e-fresh"]);
+    await expect(page.getByText(/^已換上新版本（\d{4}\.\d{2}\.\d{2} \d{2}:\d{2}）。$/)).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole("button", { name: "重新載入" })).toBeHidden();
+  });
+
+  test("暫存區是空的、讀者已經在操作：不出現提示，分頁切到背景才換，回來時顯示已換上新版本", async ({ page }) => {
+    await page.goto("./");
+    await expect(page.getByTestId("offline-ready")).toBeVisible({ timeout: 30_000 });
+    // 讀者點過頁面
+    await page.getByRole("heading", { name: "暫存區" }).click();
     await serveNewVersion(page, "e2e-idle");
     await expect.poll(() => page.evaluate(async () => !!(await navigator.serviceWorker.getRegistration())?.waiting), { timeout: 30_000 }).toBe(true);
     await page.waitForTimeout(500);
     await expect(page.getByRole("button", { name: "重新載入" })).toBeHidden();
+    expect(await page.evaluate(() => caches.keys())).not.toEqual(["gears-e2e-idle"]);
     const loaded = page.waitForEvent("load", { timeout: 15_000 });
     await page.evaluate(() => {
       Object.defineProperty(document, "hidden", { configurable: true, get: () => true });
@@ -160,8 +174,17 @@ test.describe("換上新版本", () => {
     });
     await loaded;
     await expect.poll(() => page.evaluate(() => caches.keys())).toEqual(["gears-e2e-idle"]);
-    // 讀者沒有按任何東西，回來時不出現「已換上新版本」
-    await expect(page.getByText(/已換上新版本/)).toBeHidden();
+    await expect(page.getByText(/^已換上新版本（\d{4}\.\d{2}\.\d{2} \d{2}:\d{2}）。$/)).toBeVisible({ timeout: 10_000 });
+  });
+
+  test("分頁切回前景時檢查新版本，不必重新整理", async ({ page }) => {
+    await page.goto("./");
+    await expect(page.getByTestId("offline-ready")).toBeVisible({ timeout: 30_000 });
+    await addFile(page);
+    // 只換掉伺服器上的 sw.js，不呼叫 update()，靠切回前景時的檢查發現
+    sw = (s) => s.replace(/const VERSION = "[^"]*"/, 'const VERSION = "e2e-visible"');
+    await page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
+    await expect(page.getByRole("button", { name: "重新載入" })).toBeVisible({ timeout: 30_000 });
   });
 
   test("從空白開始的工具畫面上有輸入的內容，暫存區是空的也不自動換", async ({ page, browserName }) => {
