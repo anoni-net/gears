@@ -2844,6 +2844,47 @@ button.link {
   margin: 0 0 0.5rem;
 }
 
+/* 誰看得到什麼的對照表。手機上四欄也放得下，看不到的格子加粗，一眼看出哪裡保護得到 */
+.remote-who {
+  width: 100%;
+  margin: 0.25rem 0 0.75rem;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.remote-who th,
+.remote-who td {
+  padding: 0.35rem 0.3rem;
+  border-bottom: 1px solid var(--line);
+  text-align: center;
+}
+
+.remote-who thead th {
+  font-weight: 600;
+  color: var(--strong);
+}
+
+/* 中文會在任意字之間斷行，欄名與「看得到」、「看不到」不換行，手機上只讓最左邊的項目換行。
+   英文在空格斷行，照常換行才放得下 */
+.remote-who:lang(zh) thead th,
+.remote-who:lang(zh) td {
+  white-space: nowrap;
+}
+
+.remote-who tbody th {
+  font-weight: normal;
+  text-align: left;
+}
+
+.remote-who td.hidden {
+  font-weight: 600;
+  color: var(--strong);
+}
+
+.remote-who td.sees {
+  color: var(--muted);
+}
+
 .remote-privacy ul {
   margin: 0.5rem 0 0;
   padding-left: 1.25rem;

@@ -482,7 +482,37 @@ export function RemoteTool(_props: CreateToolProps) {
       <p>
         <strong>{t("remote.privacy.title")}</strong>
       </p>
-      <p>{t(IS_ONION ? "remote.privacy.onion" : "remote.privacy.clearnet")}</p>
+      <p>{t("remote.privacy.summary")}</p>
+      {/* 誰看得到什麼用表格對照。onion 版不經過 Cloudflare，少一欄，中繼伺服器也看不到你的 IP */}
+      <table class="remote-who" data-testid="remote-who">
+        <thead>
+          <tr>
+            <td />
+            <th scope="col">{t("remote.privacy.who.relay")}</th>
+            {IS_ONION ? null : <th scope="col">Cloudflare</th>}
+            <th scope="col">{t("remote.privacy.who.peer")}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {(
+            [
+              ["ip", IS_ONION ? [false, false] : [true, true, false]],
+              ["meta", IS_ONION ? [true, true] : [true, true, true]],
+              ["content", IS_ONION ? [false, true] : [false, false, true]],
+            ] as const
+          ).map(([row, cells]) => (
+            <tr key={row}>
+              <th scope="row">{t(`remote.privacy.row.${row}`)}</th>
+              {cells.map((sees, i) => (
+                <td key={i} class={sees ? "sees" : "hidden"}>
+                  {t(sees ? "remote.privacy.sees.yes" : "remote.privacy.sees.no")}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p>{t(IS_ONION ? "remote.privacy.onionNote" : "remote.privacy.avoid")}</p>
       <details>
         <summary>{t("remote.privacy.more")}</summary>
         <ul>

@@ -29,7 +29,11 @@ test("打開分享連結、按加入，兩端的確認碼相同，接收之後�
   await receiver.goto(link);
   await expect(receiver.getByTestId("remote-invite")).toContainText("按下「加入」才會連線");
   expect(new URL(receiver.url()).hash).toBe("");
-  await expect(receiver.getByTestId("remote-privacy")).toContainText("看不到內容");
+  // 誰看得到什麼的對照表：中繼伺服器與 Cloudflare 看不到內容，對方看不到你的 IP
+  const who = receiver.getByTestId("remote-who");
+  await expect(who.locator("thead th")).toHaveText(["中繼伺服器", "Cloudflare", "對方"]);
+  await expect(who.locator("tbody tr").nth(0).locator("td")).toHaveText(["看得到", "看得到", "看不到"]);
+  await expect(who.locator("tbody tr").nth(2).locator("td")).toHaveText(["看不到", "看不到", "看得到"]);
   await receiver.getByRole("button", { name: "加入", exact: true }).click();
 
   await expect(receiver.getByTestId("remote-incoming").locator("li")).toHaveCount(2, { timeout: 20_000 });
