@@ -1,12 +1,13 @@
 // 查證驗證 C2PA 內容憑證用的信任清單（src/tools/verify/c2pa-trust/）由這支腳本產生。
-// 每月跟著下載的軟體驗證的公鑰一起核對一次：從官方的 repo 下載最新版，寫回檔案，並記下
+// 每月跟著下載的軟體驗證的公鑰一起核對一次：從兩個官方的 repo 下載最新版，寫回檔案，並記下
 // 來源的 commit。清單只會在建置時內嵌，查證的時候不連線。
 //
 //   node scripts/c2pa-trust.mjs           下載、寫回
 //   node scripts/c2pa-trust.mjs --check   只比對，跟目前的檔案不同時以非零值結束
 //
-// 只用 C2PA 的正式清單：c2pa-org/conformance-public 的 trust-list/（CC-BY-4.0），C2PA 一致性計畫的簽署者
-// 與時間戳記服務。2026-01-01 起凍結的過渡清單（Interim Trust List）不用
+// - 正式清單：c2pa-org/conformance-public 的 trust-list/（CC-BY-4.0），C2PA 一致性計畫的簽署者與時間戳記服務
+// - 過渡清單（Interim Trust List）：contentauth/verify-site 的 static/trust/（Apache-2.0），2026-01-01 起凍結、
+//   不再新增，舊的憑證照樣有效。官方的一致性工具先用正式清單驗證，對不上才用過渡清單，這裡照做
 
 import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -15,6 +16,10 @@ const SOURCES = [
   {
     repo: "c2pa-org/conformance-public",
     files: { "official.pem": "trust-list/C2PA-TRUST-LIST.pem", "official-tsa.pem": "trust-list/C2PA-TSA-TRUST-LIST.pem" },
+  },
+  {
+    repo: "contentauth/verify-site",
+    files: { "interim-anchors.pem": "static/trust/anchors.pem", "interim-allowed.pem": "static/trust/allowed.pem", "interim-store.cfg": "static/trust/store.cfg" },
   },
 ];
 

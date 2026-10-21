@@ -2,5 +2,9 @@
   "c2pa-org/conformance-public": {
     "commit": "74ade44500ef4d64eaac66957ecda655c64d6456",
     "date": "2026-10-20T15:40:47Z"
+  },
+  "contentauth/verify-site": {
+    "commit": "a09c33de417c4ed8f6ab4c621f0f802168dc910f",
+    "date": "2026-06-23T17:37:48Z"
   }
 }

@@ -4,9 +4,11 @@ import type { ManifestStore } from "@contentauth/c2pa-types";
 // WebAssembly）完成，這裡把它回傳的資訊清單整理成查證要列的幾件事，不另外下判決：
 //
 // - 簽章：有效、無效，以及內容在簽署之後有沒有被改過
-// - 簽署者：在不在 C2PA 的正式信任清單裡。2026-01-01 起凍結的過渡清單不用
+// - 簽署者：在不在信任清單裡。先用 C2PA 的正式清單，對不上再用過渡清單，跟官方的一致性工具相同
 // - 撤銷狀態：只讀簽署時附在檔案裡的 OCSP 回應，不連線查詢
 // - 時間戳記、產生的軟體、動作紀錄（含數位來源類型）、素材與身分聲明
+
+export type TrustList = "official" | "interim";
 
 // C2PA 規範列出的動作，畫面上換成讀得懂的說法，其他的照原樣列出
 export const C2PA_ACTIONS = [
@@ -26,6 +28,7 @@ export interface C2paAction {
 
 export interface C2paCheck {
   state: "trusted" | "valid" | "invalid";
+  trustList?: TrustList; // 受信任時是哪一份清單
   signer?: string; // 憑證的名稱（common name）
   issuer?: string; // 憑證的組織
   signedAt?: string; // 簽署時間，有時間戳記服務時由它證明
@@ -44,7 +47,7 @@ const CHANGED = /^assertion\.(dataHash|bmffHash|boxesHash|collectionHash|hashedU
 
 const text = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim().slice(0, 200) : undefined);
 
-export function summarizeStore(store: ManifestStore): C2paCheck | undefined {
+export function summarizeStore(store: ManifestStore, trustList?: TrustList): C2paCheck | undefined {
   const label = store.active_manifest;
   const manifest = label ? store.manifests?.[label] : undefined;
   if (!manifest) return undefined;
@@ -81,6 +84,7 @@ export function summarizeStore(store: ManifestStore): C2paCheck | undefined {
 
   return {
     state,
+    trustList: state === "trusted" ? trustList : undefined,
     signer: text(sig?.common_name),
     issuer: text(sig?.issuer),
     signedAt: text(sig?.time),
@@ -93,3 +97,7 @@ export function summarizeStore(store: ManifestStore): C2paCheck | undefined {
     identity: (manifest.assertions ?? []).some((a) => a.label.startsWith("cawg.identity")),
   };
 }
+
+// 正式清單驗證之後簽署者不受信任，才改用過渡清單再驗一次
+export const needsInterim = (store: ManifestStore) =>
+  store.validation_state !== "Trusted" && codes(store.validation_results?.activeManifest?.failure ?? store.validation_status).includes("signingCredential.untrusted");

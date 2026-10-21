@@ -8,7 +8,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 // - C.jpg：c2pa-rs 的測試憑證簽的，簽章有效、簽署者不在信任清單裡，動作是程式產生（algorithmicMedia）
 // - XCA.jpg：簽署之後影像資料被改過（assertion.dataHash.mismatch）
 // - E-sig-CA.jpg：簽章被改壞（claimSignature.mismatch）
-// - ocsp.jpg：Adobe Photoshop 簽的，簽署者只在 2026 年凍結的過渡清單裡，查證只用正式清單，列為不受信任
+// - ocsp.jpg：Adobe Photoshop 簽的，簽署者在過渡信任清單裡，附有 OCSP 回應（沒有被撤銷）
 const COMMIT = "60f7cbdc69ab7a2554fcc87eb4df77050814b2cf";
 export const C2PA_FIXTURES: Record<string, string> = {
   "C.jpg": "a2d14755db55de67a47c04090340d8266e892367be4104a45626d7a6fa6e9ffd",

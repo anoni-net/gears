@@ -165,7 +165,7 @@ test("ProofMode 的證明檔：簽章、公鑰指紋與感測器資料，照片�
   expect(report).toContain("        - Wifi MAC：02:00:00:00:00:00");
 });
 
-test("C2PA 內容憑證：用 c2pa-web 驗證，列出簽署者、撤銷狀態與動作，內容被改過的列在需要留意的地方", async ({ page }) => {
+test("C2PA 內容憑證：用 c2pa-web 驗證，列出信任清單、撤銷狀態與動作，內容被改過的列在需要留意的地方", async ({ page }) => {
   test.skip(!hasC2paFixtures(), "沒有 C2PA 的測試圖");
   await page.goto("./verify/");
   const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.getByRole("button", { name: "選擇檔案" }).first().click()]);
@@ -175,9 +175,9 @@ test("C2PA 內容憑證：用 c2pa-web 驗證，列出簽署者、撤銷狀態�
   ]);
   const cards = page.locator(".verify-card");
   const signed = cards.filter({ has: page.getByRole("heading", { name: "photoshop.jpg" }) });
-  await expect(signed.getByText("C2PA 內容憑證：簽章有效，但簽署者不在信任清單裡，無法確認是誰簽的")).toBeVisible({ timeout: 30000 });
+  await expect(signed.getByText("C2PA 內容憑證：簽章有效，簽署者在 C2PA 的過渡信任清單裡（2026 年起不再新增簽署者）")).toBeVisible({ timeout: 30000 });
   await expect(signed.getByText("簽署者：Adobe C2PA（Adobe Inc.）")).toBeVisible();
-  await expect(signed.getByText("沒有檢查憑證是否已被撤銷，這裡不會連線查詢")).toBeVisible();
+  await expect(signed.getByText("檔案內附的撤銷資料顯示憑證沒有被撤銷")).toBeVisible();
   await expect(signed.getByText(/^動作紀錄：開啟既有的檔案（用生成式 AI 編修過（compositeWithTrainedAlgorithmicMedia））/)).toBeVisible();
 
   const changed = cards.filter({ has: page.getByRole("heading", { name: "changed.jpg" }) });
