@@ -63,7 +63,9 @@ jobs:
               cp "$prev" public/data/165.txt
             fi
           elif [ -s "$prev" ]; then
+            # 目錄由下載腳本建立，下載失敗時還不存在
             echo "::warning::165 清單下載失敗，沿用上一份"
+            mkdir -p public/data
             cp "$prev" public/data/165.txt
           else
             echo "::warning::165 清單下載失敗，這一版沒有清單"
