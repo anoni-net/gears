@@ -571,6 +571,7 @@ ProofMode（Guardian Project 給人權紀錄者的 Android App）拍照時不改
 第一次開啟之後，沒有網路也能使用。service worker 的範本在 `src/sw/sw-template.js`，建置時 `vite.config.ts` 的 `serviceWorker()` 列出 `dist/` 的檔案、算出版本（所有檔案內容的雜湊），輸出成 `/gears/sw.js`。
 
 - 安裝時先存頁面、程式、圖示與 165 清單，約 7 MB，其中 PDF 遮蔽的 pdf.js 約 1.7 MB（壓縮後約 500 KB），條碼的 zxing-wasm 約 950 KB（壓縮後約 420 KB，暫存區的圖片都會用到，所以預先存）。人臉與文字辨識的模型與 WebAssembly、pdf.js 的 CMap 與字型、驗證內容憑證的 c2pa（`vendor/`、`models/`、`assets/ort-wasm-*`、`assets/c2pa_bg-*`）用到時才存
+- 用到時才存的這些檔案放在不隨版本清掉的快取（`gears-keep`，#142）。工作台一天常部署好幾次，原本放在隨版本清掉的快取，每次換版本之後第一次找人臉或個資都要重新下載約 23 MB。網址不變，建置時 `vite.config.ts` 的 `serviceWorker()` 替每個檔案算內容的雜湊，寫進 `sw.js` 的 `LAZY`，service worker 存的時候在回應加上 `x-gears-hash`。讀的時候雜湊對不上就重新下載，新版本接手時刪掉內容變了或不在清單上的。存進去的內容已經解壓縮，原本的 `content-encoding` 與 `content-length` 拿掉。這份清單也算進 service worker 的版本，只換了用到時才存的檔案時一樣會換一版
 - 逐字稿的 Whisper 模型存在另一個不隨版本清掉的快取（`gears-models`），換新版本時不必重新下載 80 到 250 MB。網址帶著模型的版本，清單以外的在新版本接手時刪掉。畫面上標出已下載的模型，可以刪除
 - 模型檔的下載、比對 SHA-256、切段與這個快取共用 `src/core/models.ts`（#142）：`downloadVerified` 下載並比對，`cachedModel` 先找快取、同一個檔案同時有好幾個請求時共用一次下載、存不進去時這次照樣使用，`isCached`、`removeCached` 給畫面判斷「已下載」與刪除。逐字稿、sherpa-onnx 與語言模型速度量測的 Worker 都用它，量測頁只用下載與比對，快取留給 Transformers.js。分辨說話者的 `speaker-embed.ts` 只能匯入 Transformers.js 與 onnxruntime（見上方「逐字稿」），不用這裡，靠 service worker 快取
 - 只存工作台自己的檔案。讀者放進暫存區的檔案只在記憶體裡，不寫進快取，只有換版本的那一刻經過 service worker（見下一項）

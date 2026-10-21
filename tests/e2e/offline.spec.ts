@@ -230,6 +230,38 @@ test.describe("換上新版本", () => {
     expect(await page.evaluate(() => caches.keys())).toEqual(expect.arrayContaining(["gears-e2e-models", "gears-models"]));
   });
 
+  test("遮蔽的辨識模型換版本時留著，內容變了或不在清單上的才刪掉", async ({ page, context, browserName }) => {
+    test.skip(browserName !== "chromium", "離線測試只在 Chromium 執行");
+    await page.goto("./");
+    await expect(page.getByTestId("offline-ready")).toBeVisible({ timeout: 30_000 });
+    // 經過 service worker 取一次人臉模型，存進 gears-keep，回應帶著內容的雜湊
+    const yunet = "/gears/models/yunet-2023mar-dynamic.onnx";
+    await page.evaluate((url) => fetch(url).then((r) => r.arrayBuffer()), yunet);
+    const kept = () =>
+      page.evaluate(async () => {
+        const cache = await caches.open("gears-keep");
+        return Promise.all((await cache.keys()).map(async (r) => [new URL(r.url).pathname, (await cache.match(r))!.headers.get("x-gears-hash")]));
+      });
+    await expect.poll(async () => (await kept()).map(([path]) => path)).toEqual([yunet]);
+    expect((await kept())[0]![1]).toMatch(/^[0-9a-f]{16}$/);
+    // 內容換過的檔案（雜湊對不上）與已經不在清單上的檔案
+    await page.evaluate(async () => {
+      const cache = await caches.open("gears-keep");
+      await cache.put("/gears/vendor/tesseract/worker.min.js", new Response("old", { headers: { "x-gears-hash": "0000000000000000" } }));
+      await cache.put("/gears/assets/ort-wasm-simd-threaded-OLD.wasm", new Response("old", { headers: { "x-gears-hash": "1111111111111111" } }));
+    });
+    await addFile(page);
+    await serveNewVersion(page, "e2e-keep");
+    await page.getByRole("button", { name: "重新載入" }).click();
+    await expect(page.getByText(/^已換上新版本（\d{4}\.\d{2}\.\d{2} \d{2}:\d{2}），暫存區的檔案都還在。$/)).toBeVisible({ timeout: 10_000 });
+    await expect.poll(async () => (await kept()).map(([path]) => path)).toEqual([yunet]);
+    expect(await page.evaluate(() => caches.keys())).toEqual(expect.arrayContaining(["gears-e2e-keep", "gears-keep"]));
+    // 留著的那份不必再連網
+    await context.setOffline(true);
+    expect(await page.evaluate((url) => fetch(url).then((r) => r.arrayBuffer()).then((b) => b.byteLength), yunet)).toBeGreaterThan(100_000);
+    await context.setOffline(false);
+  });
+
   test("新版本沒有接手時，按下重新載入一樣會重新載入，不會停在那裡", async ({ page }) => {
     await page.goto("./");
     await expect(page.getByTestId("offline-ready")).toBeVisible({ timeout: 30_000 });
