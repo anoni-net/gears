@@ -37,6 +37,7 @@ test("社群轉檔的模型由同一個 onion 網站提供，轉檔紀錄也連�
 test("遠端傳送的對照表不放 Cloudflare 那一欄，中繼伺服器無法得知你的 IP", async ({ page }) => {
   await page.goto("./remote/");
   await page.getByRole("button", { name: "只傳文字訊息或視訊通話" }).click();
+  await expect(page.getByTestId("remote-route").locator(".node")).toHaveText(["你", "Tor", "中繼伺服器", "對方"]);
   const who = page.getByTestId("remote-who");
   await expect(who.locator("thead th")).toHaveText(["中繼伺服器", "對方"]);
   await expect(who.locator("tbody tr").nth(0).locator("td")).toHaveText(["無法得知", "無法得知"]);

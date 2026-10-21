@@ -2844,6 +2844,65 @@ button.link {
   margin: 0 0 0.5rem;
 }
 
+/* 傳送的路線：一排方塊加上箭頭，兩端是你與對方，中繼伺服器用類別色標出來 */
+.remote-route {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem 0;
+  margin: 0.5rem 0 0.25rem;
+  padding: 0;
+  list-style: none;
+  font-size: 0.9rem;
+}
+
+.remote-route li {
+  display: flex;
+  align-items: center;
+}
+
+.remote-route .arrow {
+  padding: 0 0.3rem;
+  color: var(--muted);
+}
+
+.remote-route .node {
+  padding: 0.2rem 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--bg);
+  white-space: nowrap;
+}
+
+.remote-route .end .node {
+  font-weight: 600;
+  color: var(--strong);
+}
+
+.remote-route .relay .node {
+  border-color: var(--cat-secure);
+}
+
+/* 手機上縮小間距，路線盡量排成一行 */
+@media (max-width: 419px) {
+  .remote-route {
+    font-size: 0.85rem;
+  }
+
+  .remote-route .arrow {
+    padding: 0 0.15rem;
+  }
+
+  .remote-route .node {
+    padding: 0.15rem 0.4rem;
+  }
+}
+
+.remote-route-note {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+}
+
 /* 誰看得到什麼的對照表。手機上四欄也放得下，看不到的格子加粗，一眼看出哪裡保護得到 */
 .remote-who {
   width: 100%;
@@ -3164,8 +3223,17 @@ button.link {
     padding: 0.75rem;
   }
 
-  .remote-who {
+  .remote-who,
+  .remote-route {
     font-size: 0.8rem;
+  }
+
+  .remote-route .arrow {
+    padding: 0 0.15rem;
+  }
+
+  .remote-route .node {
+    padding: 0.2rem 0.35rem;
   }
 
   .remote-who th,

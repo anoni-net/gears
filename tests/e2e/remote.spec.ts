@@ -30,6 +30,8 @@ test("打開分享連結、按加入，兩端的確認碼相同，接收之後�
   await expect(receiver.getByTestId("remote-invite")).toContainText("按下「加入」才會連線");
   expect(new URL(receiver.url()).hash).toBe("");
   // 各方可得知的資訊對照表：中繼伺服器與 Cloudflare 無法得知內容，對方無法得知你的 IP
+  // 傳送的路線：你、Cloudflare、中繼伺服器、對方
+  await expect(receiver.getByTestId("remote-route").locator(".node")).toHaveText(["你", "Cloudflare", "中繼伺服器", "對方"]);
   const who = receiver.getByTestId("remote-who");
   await expect(who.locator("thead th")).toHaveText(["中繼伺服器", "Cloudflare", "對方"]);
   await expect(who.locator("tbody tr").nth(0).locator("td")).toHaveText(["可得知", "可得知", "無法得知"]);

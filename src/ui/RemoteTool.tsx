@@ -483,6 +483,21 @@ export function RemoteTool(_props: CreateToolProps) {
         <strong>{t("remote.privacy.title")}</strong>
       </p>
       <p>{t("remote.privacy.summary")}</p>
+      {/* 傳送的路線：你這一側經過 Cloudflare（onion 版是 Tor）到中繼伺服器，再轉給對方。
+          對方那一側經過哪裡看對方的瀏覽器，寫在路線下面。箭頭只是裝飾，讀螢幕軟體唸的是清單 */}
+      <ol class="remote-route" aria-label={t("remote.privacy.route.label")} data-testid="remote-route">
+        {[t("remote.privacy.route.you"), IS_ONION ? "Tor" : "Cloudflare", t("remote.privacy.who.relay"), t("remote.privacy.who.peer")].map((name, i) => (
+          <li key={i} class={i === 2 ? "relay" : i === 0 || i === 3 ? "end" : ""}>
+            {i ? (
+              <span class="arrow" aria-hidden="true">
+                →
+              </span>
+            ) : null}
+            <span class="node">{name}</span>
+          </li>
+        ))}
+      </ol>
+      <p class="hint remote-route-note">{t("remote.privacy.route.note")}</p>
       {/* 誰看得到什麼用表格對照。onion 版不經過 Cloudflare，少一欄，中繼伺服器也看不到你的 IP */}
       <table class="remote-who" data-testid="remote-who">
         <thead>
