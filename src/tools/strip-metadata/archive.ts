@@ -1,5 +1,8 @@
 import { type Finding, type RunResult, ToolError } from "../../core/tool.ts";
+import { sha256 } from "@noble/hashes/sha2.js";
+import { bytesToHex } from "@noble/hashes/utils.js";
 import { dosDate, entryData, readZip, writeZip, type NewEntry } from "../../core/zip.ts";
+import { parseProofCsv, parseProofJson, proofHashes } from "../verify/proofmode.ts";
 import { type Inner, Tally } from "./package.ts";
 import { other } from "./preview.ts";
 
@@ -11,6 +14,11 @@ import { other } from "./preview.ts";
 // 存著圖片的縮圖，包括已經刪掉的。這些系統檔整個拿掉。
 //
 // 壓縮檔裡的照片、文件與影音交給對應格式的處理程式，一起清除。
+
+// ProofMode 的證明檔（src/tools/verify/proofmode.ts）：照片簽過名，清除會讓簽章對不上，證明就失去
+// 作用。照片與證明檔保留原樣，只統一壓縮檔本身的時間與附加欄位。感測器資料裡的位置與網路
+// 在檢查結果裡列出，交不交出去由讀者決定
+const SENSITIVE = ["Location.Latitude", "Location.Longitude", "Wifi MAC", "IPv4", "IPv6", "CellInfo", "DeviceID", "Network"];
 
 // 解壓縮之後的總大小上限，跟文件一樣
 const MAX_TOTAL = 512 * 1024 * 1024;
@@ -26,6 +34,8 @@ export async function stripZipArchive(bytes: Uint8Array, inner: Inner): Promise<
   if (commentLength || entries.some((e) => e.extraLength || e.commentLength || e.madeBy !== 0 || dosDate(e))) tally.add("archive-info");
   const parts: NewEntry[] = [];
   let cleaned = 0;
+  const proofs = proofHashes(entries.map((e) => e.name));
+  let kept = false;
   for (const entry of entries) {
     if (SYSTEM_FILE.test(entry.name)) {
       tally.add("archive-system");
@@ -36,6 +46,11 @@ export async function stripZipArchive(bytes: Uint8Array, inner: Inner): Promise<
       continue;
     }
     let data = await entryData(bytes, entry);
+    if (proofs.length && proofs.includes(bytesToHex(sha256(data)))) {
+      parts.push({ name: entry.name, data, compress: entry.method === 8 });
+      kept = true;
+      continue;
+    }
     const result = await inner.strip(data);
     if (result?.report.removed.length) {
       data = result.data;
@@ -46,7 +61,7 @@ export async function stripZipArchive(bytes: Uint8Array, inner: Inner): Promise<
   if (cleaned) tally.add("archive-files");
   const data = await writeZip(parts);
   readZip(data);
-  return { data, report: { removed: tally.items(), kept: [{ code: "archive-content" }] } };
+  return { data, report: { removed: tally.items(), kept: [{ code: "archive-content" }, ...(kept ? [{ code: "archive-proofmode" as const }] : [])] } };
 }
 
 export async function inspectZipArchive(bytes: Uint8Array, inner: Inner): Promise<Finding[]> {
@@ -61,6 +76,17 @@ export async function inspectZipArchive(bytes: Uint8Array, inner: Inner): Promis
   if (commentLength || entries.some((e) => e.commentLength)) findings.push({ code: "comment" });
   const system = [...new Set(entries.filter((e) => SYSTEM_FILE.test(e.name)).map((e) => (e.name.startsWith("__MACOSX/") ? "__MACOSX" : e.name.split("/").at(-1)!)))];
   if (system.length) findings.push({ code: "system-files", value: system.slice(0, 5).join("、") });
+  const proofs = proofHashes(entries.map((e) => e.name));
+  if (proofs.length) {
+    const fields = new Set<string>();
+    for (const entry of entries) {
+      const name = entry.name.split("/").at(-1)!;
+      const parse = name.endsWith(".proof.json") ? parseProofJson : name.endsWith(".proof.csv") ? parseProofCsv : undefined;
+      if (!parse) continue;
+      for (const [k] of parse(new TextDecoder().decode(await entryData(bytes, entry)))) if (SENSITIVE.includes(k)) fields.add(k);
+    }
+    findings.push({ code: "proofmode", value: SENSITIVE.filter((k) => fields.has(k)).join(", ") || undefined });
+  }
   for (const entry of entries) {
     if (entry.name.endsWith("/") || SYSTEM_FILE.test(entry.name)) continue;
     findings.push(...((await inner.inspect(await entryData(bytes, entry))) ?? []));

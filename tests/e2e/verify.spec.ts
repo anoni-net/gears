@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { bytes, insertIntoJpeg, segment, syntheticJpeg } from "../helpers/fixtures.ts";
 import { incrementalPdf } from "../helpers/pdf-incremental.ts";
+import { proofModeBundle } from "../helpers/proofmode.ts";
 import { downloadFrom, expect, test } from "./guard.ts";
 
 const sha256 = (data: Uint8Array) => createHash("sha256").update(data).digest("hex");
@@ -130,4 +131,34 @@ test("來源標示：IPTC 的 AI 欄位與 GB 45438 的隱式標識列在卡片�
   expect(report).toContain(`    - IPTC 記錄的提示詞：${prompt}`);
   expect(report).toContain(`    - 生成服務：個人，手機號碼 19900001111（${producer}）`);
   expect(report).toContain("沒有 AI 生成的標示也不代表不是 AI 產生的");
+});
+
+test("ProofMode 的證明檔：簽章、公鑰指紋與感測器資料，照片可以一起查證", async ({ page }) => {
+  const { zip, fingerprint } = await proofModeBundle();
+  await page.goto("./verify/");
+  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.getByRole("button", { name: "選擇檔案" }).first().click()]);
+  await chooser.setFiles([{ name: "IMG_0001-proofmode.zip", mimeType: "application/zip", buffer: Buffer.from(zip) }]);
+
+  const block = page.getByTestId("verify-proofmode");
+  await expect(block.getByText("ProofMode 的證明檔，1 份證明")).toBeVisible({ timeout: 15000 });
+  await expect(block.getByText(fingerprint.replace(/(.{4})(?!$)/g, "$1 "))).toBeVisible();
+  await expect(block.getByText("照片或影片：IMG_0001.jpg")).toBeVisible();
+  await expect(block.getByText(/^照片的簽章正確/)).toBeVisible();
+  await expect(block.getByText(/^感測器資料的簽章正確/)).toBeVisible();
+  await expect(block.getByText(/OpenTimestamps/)).toBeVisible();
+  // 感測器資料完整列出，收在可以展開的區塊
+  await block.getByText("感測器資料（8 項）").click();
+  await expect(block.getByText("02:00:00:00:00:00")).toBeVisible();
+  // 位置併進檔案卡片
+  await expect(page.locator(".verify-card").first().getByText("25.03300, 121.56540")).toBeVisible();
+
+  await block.getByRole("button", { name: "照片一起查證" }).click();
+  await expect(block.getByRole("button", { name: "已加入這一批" })).toBeDisabled();
+  await expect(page.locator(".verify-card")).toHaveCount(2);
+  await expect(page.locator(".verify-card").getByRole("heading", { name: "IMG_0001.jpg" })).toBeVisible();
+
+  const file = await downloadFrom(page, () => page.getByRole("button", { name: "下載查證紀錄" }).click());
+  const report = Buffer.from(file.data).toString("utf8");
+  expect(report).toContain("- ProofMode 的證明檔，1 份證明");
+  expect(report).toContain("        - Wifi MAC：02:00:00:00:00:00");
 });
