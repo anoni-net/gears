@@ -3157,3 +3157,19 @@ button.link {
   margin-top: 1rem;
   font-size: 0.95rem;
 }
+
+/* 320px 這類最窄的手機：對照表的字與間距縮小，最左邊的項目才不會一行只剩兩個字 */
+@media (max-width: 359px) {
+  .remote-privacy {
+    padding: 0.75rem;
+  }
+
+  .remote-who {
+    font-size: 0.8rem;
+  }
+
+  .remote-who th,
+  .remote-who td {
+    padding: 0.3rem 0.15rem;
+  }
+}
