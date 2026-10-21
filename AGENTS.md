@@ -248,14 +248,14 @@ GB 45438 的服務提供者編碼（TC260-PG-20252A，27 碼）拆成主體類�
 找到 C2PA 內容憑證時，查證用官方的 `@contentauth/c2pa-web`（0.15.4，鎖定版本，c2pa-rs 編成的 WebAssembly）完整驗證（`src/ui/c2pa-check.ts`），結果由 `src/tools/verify/c2pa.ts` 整理成卡片上的幾行，同一套說法用在匯出的紀錄：
 
 - 簽章有效或無效、內容在簽署之後有沒有被改過。被改過、簽章無效、簽署者的憑證已被撤銷，列在需要留意的地方（`c2pa-changed`、`c2pa-invalid`、`c2pa-revoked`）
-- 簽署者在不在信任清單裡：先用 C2PA 的正式清單，簽署者不受信任時改用過渡清單（Interim Trust List）再驗一次，跟官方的一致性工具相同。用過渡清單通過的另外標明，過渡清單 2026-01-01 起凍結，不再新增簽署者，舊的照樣有效，較早的 Adobe、OpenAI 圖片多半用它
+- 簽署者在不在信任清單裡：只用 C2PA 的正式清單。2026-01-01 起凍結的過渡清單（Interim Trust List）不用，官方的一致性工具會退回去用它，這裡不退。用過渡清單裡的憑證簽的圖片（例如測試用的 Adobe Photoshop 那一張）列為簽署者不受信任，簽署者的名稱照樣列出
 - 簽署者的名稱與組織、簽署時間（標明是受信任的時間戳記服務證明，還是簽署端自己填的）
 - 撤銷狀態只讀簽署時附在檔案裡的 OCSP 回應。沒有附的寫明「沒有檢查」：2025-09 Nikon 撤銷過相機的憑證，那些照片的簽章在密碼學上仍然驗得過
 - 產生的軟體、動作紀錄（動作與數位來源類型換成讀得懂的說法，`C2PA_ACTIONS`）、素材的數量、有沒有 CAWG 的身分聲明（內容還沒有列出）
 
 不連線：遠端的資訊清單（`remoteManifestFetch`）與線上的撤銷查詢（`ocspFetch`）都關掉，信任清單直接給內容，不給網址。c2pa-web 在遇到內容憑證時才下載，Worker 從 `blob:` 網址建立（CSP 的 `worker-src` 本來就允許），WebAssembly 約 9 MB（壓縮後約 3.4 MB），service worker 用到時才存（`assets/c2pa_bg-*`）。升級前一樣在套件裡搜尋對外的網址，0.15.4 沒有。WebAssembly 被關掉時（鎖定模式、Tor Browser 的部分設定），卡片上說明沒有辦法驗證。
 
-信任清單建置時內嵌在 `src/tools/verify/c2pa-trust/`，由 `node scripts/c2pa-trust.mjs` 從官方的 repo 下載，來源的 commit 記在 `sources.json`：正式清單取自 c2pa-org/conformance-public（CC BY 4.0），過渡清單取自 contentauth/verify-site（Apache-2.0），授權與出處寫在 `licenses/c2pa.txt`。每月跟下載的軟體驗證的公鑰一起核對一次（`node scripts/c2pa-trust.mjs --check`），有變就更新、開 PR。
+信任清單建置時內嵌在 `src/tools/verify/c2pa-trust/`，由 `node scripts/c2pa-trust.mjs` 從官方的 repo 下載，來源的 commit 記在 `sources.json`：取自 c2pa-org/conformance-public（CC BY 4.0），授權與出處寫在 `licenses/c2pa.txt`。每月跟下載的軟體驗證的公鑰一起核對一次（`node scripts/c2pa-trust.mjs --check`），有變就更新、開 PR。
 
 單元測試在 `tests/unit/verify-c2pa.spec.ts`，用 c2pa-web 裡同一份 WebAssembly 在 Node 裡驗證。測試圖取自 c2pa-rs 的測試資料（MIT 或 Apache-2.0），照片不進 repo，`tests/global-setup.ts` 在測試開始前下載到 `tests/.generated/`，鎖定 commit 並比對 SHA-256（`tests/helpers/c2pa-fixtures.ts`），下載不了時略過。瀏覽器測試（`tests/e2e/verify.spec.ts`）確認 c2pa-web 在正式建置的 CSP 底下載入、驗證並列出結果。
 
@@ -791,6 +791,6 @@ iPhone 預設拍出來的是 HEIC，在網頁上選照片時交出來的也是�
 - 遮蔽的自動尋找用 [YuNet](https://github.com/opencv/opencv_zoo/tree/main/models/face_detection_yunet) 模型（MIT）與 [onnxruntime-web](https://github.com/microsoft/onnxruntime) 1.30.0（MIT）、[Tesseract.js](https://github.com/naptha/tesseract.js) 7.0.0 與 tessdata_best 的語言資料（Apache-2.0），見 `licenses/redact-detect.txt`
 - 逐字稿用 [Transformers.js](https://github.com/huggingface/transformers.js) 4.3.1（Apache-2.0）、Whisper small 與 base 的 ONNX 檔（onnx-community，原始模型的模型卡標示 Apache-2.0）、讀者選擇之後從 Hugging Face 下載的 large-v3-turbo（模型卡標示 MIT）、分辨說話者用的 3D-Speaker CAM++（Apache-2.0，ONNX 檔取自 sherpa-onnx）、[opencc-js](https://github.com/nk2028/opencc-js) 1.4.2（MIT，字典 Apache-2.0），見 `licenses/transcribe.txt`
 - 下載的軟體驗證用 [OpenPGP.js](https://github.com/openpgpjs/openpgpjs) 6.3.2（LGPL-3.0），內建 Tor Project 與 Tails 公開的簽章公鑰，見 `licenses/openpgp.txt`
-- 查證驗證內容憑證用 [c2pa-web](https://github.com/contentauth/c2pa-js) 0.15.4（MIT，裡面是 [c2pa-rs](https://github.com/contentauth/c2pa-rs) 編成的 WebAssembly），內建 C2PA 的正式信任清單（CC BY 4.0）與過渡信任清單（Apache-2.0），見 `licenses/c2pa.txt`
+- 查證驗證內容憑證用 [c2pa-web](https://github.com/contentauth/c2pa-js) 0.15.4（MIT，裡面是 [c2pa-rs](https://github.com/contentauth/c2pa-rs) 編成的 WebAssembly），內建 C2PA 的正式信任清單（CC BY 4.0），見 `licenses/c2pa.txt`
 - QR code 以外的條碼用 [zxing-wasm](https://github.com/Sec-ant/zxing-wasm) 3.1.4（MIT），它是 [ZXing-C++](https://github.com/zxing-cpp/zxing-cpp)（Apache-2.0）編譯成的 WebAssembly，見 `licenses/zxing.txt`
 - 165 反詐騙清單見上方，部署時下載，不進版控

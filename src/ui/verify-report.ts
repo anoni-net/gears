@@ -109,7 +109,7 @@ function c2paLines(p: Provenance): string[] {
   if (!result) return [t("verify.prov.c2pa")];
   if ("error" in result) return [tDynamic(`verify.c2pa.error.${result.error}`)];
   const c = result.check;
-  const out = [c.state === "trusted" ? tDynamic(`verify.c2pa.state.trusted.${c.trustList ?? "official"}`) : tDynamic(`verify.c2pa.state.${c.state}`)];
+  const out = [tDynamic(`verify.c2pa.state.${c.state}`)];
   for (const problem of c.problems) out.push(tDynamic(`verify.c2pa.problem.${problem}`));
   if (c.signer || c.issuer) out.push(t("verify.c2pa.signer", { name: c.signer && c.issuer && c.signer !== c.issuer ? `${c.signer}（${c.issuer}）` : (c.signer ?? c.issuer)! }));
   if (c.signedAt) {
