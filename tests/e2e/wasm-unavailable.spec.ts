@@ -66,7 +66,7 @@ test("遮蔽 PDF：有文字層時不必辨識，照樣找得到個資", async (
   await page.goto("./redact/");
   await page.getByTestId("file-input").setInputFiles({ name: "contact.pdf", mimeType: "application/pdf", buffer: await textPdf() });
   await expect(page.getByText("第 1 頁，共 1 頁")).toBeVisible({ timeout: 15000 });
-  await expect(page.getByTestId("redact-auto-status")).toContainText("自動尋找在你的瀏覽器裡執行", { timeout: 15000 });
+  await expect(page.getByTestId("redact-auto-status")).toContainText("側臉、戴口罩的臉", { timeout: 15000 });
   await page.getByRole("button", { name: "找電話、Email 等個資" }).click();
   await expect(page.getByTestId("redact-auto-status")).toHaveText("加了 2 個框，請逐一確認，框錯的點一下就會拿掉。");
   // 找人臉一定要 WebAssembly

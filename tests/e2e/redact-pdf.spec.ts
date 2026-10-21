@@ -25,7 +25,7 @@ async function samplePdf(): Promise<Buffer> {
 
 // 頁面畫好之前框選不會有反應，等載入的訊息換成自動尋找的說明
 async function pageReady(page: Page) {
-  await expect(page.getByTestId("redact-auto-status")).toContainText("自動尋找在你的瀏覽器裡執行", { timeout: 15000 });
+  await expect(page.getByTestId("redact-auto-status")).toContainText("側臉、戴口罩的臉", { timeout: 15000 });
 }
 
 async function canvasBox(page: Page) {

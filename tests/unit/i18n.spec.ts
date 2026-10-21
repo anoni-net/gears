@@ -18,6 +18,8 @@ test("每個代碼與工具都有正體中文的字串", () => {
     ...TOOL_GROUPS.flatMap((group) => group.tools.map((id) => `desk.when.${id}`)),
     // 檔案畫面的工具列：按鈕用動詞，需要編輯畫面的工具還有「再做一次」
     ...[...fileTools, ...editorTools].map((tool) => `tool.${tool.id}.action`),
+    // 工具頁還沒選檔案時的使用方式，每個工具三步（src/ui/ToolIntro.tsx）
+    ...[...fileTools, ...editorTools].flatMap((tool) => [1, 2, 3].map((n) => `howto.${tool.id}.${n}`)),
     ...editorTools.map((tool) => `tool.${tool.id}.again`),
     // 會在暫存區留下版本的工具，版本列要有名稱
     ...[...fileTools, ...editorTools, ...createTools.filter((tool) => tool.output === "file")].map((tool) => `file.version.${tool.id}`),
