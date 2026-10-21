@@ -4,6 +4,7 @@ import type { Evidence, TimeEntry } from "../tools/verify/examine.ts";
 import { DIGITAL_SOURCE_TYPES, type Provenance } from "../tools/verify/provenance.ts";
 import { C2PA_ACTIONS, CAWG_ACCOUNT_TYPES, CAWG_TRAINING_KINDS, CAWG_TRAINING_USES, type C2paAccount, type C2paAction } from "../tools/verify/c2pa.ts";
 import { isoTime } from "../tools/verify/times.ts";
+import type { PdfSignatureCheck } from "../tools/verify/pdf-signature.ts";
 import type { ProofItem, SigResult } from "../tools/verify/proofmode.ts";
 import { providerText } from "./provider-text.ts";
 import type { CaseFile, Group, Summary, Warning } from "../tools/verify/summary.ts";
@@ -75,6 +76,26 @@ export function warningDetail(w: Warning, files: CaseFile[]): string {
   return tDynamic(`verify.warn.${w.code}.detail`, { files: names(files, w.files), value: value!, other: other! });
 }
 
+// PDF 數位簽章的驗證結果（src/tools/verify/pdf-signature.ts）。簽署者的憑證主體照實列出，
+// 自然人憑證的主體有姓名，讀者看過再決定怎麼保管
+function signatureLines(c: PdfSignatureCheck): string[] {
+  const time = (iso?: string) => {
+    const v = iso ? isoTime(iso) : undefined;
+    return v ? timeText(v) : (iso ?? "-");
+  };
+  const out: string[] = [];
+  if (c.integrity === "changed") out.push(t("verify.pdfsig.changed"));
+  else out.push(tDynamic(`verify.pdfsig.signature.${c.signature}`));
+  if (c.signer) out.push(t("verify.pdfsig.signer", { value: c.signer }));
+  if (c.issuer) out.push(t("verify.pdfsig.issuer", { value: c.issuer }));
+  if (c.validFrom && c.validTo) out.push(t("verify.pdfsig.validity", { from: time(c.validFrom), to: time(c.validTo) }));
+  if (c.signingTime) out.push(t("verify.pdfsig.signingTime", { time: time(c.signingTime) }));
+  if (c.chain === "trusted") out.push(t("verify.pdfsig.chain.trusted", { root: c.root ?? "-" }));
+  else if (c.chain === "trusted-at-signing") out.push(t("verify.pdfsig.chain.trusted-at-signing", { root: c.root ?? "-" }));
+  else if (c.chain === "untrusted") out.push(t("verify.pdfsig.chain.untrusted"));
+  return out;
+}
+
 // 每個檔案的其他痕跡（修訂次數、範本、簽章），畫面與匯出共用
 export function traceLines(ev: Evidence): string[] {
   const out: string[] = [];
@@ -84,7 +105,13 @@ export function traceLines(ev: Evidence): string[] {
   }
   for (const s of ev.signatures) {
     const who = s.name ?? t("verify.unknownSigner");
-    out.push(t(s.coversWhole ? "verify.signature.whole" : "verify.signature.partial", { name: who, time: s.time ? timeText(s.time) : "-" }));
+    const vars = { name: who, time: s.time ? timeText(s.time) : "-" };
+    if (!s.check) {
+      out.push(t(s.coversWhole ? "verify.signature.whole" : "verify.signature.partial", vars));
+      continue;
+    }
+    out.push(t(s.coversWhole ? "verify.signature.wholeChecked" : "verify.signature.partialChecked", vars));
+    out.push(...signatureLines(s.check));
   }
   return out;
 }

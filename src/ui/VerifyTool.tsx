@@ -67,6 +67,11 @@ function analyze(file: TrayFile): Promise<Result> {
       // 太大、沒有整個讀進記憶體的檔案，只用加入暫存區時的檢查結果
       const bytes = original.large ? new Uint8Array(0) : new Uint8Array(await original.blob.arrayBuffer());
       const evidence = await examine(bytes, original.format, original.findings);
+      // PDF 帶著數位簽章時驗證簽章與憑證鏈，pkijs 這時才下載
+      if (evidence.signatures.some((s) => s.contents)) {
+        const { checkPdfSignatures } = await import("./pdf-signature-check.ts");
+        await checkPdfSignatures(bytes, evidence.signatures);
+      }
       // 有內容憑證時接著完整驗證，c2pa-web 這時才下載
       if (evidence.provenance?.c2pa && !original.large) {
         const { checkC2pa } = await import("./c2pa-check.ts");
