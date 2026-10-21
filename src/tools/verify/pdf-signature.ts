@@ -11,12 +11,22 @@ import type * as Pkijs from "pkijs";
 // 3. 時間戳記（RFC 3161）：附在簽章上的（證明簽章值在那個時間已經存在），或整份文件的時間戳記
 //    （/SubFilter 為 ETSI.RFC3161，直接證明簽署的範圍）。驗時間戳記服務的簽章與憑證鏈，接到內建的
 //    根憑證才採信，簽署者的憑證現在過期時，用時間戳記證明的時間再驗一次
+// 4. 撤銷狀態：只讀檔案裡已經存好的資料，簽章裡附的（adbe-revocationInfoArchival 與 CMS 的
+//    crls）與長期驗證存在 /DSS 的 OCSP 回應與撤銷清單（CRL），不連線查詢。只檢查簽署者的憑證，
+//    憑證鏈接到內建的根憑證才檢查，接不到的話分不出撤銷資料是誰簽的
 //
 // 只給線索：簽章有效不代表文件的內容是真的，法律上的效力也不在這裡判斷
+
+export interface RevocationData {
+  certs: Uint8Array[]; // DER
+  ocsps: Uint8Array[]; // OCSPResponse
+  crls: Uint8Array[];
+}
 
 export interface PdfSignatureInput {
   byteRange: number[];
   contents: Uint8Array; // /Contents 的 CMS（DER），後面補的 0 不影響解析，不必拿掉
+  dss?: RevocationData; // 文件的 /DSS，所有簽章共用
 }
 
 export interface TrustStore {
@@ -34,6 +44,15 @@ export interface TimestampCheck {
   root?: string;
 }
 
+export interface RevocationCheck {
+  // unverified：有這張憑證的撤銷資料，但簽章驗不過。not-checked：檔案裡沒有這張憑證的撤銷資料
+  status: "good" | "revoked" | "unknown" | "unverified" | "not-checked";
+  source?: "ocsp" | "crl";
+  checkedAt?: string; // OCSP 回應產生的時間，或撤銷清單的發布時間
+  revokedAt?: string;
+  afterTimestamp?: boolean; // 撤銷的時間晚於可信的時間戳記，簽章在撤銷之前就已經存在
+}
+
 export interface PdfSignatureCheck {
   integrity: "intact" | "changed" | "unknown"; // 簽署的範圍算出的摘要跟簽章裡記的一不一樣
   signature: "valid" | "invalid" | "unsupported" | "unavailable"; // unavailable：瀏覽器沒有 crypto.subtle
@@ -47,6 +66,7 @@ export interface PdfSignatureCheck {
   root?: string; // 憑證鏈接到的根憑證
   kind?: "signature" | "document"; // document：整份文件的時間戳記，簽署者就是時間戳記服務
   timestamp?: TimestampCheck;
+  revocation?: RevocationCheck; // 憑證鏈接到內建的根憑證時才有
 }
 
 type Lib = typeof Pkijs;
@@ -169,6 +189,136 @@ async function verifyToken(lib: Lib, token: Pkijs.SignedData, covered: Uint8Arra
   return { check, at };
 }
 
+interface Revocations {
+  ocsps: Pkijs.BasicOCSPResponse[];
+  crls: Pkijs.CertificateRevocationList[];
+}
+
+// 簽章裡附的撤銷資料：Adobe 的 adbe-revocationInfoArchival（簽署的屬性，[0] 是 CRL、[1] 是 OCSP
+// 回應）與 CMS 本身的 crls（RFC 5940 的 OCSP 回應放在 OtherRevocationInfoFormat），再加上 /DSS
+function collectRevocations(lib: Lib, asn1: typeof import("asn1js"), signed: Pkijs.SignedData, info: Pkijs.SignerInfo, dss?: RevocationData): Revocations {
+  const out: Revocations = { ocsps: [], crls: [] };
+  const addOcsp = (schema: unknown) => {
+    try {
+      const bytes = new lib.OCSPResponse({ schema }).responseBytes;
+      if (bytes?.responseType === "1.3.6.1.5.5.7.48.1.1") out.ocsps.push(lib.BasicOCSPResponse.fromBER(toBuffer(new Uint8Array(bytes.response.valueBlock.valueHexView))));
+    } catch {
+      // 讀不出來就略過
+    }
+  };
+  const addCrl = (schema: unknown) => {
+    try {
+      out.crls.push(new lib.CertificateRevocationList({ schema }));
+    } catch {
+      // 讀不出來就略過
+    }
+  };
+  const fromDer = (der: Uint8Array) => {
+    const parsed = asn1.fromBER(toBuffer(der));
+    return parsed.offset === -1 ? undefined : parsed.result;
+  };
+
+  const archival = info.signedAttrs?.attributes.find((a) => a.type === "1.2.840.113583.1.1.8")?.values[0];
+  if (archival instanceof asn1.Sequence) {
+    for (const item of archival.valueBlock.value) {
+      if (item.idBlock.tagClass !== 3 || !(item instanceof asn1.Constructed)) continue;
+      const list = item.valueBlock.value[0];
+      if (!(list instanceof asn1.Sequence)) continue;
+      for (const entry of list.valueBlock.value) {
+        if (item.idBlock.tagNumber === 0) addCrl(entry);
+        else if (item.idBlock.tagNumber === 1) addOcsp(entry);
+      }
+    }
+  }
+  for (const entry of signed.crls ?? []) {
+    if (entry instanceof lib.CertificateRevocationList) out.crls.push(entry);
+    else if (entry instanceof lib.OtherRevocationInfoFormat && entry.otherRevInfoFormat === "1.3.6.1.5.5.7.16.2") addOcsp(entry.otherRevInfo);
+  }
+  for (const der of dss?.ocsps ?? []) {
+    const schema = fromDer(der);
+    if (schema) addOcsp(schema);
+  }
+  for (const der of dss?.crls ?? []) {
+    const schema = fromDer(der);
+    if (schema) addCrl(schema);
+  }
+  return out;
+}
+
+// OCSP 回應由簽發者自己簽，或由簽發者授權的回應者簽：回應者的憑證由簽發者簽發、有 OCSP 簽署的
+// 用途、回應產生時在效期內。pkijs 的 verify 用現在的時間驗回應者的憑證鏈，回應者的憑證效期
+// 通常只有幾天，存在檔案裡的舊回應都會失敗，所以這裡自己判斷
+async function ocspSignedBy(lib: Lib, basic: Pkijs.BasicOCSPResponse, issuer: Pkijs.Certificate, at: Date): Promise<boolean> {
+  const engine = lib.getCrypto(true);
+  for (const c of [issuer, ...(basic.certs ?? [])]) {
+    let ok = false;
+    try {
+      ok = await engine.verifyWithPublicKey(toBuffer(new Uint8Array(basic.tbsResponseData.tbsView)), basic.signature, c.subjectPublicKeyInfo, basic.signatureAlgorithm);
+    } catch {
+      continue;
+    }
+    if (!ok) continue;
+    if (same(c, issuer)) return true;
+    const eku = c.extensions?.find((e) => e.extnID === "2.5.29.37")?.parsedValue as { keyPurposes?: string[] } | undefined;
+    if (!eku?.keyPurposes?.includes("1.3.6.1.5.5.7.3.9")) continue;
+    if (at < c.notBefore.value || at > c.notAfter.value) continue;
+    try {
+      if (await c.verify(issuer)) return true;
+    } catch {
+      // 不是簽發者簽的
+    }
+  }
+  return false;
+}
+
+const RANK: Record<RevocationCheck["status"], number> = { "not-checked": 0, unverified: 1, unknown: 2, good: 3, revoked: 4 };
+
+// 同一張憑證有好幾份撤銷資料時，被撤銷的優先，其次是沒有被撤銷
+async function revocationOf(lib: Lib, cert: Pkijs.Certificate, issuer: Pkijs.Certificate, data: Revocations): Promise<RevocationCheck> {
+  let result: RevocationCheck = { status: "not-checked" };
+  const take = (r: RevocationCheck) => {
+    if (RANK[r.status] > RANK[result.status]) result = r;
+  };
+  for (const basic of data.ocsps) {
+    let status: { isForCertificate: boolean; status: number };
+    try {
+      status = await basic.getCertificateStatus(cert, issuer);
+    } catch {
+      continue;
+    }
+    if (!status.isForCertificate) continue;
+    const producedAt = basic.tbsResponseData.producedAt;
+    if (!(await ocspSignedBy(lib, basic, issuer, producedAt))) {
+      take({ status: "unverified", source: "ocsp" });
+      continue;
+    }
+    const r: RevocationCheck = { status: status.status === 0 ? "good" : status.status === 1 ? "revoked" : "unknown", source: "ocsp", checkedAt: producedAt.toISOString() };
+    if (r.status === "revoked") {
+      const single = basic.tbsResponseData.responses.find((x) => x.certID.serialNumber.isEqual(cert.serialNumber) && x.certStatus.idBlock.tagNumber === 1);
+      const when = (single?.certStatus as { valueBlock?: { value?: { toDate?: () => Date }[] } } | undefined)?.valueBlock?.value?.[0]?.toDate?.();
+      if (when) r.revokedAt = when.toISOString();
+    }
+    take(r);
+  }
+  for (const crl of data.crls) {
+    if (!crl.issuer.isEqual(issuer.subject)) continue;
+    let ok = false;
+    try {
+      ok = await crl.verify({ issuerCertificate: issuer });
+    } catch {
+      // 驗不過
+    }
+    if (!ok) {
+      take({ status: "unverified", source: "crl" });
+      continue;
+    }
+    const entry = crl.revokedCertificates?.find((r) => r.userCertificate.isEqual(cert.serialNumber));
+    const checkedAt = crl.thisUpdate.value.toISOString();
+    take(entry ? { status: "revoked", source: "crl", checkedAt, revokedAt: entry.revocationDate.value.toISOString() } : { status: "good", source: "crl", checkedAt });
+  }
+  return result;
+}
+
 export async function verifyPdfSignature(bytes: Uint8Array, input: PdfSignatureInput, trust: TrustStore): Promise<PdfSignatureCheck> {
   const lib: Lib = await import("pkijs");
   const asn1: typeof import("asn1js") = await import("asn1js");
@@ -245,7 +395,7 @@ export async function verifyPdfSignature(bytes: Uint8Array, input: PdfSignatureI
 
   // 第二層：憑證鏈接到內建的根憑證。先看現在，驗不過再看時間戳記證明的時間，最後才看簽署端自己填的
   const roots = certsOf(lib, trust.roots);
-  const intermediates = [...embeddedOf(lib, signed), ...certsOf(lib, trust.intermediates)];
+  const intermediates = [...embeddedOf(lib, signed), ...certsOf(lib, input.dss?.certs), ...certsOf(lib, trust.intermediates)];
   let path = await chainAt(lib, signerCert, intermediates, roots, new Date());
   out.chain = path ? "trusted" : "untrusted";
   if (!path && trustedAt) {
@@ -258,5 +408,13 @@ export async function verifyPdfSignature(bytes: Uint8Array, input: PdfSignatureI
   }
   const root = path?.at(-1);
   if (root) out.root = nameText(root.subject);
+
+  // 第四層：撤銷狀態。簽發者是憑證鏈的下一張
+  const issuer = path?.[1];
+  if (issuer) {
+    out.revocation = await revocationOf(lib, signerCert, issuer, collectRevocations(lib, asn1, signed, signerInfo, input.dss));
+    const revokedAt = out.revocation.revokedAt ? new Date(out.revocation.revokedAt) : undefined;
+    if (revokedAt && trustedAt && revokedAt > trustedAt) out.revocation.afterTimestamp = true;
+  }
   return out;
 }

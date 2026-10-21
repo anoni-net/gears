@@ -42,7 +42,8 @@ export type WarningCode =
   | "c2pa-invalid"
   | "c2pa-revoked"
   | "pdf-signature-invalid"
-  | "pdf-timestamp-invalid";
+  | "pdf-timestamp-invalid"
+  | "pdf-signature-revoked";
 
 export interface Warning {
   code: WarningCode;
@@ -137,6 +138,9 @@ function fileWarnings(f: CaseFile): Warning[] {
   // 附在簽章上的時間戳記驗不過。整份文件的時間戳記對不上時，簽章本身就算驗不過，列在上一項
   const badStamp = (c?: PdfSignatureCheck) => c?.kind === "signature" && !!c.timestamp && (c.timestamp.imprint === "mismatch" || c.timestamp.signature === "invalid");
   if (ev.signatures.some((s) => badStamp(s.check))) out.push({ code: "pdf-timestamp-invalid", files: [f.index] });
+  // 撤銷的時間晚於可信的時間戳記時，簽章在撤銷之前就已經存在，不列
+  const revoked = ev.signatures.find((s) => s.check?.revocation?.status === "revoked" && !s.check.revocation.afterTimestamp);
+  if (revoked) out.push({ code: "pdf-signature-revoked", files: [f.index], value: revoked.check!.signer });
   if (ev.revisions.length) out.push({ code: "pdf-revisions", files: [f.index], value: String(ev.revisions.length + 1) });
   if (ev.docCheck?.connect) out.push({ code: "doc-connects", files: [f.index], value: String(ev.docCheck.connect) });
   else if (ev.docCheck?.code) out.push({ code: "doc-code", files: [f.index] });
