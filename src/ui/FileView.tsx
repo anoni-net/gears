@@ -94,26 +94,6 @@ function MediaPreview({ blob, format }: { blob: Blob; format: Version["format"] 
   );
 }
 
-function versionLabel(v: Version) {
-  return v.tool ? tDynamic(`file.version.${v.tool}`) : t("file.original");
-}
-
-// 跟上一個版本比，說明這一步拿掉了哪些資訊。遮蔽這類會重新編碼的工具，中繼資料是
-// 順帶拿掉的，讀者沒有主動要求，不說的話看起來像資料平白消失。
-function RemovedNote({ version, previous }: { version: Version; previous?: Version }) {
-  if (!previous || !version.tool) return null;
-  const now = new Set(version.findings.map((f) => f.code));
-  const gone = previous.findings.filter((f) => !now.has(f.code));
-  if (!gone.length) return null;
-  const reencoded = version.report?.removed.some((r) => r.code === "reencode");
-  return (
-    <p class="note" data-testid="removed-note">
-      {t("findings.removed", { tool: tDynamic(`tool.${version.tool}`), n: gone.length })}
-      {reencoded ? t(version.report?.kept.some((r) => r.code === "exif-kept") ? "findings.exifKept" : "findings.reencoded") : null}
-    </p>
-  );
-}
-
 function FindingList({ findings }: { findings: Version["findings"] }) {
   return (
     <ul class="findings">
@@ -166,7 +146,7 @@ function ContentChoices({ version, busy, onApply }: { version: Version; busy: bo
 }
 
 // 文件的註解、追蹤修訂與附加檔案是內容，清除之後仍然在，跟中繼資料分開列
-function Findings({ version, previous, busy, onApply }: { version: Version; previous?: Version; busy?: boolean; onApply?: (options: RunOptions) => void }) {
+function Findings({ version, busy, onApply }: { version: Version; busy?: boolean; onApply?: (options: RunOptions) => void }) {
   const metadata = version.findings.filter((f) => !CONTENT_FINDINGS.includes(f.code));
   const content = version.findings.filter((f) => CONTENT_FINDINGS.includes(f.code));
   return (
@@ -179,7 +159,6 @@ function Findings({ version, previous, busy, onApply }: { version: Version; prev
           <p class="hint">{t("findings.scope")}</p>
         </>
       )}
-      <RemovedNote version={version} previous={previous} />
       {content.length ? (
         <div class="content-findings" data-testid="content-findings">
           <h4>{t("findings.content")}</h4>
@@ -218,6 +197,63 @@ function ReportView({ report }: { report: Report }) {
       ) : null}
       {report.notes?.length ? <ul>{rows(report.notes)}</ul> : null}
     </div>
+  );
+}
+
+// 這一步跟上一個版本比，原本找到的資訊少了幾項。遮蔽這類會重新編碼的工具，中繼資料是
+// 順帶拿掉的，讀者沒有主動要求，不說的話看起來像資料平白消失。
+function RemovedNote({ version, previous }: { version: Version; previous: Version }) {
+  const now = new Set(version.findings.map((f) => f.code));
+  const gone = previous.findings.filter((f) => !now.has(f.code));
+  if (!gone.length) return null;
+  const reencoded = version.report?.removed.some((r) => r.code === "reencode");
+  return (
+    <p class="hint" data-testid="removed-note">
+      {t("findings.removed", { n: gone.length })}
+      {reencoded ? t(version.report?.kept.some((r) => r.code === "exif-kept") ? "findings.exifKept" : "findings.reencoded") : null}
+    </p>
+  );
+}
+
+// 處理紀錄：原檔與之後每一步，依序列在檔名下面，讀者不必退回上一步才知道剛才做了什麼
+// （2026-10-22 的使用回饋）。最新的一步預設展開、可以復原，之前的收起來，點開看當時的處理報告
+function History({ file, busy }: { file: TrayFile; busy: boolean }) {
+  const original = file.versions[0]!;
+  const last = file.versions.length - 1;
+  const metadata = (v: Version) => v.findings.filter((f) => !CONTENT_FINDINGS.includes(f.code)).length;
+  const inspectable = fileTools.some((tool) => tool.accepts(original.format));
+  return (
+    <section class="history" aria-labelledby="history-title" data-testid="history">
+      <h3 id="history-title">{t("history.title")}</h3>
+      <ol>
+        <li class="history-original">
+          {/* QR code 產生器、面對面傳送這類工具放進來的檔案，第一個版本寫出是哪個工具建立的 */}
+          <strong>{original.tool ? tDynamic(`file.version.${original.tool}`) : t("file.original")}</strong>
+          {inspectable ? (
+            <span class="hint">{metadata(original) ? t("history.found", { n: metadata(original) }) : t("tray.clean")}</span>
+          ) : null}
+        </li>
+        {file.versions.slice(1).map((v, i) => (
+          <li key={v.id} aria-current={i + 1 === last ? "step" : undefined} data-testid={i + 1 === last ? "history-current" : undefined}>
+            <details open={i + 1 === last}>
+              <summary>
+                <strong>{tDynamic(`tool.${v.tool}`)}</strong>
+                {i + 1 === last ? <span class="badge">{t("history.current")}</span> : null}
+              </summary>
+              <RemovedNote version={v} previous={file.versions[i]!} />
+              {v.report ? <ReportView report={v.report} /> : null}
+              {i + 1 === last ? (
+                <p class="actions">
+                  <button type="button" onClick={() => tray.undo(file.id)} disabled={busy}>
+                    {t("history.undo")}
+                  </button>
+                </p>
+              ) : null}
+            </details>
+          </li>
+        ))}
+      </ol>
+    </section>
   );
 }
 
@@ -393,13 +429,8 @@ export function FileView({ file, others, index, busy, preferred, onOpenTool }: P
         </p>
       ) : null}
 
-      <ol class="versions" aria-label={t("file.versions")}>
-        {file.versions.map((v) => (
-          <li key={v.id} aria-current={v === current ? "step" : undefined}>
-            {versionLabel(v)}
-          </li>
-        ))}
-      </ol>
+      {/* 只有原檔時不顯示。工具建立的檔案（QR code 產生器、面對面傳送收到的）顯示是哪個工具建立的 */}
+      {file.versions.length > 1 || file.versions[0]!.tool ? <History file={file} busy={busy} /> : null}
 
       {editing ? (
         <section class="editor" aria-labelledby="editor-title">
@@ -443,7 +474,6 @@ export function FileView({ file, others, index, busy, preferred, onOpenTool }: P
               <h3>{t("findings.title")}</h3>
               <Findings
                 version={current}
-                previous={file.versions.at(-2)}
                 busy={busy}
                 onApply={current.large ? undefined : (options) => void run("strip-metadata", options)}
               />
@@ -455,14 +485,6 @@ export function FileView({ file, others, index, busy, preferred, onOpenTool }: P
           {/* 處理完的下載放在工具列表之前。原本在最後面，手機上要捲過好幾組工具才看得到，
               最顯眼的按鈕反而是建議的下一個工具（2026-10-19 的使用回饋） */}
           {current.tool ? <Output version={current} name={outputName(file, index)} /> : null}
-          {current.report ? <ReportView report={current.report} /> : null}
-          {file.versions.length > 1 ? (
-            <p class="actions">
-              <button type="button" onClick={() => tray.undo(file.id)} disabled={busy}>
-                {t("file.undo")}
-              </button>
-            </p>
-          ) : null}
 
           {isImage && file.versions[0]!.tool === null ? <QrInImage blob={current.blob} onOpenTool={onOpenTool} /> : null}
 

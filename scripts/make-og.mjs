@@ -23,19 +23,19 @@ const CARDS = {
     lang: "zh-Hant-TW",
     font: '"Noto Sans CJK TC", "Noto Sans TC"',
     name: "檔案工作台",
-    line: "清除中繼資料、遮蔽個資、加密檔案，\n用本機的 AI 模型把錄音檔轉成逐字稿，也能查證收到的檔案。\n全部在你的瀏覽器裡處理，檔案不上傳。",
+    line: "清除中繼資料、遮蔽個資、加密檔案，\n用本機的 AI 模型把錄音檔轉成逐字稿，也能查證收到的檔案。\n打開瀏覽器就能使用，不必安裝或註冊。",
   },
   "zh-CN": {
     lang: "zh-Hans",
     font: '"Noto Sans CJK SC", "Noto Sans SC"',
     name: "文件工作台",
-    line: "清除元数据、遮蔽个资、加密文件，\n用本地的 AI 模型把录音文件转成逐字稿，也能查证收到的文件。\n全部在你的浏览器里处理，文件不上传。",
+    line: "清除元数据、遮蔽个资、加密文件，\n用本地的 AI 模型把录音文件转成逐字稿，也能查证收到的文件。\n打开浏览器就能使用，不必安装或注册。",
   },
   en: {
     lang: "en",
     font: '"Noto Sans", "Noto Sans CJK TC"',
     name: "File Workbench",
-    line: "Strip metadata, redact and encrypt files, transcribe recordings with on-device AI models, and verify the files you receive. Everything runs in your browser and nothing is uploaded.",
+    line: "Strip metadata, redact and encrypt files, transcribe recordings with on-device AI models, and verify the files you receive. Open it in a browser and start, with no install or account.",
   },
 };
 

@@ -29,7 +29,7 @@ test("沒有 crypto.subtle：用公鑰加密停用，用密語加密照常", asy
   await page.getByLabel("密語", { exact: true }).check();
   await page.getByLabel("加密用的密語").fill("correct horse battery staple");
   await page.getByRole("button", { name: "加密", exact: true }).click();
-  await expect(page.getByText("加密後", { exact: true })).toBeVisible({ timeout: 60_000 });
+  await expect(page.getByTestId("history-current").getByText("加密", { exact: true })).toBeVisible({ timeout: 60_000 });
   const out = await downloadFrom(page, () => page.getByRole("link", { name: "下載" }).click());
   expect(new TextDecoder().decode(await decrypt(out.data, "correct horse battery staple"))).toBe("hello");
 });

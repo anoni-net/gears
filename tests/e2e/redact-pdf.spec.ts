@@ -96,7 +96,7 @@ test("PDF 遮蔽：分頁框選，輸出的每一頁都是圖片，文字與文�
   await expect(page.getByText("全部框了 1 個範圍，這一頁 1 個")).toBeVisible();
 
   await page.getByRole("button", { name: "套用遮蔽" }).click();
-  await expect(page.getByText("遮蔽後", { exact: true })).toBeVisible({ timeout: 15000 });
+  await expect(page.getByTestId("history-current").getByText("遮蔽", { exact: true })).toBeVisible({ timeout: 15000 });
   await expect(page.getByText("每一頁轉成圖片，原檔的文字、字型、中繼資料、附件與表單都不帶過去")).toBeVisible();
 
   const file = await downloadFrom(page, () => page.getByRole("link", { name: "下載" }).click());
@@ -129,7 +129,7 @@ test("PDF 遮蔽：XMP、註解的作者、文件識別碼與舊版本留下的�
   await drag(page, [0.6, 0.6], [0.9, 0.9]);
   await expect(page.getByText("已經框了 1 個範圍")).toBeVisible();
   await page.getByRole("button", { name: "套用遮蔽" }).click();
-  await expect(page.getByText("遮蔽後", { exact: true })).toBeVisible({ timeout: 15000 });
+  await expect(page.getByTestId("history-current").getByText("遮蔽", { exact: true })).toBeVisible({ timeout: 15000 });
   const file = await downloadFrom(page, () => page.getByRole("link", { name: "下載" }).click());
   const text = Buffer.from(file.data).toString("latin1");
   for (const secret of [...DOC_SECRETS, VISIBLE, "Jane Doe", "FIELD-NAME", "5345435245542d4943"]) expect(text).not.toContain(secret);
@@ -183,7 +183,7 @@ test("PDF 有文字層時直接讀，不下載 Tesseract，框蓋住原本的文
   expect(ocr()).toBe(false);
 
   await page.getByRole("button", { name: "套用遮蔽" }).click();
-  await expect(page.getByText("遮蔽後", { exact: true })).toBeVisible({ timeout: 15000 });
+  await expect(page.getByTestId("history-current").getByText("遮蔽", { exact: true })).toBeVisible({ timeout: 15000 });
   const file = await downloadFrom(page, () => page.getByRole("link", { name: "下載" }).click());
   const [jpeg] = pageJpegs(await PDFDocument.load(file.data, { updateMetadata: false }));
   // 電話的第一個與最後一個數字（約 x 76 與 147 點）、Email 的頭尾，基線往上 4 點，都要是黑的

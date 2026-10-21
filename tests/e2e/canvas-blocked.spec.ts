@@ -76,12 +76,12 @@ test("遮蔽：讀不到 canvas 時不產生雜訊圖，框留著，允許之後
 
   await page.getByRole("button", { name: "套用遮蔽" }).click();
   await expect(page.getByRole("alert")).toContainText("網址列跳出詢問");
-  await expect(page.getByText("遮蔽後", { exact: true })).toHaveCount(0);
+  await expect(page.getByTestId("history-current").getByText("遮蔽", { exact: true })).toHaveCount(0);
   await expect(page.getByText("已經框了 1 個範圍")).toBeVisible();
 
   await allow(page);
   await page.getByRole("button", { name: "套用遮蔽" }).click();
-  await expect(page.getByText("遮蔽後", { exact: true })).toBeVisible();
+  await expect(page.getByTestId("history-current").getByText("遮蔽", { exact: true })).toBeVisible();
 });
 
 test("列印追蹤點：讀不到 canvas 時不判斷、不輸出，允許之後再套用", async ({ page }) => {
@@ -91,14 +91,14 @@ test("列印追蹤點：讀不到 canvas 時不判斷、不輸出，允許之後
   await expect(page.getByTestId("print-dots-status")).toBeEmpty();
   await page.getByRole("button", { name: "套用" }).click();
   await expect(page.getByRole("alert")).toContainText("網址列跳出詢問");
-  await expect(page.getByText("去掉追蹤點後", { exact: true })).toHaveCount(0);
+  await expect(page.getByTestId("history-current").getByText("列印追蹤點", { exact: true })).toHaveCount(0);
 
   await allow(page);
   await page.getByRole("button", { name: "只看黃色" }).click();
   await expect(page.getByTestId("print-dots-status")).toContainText("沒有找到");
   await expect(page.getByRole("alert")).toHaveCount(0);
   await page.getByRole("button", { name: "套用" }).click();
-  await expect(page.getByText("去掉追蹤點後", { exact: true })).toBeVisible();
+  await expect(page.getByTestId("history-current").getByText("列印追蹤點", { exact: true })).toBeVisible();
 });
 
 test("縮成常見尺寸：讀不到 canvas 時不輸出，允許之後再按一次", async ({ page }) => {
@@ -106,11 +106,11 @@ test("縮成常見尺寸：讀不到 canvas 時不輸出，允許之後再按一
   await page.getByTestId("file-input").setInputFiles({ name: "photo.jpg", mimeType: "image/jpeg", buffer: await image(page, "image/jpeg") });
   await page.getByRole("button", { name: "縮小並重新壓縮" }).click();
   await expect(page.getByRole("alert")).toContainText("網址列跳出詢問");
-  await expect(page.getByText("縮成常見尺寸後", { exact: true })).toHaveCount(0);
+  await expect(page.getByTestId("history-current").getByText("縮成常見尺寸", { exact: true })).toHaveCount(0);
 
   await allow(page);
   await page.getByRole("button", { name: "縮小並重新壓縮" }).click();
-  await expect(page.getByText("縮成常見尺寸後", { exact: true })).toBeVisible();
+  await expect(page.getByTestId("history-current").getByText("縮成常見尺寸", { exact: true })).toBeVisible();
 });
 
 test("影片的關鍵影格：讀不到 canvas 時說明，允許之後按「再試一次」", async ({ page }) => {

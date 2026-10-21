@@ -132,15 +132,23 @@ test("JPEG：找出位置、清除、下載，旋轉方向保留", async ({ page
   expect(parseExif(out.subarray(exifAt + 6)).orientation).toBe(6);
 });
 
-test("退回上一步，再清空暫存區", async ({ page }) => {
+test("處理紀錄列出每一步，復原之後再清空暫存區", async ({ page }) => {
   const jpeg = insertIntoJpeg(await canvasImage(page, "image/jpeg"), exifSegment(sampleTiff()));
   await addFile(page, "photo.jpg", "image/jpeg", jpeg);
   await page.getByRole("button", { name: "清除", exact: true }).click();
   await expect(page.getByText("沒有找到可能透露身分的中繼資料。")).toBeVisible();
 
-  await page.getByRole("button", { name: "退回上一步" }).click();
+  // 不必復原就看得到這一步做了什麼：處理紀錄列出原檔與清除中繼資料，最新的一步展開處理報告
+  const history = page.getByTestId("history");
+  await expect(history).toContainText("原檔");
+  await expect(page.getByTestId("history-current")).toContainText("清除中繼資料");
+  await expect(page.getByTestId("history-current")).toContainText("目前的版本");
+  await expect(page.getByTestId("history-current")).toContainText("拿掉的");
+
+  await page.getByRole("button", { name: "復原這一步" }).click();
   await expect(page.getByText("拍攝位置", { exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "退回上一步" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "復原這一步" })).toHaveCount(0);
+  await expect(history).toHaveCount(0);
 
   // 第一次按下只是確認，檔案還在
   await page.getByRole("button", { name: "清空暫存區" }).click();
@@ -261,13 +269,19 @@ test("做了第二個工具之後，前面處理過的仍標示已處理", async
   await page.getByRole("button", { name: "套用遮蔽" }).click();
 
   // 兩個工具都標示已處理，遮蔽可以再框一次。清除之後已經沒有中繼資料，遮蔽這一步不用再說明
-  await expect(page.getByTestId("removed-note")).toHaveCount(0);
+  await expect(page.getByTestId("history-current").getByTestId("removed-note")).toHaveCount(0);
   await expect(strip.getByText("已處理")).toBeVisible();
   await expect(redact.getByText("已處理")).toBeVisible();
   await expect(redact.getByRole("button", { name: "再框選一次" })).toBeVisible();
 
-  // 退回上一步，遮蔽的版本拿掉，已處理也跟著消失
-  await page.getByRole("button", { name: "退回上一步" }).click();
+  // 兩步都列在處理紀錄，只有最新的一步展開
+  const steps = page.getByTestId("history").locator("details");
+  await expect(steps).toHaveCount(2);
+  await expect(steps.nth(0)).not.toHaveAttribute("open");
+  await expect(steps.nth(1)).toHaveAttribute("open");
+
+  // 復原這一步，遮蔽的版本拿掉，已處理也跟著消失
+  await page.getByRole("button", { name: "復原這一步" }).click();
   await expect(redact.getByText("已處理")).toHaveCount(0);
   await expect(redact.getByRole("button", { name: "開始框選" })).toBeVisible();
   await expect(strip.getByText("已處理")).toBeVisible();
@@ -281,7 +295,7 @@ test("先遮蔽：說明中繼資料是重新產生整張圖時一起拿掉的",
   await page.getByRole("button", { name: "套用遮蔽" }).click();
 
   const note = page.getByTestId("removed-note");
-  await expect(note).toContainText("上一步（遮蔽）拿掉了原本找到的 7 項資訊。遮蔽時重新產生了整張圖");
+  await expect(note).toContainText("原本找到的 7 項資訊拿掉了。遮蔽時重新產生了整張圖");
   // 已經沒有中繼資料，清除中繼資料不顯示按鈕
   const strip = page.locator(".shelf li", { hasText: "清除中繼資料" });
   await expect(strip.getByRole("button")).toHaveCount(0);

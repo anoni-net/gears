@@ -608,24 +608,70 @@ h4 {
   overflow-wrap: anywhere;
 }
 
-.versions {
-  list-style: none;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem;
-  padding: 0;
+/* 處理紀錄：原檔與之後每一步（src/ui/FileView.tsx 的 History） */
+.history {
   margin: 0 0 1rem;
-  font-size: 0.85rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.history h3 {
+  margin: 0 0 0.25rem;
+  font-size: 0.9rem;
   color: var(--muted);
 }
 
-.versions li + li::before {
-  content: "→ ";
+.history ol {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  counter-reset: step;
 }
 
-.versions li[aria-current] {
-  color: var(--text);
-  font-weight: 600;
+.history li {
+  padding: 0.4rem 0;
+}
+
+.history li + li {
+  border-top: 1px solid var(--line);
+  counter-increment: step;
+}
+
+.history li + li summary strong::before {
+  content: counter(step) ". ";
+  color: var(--muted);
+  font-weight: normal;
+}
+
+.history-original {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 0.75rem;
+  align-items: baseline;
+}
+
+.history-original .hint {
+  margin: 0;
+}
+
+.history summary {
+  cursor: pointer;
+}
+
+.history summary .badge {
+  margin-left: 0.5rem;
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+
+.history details > :not(summary) {
+  margin-top: 0.5rem;
+}
+
+.history .actions {
+  margin-bottom: 0;
 }
 
 .columns {
