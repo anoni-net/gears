@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { syntheticJpeg } from "../helpers/fixtures.ts";
+import { bytes, insertIntoJpeg, segment, syntheticJpeg } from "../helpers/fixtures.ts";
 import { incrementalPdf } from "../helpers/pdf-incremental.ts";
 import { downloadFrom, expect, test } from "./guard.ts";
 
@@ -95,4 +95,39 @@ test("暫存區沒有檔案時，只顯示說明與選擇檔案", async ({ page 
   await expect(page.getByText(/有矛盾不代表造假/)).toBeVisible();
   await expect(page.getByRole("button", { name: "選擇檔案" }).first()).toBeVisible();
   await expect(page.getByRole("heading", { name: "時間線" })).toHaveCount(0);
+});
+
+test("來源標示：IPTC 的 AI 欄位與 GB 45438 的隱式標識列在卡片上，完整的提示詞收在完整資訊", async ({ page }) => {
+  // 編出來的服務提供者編碼：個人、綁手機號碼，號碼照實列出
+  const producer = `0022${"19900001111"}${"0".repeat(7)}00000`;
+  const aigc = JSON.stringify({ Label: "1", ContentProducer: producer, ProduceID: "pid-e2e-1" }).replaceAll('"', "&quot;");
+  const prompt = `a lighthouse at dusk, ${"oil painting, ".repeat(12)}soft light`;
+  const xmp =
+    '<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">' +
+    '<rdf:Description xmlns:Iptc4xmpExt="http://iptc.org/std/Iptc4xmpExt/2008-02-29/" xmlns:TC260="http://www.tc260.org.cn/ns/AIGC/1.0/"' +
+    ` Iptc4xmpExt:DigitalSourceType="http://cv.iptc.org/newscodes/digitalsourcetype/trainedAlgorithmicMedia" Iptc4xmpExt:AISystemUsed="Example Image Model" TC260:AIGC="${aigc}">` +
+    `<Iptc4xmpExt:AIPromptInformation>${prompt}</Iptc4xmpExt:AIPromptInformation></rdf:Description></rdf:RDF></x:xmpmeta>`;
+  const photo = Buffer.from(insertIntoJpeg(syntheticJpeg(), segment(0xe1, bytes(`http://ns.adobe.com/xap/1.0/\0${xmp}`))));
+  await page.goto("./verify/");
+  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.getByRole("button", { name: "選擇檔案" }).first().click()]);
+  await chooser.setFiles([{ name: "generated.jpg", mimeType: "image/jpeg", buffer: photo }]);
+
+  const card = page.locator(".verify-card").first();
+  await expect(card.getByText("來源標示")).toBeVisible({ timeout: 15000 });
+  await expect(card.getByText("IPTC 的數位來源類型：用生成式 AI 產生（trainedAlgorithmicMedia）")).toBeVisible();
+  await expect(card.getByText("IPTC 記錄的 AI 系統：Example Image Model")).toBeVisible();
+  await expect(card.getByText("GB 45438 的隱式標識（XMP）：標示為 AI 生成合成的內容")).toBeVisible();
+  await expect(card.getByText(`生成服務：個人，手機號碼 19900001111（${producer}）`)).toBeVisible();
+  await expect(card.getByText(/除了 C2PA 內容憑證，這些標示都沒有簽章/)).toBeVisible();
+  // 卡片上只列提示詞的開頭，完整的收在完整資訊
+  await expect(card.getByText(`IPTC 記錄的提示詞：${prompt.slice(0, 120)}…`)).toBeVisible();
+  await card.getByText("完整資訊（雜湊值與所有時間）").click();
+  await expect(card.locator(".verify-prompt")).toHaveText(prompt);
+
+  const file = await downloadFrom(page, () => page.getByRole("button", { name: "下載查證紀錄" }).click());
+  const report = Buffer.from(file.data).toString("utf8");
+  expect(report).toContain("- 來源標示：");
+  expect(report).toContain(`    - IPTC 記錄的提示詞：${prompt}`);
+  expect(report).toContain(`    - 生成服務：個人，手機號碼 19900001111（${producer}）`);
+  expect(report).toContain("沒有 AI 生成的標示也不代表不是 AI 產生的");
 });

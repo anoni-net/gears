@@ -2140,6 +2140,16 @@ button.link {
   font-size: 0.85rem;
 }
 
+.verify-facts dd .hint {
+  margin: 0.3rem 0 0;
+}
+
+/* 完整的提示詞保留原本的換行 */
+.verify-prompt {
+  margin: 0 0 0.4rem;
+  white-space: pre-wrap;
+}
+
 @media (max-width: 40rem) {
   .verify-facts {
     grid-template-columns: 1fr;

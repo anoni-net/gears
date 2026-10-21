@@ -19,12 +19,14 @@ import {
   type CaseEntry,
   buildReport,
   formatSize,
+  fullPrompts,
   keyTimes,
   kindText,
   localTime,
   names,
   overviewText,
   peopleText,
+  provenanceLines,
   relations,
   sourceText,
   timeText,
@@ -300,6 +302,8 @@ function FileCard(props: { file: TrayFile; entry?: CaseEntry; failed: boolean; w
   const ev = entry?.evidence;
   const { start, modified } = ev ? keyTimes(ev) : {};
   const traces = ev ? traceLines(ev) : [];
+  const provenance = ev ? provenanceLines(ev) : [];
+  const prompts = ev ? fullPrompts(ev) : [];
   return (
     <article class="verify-card" aria-label={file.name}>
       <h4>{file.name}</h4>
@@ -344,8 +348,18 @@ function FileCard(props: { file: TrayFile; entry?: CaseEntry; failed: boolean; w
                 </ul>
               </Fact>
             ) : null}
+            {provenance.length ? (
+              <Fact label={t("verify.fact.provenance")}>
+                <ul>
+                  {provenance.map((line, i) => (
+                    <li key={i}>{line}</li>
+                  ))}
+                </ul>
+                <p class="hint">{t("verify.provenanceNote")}</p>
+              </Fact>
+            ) : null}
           </dl>
-          {!start && !ev.devices.length && !ev.software.length && !ev.people.length && !ev.locations.length && !traces.length ? (
+          {!start && !ev.devices.length && !ev.software.length && !ev.people.length && !ev.locations.length && !traces.length && !provenance.length ? (
             <p class="hint">{t("verify.nothing")}</p>
           ) : null}
           {ev.thumbnail ? (
@@ -364,6 +378,15 @@ function FileCard(props: { file: TrayFile; entry?: CaseEntry; failed: boolean; w
               </Fact>
               <Fact label={t("verify.fact.added")}>{localTime(file.addedAt)}</Fact>
               {ev.serials.length ? <Fact label={t("verify.serial")}>{list(ev.serials)}</Fact> : null}
+              {prompts.length ? (
+                <Fact label={t("verify.fact.prompts")}>
+                  {prompts.map((text, i) => (
+                    <p key={i} class="verify-prompt">
+                      {text}
+                    </p>
+                  ))}
+                </Fact>
+              ) : null}
               {ev.times.length ? (
                 <Fact label={t("verify.fact.allTimes")}>
                   <ul>

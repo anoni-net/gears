@@ -31,6 +31,7 @@ export interface ExifInfo {
   gpsTime?: [number, number, number];
   thumbnailAt?: number; // 縮圖 JPEG 相對於 TIFF 開頭的位置與長度
   thumbnailLength?: number;
+  userComment?: string; // 生成工具的參數與 GB 45438 的隱式標識可能寫在這裡
 }
 
 const TYPE_SIZE: Record<number, number> = { 1: 1, 2: 1, 3: 2, 4: 4, 5: 8, 7: 1, 9: 4, 10: 8 };
@@ -121,6 +122,8 @@ export function parseExif(tiff: Uint8Array): ExifInfo {
     info.owner = text(ex.get(0xa430)) ?? info.owner;
     info.serial = text(ex.get(0xa431));
     info.lens = text(ex.get(0xa434));
+    const comment = ex.get(0x9286);
+    if (comment && comment.type === 7) info.userComment = userComment(tiff.subarray(comment.at, comment.at + comment.count), little);
   }
 
   const gpsOffset = pointer(e0.get(0x8825));
@@ -152,6 +155,28 @@ export function parseExif(tiff: Uint8Array): ExifInfo {
   }
 
   return info;
+}
+
+// UserComment 的前 8 個位元組標出編碼：ASCII、UNICODE（UTF-16）或全為 0（未指定）。
+// UTF-16 規格上跟著 TIFF 的位元組順序，但有些程式一律寫成大端序，看哪一邊的 0 比較多
+function userComment(data: Uint8Array, little: boolean): string | undefined {
+  if (data.length <= 8) return undefined;
+  const head = String.fromCharCode(...data.subarray(0, 8));
+  const body = data.subarray(8);
+  let text: string;
+  if (head.startsWith("UNICODE")) {
+    let even = 0;
+    let odd = 0;
+    for (let i = 0; i + 1 < body.length && i < 400; i += 2) {
+      if (body[i] === 0) even++;
+      if (body[i + 1] === 0) odd++;
+    }
+    text = new TextDecoder(even > odd ? "utf-16be" : odd > even ? "utf-16le" : little ? "utf-16le" : "utf-16be").decode(body);
+  } else {
+    text = new TextDecoder().decode(body);
+  }
+  text = text.replace(/\0+$/, "").trim();
+  return text || undefined;
 }
 
 function dms(values?: number[]): number | undefined {
