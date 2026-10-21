@@ -355,8 +355,10 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
       setAuto({ kind, state: "done", n: addFound(textLines) });
       return;
     }
-    // 找人臉與辨識文字都是 WebAssembly，瀏覽器關掉時直接說明，不下載模型（見 wasm.ts）
-    if (!wasmAvailable()) {
+    // 找人臉與辨識文字都是 WebAssembly，瀏覽器關掉時直接說明，不下載模型（見 wasm.ts）。
+    // PDF 有文字層時不必辨識，照樣可以找
+    const wasm = wasmAvailable();
+    if (!wasm && (kind === "faces" || !pdf)) {
       trackFail("redact", "wasm-unavailable");
       setAuto({ kind, state: "noWasm", n: 0 });
       return;
@@ -365,19 +367,25 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
     const onProgress = (progress: number | null) =>
       setAuto((a) => (a?.kind === kind && a.state === "running" ? { ...a, progress } : a));
     try {
-      assertCanvasReadable();
-      const { findFaces, findText } = await import("./redact-detect.ts");
+      // PDF 讀文字層時不讀 canvas，需要辨識時由 findPdfText 檢查
+      if (kind === "faces" || !pdf) assertCanvasReadable();
+      const { findFaces, findPdfText, findText } = await import("./redact-detect.ts");
       if (kind === "faces") {
         const { faces, maybe: possible } = await findFaces(bitmap, onProgress);
         setAuto({ kind, state: "done", n: addFound(faces) || faces.length });
         setMaybe(possible.filter((m) => !latest.current.some((b) => overlaps(b, m))));
       } else {
-        const { pii, lines } = await findText(bitmap, onProgress);
+        const { pii, lines } = pdf ? await findPdfText(pdf, pageIndex, bitmap, onProgress, wasm) : await findText(bitmap, onProgress);
         setTextLines(lines);
         const found = kind === "lines" ? lines : pii.map((m) => m.box);
         setAuto({ kind, state: "done", n: addFound(found) || found.length });
       }
     } catch (error) {
+      if ((error as Error).name === "NoOcrError") {
+        trackFail("redact", "wasm-unavailable");
+        setAuto({ kind, state: "noWasm", n: 0 });
+        return;
+      }
       setAuto({ kind, state: isCanvasBlocked(error) ? "blocked" : "failed", n: 0 });
     }
   };

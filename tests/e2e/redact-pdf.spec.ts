@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 import { PDFDocument, PDFName, PDFRawStream, StandardFonts, rgb } from "pdf-lib";
 import { DOC_SECRETS, VISIBLE, syntheticPdf } from "../helpers/documents.ts";
+import { textPdf } from "../helpers/text-pdf.ts";
 import { downloadFrom, expect, test } from "./guard.ts";
 
 const SECRETS = ["SECRET-NAME", "SECRET-AUTHOR", "PAGE-TWO-TEXT"];
@@ -140,4 +141,71 @@ test("PDF 打不開時說明原因，不顯示畫布", async ({ page }) => {
   await page.getByTestId("file-input").setInputFiles({ name: "broken.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF-1.7\nbroken") });
   await expect(page.getByText("沒有辦法開啟這份 PDF")).toBeVisible({ timeout: 15000 });
   await expect(page.getByRole("button", { name: "套用遮蔽" })).toBeDisabled();
+});
+
+// 白底黑字的圖，寫著一支電話。英文與數字，CI 沒有中文字型
+async function phoneImage(page: Page): Promise<Buffer> {
+  const data = await page.evaluate(async () => {
+    const c = document.createElement("canvas");
+    c.width = 900;
+    c.height = 360;
+    const g = c.getContext("2d")!;
+    g.fillStyle = "#fff";
+    g.fillRect(0, 0, c.width, c.height);
+    g.fillStyle = "#000";
+    g.font = "64px sans-serif";
+    g.fillText("Tel 0987-654-321", 40, 200);
+    const b = await new Promise<Blob>((r) => c.toBlob((x) => r(x!), "image/png"));
+    return Array.from(new Uint8Array(await b.arrayBuffer()));
+  });
+  return Buffer.from(data);
+}
+
+// 記下有沒有下載 Tesseract 的程式或語言資料
+function watchOcr(page: Page): () => boolean {
+  let used = false;
+  page.on("request", (r) => {
+    if (/vendor\/(tesseract|tessdata)\//.test(r.url())) used = true;
+  });
+  return () => used;
+}
+
+test("PDF 有文字層時直接讀，不下載 Tesseract，框蓋住原本的文字", async ({ page }) => {
+  const ocr = watchOcr(page);
+  await page.goto("./redact/");
+  await page.getByTestId("file-input").setInputFiles({ name: "contact.pdf", mimeType: "application/pdf", buffer: await textPdf() });
+  await expect(page.getByText("第 1 頁，共 1 頁")).toBeVisible({ timeout: 15000 });
+  await pageReady(page);
+  await page.getByRole("button", { name: "找電話、Email 等個資" }).click();
+  await expect(page.getByTestId("redact-auto-status")).toHaveText("加了 2 個框，請逐一確認，框錯的點一下就會拿掉。");
+  await page.getByRole("button", { name: /框起所有文字/ }).click();
+  await expect(page.getByText("已經框了 3 個範圍")).toBeVisible();
+  expect(ocr()).toBe(false);
+
+  await page.getByRole("button", { name: "套用遮蔽" }).click();
+  await expect(page.getByText("遮蔽後", { exact: true })).toBeVisible({ timeout: 15000 });
+  const file = await downloadFrom(page, () => page.getByRole("link", { name: "下載" }).click());
+  const [jpeg] = pageJpegs(await PDFDocument.load(file.data, { updateMetadata: false }));
+  // 電話的第一個與最後一個數字（約 x 76 與 147 點）、Email 的頭尾，基線往上 4 點，都要是黑的
+  for (const [x, y] of [
+    [77, 164],
+    [146, 164],
+    [52, 144],
+    [165, 144],
+  ] as const) {
+    expect(Math.max(...(await pixel(page, jpeg!, x / 400, 1 - y / 200)))).toBeLessThanOrEqual(24);
+  }
+});
+
+test("PDF 上的圖片另外辨識，跟文字層找到的合在一起", async ({ page }) => {
+  test.setTimeout(120_000);
+  const ocr = watchOcr(page);
+  await page.goto("./redact/");
+  const image = await phoneImage(page);
+  await page.getByTestId("file-input").setInputFiles({ name: "mixed.pdf", mimeType: "application/pdf", buffer: await textPdf(image) });
+  await expect(page.getByText("第 1 頁，共 1 頁")).toBeVisible({ timeout: 15000 });
+  await pageReady(page);
+  await page.getByRole("button", { name: "找電話、Email 等個資" }).click();
+  await expect(page.getByTestId("redact-auto-status")).toHaveText("加了 3 個框，請逐一確認，框錯的點一下就會拿掉。", { timeout: 90_000 });
+  expect(ocr()).toBe(true);
 });

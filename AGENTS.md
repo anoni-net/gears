@@ -130,6 +130,7 @@ CI（`.github/workflows/ci.yml`）依瀏覽器拆成四台機器同時執行：C
 
 - 人臉：OpenCV 的 YuNet 模型（`public/models/yunet-2023mar-dynamic.onnx`，進版控，約 225 KB），用 onnxruntime-web 的 WebAssembly 執行，不需要 WebGL。官方模型的輸入固定 640×640，`scripts/make-yunet.py` 從官方檔案改成可變的輸入尺寸（權重不動，比對過 sha256）。整張圖縮到長邊 960 與 320 各偵測一次：960 抓合照裡的小臉，320 抓佔滿畫面的大臉（模型適合約 10 到 300 像素的臉）。縮小時每次最多縮一半，原始解析度的照片一口氣縮小會產生鋸齒，分數會掉。0.7 以上直接加成框，0.6 到 0.7 列為「可能是臉」，畫成黃色虛線，讀者點一下才變成遮蔽框，訊息區也有「全部加上」的按鈕。同一張臉在兩種尺寸都找到時只留分數最高的。解碼與合併在 `src/tools/redact/faces.ts`，有單元測試。實測 14 張照片，Chromium、WebKit、Firefox、Brave 都是 71 張臉全找到、零誤判，真臉最低 0.81，不是臉最高 0.55
 - 個資：Tesseract 用正體中文與英文辨識文字，`src/tools/redact/pii.ts` 把同一行的字接起來比對電話、Email、身分證與居留證、卡號、長串數字、網址與 @帳號，再把對到的字合成一個框。「框起所有文字」把每一行文字都框起來，還沒辨識過時先辨識。照片裡的紋路與人影常被認成「| = ~ aa」這類碎片，所以只框信心分數夠高的字（`src/tools/redact/text-lines.ts`）：含字母、數字或漢字、85 分以上（4 個字元以上的長字 75 分），一段裡有兩個以上這樣的字，或一個 3 個字元以上的字，才算有文字
+- PDF 有文字層時不辨識，直接讀文字層（見下方「PDF 的遮蔽」的自動尋找）
 - Tesseract 的 WebAssembly 與語言資料由 `scripts/copy-vendor.mjs` 從 `node_modules` 複製到 `public/vendor/`（不進版控，`npm run build` 與 `npm run dev` 之前自動執行）。onnxruntime 的 WebAssembly 由 Vite 打包到 `assets/ort-wasm-*.wasm`（檔名帶雜湊）。都是按下按鈕時才下載，人臉約 14 MB（伺服器有壓縮時約 4 MB）、文字約 9 MB
 - onnxruntime-web 只用單執行緒的 WebAssembly（`env.wasm.numThreads = 1`），多執行緒要伺服器另外送 cross-origin isolation 的標頭。升級前先在套件裡搜尋對外的網址，1.30.0 只在一段警告文字裡有說明頁的網址。先前用的 MediaPipe 1.0.0 起會把使用紀錄送到 `odml.pa.googleapis.com`，這種事要在升級時擋下來，不該靠 CSP
 - Tesseract 的語言資料不寫進 IndexedDB（`cacheMethod: "none"`），靠瀏覽器的 HTTP 快取
@@ -151,7 +152,16 @@ CI（`.github/workflows/ci.yml`）依瀏覽器拆成四台機器同時執行：C
 - 換頁時，前一頁的圖片等新的一頁畫好、畫布換過去之後才釋放，先釋放的話，畫布重畫時用的是已經關閉的圖片，主控台會出現錯誤
 - 授權全文在 `licenses/pdfjs.txt`
 
-測試（`tests/e2e/redact-pdf.spec.ts`）用 pdf-lib 組出兩頁、有文字與作者的 PDF，遮蔽之後確認檔案裡沒有原本的文字、作者與字型，每一頁都是 JPEG，框起來的地方是黑的。中文字型在本機另外驗證過兩種：LibreOffice 轉出、內嵌 Noto Serif CJK 的 PDF，以及引用未內嵌字型 `MSung-Light`、編碼 `UniCNS-UCS2-H` 的 PDF（要靠 CMap），Chromium、WebKit、Firefox 都畫得出字，自動找個資也找得到電話與 Email。
+自動尋找個資與「框起所有文字」讀 PDF 本身的文字層（#141，`src/ui/redact-detect.ts` 的 `findPdfText`，純邏輯在 `src/tools/redact/pdf-text.ts`，有單元測試），不必下載 Tesseract，也不會認錯字：
+
+- `pdf-pages.ts` 的 `layout()` 用 `getTextContent()` 取得每一段文字，依 `render()` 同一個縮放換算成畫布的座標。位置照 pdf.js 自己的文字層算：原點在基線上，沿著書寫方向的角度展開，往上是字高乘上 ascent。直書不照 pdf.js，以原點為中心左右各占半個字寬，pdf.js 的文字層沿用橫書的 ascent，整欄會偏向一邊
+- pdf.js 只給整段的寬度，每個字的位置依字寬的比例分配（全形字算 1，其他 0.55，空白 0.3），每個字沿著書寫方向兩邊多留四分之一個字高，比例字型的英文才不會露出頭尾。段落依 pdf.js 的換行、基線與方向排成一行一行，同一行兩段之間超過三成字高時補一個空白
+- 個資沿用 `findPiiInText`，比對前把全形英數換成半形（公文與直書常寫「０９１２－３４５－６７８」），只在這裡換：寫作習慣檢查把全形英數當成要修正的習慣
+- 沒有文字層（掃描檔、字形畫成路徑），或兩成以上是私用區字元與 `U+FFFD`（缺少 ToUnicode，讀出來是亂碼）時，整頁辨識，跟圖片一樣
+- 頁面上的圖片從 `getOperatorList()` 追蹤座標變換，算出畫在畫布上的範圍（`imageRegions`），只辨識那幾塊，結果跟文字層合在一起，重疊的框只留一個。邊長不到 16 像素的不算，蓋住六成以上的頁面時整頁辨識，算不出位置的畫法（`paintInlineImageXObjectGroup`）也是
+- 只讀文字層時不讀 canvas，也不需要 WebAssembly：Tor Browser 不必先允許，鎖定模式照樣找得到。需要辨識時才檢查，關掉 WebAssembly 時圖片裡的字略過
+
+測試（`tests/e2e/redact-pdf.spec.ts`）用 pdf-lib 組出兩頁、有文字與作者的 PDF，遮蔽之後確認檔案裡沒有原本的文字、作者與字型，每一頁都是 JPEG，框起來的地方是黑的。中文字型在本機另外驗證過兩種：LibreOffice 轉出、內嵌 Noto Serif CJK 的 PDF，以及引用未內嵌字型 `MSung-Light`、編碼 `UniCNS-UCS2-H` 的 PDF（要靠 CMap），Chromium、WebKit、Firefox 都畫得出字，自動找個資也找得到電話與 Email。改讀文字層之後，瀏覽器測試另外確認有文字層的 PDF 不下載 Tesseract、框蓋住原本的文字，貼在頁面上的圖片另外辨識（`tests/helpers/text-pdf.ts`），以及關掉 WebAssembly、讀不到 canvas 時照樣找得到。2026-10-21 在本機用 LibreOffice 匯出的中文 PDF（電話、市話、Email、@帳號、表格裡的身分證與帳號）、`MSung-Light` 的橫書與直書（全形數字）、`/Rotate 90` 的頁面，在三種瀏覽器核心截圖確認框的位置。
 
 ## 縮成常見尺寸
 

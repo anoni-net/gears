@@ -1,6 +1,7 @@
-import { GlobalWorkerOptions, getDocument, type PDFDocumentProxy } from "pdfjs-dist";
+import { GlobalWorkerOptions, OPS, Util, getDocument, type PDFDocumentProxy, type PDFPageProxy } from "pdfjs-dist";
 import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import type { Box } from "../tools/redact/index.ts";
+import { type TextRun, imageRegions } from "../tools/redact/pdf-text.ts";
 import { assertCanvasReadable } from "./canvas-access.ts";
 
 // 用 pdf.js 把 PDF 的頁面畫成圖片，遮蔽的編輯畫面與選擇頁面的縮圖都用它。
@@ -31,6 +32,9 @@ export interface PdfPages {
   render(index: number, maxSide?: number): Promise<ImageBitmap>;
   // 第 index 頁的文字，一行一個字串（依 pdf.js 判斷的換行），比對版本用
   text(index: number): Promise<string[]>;
+  // 第 index 頁的文字層與圖片的位置，座標跟 render(index) 畫出來的圖片相同，遮蔽的自動尋找用
+  // （src/tools/redact/pdf-text.ts）。圖片的位置算不出來時是 "page"
+  layout(index: number): Promise<{ runs: TextRun[]; images: Box[] | "page" }>;
   close(): void;
 }
 
@@ -54,6 +58,12 @@ export async function openPdf(data: Uint8Array): Promise<PdfPages> {
   });
   const doc: PDFDocumentProxy = await task.promise;
 
+  // 畫成圖片與讀文字層用同一個縮放，座標才對得上
+  const viewportOf = (page: PDFPageProxy, maxSide = MAX_SIDE) => {
+    const base = page.getViewport({ scale: 1 });
+    return page.getViewport({ scale: Math.min(DPI / 72, maxSide / Math.max(base.width, base.height)) });
+  };
+
   return {
     count: doc.numPages,
     async size(index) {
@@ -62,9 +72,7 @@ export async function openPdf(data: Uint8Array): Promise<PdfPages> {
     },
     async render(index, maxSide = MAX_SIDE) {
       const page = await doc.getPage(index + 1);
-      const base = page.getViewport({ scale: 1 });
-      const scale = Math.min(DPI / 72, maxSide / Math.max(base.width, base.height));
-      const viewport = page.getViewport({ scale });
+      const viewport = viewportOf(page, maxSide);
       const canvas = document.createElement("canvas");
       canvas.width = Math.round(viewport.width);
       canvas.height = Math.round(viewport.height);
@@ -92,6 +100,32 @@ export async function openPdf(data: Uint8Array): Promise<PdfPages> {
       if (line) lines.push(line);
       page.cleanup();
       return lines.map((l) => l.replace(/\s+/g, " ").trim()).filter(Boolean);
+    },
+    async layout(index) {
+      const page = await doc.getPage(index + 1);
+      const viewport = viewportOf(page);
+      const width = Math.round(viewport.width);
+      const height = Math.round(viewport.height);
+      const content = await page.getTextContent();
+      const runs: TextRun[] = [];
+      for (const item of content.items) {
+        if (!("str" in item)) continue;
+        const style = content.styles[item.fontName];
+        // 跟 pdf.js 的文字層相同：沒有 ascent 時用 1 + descent，都沒有時 0.8
+        const ascent = style?.ascent || (style?.descent ? 1 + style.descent : 0.8);
+        runs.push({
+          str: item.str,
+          transform: Util.transform(viewport.transform, item.transform),
+          length: (style?.vertical ? item.height : item.width) * viewport.scale,
+          ascent,
+          vertical: !!style?.vertical,
+          eol: item.hasEOL,
+        });
+      }
+      const ops = await page.getOperatorList();
+      const images = imageRegions(ops.fnArray, ops.argsArray as unknown[][], OPS, viewport.transform, width, height);
+      page.cleanup();
+      return { runs, images };
     },
     close() {
       void task.destroy();
