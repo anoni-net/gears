@@ -646,6 +646,7 @@ export const en: Record<MessageKey, string> = {
   "tool.error.broken": "The file's structure has problems and can't be processed safely. The original is unchanged.",
   "tool.error.verify": "The processed file couldn't be opened, so this result was discarded. The original is unchanged.",
   "tool.error.unsupported": "The current tool doesn't support this file. Remove the password from encrypted documents in the original app first.",
+  "report.done": "What was done",
   "report.removed": "Removed",
   "report.kept": "Kept",
   "report.bytes": "{n} bytes",

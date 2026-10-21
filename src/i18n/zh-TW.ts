@@ -659,6 +659,7 @@ export const zhTW = {
   "tool.error.verify": "處理後的檔案沒有辦法正常開啟，已經放棄這次的結果，原檔維持原樣。",
   "tool.error.unsupported": "目前的工具不支援這個檔案。加密過的文件要先在原本的軟體裡解除密碼。",
 
+  "report.done": "處理方式",
   "report.removed": "拿掉的",
   "report.kept": "保留的",
   "report.bytes": "{n} 位元組",

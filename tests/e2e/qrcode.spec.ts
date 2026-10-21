@@ -36,7 +36,7 @@ test("Wi-Fi 的 QR code：產生的檔案放進暫存區，接著可以下載", 
   await expect(page).toHaveURL(/\/gears\/$/);
   await expect(page.locator(".tray .item")).toHaveCount(1);
   await expect(page.getByRole("heading", { name: "wifi-qrcode.png" })).toBeVisible();
-  await expect(page.getByText("QR code 產生器建立")).toBeVisible();
+  await expect(page.getByTestId("history").getByRole("button", { name: "QR code 產生器建立" })).toBeVisible();
 
   const file = await downloadFrom(page, () => page.getByRole("link", { name: "下載" }).click());
   expect(decodeQrPng(file.data)).toBe(wifiPayload({ ssid: "Cafe;5G", password: "p@ss:word", security: "WPA", hidden: false }));

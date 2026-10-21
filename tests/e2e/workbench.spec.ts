@@ -142,8 +142,13 @@ test("處理紀錄列出每一步，復原之後再清空暫存區", async ({ pa
   const history = page.getByTestId("history");
   await expect(history).toContainText("原檔");
   await expect(page.getByTestId("history-current")).toContainText("清除中繼資料");
-  await expect(page.getByTestId("history-current")).toContainText("目前的版本");
-  await expect(page.getByTestId("history-current")).toContainText("拿掉的");
+  await expect(page.getByTestId("step-detail")).toContainText("目前的版本");
+  await expect(page.getByTestId("step-detail")).toContainText("拿掉的");
+  // 點原檔，看得到原本找到的資訊，不必先復原
+  await history.getByRole("button", { name: "原檔" }).click();
+  await expect(page.getByTestId("step-detail")).toContainText("拍攝位置");
+  await expect(page.getByRole("button", { name: "復原這一步" })).toHaveCount(0);
+  await history.getByRole("button", { name: /清除中繼資料/ }).click();
 
   await page.getByRole("button", { name: "復原這一步" }).click();
   await expect(page.getByText("拍攝位置", { exact: true })).toBeVisible();
@@ -269,16 +274,17 @@ test("做了第二個工具之後，前面處理過的仍標示已處理", async
   await page.getByRole("button", { name: "套用遮蔽" }).click();
 
   // 兩個工具都標示已處理，遮蔽可以再框一次。清除之後已經沒有中繼資料，遮蔽這一步不用再說明
-  await expect(page.getByTestId("history-current").getByTestId("removed-note")).toHaveCount(0);
+  await expect(page.getByTestId("removed-note")).toHaveCount(0);
   await expect(strip.getByText("已處理")).toBeVisible();
   await expect(redact.getByText("已處理")).toBeVisible();
   await expect(redact.getByRole("button", { name: "再框選一次" })).toBeVisible();
 
-  // 兩步都列在處理紀錄，只有最新的一步展開
-  const steps = page.getByTestId("history").locator("details");
-  await expect(steps).toHaveCount(2);
-  await expect(steps.nth(0)).not.toHaveAttribute("open");
-  await expect(steps.nth(1)).toHaveAttribute("open");
+  // 原檔與兩步都列在處理紀錄，最新的一步選中、下面顯示它的報告
+  const steps = page.getByTestId("history").locator(".step");
+  await expect(steps).toHaveCount(3);
+  await expect(steps.nth(1)).toHaveAttribute("aria-pressed", "false");
+  await expect(steps.nth(2)).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByTestId("step-detail")).toContainText("塗成實心黑色的範圍");
 
   // 復原這一步，遮蔽的版本拿掉，已處理也跟著消失
   await page.getByRole("button", { name: "復原這一步" }).click();

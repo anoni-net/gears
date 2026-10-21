@@ -647,6 +647,7 @@ export const zhCN: Record<MessageKey, string> = {
   "tool.error.broken": "文件的结构有问题，没有办法安全地处理，原文件维持原样。",
   "tool.error.verify": "处理后的文件没有办法正常打开，已经放弃这次的结果，原文件维持原样。",
   "tool.error.unsupported": "目前的工具不支持这个文件。加密过的文档要先在原本的软件里解除密码。",
+  "report.done": "处理方式",
   "report.removed": "拿掉的",
   "report.kept": "保留的",
   "report.bytes": "{n} 字节",

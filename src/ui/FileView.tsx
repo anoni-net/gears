@@ -171,6 +171,23 @@ function Findings({ version, busy, onApply }: { version: Version; busy?: boolean
   );
 }
 
+// 處理報告的「處理方式」：這一步實際做的事，例如重新壓縮、塗黑、加密。原本跟拿掉的資訊混在
+// 「拿掉的」底下，「用一般的參數重新壓縮」讀起來像被拿掉的東西（2026-10-22 的使用回饋）
+const DONE_CODES = new Set([
+  "reencode",
+  "blend-resize",
+  "blend-reencode",
+  "redaction",
+  "pdf-pages",
+  "print-dots-yellow",
+  "print-dots-bw",
+  "heic-converted",
+  "age-passphrase",
+  "age-recipients",
+  "age-armor",
+  "age-decrypted",
+]);
+
 function ReportView({ report }: { report: Report }) {
   const rows = (items: Report["removed"]) =>
     items.map((item, i) => (
@@ -181,12 +198,22 @@ function ReportView({ report }: { report: Report }) {
         {item.bytes !== undefined ? <small>{t("report.bytes", { n: item.bytes.toLocaleString() })}</small> : null}
       </li>
     ));
+  const all = [...report.removed, ...(report.notes ?? [])];
+  const done = all.filter((item) => DONE_CODES.has(item.code));
+  const removed = report.removed.filter((item) => !DONE_CODES.has(item.code));
+  const notes = (report.notes ?? []).filter((item) => !DONE_CODES.has(item.code));
   return (
     <div class="report">
-      {report.removed.length ? (
+      {done.length ? (
+        <div>
+          <h4>{t("report.done")}</h4>
+          <ul>{rows(done)}</ul>
+        </div>
+      ) : null}
+      {removed.length ? (
         <div>
           <h4>{t("report.removed")}</h4>
-          <ul>{rows(report.removed)}</ul>
+          <ul>{rows(removed)}</ul>
         </div>
       ) : null}
       {report.kept.length ? (
@@ -195,7 +222,7 @@ function ReportView({ report }: { report: Report }) {
           <ul>{rows(report.kept)}</ul>
         </div>
       ) : null}
-      {report.notes?.length ? <ul>{rows(report.notes)}</ul> : null}
+      {notes.length ? <ul>{rows(notes)}</ul> : null}
     </div>
   );
 }
@@ -215,44 +242,70 @@ function RemovedNote({ version, previous }: { version: Version; previous: Versio
   );
 }
 
-// 處理紀錄：原檔與之後每一步，依序列在檔名下面，讀者不必退回上一步才知道剛才做了什麼
-// （2026-10-22 的使用回饋）。最新的一步預設展開、可以復原，之前的收起來，點開看當時的處理報告
-function History({ file, busy }: { file: TrayFile; busy: boolean }) {
-  const original = file.versions[0]!;
-  const last = file.versions.length - 1;
-  const metadata = (v: Version) => v.findings.filter((f) => !CONTENT_FINDINGS.includes(f.code)).length;
-  const inspectable = fileTools.some((tool) => tool.accepts(original.format));
+// 處理紀錄：檔名下方一排步驟，原檔與之後每一步各一個按鈕，下面顯示選中那一步做了什麼。
+// 原本是一行很小的「原檔 → 清除中繼資料後」，報告只看得到最新一步，讀者要退回上一步才知道剛才做了什麼；
+// 改成收合清單之後，手機上仍然不會注意到（2026-10-22 的使用回饋）。新增一步或復原之後回到最新的一步，可以復原
+function Steps({ file, busy }: { file: TrayFile; busy: boolean }) {
+  const versions = file.versions;
+  const last = versions.length - 1;
+  const [picked, setPicked] = useState(last);
+  useEffect(() => setPicked(last), [last]);
+  const at = Math.min(picked, last);
+  const v = versions[at]!;
+  // QR code 產生器、面對面傳送這類工具放進來的檔案，第一步寫出是哪個工具建立的
+  const label = (x: Version, i: number) =>
+    i > 0 ? tDynamic(`tool.${x.tool}`) : x.tool ? tDynamic(`file.version.${x.tool}`) : t("file.original");
+  const metadata = (x: Version) => x.findings.filter((f) => !CONTENT_FINDINGS.includes(f.code));
+  const inspectable = fileTools.some((tool) => tool.accepts(versions[0]!.format));
+  const detail =
+    at === 0 ? (
+      inspectable ? (
+        <>
+          <p class="hint">{metadata(v).length ? t("history.found", { n: metadata(v).length }) : t("tray.clean")}</p>
+          {metadata(v).length ? <FindingList findings={metadata(v)} /> : null}
+        </>
+      ) : null
+    ) : (
+      <>
+        <RemovedNote version={v} previous={versions[at - 1]!} />
+        {v.report ? <ReportView report={v.report} /> : null}
+        {at === last ? (
+          <p class="actions">
+            <button type="button" onClick={() => tray.undo(file.id)} disabled={busy}>
+              {t("history.undo")}
+            </button>
+          </p>
+        ) : null}
+      </>
+    );
   return (
-    <section class="history" aria-labelledby="history-title" data-testid="history">
-      <h3 id="history-title">{t("history.title")}</h3>
-      <ol>
-        <li class="history-original">
-          {/* QR code 產生器、面對面傳送這類工具放進來的檔案，第一個版本寫出是哪個工具建立的 */}
-          <strong>{original.tool ? tDynamic(`file.version.${original.tool}`) : t("file.original")}</strong>
-          {inspectable ? (
-            <span class="hint">{metadata(original) ? t("history.found", { n: metadata(original) }) : t("tray.clean")}</span>
-          ) : null}
-        </li>
-        {file.versions.slice(1).map((v, i) => (
-          <li key={v.id} aria-current={i + 1 === last ? "step" : undefined} data-testid={i + 1 === last ? "history-current" : undefined}>
-            <details open={i + 1 === last}>
-              <summary>
-                <strong>{tDynamic(`tool.${v.tool}`)}</strong>
-                {i + 1 === last ? <span class="badge">{t("history.current")}</span> : null}
-              </summary>
-              <RemovedNote version={v} previous={file.versions[i]!} />
-              {v.report ? <ReportView report={v.report} /> : null}
-              {i + 1 === last ? (
-                <p class="actions">
-                  <button type="button" onClick={() => tray.undo(file.id)} disabled={busy}>
-                    {t("history.undo")}
-                  </button>
-                </p>
-              ) : null}
-            </details>
+    <section class="steps" aria-labelledby="steps-title" data-testid="history">
+      <h3 id="steps-title">{t("history.title")}</h3>
+      <ol class="step-track">
+        {versions.map((x, i) => (
+          <li key={x.id} aria-current={i === last ? "step" : undefined} data-testid={i === last && i > 0 ? "history-current" : undefined}>
+            <button
+              type="button"
+              class={i === last ? "step current" : "step"}
+              aria-pressed={i === at}
+              aria-controls="step-detail"
+              onClick={() => setPicked(i)}
+            >
+              {i > 0 ? <span class="step-no" aria-hidden="true">{i}</span> : null}
+              <span class="step-name">{label(x, i)}</span>
+            </button>
           </li>
         ))}
       </ol>
+      {detail ? (
+        <div id="step-detail" class="step-detail" data-testid="step-detail">
+          <p class="step-title">
+            <strong>{label(v, at)}</strong>
+            {at === last ? <span class="badge">{t("history.current")}</span> : null}
+          </p>
+          {detail}
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -421,16 +474,27 @@ export function FileView({ file, others, index, busy, preferred, onOpenTool }: P
     entry.kind === "create" ? openCreate(entry.id) : entry.kind === "editor" ? setEditing(entry.id) : void run(entry.id);
 
   return (
-    <section class="file" aria-labelledby="file-title" ref={section}>
-      <h2 id="file-title">{file.name}</h2>
-      {file.sample ? (
-        <p class="hint" data-testid="sample-note">
-          {t("file.sample")}
-        </p>
-      ) : null}
+    // 版面依讀者的順序：檔名與下載、做過的步驟、檔案現在的樣子與裡面的資訊、接下來的工具。
+    // 寬螢幕上檔名與下載同一列、步驟橫跨兩欄，預覽在左、資訊與工具在右，預覽捲動時留在畫面上。
+    // 手機上排成一欄：處理過的先看預覽再下載（遮蔽完馬上看得到框有沒有蓋對），還沒處理的先看找到的資訊（styles.css）
+    <section
+      class={`file${isImage || media ? " has-preview" : ""}${current.tool ? " processed" : ""}`}
+      aria-labelledby="file-title"
+      ref={section}
+    >
+      <div class="file-head">
+        <h2 id="file-title">{file.name}</h2>
+        {file.sample ? (
+          <p class="hint" data-testid="sample-note">
+            {t("file.sample")}
+          </p>
+        ) : null}
+      </div>
+
+      {current.tool && !editing ? <Output version={current} name={outputName(file, index)} /> : null}
 
       {/* 只有原檔時不顯示。工具建立的檔案（QR code 產生器、面對面傳送收到的）顯示是哪個工具建立的 */}
-      {file.versions.length > 1 || file.versions[0]!.tool ? <History file={file} busy={busy} /> : null}
+      {file.versions.length > 1 || file.versions[0]!.tool ? <Steps file={file} busy={busy} /> : null}
 
       {editing ? (
         <section class="editor" aria-labelledby="editor-title">
@@ -450,7 +514,7 @@ export function FileView({ file, others, index, busy, preferred, onOpenTool }: P
                 .then(() => {
                   setEditing(null);
                   // 編輯畫面很長，套用的按鈕在底部。關掉之後畫面變短，停在原處的話看到的是工具列表，
-                  // 捲回檔案的開頭，預覽與下載就在眼前
+                  // 捲回檔案的開頭，下載、步驟與預覽就在眼前
                   if ((section.current?.getBoundingClientRect().top ?? 0) < 0) section.current?.scrollIntoView({ block: "start" });
                 })
                 .catch(() => setError(t("tool.error.verify")));
@@ -463,49 +527,44 @@ export function FileView({ file, others, index, busy, preferred, onOpenTool }: P
           ) : null}
         </section>
       ) : (
-      // processed：手機上處理完的預覽排在前面，遮蔽完馬上看得到框有沒有蓋對（styles.css）
-      <div class={`columns${isImage || media ? "" : " single"}${current.tool ? " processed" : ""}`}>
-        {isImage ? <Preview url={preview} blob={current.blob} format={current.format} key={preview} /> : null}
-        {media ? <MediaPreview blob={current.blob} format={current.format} /> : null}
+        <>
+          {isImage ? <Preview url={preview} blob={current.blob} format={current.format} key={preview} /> : null}
+          {media ? <MediaPreview blob={current.blob} format={current.format} /> : null}
 
-        <div class="panel">
-          {canInspect ? (
-            <>
-              <h3>{t("findings.title")}</h3>
-              <Findings
-                version={current}
-                busy={busy}
-                onApply={current.large ? undefined : (options) => void run("strip-metadata", options)}
-              />
-            </>
-          ) : (
-            <p class="note">{t(noInspectMessage(current, !!signals.signature))}</p>
-          )}
+          <div class="panel">
+            {canInspect ? (
+              <>
+                <h3>{t("findings.title")}</h3>
+                <Findings
+                  version={current}
+                  busy={busy}
+                  onApply={current.large ? undefined : (options) => void run("strip-metadata", options)}
+                />
+              </>
+            ) : (
+              <p class="note">{t(noInspectMessage(current, !!signals.signature))}</p>
+            )}
 
-          {/* 處理完的下載放在工具列表之前。原本在最後面，手機上要捲過好幾組工具才看得到，
-              最顯眼的按鈕反而是建議的下一個工具（2026-10-19 的使用回饋） */}
-          {current.tool ? <Output version={current} name={outputName(file, index)} /> : null}
+            {isImage && file.versions[0]!.tool === null ? <QrInImage blob={current.blob} onOpenTool={onOpenTool} /> : null}
 
-          {isImage && file.versions[0]!.tool === null ? <QrInImage blob={current.blob} onOpenTool={onOpenTool} /> : null}
-
-          <h3>{t("tools.title")}</h3>
-          {groups.map((group) => (
-            <div class="shelf-group" key={group.id}>
-              <h4>{tDynamic(`desk.group.${group.id}`)}</h4>
-              <ul class="shelf">
-                {group.entries.map((entry) => (
-                  <ShelfItem key={entry.id} entry={entry} busy={busy} onAct={() => act(entry)} />
-                ))}
-              </ul>
-            </div>
-          ))}
-          {error ? (
-            <p class="error" role="alert">
-              {error}
-            </p>
-          ) : null}
-        </div>
-      </div>
+            <h3>{t("tools.title")}</h3>
+            {groups.map((group) => (
+              <div class="shelf-group" key={group.id}>
+                <h4>{tDynamic(`desk.group.${group.id}`)}</h4>
+                <ul class="shelf">
+                  {group.entries.map((entry) => (
+                    <ShelfItem key={entry.id} entry={entry} busy={busy} onAct={() => act(entry)} />
+                  ))}
+                </ul>
+              </div>
+            ))}
+            {error ? (
+              <p class="error" role="alert">
+                {error}
+              </p>
+            ) : null}
+          </div>
+        </>
       )}
     </section>
   );

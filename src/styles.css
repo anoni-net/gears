@@ -599,113 +599,179 @@ h4 {
   padding: 0 0.75rem;
 }
 
+/* 檔案畫面（src/ui/FileView.tsx）。手機排成一欄：檔名、步驟、預覽、下載、找到的資訊與工具。
+   還沒處理的檔案先看找到的資訊與按鈕，預覽放在後面，也不讓它佔掉整個畫面。處理過的先看預覽再下載，
+   遮蔽完馬上看得到框有沒有蓋對 */
 .file {
   min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.25rem 1.5rem;
+  align-items: start;
 }
 
-.file h2 {
-  margin-top: 0;
+.file-head h2 {
+  margin: 0;
   overflow-wrap: anywhere;
 }
 
-/* 處理紀錄：原檔與之後每一步（src/ui/FileView.tsx 的 History） */
-.history {
-  margin: 0 0 1rem;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
+.file-head .hint {
+  margin: 0.25rem 0 0;
 }
 
-.history h3 {
-  margin: 0 0 0.25rem;
+.file > .file-head { order: 1; }
+.file > .steps { order: 2; }
+.file > .panel { order: 3; }
+.file > .preview { order: 4; }
+.file.processed > .preview { order: 3; }
+.file.processed > .output { order: 4; }
+.file.processed > .panel { order: 5; }
+.file > .editor { order: 6; }
+
+.file > .output {
+  margin: 0;
+}
+
+.file > .output h3 {
+  margin-top: 0;
+}
+
+@media (max-width: 63.99rem) {
+  .file > .preview img {
+    max-height: 40vh;
+  }
+}
+
+/* 寬螢幕：檔名與下載同一列，步驟橫跨兩欄，預覽在左、資訊與工具在右。預覽捲動時留在畫面上，
+   工具列表很長，原本捲下去之後左邊只剩空白 */
+@media (min-width: 64rem) {
+  .file {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      "head output"
+      "steps steps"
+      "preview panel";
+  }
+
+  .file:not(.has-preview) {
+    grid-template-areas:
+      "head output"
+      "steps steps"
+      "panel panel";
+  }
+
+  .file > .file-head { grid-area: head; }
+  .file > .output { grid-area: output; }
+  .file > .steps { grid-area: steps; }
+  .file > .preview { grid-area: preview; position: sticky; top: 1rem; }
+  .file > .panel { grid-area: panel; }
+  .file > .editor { grid-column: 1 / -1; }
+
+  .file:not(.has-preview) > .panel {
+    max-width: 40rem;
+  }
+}
+
+/* 處理紀錄：一排步驟，選中的那一步在下面顯示做了什麼（Steps） */
+.steps {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--fill);
+}
+
+.steps h3 {
+  margin: 0 0 0.5rem;
   font-size: 0.9rem;
   color: var(--muted);
 }
 
-.history ol {
+.step-track {
   list-style: none;
   padding: 0;
   margin: 0;
-  counter-reset: step;
-}
-
-.history li {
-  padding: 0.4rem 0;
-}
-
-.history li + li {
-  border-top: 1px solid var(--line);
-  counter-increment: step;
-}
-
-.history li + li summary strong::before {
-  content: counter(step) ". ";
-  color: var(--muted);
-  font-weight: normal;
-}
-
-.history-original {
   display: flex;
   flex-wrap: wrap;
-  gap: 0 0.75rem;
-  align-items: baseline;
+  align-items: center;
+  gap: 0.4rem;
 }
 
-.history-original .hint {
-  margin: 0;
+.step-track li {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
 }
 
-.history summary {
+.step-track li + li::before {
+  content: "›";
+  color: var(--muted);
+}
+
+.step {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2.25rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.9rem;
   cursor: pointer;
 }
 
-.history summary .badge {
+.step[aria-pressed="true"] {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.step.current {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+  font-weight: 600;
+}
+
+.step-no {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.3rem;
+  height: 1.3rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  background: var(--fill);
+  color: var(--text);
+}
+
+.step.current .step-no {
+  background: var(--bg);
+}
+
+.step-detail {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--line);
+}
+
+.step-detail .step-title {
+  margin: 0 0 0.5rem;
+}
+
+.step-detail .badge {
   margin-left: 0.5rem;
   background: transparent;
   border: 1px solid var(--line);
   color: var(--muted);
 }
 
-.history details > :not(summary) {
-  margin-top: 0.5rem;
+.step-detail .report h4:first-child {
+  margin-top: 0;
 }
 
-.history .actions {
+.step-detail .actions {
   margin-bottom: 0;
-}
-
-.columns {
-  display: grid;
-  gap: 1.25rem;
-  align-items: start;
-}
-
-@media (min-width: 64rem) {
-  .columns.single {
-    grid-template-columns: minmax(0, 40rem);
-  }
-}
-
-/* 手機上先看到找到的資訊與按鈕，預覽放在後面，也不讓它佔掉整個畫面 */
-@media (max-width: 63.99rem) {
-  .panel {
-    order: -1;
-  }
-
-  /* 處理完之後要確認結果，預覽排回前面，下載就在預覽下方（FileView 把下載放在工具列表之前） */
-  .columns.processed .panel {
-    order: 0;
-  }
-
-  .preview img {
-    max-height: 40vh;
-  }
-}
-
-@media (min-width: 64rem) {
-  .columns {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  }
 }
 
 .preview {
