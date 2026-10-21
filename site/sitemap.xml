@@ -588,4 +588,25 @@
     <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/remote-server/" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/remote-server/" />
   </url>
+  <url>
+    <loc>https://anoni.net/gears/storage/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/storage/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/storage/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/storage/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/storage/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/zh-cn/storage/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/storage/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/storage/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/storage/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/storage/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/en/storage/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/storage/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/storage/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/storage/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/storage/" />
+  </url>
 </urlset>
