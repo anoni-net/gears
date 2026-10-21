@@ -24,6 +24,7 @@ import { FeedbackPage } from "./ui/FeedbackPage.tsx";
 import { NotFoundPage } from "./ui/NotFoundPage.tsx";
 import { RemoteServerPage } from "./ui/RemoteServerPage.tsx";
 import { SampleLink, SamplesPage } from "./ui/SamplesPage.tsx";
+import { StoragePage } from "./ui/StoragePage.tsx";
 import { type FileSample, makeSampleFile } from "./ui/samples.ts";
 
 const isCreateTool = (id: string) => createTools.some((tool) => tool.id === id);
@@ -298,6 +299,8 @@ export function App() {
     view = <FeedbackPage from={from.current} />;
   } else if (route === "remote-server") {
     view = <RemoteServerPage />;
+  } else if (route === "storage") {
+    view = <StoragePage />;
   } else if (route === "samples") {
     view = <SamplesPage focus={preset} onOpenFile={openSample} onOpenQr={(id) => openTool("qr-read", `sample:${id}`)} />;
   } else if (selected) {

@@ -17,7 +17,7 @@ const MODEL_DIRS = __MODEL_DIRS__.map((dir) => `${BASE}${dir}`);
 // 存在不隨版本清掉的快取，存的時候在回應加上 HASH_HEADER，換版本時內容變了或不在清單上的才刪掉，
 // 一天部署好幾次也不必每次重新下載約 23 MB（#142）
 const LAZY = __LAZY__;
-const KEEP = "gears-keep";
+const KEEP = "gears-keep"; // 跟 src/core/storage.ts 的 KEEP_CACHE 一致
 const HASH_HEADER = "x-gears-hash";
 const lazyHash = (pathname) => (pathname.startsWith(BASE) ? LAZY[pathname.slice(BASE.length)] : undefined);
 
