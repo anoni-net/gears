@@ -251,13 +251,17 @@ GB 45438 的服務提供者編碼（TC260-PG-20252A，27 碼）拆成主體類�
 - 簽署者在不在信任清單裡：先用 C2PA 的正式清單，簽署者不受信任時改用過渡清單（Interim Trust List）再驗一次，跟官方的一致性工具相同。用過渡清單通過的另外標明，過渡清單 2026-01-01 起凍結，不再新增簽署者，舊的照樣有效。Leica、Canon、Nikon、Sony 等相機廠商與法新社、歐洲廣播聯盟這類媒體只在過渡清單裡，只用正式清單的話，這些照片都會列為簽署者不受信任，撤銷狀態也不會檢查（c2pa-rs 只在簽署者受信任時讀內附的 OCSP 回應）
 - 簽署者的名稱與組織、簽署時間（標明是受信任的時間戳記服務證明，還是簽署端自己填的）
 - 撤銷狀態只讀簽署時附在檔案裡的 OCSP 回應。沒有附的寫明「沒有檢查」：2025-09 Nikon 撤銷過相機的憑證，那些照片的簽章在密碼學上仍然驗得過
-- 產生的軟體、動作紀錄（動作與數位來源類型換成讀得懂的說法，`C2PA_ACTIONS`）、素材的數量、有沒有 CAWG 的身分聲明（內容還沒有列出）
+- 產生的軟體、動作紀錄（動作與數位來源類型換成讀得懂的說法，`C2PA_ACTIONS`）、素材的數量
+- CAWG 的身分聲明（`cawg.identity`）：用 X.509 憑證簽的列出簽署者，Identity Claims Aggregation 列出簽發者（`did:web:…`）與創作者驗證過的帳號（平台、帳號、網址與驗證時間）。帳號照實列出，跟服務提供者編碼裡的個人號碼同一個原則，讀者看過再決定怎麼保管
+- 創作者對 AI 使用的標示（`cawg.training-mining`）：允不允許用於生成式 AI 訓練、AI 訓練、推論與資料探勘
+
+驗證 Identity Claims Aggregation 的簽發者時，c2pa-rs 會連線到簽發者的網站取得 `did:web` 的金鑰（例如 `https://<簽發者>/.well-known/did.json`），這個連線不受 `allowed_network_hosts` 限制（c2pa-rs issue #1645），設定關不掉。頁面的 CSP 只允許連自己的網域，連線在瀏覽器裡一律被擋下，不會送出去。擋下之後 c2pa-rs 回報 `cawg.ica.did_unavailable`，並把整份內容憑證算成 Invalid，`summarizeStore` 不把它當成驗證失敗：卡片寫「要連線才能確認簽發者，這裡不連線」，內容憑證本身照簽章的結果判斷。單元測試在 Node 裡一樣攔下連線
 
 不連線：遠端的資訊清單（`remoteManifestFetch`）與線上的撤銷查詢（`ocspFetch`）都關掉，信任清單直接給內容，不給網址。c2pa-web 在遇到內容憑證時才下載，Worker 從 `blob:` 網址建立（CSP 的 `worker-src` 本來就允許），WebAssembly 約 9 MB（壓縮後約 3.4 MB），service worker 用到時才存（`assets/c2pa_bg-*`）。升級前一樣在套件裡搜尋對外的網址，0.15.4 沒有。WebAssembly 被關掉時（鎖定模式、Tor Browser 的部分設定），卡片上說明沒有辦法驗證。
 
 信任清單建置時內嵌在 `src/tools/verify/c2pa-trust/`，由 `node scripts/c2pa-trust.mjs` 從官方的 repo 下載，來源的 commit 記在 `sources.json`：正式清單取自 c2pa-org/conformance-public（CC BY 4.0），過渡清單取自 contentauth/verify-site（Apache-2.0），授權與出處寫在 `licenses/c2pa.txt`。每月跟下載的軟體驗證的公鑰一起核對一次（`node scripts/c2pa-trust.mjs --check`），有變就更新、開 PR。
 
-單元測試在 `tests/unit/verify-c2pa.spec.ts`，用 c2pa-web 裡同一份 WebAssembly 在 Node 裡驗證。測試圖取自 c2pa-rs 的測試資料（MIT 或 Apache-2.0），照片不進 repo，`tests/global-setup.ts` 在測試開始前下載到 `tests/.generated/`，鎖定 commit 並比對 SHA-256（`tests/helpers/c2pa-fixtures.ts`），下載不了時略過。瀏覽器測試（`tests/e2e/verify.spec.ts`）確認 c2pa-web 在正式建置的 CSP 底下載入、驗證並列出結果。
+單元測試在 `tests/unit/verify-c2pa.spec.ts`，用 c2pa-web 裡同一份 WebAssembly 在 Node 裡驗證。測試圖取自 c2pa-rs 的測試資料（MIT 或 Apache-2.0，含兩種身分聲明與一部 MP4），照片不進 repo，`tests/global-setup.ts` 在測試開始前下載到 `tests/.generated/`，鎖定 commit 並比對 SHA-256（`tests/helpers/c2pa-fixtures.ts`），下載不了時略過。瀏覽器測試（`tests/e2e/verify.spec.ts`）確認 c2pa-web 在正式建置的 CSP 底下載入、驗證並列出結果。
 
 ### ProofMode 的證明檔
 

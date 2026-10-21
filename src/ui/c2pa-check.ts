@@ -50,15 +50,12 @@ export async function checkC2pa(blob: Blob, format: Format): Promise<C2paResult>
     };
     let store = await read(official);
     if (!store) return { error: "unreadable" };
-    let list: "official" | "interim" = "official";
+    let check = summarizeStore(store, "official");
     if (needsInterim(store)) {
       const second = await read(interim);
-      if (second?.validation_state === "Trusted") {
-        store = second;
-        list = "interim";
-      }
+      const interimCheck = second && summarizeStore(second, "interim");
+      if (interimCheck?.state === "trusted") check = interimCheck;
     }
-    const check = summarizeStore(store, list);
     return check ? { check } : { error: "unreadable" };
   } catch {
     return { error: "unreadable" };
