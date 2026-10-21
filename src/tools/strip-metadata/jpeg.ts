@@ -1,5 +1,7 @@
 import { ascii, concat, indexOf, startsWith, u16be } from "../../core/bytes.ts";
 import { type Finding, type Report, type ReportItem, type RunResult, ToolError } from "../../core/tool.ts";
+import { isC2paApp11 } from "../verify/provenance.ts";
+import { xmpAigc } from "./aigc.ts";
 import { exifFindings, orientationSegment, parseExif } from "./exif.ts";
 import { other } from "./preview.ts";
 
@@ -95,6 +97,8 @@ function classify(bytes: Uint8Array, s: Segment) {
       return startsWith(bytes, at, "Photoshop 3.0\0") ? "iptc" : "app";
     case 0xee:
       return startsWith(bytes, at, "Adobe") ? "adobe" : "app";
+    case 0xeb:
+      return isC2paApp11(bytes, at, s.end) ? "c2pa" : "app";
     case 0xfe:
       return "comment";
     default:
@@ -163,6 +167,7 @@ export function stripJpeg(bytes: Uint8Array): RunResult {
       case "iptc":
       case "comment":
       case "app":
+      case "c2pa":
         removed.push({ code: kind, bytes: size });
         break;
       default:
@@ -202,8 +207,12 @@ export function inspectJpeg(bytes: Uint8Array): Finding[] {
         findings.push({ code: "xmp" });
         const xmp = bytes.subarray(body(s), s.end);
         if (indexOf(xmp, "GPSLatitude") >= 0) findings.push({ code: "location" });
+        findings.push(...xmpAigc(xmp));
         break;
       }
+      case "c2pa":
+        findings.push({ code: "c2pa" });
+        break;
       case "iptc":
         findings.push({ code: "iptc" });
         break;

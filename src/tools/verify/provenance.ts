@@ -1,4 +1,5 @@
 import { ascii, type Format, indexOf, startsWith, u32be, u32le } from "../../core/bytes.ts";
+import { unescapeXml, walkXml } from "../../core/xml.ts";
 
 // 來源標示：檔案自己宣告的產生方式。IPTC 的數位來源類型與 AI 欄位、GB 45438 的隱式標識、
 // 生成工具寫下的參數，以及有沒有 C2PA 內容憑證。只讀檔案寫了什麼，不從像素推算任何分數。
@@ -96,6 +97,24 @@ export function parseTc260(text: string, where: Tc260Where): Tc260Label | undefi
   if (filled("ReservedCode2")) label.security.push("propagator");
   if (!label.label && !label.producer && !label.produceId && !label.propagator) return undefined;
   return label;
+}
+
+// XMP 裡的 TC260:AIGC，寫成屬性或元素都認得。清除中繼資料檢查時用，查證另外在讀 XMP 時一起讀
+export function tc260InXmp(xmp: string): Tc260Label[] {
+  const out: Tc260Label[] = [];
+  try {
+    walkXml(xmp, (el, text) => {
+      if (text === null) {
+        for (const a of el.attrs) if (a.ns === TC260 && a.local === "AIGC") push(parseTc260(unescapeXml(a.value), "xmp"));
+      } else if (el.ns === TC260 && el.local === "AIGC") push(parseTc260(text, "xmp"));
+    });
+  } catch {
+    // 讀不完整的 XMP 就停在讀到的部分
+  }
+  return out;
+  function push(label: Tc260Label | undefined) {
+    if (label) out.push(label);
+  }
 }
 
 export type ProviderSubject = "organization" | "person";
@@ -281,7 +300,16 @@ export async function pngTexts(bytes: Uint8Array): Promise<PngText[]> {
 
 // --- C2PA：只辨識有沒有內容憑證，位置照 C2PA 規範與官方的 c2pa-rs ---
 
-const C2PA_UUID = [0xd8, 0xfe, 0xc3, 0xd6, 0x1b, 0x0e, 0x48, 0x3c, 0x92, 0x97, 0x58, 0x28, 0x87, 0x7e, 0xc4, 0x81];
+export const C2PA_UUID = [0xd8, 0xfe, 0xc3, 0xd6, 0x1b, 0x0e, 0x48, 0x3c, 0x92, 0x97, 0x58, 0x28, 0x87, 0x7e, 0xc4, 0x81];
+
+// at 是一個 jumb box 的開頭：裡面第一個 jumd 的類型以 c2pa 開頭
+export const isC2paJumbf = (bytes: Uint8Array, at: number) => startsWith(bytes, at + 4, "jumb") && startsWith(bytes, at + 12, "jumd") && startsWith(bytes, at + 16, "c2pa");
+
+// APP11 的內容（marker 與長度之後）：CI（JP）、En、Z 共 8 個位元組，接著是 jumb box
+export const isC2paApp11 = (bytes: Uint8Array, body: number, end: number) => end - body >= 28 && startsWith(bytes, body, "JP") && isC2paJumbf(bytes, body + 8);
+
+// 最上層的 uuid box，payload 的開頭是 C2PA 的 UUID
+export const isC2paUuid = (bytes: Uint8Array, payload: number) => C2PA_UUID.every((b, k) => bytes[payload + k] === b);
 
 // JPEG：APP11 的內容是 CI（JP）、En、Z，接著 JUMBF 的 jumb box，裡面第一個 jumd 的類型以 c2pa 開頭
 function jpegC2pa(bytes: Uint8Array): boolean {
@@ -300,7 +328,7 @@ function jpegC2pa(bytes: Uint8Array): boolean {
     if (marker === 0xda || marker === 0xd9) return false;
     const length = (bytes[i + 2]! << 8) | bytes[i + 3]!;
     const body = i + 4;
-    if (marker === 0xeb && length >= 30 && startsWith(bytes, body, "JP") && startsWith(bytes, body + 12, "jumb") && startsWith(bytes, body + 24, "c2pa")) return true;
+    if (marker === 0xeb && isC2paApp11(bytes, body, i + 2 + length)) return true;
     i += 2 + length;
   }
   return false;
@@ -341,7 +369,7 @@ function bmffC2pa(bytes: Uint8Array): boolean {
       header = 16;
     } else if (size === 0) size = bytes.length - i;
     if (size < header) return false;
-    if (type === "uuid" && C2PA_UUID.every((b, k) => bytes[i + header + k] === b)) return true;
+    if (type === "uuid" && isC2paUuid(bytes, i + header)) return true;
     i += size;
   }
   return false;
@@ -353,7 +381,7 @@ function jxlC2pa(bytes: Uint8Array): boolean {
   let i = 0;
   while (i + 8 <= bytes.length) {
     const size = u32be(bytes, i);
-    if (ascii(bytes, i + 4, 4) === "jumb" && startsWith(bytes, i + 12, "jumd") && startsWith(bytes, i + 16, "c2pa")) return true;
+    if (isC2paJumbf(bytes, i)) return true;
     if (size < 8) return false;
     i += size;
   }

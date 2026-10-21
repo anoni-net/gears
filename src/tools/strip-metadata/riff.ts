@@ -139,6 +139,7 @@ function inspectChunks(bytes: Uint8Array, start: number, end: number, findings: 
       if (date) findings.push({ code: "datetime", value: `${date} ${text(bytes, c.data + 330, 8) ?? ""}`.trim() });
       if (comment) findings.push({ code: "comment", value: comment.slice(0, 80) });
     } else if (c.id === "_PMX") findings.push({ code: "xmp" });
+    else if (c.id === "C2PA") findings.push({ code: "c2pa" });
     else if (c.id.toLowerCase() === "id3 ") findings.push(...id3v2Findings(bytes, c.data));
     else if (c.id === "IDIT") findings.push({ code: "datetime", value: text(bytes, c.data, c.end - c.data) });
     else if (c.id === "iXML" || c.id === "strd" || c.id === "cart" || c.id === "axml") findings.push(other(c.id, bytes.subarray(c.data, c.end)));

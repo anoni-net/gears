@@ -1,7 +1,8 @@
 import { AUDIO_FORMATS, EXTENSION, type Format, VIDEO_FORMATS, isPhoto } from "../core/bytes.ts";
 import { list, t, tDynamic } from "../i18n/index.ts";
 import type { Evidence, TimeEntry } from "../tools/verify/examine.ts";
-import { DIGITAL_SOURCE_TYPES, parseProviderCode } from "../tools/verify/provenance.ts";
+import { DIGITAL_SOURCE_TYPES } from "../tools/verify/provenance.ts";
+import { providerText } from "./provider-text.ts";
 import type { CaseFile, Group, Summary, Warning } from "../tools/verify/summary.ts";
 import type { TimeValue } from "../tools/verify/times.ts";
 
@@ -92,17 +93,6 @@ const sourceTypeText = (code: string) =>
   (DIGITAL_SOURCE_TYPES as readonly string[]).includes(code) ? t("verify.prov.code", { text: tDynamic(`verify.dst.${code}`), code }) : code;
 
 const labelText = (value: string) => (["1", "2", "3"].includes(value) ? tDynamic(`verify.tc260.label.${value}`) : t("verify.tc260.labelOther", { value }));
-
-// 服務提供者編碼拆成主體、綁定方式與號碼。個人的號碼照實列出：讀者可能在查證收到的檔案，
-// 也可能是自己的檔案，都要先看到檔案裡實際有什麼，再決定要不要清除中繼資料
-export function providerText(code: string): string {
-  const p = parseProviderCode(code);
-  if (!p) return code;
-  let text = t("verify.provider", { subject: tDynamic(`verify.provider.${p.subject}`), binding: tDynamic(`verify.provider.${p.binding}`), number: p.number });
-  if (p.service) text = t("verify.provider.with", { text, more: tDynamic(`verify.provider.${p.service}`) });
-  if (p.model) text = t("verify.provider.with", { text, more: t("verify.provider.model", { value: p.model }) });
-  return t("verify.prov.code", { text, code });
-}
 
 export function provenanceLines(ev: Evidence, full = false): string[] {
   const p = ev.provenance;

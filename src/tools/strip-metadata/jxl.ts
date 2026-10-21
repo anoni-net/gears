@@ -1,5 +1,7 @@
 import { ascii, concat, u32be } from "../../core/bytes.ts";
 import { type Finding, type ReportItem, type RunResult, ToolError } from "../../core/tool.ts";
+import { isC2paJumbf } from "../verify/provenance.ts";
+import { xmpAigc } from "./aigc.ts";
 import { exifFindings, parseExif, tiffStart } from "./exif.ts";
 import { other } from "./preview.ts";
 
@@ -37,7 +39,10 @@ function walk(bytes: Uint8Array): Box[] | null {
   return boxes;
 }
 
-const removedCode = (b: Box): ReportItem["code"] => (b.type === "Exif" ? "exif" : b.type === "xml " ? "xmp" : "other");
+// brotli 壓縮過的 brob 讀不到裡面的標籤，只有沒壓縮的 jumb 認得出是 C2PA
+const isC2pa = (bytes: Uint8Array, b: Box) => b.type === "jumb" && isC2paJumbf(bytes, b.start);
+
+const removedCode = (bytes: Uint8Array, b: Box): ReportItem["code"] => (b.type === "Exif" ? "exif" : b.type === "xml " ? "xmp" : isC2pa(bytes, b) ? "c2pa" : "other");
 
 export function stripJxl(bytes: Uint8Array): RunResult {
   const boxes = walk(bytes);
@@ -45,7 +50,7 @@ export function stripJxl(bytes: Uint8Array): RunResult {
   const parts: Uint8Array[] = [];
   const removed: ReportItem[] = [];
   for (const b of boxes) {
-    if (REMOVE.has(b.type)) removed.push({ code: removedCode(b), bytes: b.end - b.start });
+    if (REMOVE.has(b.type)) removed.push({ code: removedCode(bytes, b), bytes: b.end - b.start });
     else parts.push(bytes.subarray(b.start, b.end));
   }
   return { data: concat(parts), report: { removed, kept: [{ code: "jxl-image" }] } };
@@ -63,7 +68,8 @@ export function inspectJxl(bytes: Uint8Array): Finding[] {
     if (b.type === "Exif") {
       const at = b.start + b.header;
       findings.push(...exifFindings(parseExif(bytes.subarray(at + tiffStart(bytes, at, b.end), b.end))));
-    } else if (b.type === "xml ") findings.push({ code: "xmp" });
+    } else if (b.type === "xml ") findings.push({ code: "xmp" }, ...xmpAigc(bytes.subarray(b.start + b.header, b.end)));
+    else if (isC2pa(bytes, b)) findings.push({ code: "c2pa" });
     else if (REMOVE.has(b.type)) findings.push(other(b.type.trim(), bytes.subarray(b.start + b.header, b.end)));
   }
   return findings;

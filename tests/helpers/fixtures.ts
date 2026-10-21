@@ -198,6 +198,15 @@ export function syntheticHeif(ilocVersion: 0 | 1 = 1, brand = "heic"): Uint8Arra
   return concat([ftyp, meta, heifBox("mdat", HEVC_DATA, exifPayload)]);
 }
 
+// --- 來源標示 ---
+
+// C2PA 的 JUMBF：jumb box 裡第一個 jumd 的類型以 c2pa 開頭，內容是一段假的資訊清單
+export const C2PA_SECRET = "SECRET-C2PA-CREATOR";
+export const c2paJumbf = () =>
+  heifBox("jumb", heifBox("jumd", bytes("c2pa"), new Uint8Array(12), new Uint8Array([3]), bytes("c2pa\0")), heifBox("json", bytes(`{"author":"${C2PA_SECRET}"}`)));
+
+export const C2PA_UUID = new Uint8Array([0xd8, 0xfe, 0xc3, 0xd6, 0x1b, 0x0e, 0x48, 0x3c, 0x92, 0x97, 0x58, 0x28, 0x87, 0x7e, 0xc4, 0x81]);
+
 // --- 其他圖片格式 ---
 
 export const SECRETS = ["SECRET-MODEL", "Jane Doe", "SN-123456", "GPSLatitude", "SECRET-COMMENT", "SECRET-XMP", "SECRET-TRAILER", "janedoe"];

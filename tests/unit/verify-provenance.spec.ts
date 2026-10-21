@@ -13,15 +13,13 @@ import {
   parseTc260,
 } from "../../src/tools/verify/provenance.ts";
 import { provenanceLines } from "../../src/ui/verify-report.ts";
-import { buildTiff, bytes, chunk, exifSegment, heifBox, insertIntoPng, segment, syntheticJpeg, syntheticPng } from "../helpers/fixtures.ts";
+import { C2PA_UUID, buildTiff, bytes, c2paJumbf as jumbf, chunk, exifSegment, heifBox, insertIntoPng, segment, syntheticJpeg, syntheticPng } from "../helpers/fixtures.ts";
 
 // 編碼與號碼都是編出來的，不對應任何真實的組織或個人，也不沿用 TC260 指南裡的範例
 const ORG = `0011${"9100000000TEST001X"}00000`;
 const PERSON_PHONE = `0022${"19900001111"}${"0".repeat(7)}10042`;
 const tc260Json = (producer: string) =>
   JSON.stringify({ Label: "1", ContentProducer: producer, ProduceID: "pid-test-0001", ReservedCode1: "", ContentPropagator: "", PropagateID: "", ReservedCode2: "" });
-
-const C2PA_UUID = new Uint8Array([0xd8, 0xfe, 0xc3, 0xd6, 0x1b, 0x0e, 0x48, 0x3c, 0x92, 0x97, 0x58, 0x28, 0x87, 0x7e, 0xc4, 0x81]);
 
 function minimalJpeg(...segments: Uint8Array[]): Uint8Array {
   return concat([new Uint8Array([0xff, 0xd8]), ...segments, segment(0xda, new Uint8Array([1, 1, 0, 0, 63, 0])), new Uint8Array([0x12, 0x34, 0xff, 0xd9])]);
@@ -38,9 +36,6 @@ function riff(form: string, ...chunks: [string, Uint8Array][]): Uint8Array {
   new DataView(head.buffer).setUint32(4, body.length, true);
   return concat([head, body]);
 }
-
-// JUMBF 的 jumb box，裡面的 jumd 類型以 c2pa 開頭
-const jumbf = () => heifBox("jumb", heifBox("jumd", bytes("c2pa"), new Uint8Array(12), new Uint8Array([3]), bytes("c2pa\0")), heifBox("json", bytes("{}")));
 
 async function deflate(text: string): Promise<Uint8Array> {
   const stream = new Blob([bytes(text)]).stream().pipeThrough(new CompressionStream("deflate"));

@@ -1,4 +1,6 @@
 import type { Finding } from "../../core/tool.ts";
+import { parseTc260 } from "../verify/provenance.ts";
+import { aigcFindings } from "./aigc.ts";
 
 // 讀 EXIF（TIFF 結構）裡會透露身分或處境的欄位。只讀不寫，遇到格式錯誤就停在
 // 讀得到的部分，不丟例外：清除照樣進行，畫面上少列幾項而已。
@@ -216,6 +218,7 @@ export function exifFindings(info: ExifInfo): Finding[] {
   if (info.dateTime) findings.push({ code: "datetime", value: info.dateTime });
   if (info.software) findings.push({ code: "software", value: info.software });
   if (info.thumbnail) findings.push({ code: "thumbnail" });
+  if (info.userComment) findings.push(...aigcFindings([parseTc260(info.userComment, "exif")]));
   return findings;
 }
 
