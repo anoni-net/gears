@@ -21,6 +21,7 @@
     "build:server": "vite build -c vite.server.config.ts"
   },
   "dependencies": {
+    "@contentauth/c2pa-web": "0.15.4",
     "@huggingface/transformers": "4.3.1",
     "@noble/ciphers": "2.4.0",
     "@noble/curves": "2.4.0",

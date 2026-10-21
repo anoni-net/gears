@@ -14,7 +14,7 @@ const RUNTIME = `gears-${VERSION}-runtime`;
 const MODELS = "gears-models";
 const MODEL_DIRS = __MODEL_DIRS__.map((dir) => `${BASE}${dir}`);
 // 用到時才存的大檔案
-const LAZY = [`${BASE}vendor/`, `${BASE}models/`, `${BASE}assets/ort-wasm-`];
+const LAZY = [`${BASE}vendor/`, `${BASE}models/`, `${BASE}assets/ort-wasm-`, `${BASE}assets/c2pa_bg-`];
 
 // index.html 存成資料夾的網址，瀏覽器開啟的是 /gears/qrcode/ 不是 /gears/qrcode/index.html
 const url = (file) => BASE + file.replace(/(^|\/)index\.html$/, "$1");

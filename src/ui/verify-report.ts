@@ -1,7 +1,9 @@
 import { AUDIO_FORMATS, EXTENSION, type Format, VIDEO_FORMATS, isPhoto } from "../core/bytes.ts";
 import { list, t, tDynamic } from "../i18n/index.ts";
 import type { Evidence, TimeEntry } from "../tools/verify/examine.ts";
-import { DIGITAL_SOURCE_TYPES } from "../tools/verify/provenance.ts";
+import { DIGITAL_SOURCE_TYPES, type Provenance } from "../tools/verify/provenance.ts";
+import { C2PA_ACTIONS, type C2paAction } from "../tools/verify/c2pa.ts";
+import { isoTime } from "../tools/verify/times.ts";
 import type { ProofItem, SigResult } from "../tools/verify/proofmode.ts";
 import { providerText } from "./provider-text.ts";
 import type { CaseFile, Group, Summary, Warning } from "../tools/verify/summary.ts";
@@ -95,11 +97,38 @@ const sourceTypeText = (code: string) =>
 
 const labelText = (value: string) => (["1", "2", "3"].includes(value) ? tDynamic(`verify.tc260.label.${value}`) : t("verify.tc260.labelOther", { value }));
 
+const actionText = (a: C2paAction) => {
+  const name = (C2PA_ACTIONS as readonly string[]).includes(a.action) ? tDynamic(`verify.c2pa.action.${a.action}`) : a.action;
+  const detail = [a.softwareAgent, a.digitalSource ? sourceTypeText(a.digitalSource) : undefined].filter(Boolean).join("，");
+  return detail ? t("verify.c2pa.actionWith", { action: name, detail }) : name;
+};
+
+// 內容憑證：第二階段驗證過的列出結果，還沒驗證（或沒辦法驗證）的說明原因
+function c2paLines(p: Provenance): string[] {
+  const result = p.c2paCheck;
+  if (!result) return [t("verify.prov.c2pa")];
+  if ("error" in result) return [tDynamic(`verify.c2pa.error.${result.error}`)];
+  const c = result.check;
+  const out = [c.state === "trusted" ? tDynamic(`verify.c2pa.state.trusted.${c.trustList ?? "official"}`) : tDynamic(`verify.c2pa.state.${c.state}`)];
+  for (const problem of c.problems) out.push(tDynamic(`verify.c2pa.problem.${problem}`));
+  if (c.signer || c.issuer) out.push(t("verify.c2pa.signer", { name: c.signer && c.issuer && c.signer !== c.issuer ? `${c.signer}（${c.issuer}）` : (c.signer ?? c.issuer)! }));
+  if (c.signedAt) {
+    const time = isoTime(c.signedAt);
+    out.push(tDynamic(`verify.c2pa.signedAt.${c.timestamp}`, { time: time ? timeText(time) : c.signedAt }));
+  }
+  if (!c.problems.includes("revoked")) out.push(tDynamic(`verify.c2pa.revocation.${c.revocation}`));
+  if (c.generator) out.push(t("verify.c2pa.generator", { value: c.generator }));
+  if (c.actions.length) out.push(t("verify.c2pa.actions", { value: list(c.actions.map(actionText)) }));
+  if (c.ingredients) out.push(t("verify.c2pa.ingredients", { n: c.ingredients }));
+  if (c.identity) out.push(t("verify.c2pa.identity"));
+  return out;
+}
+
 export function provenanceLines(ev: Evidence, full = false): string[] {
   const p = ev.provenance;
   if (!p) return [];
   const out: string[] = [];
-  if (p.c2pa) out.push(t("verify.prov.c2pa"));
+  if (p.c2pa) out.push(...c2paLines(p));
   if (p.digitalSource) out.push(t("verify.prov.source", { value: sourceTypeText(p.digitalSource) }));
   if (p.aiSystem) out.push(p.aiVersion ? t("verify.prov.aiSystemVersion", { value: p.aiSystem, version: p.aiVersion }) : t("verify.prov.aiSystem", { value: p.aiSystem }));
   if (p.promptWriter) out.push(t("verify.prov.promptWriter", { value: p.promptWriter }));
