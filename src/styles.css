@@ -3079,3 +3079,40 @@ button.link {
 .remote-server .buttons {
   margin-top: 1.5rem;
 }
+
+/* 面對面與遠端傳送要送出的檔案（src/ui/transfer-ui.tsx）：有外框的清單，一個檔案一列，大小靠右 */
+.transfer-files {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.transfer-file {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0.75rem;
+  cursor: pointer;
+}
+
+.transfer-file + .transfer-file {
+  border-top: 1px solid var(--line);
+}
+
+.transfer-file .name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.transfer-file .size {
+  margin-left: auto;
+  flex-shrink: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+/* 傳送的設定跟檔案清單隔開，字小一點 */
+.transfer-option {
+  margin-top: 1rem;
+  font-size: 0.95rem;
+}

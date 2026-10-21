@@ -41,19 +41,21 @@ export function useOutgoing(state: TrayState) {
     outgoing: () => files.map((f) => ({ name: nameOf(f), blob: f.versions.at(-1)!.blob })),
     picker: (
       <>
+        {/* 檔案放在有外框的清單裡，一個檔案一列、大小靠右。「保留原本的檔名」是設定，放在清單外面，
+            不然看起來像是清單的最後一個檔案 */}
         <fieldset class="choices">
           <legend>{t("nearby.pick")}</legend>
-          {state.files.map((f) => (
-            <label key={f.id} class="check">
-              <input type="checkbox" checked={picked.has(f.id)} onChange={() => toggle(f.id)} />
-              <span>
-                {nameOf(f)}
-                <small class="hint">{size(f.versions.at(-1)!.blob.size)}</small>
-              </span>
-            </label>
-          ))}
+          <div class="transfer-files" data-testid="transfer-files">
+            {state.files.map((f) => (
+              <label key={f.id} class="transfer-file">
+                <input type="checkbox" checked={picked.has(f.id)} onChange={() => toggle(f.id)} />
+                <span class="name">{nameOf(f)}</span>
+                <span class="size">{size(f.versions.at(-1)!.blob.size)}</span>
+              </label>
+            ))}
+          </div>
         </fieldset>
-        <label class="check">
+        <label class="check transfer-option">
           <input type="checkbox" checked={keepNames} onChange={(e) => setKeepNames(e.currentTarget.checked)} data-testid="nearby-keep-names" />
           <span>
             {t("nearby.keepNames")}
