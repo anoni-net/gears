@@ -8,7 +8,7 @@
 - 上傳端點不經過 Cloudflare。Cloudflare 在邊緣解開 TLS，經過的檔案對它是明文。兩端之間另有加密、Cloudflare 只經手密文的通道可以經過，畫面上要寫明 Cloudflare 看得到 IP 與時間（遠端傳送的 clearnet 入口，見下方「遠端傳送的轉送服務」）
 - 伺服器不保存讀者的檔案，加密過的也一樣。遠端傳送的轉送服務只在轉給對方的途中經手，對方不在時直接丟掉，兩端一律同時在線（見下方「遠端傳送的轉送服務」）
 - 頁面能連線的對象寫死在 CSP 裡（`vite.config.ts`），新增任何對外連線都要改那裡，並在畫面上標示。頁面的 meta 標籤只有自己的網域、使用統計的送出網址（`https://aa.anoni.net/api/send`，見下方「使用統計」）與建議與回饋的送出網址（見下方「建議與回饋」）。逐字稿的大模型從 Hugging Face 下載（見下方「逐字稿」），只開在伺服器送的 CSP 標頭 <!-- docs-style-lint: disable-line -->
-- 執行期的相依套件只有 `preact`、`qrcode-generator`（QR code 產生）、`jsqr`（QR code 讀取）、`zxing-wasm`（QR code 以外的條碼，見下方「QR code 的內容格式」）、`age-encryption`（加密，連同它相依的 noble 系列）、`libheif-js`（HEIC 解碼，LGPL-3.0，見下方「HEIC」）、`pdf-lib`（PDF 的解析與寫出，見下方「文件」）、`pdfjs-dist`（PDF 的遮蔽，見下方「PDF 的遮蔽」），以及遮蔽的自動尋找用的 `onnxruntime-web` 與 `tesseract.js`（見下方「遮蔽的自動尋找」）、逐字稿用的 `@huggingface/transformers` 與 `opencc-js`（見下方「逐字稿」，分辨說話者用的 onnxruntime 是 Transformers.js 帶的那一份），以及查證計算 SHA-256 用的 `@noble/hashes`（age 加密原本就相依它，鎖定同一個版本，見下方「查證」）、遠端傳送的加密用的 `@noble/curves` 與 `@noble/ciphers`（同樣是 age 加密已經帶進來的版本，見下方「遠端傳送的轉送服務」）、下載的軟體驗證用的 `openpgp`（LGPL-3.0，見下方「下載的軟體驗證」）。新增套件前先想能不能自己寫，必要時鎖定確切的版本。工具用到的套件在打開工具時才載入
+- 執行期的相依套件只有 `preact`、`qrcode-generator`（QR code 產生）、`jsqr`（QR code 讀取）、`zxing-wasm`（QR code 以外的條碼，見下方「QR code 的內容格式」）、`age-encryption`（加密，連同它相依的 noble 系列）、`libheif-js`（HEIC 解碼，LGPL-3.0，見下方「HEIC」）、`pdf-lib`（PDF 的解析與寫出，見下方「文件」）、`pdfjs-dist`（PDF 的遮蔽，見下方「PDF 的遮蔽」），以及遮蔽的自動尋找用的 `onnxruntime-web` 與 `tesseract.js`（見下方「遮蔽的自動尋找」）、逐字稿用的 `@huggingface/transformers` 與 `opencc-js`（見下方「逐字稿」，分辨說話者用的 onnxruntime 是 Transformers.js 帶的那一份），以及查證計算 SHA-256 用的 `@noble/hashes`（age 加密原本就相依它，鎖定同一個版本，見下方「查證」）、遠端傳送的加密用的 `@noble/curves` 與 `@noble/ciphers`（同樣是 age 加密已經帶進來的版本，見下方「遠端傳送的轉送服務」）、下載的軟體驗證用的 `openpgp`（LGPL-3.0，見下方「下載的軟體驗證」，查證的 ProofMode 證明檔也用它）。新增套件前先想能不能自己寫，必要時鎖定確切的版本。工具用到的套件在打開工具時才載入
 - 結構有問題的檔案就停下來，不交出一份沒處理乾淨的檔案
 
 ## 支援的瀏覽器
@@ -242,6 +242,19 @@ GB 45438 的服務提供者編碼（TC260-PG-20252A，27 碼）拆成主體類�
 清除中繼資料的檢查與報告把這兩種標示列成單獨的一項（`c2pa`、`aigc`），讀者看得到拿掉的是什麼。內容憑證可能帶著創作者的名字與身分聲明，原本除了 HEIF 都已經清掉（見下方「HEIC」），只是報告裡歸成其他區段或其他程式自訂的區段。GB 45438 的標識照查證的原則，服務提供者編碼在檢查結果裡拆開列出（`src/ui/provider-text.ts`），個人的號碼完整顯示，讀者看過再決定要不要清除。XMP 與 EXIF 本來就整段拿掉，標識跟著拿掉，PNG 的 `tEXt` 也是。
 
 單元測試在 `tests/unit/verify-provenance.spec.ts` 與 `tests/unit/strip-provenance.spec.ts`，服務提供者編碼與號碼都是編出來的，不沿用指南裡的範例。
+
+### ProofMode 的證明檔
+
+ProofMode（Guardian Project 給人權紀錄者的 Android App）拍照時不改動原檔，另外產生用 App 自動產生的 OpenPGP 金鑰簽好的證明檔，讀者用「分享證明」送出一個壓縮檔（`src/tools/verify/proofmode.ts`，格式照 guardianproject/proofmode-android 的原始碼與驗證說明）：
+
+- `pubkey.asc`：簽署用的公鑰
+- `<SHA-256>.asc`：照片的分離式簽章，檔名是照片的 SHA-256。照片用原本的檔名放在壓縮檔裡，用 SHA-256 對到證明檔
+- `<SHA-256>.proof.csv`、`.proof.json`：拍攝當下的感測器資料（時間、位置、Wi-Fi 與行動網路、裝置），各自帶著 `.asc` 簽章。JSON 有就驗它，沒有才驗 CSV。CSV 每次補寫加一列，取最後一列
+- 選用的 `.ots`（OpenTimestamps）與 `.gst`（Google 的裝置完整性證明）：前者要讀 Bitcoin 的區塊資料、需要連線，後者要用 Google 的金鑰，兩者只列出有沒有附上
+
+查證讀到壓縮檔裡有 `pubkey.asc` 與 `<SHA-256>.proof.*` 時，用 `openpgp` 驗照片與感測器資料的簽章，列出公鑰的指紋。金鑰沒有對應到身分，畫面上請讀者跟對方之前給的指紋比對。感測器資料的時間、位置與裝置併進時間線與檔案卡片，其他欄位收在可以展開的區塊裡完整列出。照片可以「一起查證」，加進這一批讀 EXIF 與內容憑證。簽章對不上，或壓縮檔裡有照片卻對不到任何證明檔（照片可能被換過），列在需要留意的地方（`proofmode-mismatch`）。只附證明檔、沒有附照片是正常的用法，不列。
+
+清除中繼資料不改動 ProofMode 的照片與證明檔，清掉就失去證明的作用，只統一壓縮檔本身的時間與附加欄位。檢查結果列出感測器資料裡有哪些位置與網路的欄位（`proofmode`），交不交出去由讀者決定。單元測試在 `tests/unit/verify-proofmode.spec.ts`，證明檔由 `tests/helpers/proofmode.ts` 在測試裡產生金鑰並簽署，跟 App 的結構相同。
 
 ## 面對面傳送
 
@@ -700,7 +713,7 @@ MP4、MOV、AVI、MKV 的影音資料位置記在索引裡，所以原地處理�
 
 | 格式 | 做法 |
 |---|---|
-| ZIP（`archive.ts`） | 重新打包：時間統一、不寫附加欄位（Unix 的使用者 ID、精確的時間）與註解。`__MACOSX`、`._` 開頭的檔案、`.DS_Store`、`Thumbs.db` 拿掉（macOS 的延伸屬性常帶著下載來源的網址，`Thumbs.db` 存著圖片的縮圖），裡面的照片、文件與影音一起清除 |
+| ZIP（`archive.ts`） | 重新打包：時間統一、不寫附加欄位（Unix 的使用者 ID、精確的時間）與註解。`__MACOSX`、`._` 開頭的檔案、`.DS_Store`、`Thumbs.db` 拿掉（macOS 的延伸屬性常帶著下載來源的網址，`Thumbs.db` 存著圖片的縮圖），裡面的照片、文件與影音一起清除。ProofMode 的照片與證明檔保留原樣（見「查證」的「ProofMode 的證明檔」） |
 | TAR（`tar.ts`） | 擁有者改成 0 與空白、時間清成零，pax 延伸標頭只留檔名、連結、大小與稀疏檔的欄位，權限保留，系統檔拿掉，裡面的檔案一起清除 |
 | gzip（`gzip.ts`） | 標頭的原始檔名、時間與註解拿掉，解壓縮之後交給裡面的格式（通常是 TAR）再壓縮回去 |
 | EPUB（`epub.ts`） | OPF 的 metadata 只留書名、語言與識別碼，識別碼換成隨機的 UUID（有字型混淆時不換），目錄的作者、內文的 meta 與註解、`iTunesMetadata.plist` 拿掉，有 DRM 的不處理 |

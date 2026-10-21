@@ -2,6 +2,7 @@ import { AUDIO_FORMATS, EXTENSION, type Format, VIDEO_FORMATS, isPhoto } from ".
 import { list, t, tDynamic } from "../i18n/index.ts";
 import type { Evidence, TimeEntry } from "../tools/verify/examine.ts";
 import { DIGITAL_SOURCE_TYPES } from "../tools/verify/provenance.ts";
+import type { ProofItem, SigResult } from "../tools/verify/proofmode.ts";
 import { providerText } from "./provider-text.ts";
 import type { CaseFile, Group, Summary, Warning } from "../tools/verify/summary.ts";
 import type { TimeValue } from "../tools/verify/times.ts";
@@ -119,6 +120,22 @@ export function provenanceLines(ev: Evidence, full = false): string[] {
   return out;
 }
 
+// ProofMode：每一份證明的檢查結果，畫面與匯出共用
+const sigText = (part: "mediaSig" | "proofSig", r: SigResult) =>
+  r.kind === "good" ? t(`verify.proofmode.${part}.good`, { time: r.created ? localTime(r.created) : "-" }) : tDynamic(`verify.proofmode.${part}.${r.kind}`);
+
+export function proofLines(item: ProofItem): string[] {
+  const out = [item.media ? t("verify.proofmode.media", { name: item.media.name }) : t("verify.proofmode.noMedia", { hash: item.hash })];
+  if (item.media) out.push(sigText("mediaSig", item.mediaSig));
+  out.push(sigText("proofSig", item.proofSig));
+  if (item.ots) out.push(t("verify.proofmode.ots"));
+  if (item.gst) out.push(t("verify.proofmode.gst"));
+  return out;
+}
+
+// 指紋每 4 個字一組，跟下載的軟體驗證相同。不從那裡匯入，免得把內建的公鑰一起帶進來
+export const fingerprintText = (fp: string) => fp.toUpperCase().replace(/(.{4})(?!$)/g, "$1 ");
+
 // 卡片上被截短的提示詞，完整的放在完整資訊
 export function fullPrompts(ev: Evidence): string[] {
   const p = ev.provenance;
@@ -181,6 +198,19 @@ export function buildReport(files: CaseEntry[], summary: Summary, now: number, c
     if (ev.thumbnail) lines.push(`- ${t("verify.thumbNote")}`);
     if (ev.revisions.length) lines.push(`- ${t("verify.revisions", { n: ev.revisions.length + 1 })}`);
     for (const line of traceLines(ev)) lines.push(`- ${line}`);
+    if (ev.proofmode) {
+      const pm = ev.proofmode;
+      lines.push(`- ${t("verify.proofmode.title", { n: pm.items.length })}`);
+      lines.push(`    - ${t("verify.proofmode.key")}：${pm.fingerprint ? `\`${fingerprintText(pm.fingerprint)}\`` : t("verify.proofmode.noKey")}`);
+      if (pm.unmatched.length) lines.push(`    - ${t("verify.proofmode.unmatched", { names: list(pm.unmatched) })}`);
+      for (const item of pm.items) {
+        for (const line of proofLines(item)) lines.push(`    - ${line}`);
+        if (item.fields.length) {
+          lines.push(`    - ${t("verify.proofmode.fields", { n: item.fields.length })}：`);
+          for (const [k, v] of item.fields) lines.push(`        - ${k}：${v}`);
+        }
+      }
+    }
     const prov = provenanceLines(ev, true);
     if (prov.length) {
       lines.push(`- ${t("verify.fact.provenance")}：`);

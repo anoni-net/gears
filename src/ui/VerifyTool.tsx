@@ -18,6 +18,7 @@ import type { CreateToolProps } from "./types.ts";
 import {
   type CaseEntry,
   buildReport,
+  fingerprintText,
   formatSize,
   fullPrompts,
   keyTimes,
@@ -26,6 +27,7 @@ import {
   names,
   overviewText,
   peopleText,
+  proofLines,
   provenanceLines,
   relations,
   sourceText,
@@ -255,6 +257,62 @@ function VersionHistory({ file, revisions }: { file: TrayFile; revisions: number
   );
 }
 
+// ProofMode 的證明檔：照片與感測器資料的簽章、公鑰的指紋與完整的感測器資料。照片可以加進
+// 這一批一起查證（讀 EXIF 與內容憑證）。感測器資料照實列出，讀者看過再決定怎麼保管
+function ProofModeBlock({ proof }: { proof: NonNullable<Evidence["proofmode"]> }) {
+  const [added, setAdded] = useState<Set<string>>(new Set());
+  const add = async (item: (typeof proof.items)[number]) => {
+    const media = item.media!;
+    await tray.add([new File([media.data as Uint8Array<ArrayBuffer>], media.name)], null, "check");
+    setAdded((prev) => new Set(prev).add(item.hash));
+  };
+  return (
+    <div class="verify-block" data-testid="verify-proofmode">
+      <p>
+        <strong>{t("verify.proofmode.title", { n: proof.items.length })}</strong>
+      </p>
+      {proof.fingerprint ? (
+        <p>
+          {t("verify.proofmode.key")}：<code>{fingerprintText(proof.fingerprint)}</code> <CopyButton text={proof.fingerprint} primary={false} />
+        </p>
+      ) : (
+        <p class="error">{t("verify.proofmode.noKey")}</p>
+      )}
+      <p class="hint">{t("verify.proofmode.keyNote")}</p>
+      {proof.unmatched.length ? <p class="verify-card-warn">{t("verify.proofmode.unmatched", { names: list(proof.unmatched) })}</p> : null}
+      {proof.items.map((item) => (
+        <div key={item.hash} class="verify-proof">
+          <ul>
+            {proofLines(item).map((line, i) => (
+              <li key={i}>{line}</li>
+            ))}
+          </ul>
+          {item.media ? (
+            <div class="buttons">
+              <button type="button" disabled={added.has(item.hash)} onClick={() => void add(item)}>
+                {t(added.has(item.hash) ? "verify.email.added" : "verify.proofmode.add")}
+              </button>
+            </div>
+          ) : null}
+          {item.fields.length ? (
+            <details class="verify-details">
+              <summary>{t("verify.proofmode.fields", { n: item.fields.length })}</summary>
+              <p class="hint">{t("verify.proofmode.fieldsNote")}</p>
+              <dl class="verify-facts">
+                {item.fields.map(([k, v]) => (
+                  <Fact key={k} label={k}>
+                    {v}
+                  </Fact>
+                ))}
+              </dl>
+            </details>
+          ) : null}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // 信件：寄件驗證的結果、主旨與附件。附件可以加進這一批一起查證
 function EmailBlock({ email }: { email: NonNullable<Evidence["email"]> }) {
   const [added, setAdded] = useState<Set<number>>(new Set());
@@ -370,6 +428,7 @@ function FileCard(props: { file: TrayFile; entry?: CaseEntry; failed: boolean; w
           ) : null}
           {ev.revisions.length ? <VersionHistory file={file} revisions={ev.revisions} /> : null}
           {ev.email ? <EmailBlock email={ev.email} /> : null}
+          {ev.proofmode ? <ProofModeBlock proof={ev.proofmode} /> : null}
           <details class="verify-details">
             <summary>{t("verify.details")}</summary>
             <dl class="verify-facts">

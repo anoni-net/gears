@@ -8,14 +8,15 @@ import { parseEmail } from "../email/parse.ts";
 import { CHECK_FORMATS, checkDocument } from "../doc-check/index.ts";
 import { extractExif } from "../redact/keep-exif.ts";
 import { parseExif } from "../strip-metadata/exif.ts";
+import { type ProofModeEvidence, examineProofMode } from "./proofmode.ts";
 import { IPTC_EXT, type Provenance, TC260, emptyProvenance, fromPngTexts, hasC2pa, parseA1111, parseTc260, pngTexts, type Tc260Label } from "./provenance.ts";
 import { type TimeValue, anyTime, exifTime, gpsTime, isoTime, pdfTime } from "./times.ts";
 
 // 查證：讀出檔案裡可以用來驗證的資訊。跟清除中繼資料讀的是同一批欄位，清除時當成風險，
 // 這裡當成線索，所以保留來源與原本的寫法，不做任何判斷。判斷（矛盾、重複）在 summary.ts。
 
-export type TimeKind = "taken" | "digitized" | "modified" | "gps" | "created" | "printed" | "metadata" | "history" | "recorded" | "sent" | "received";
-export type TimeSource = "exif" | "xmp" | "pdf" | "office" | "odf" | "email" | "file";
+export type TimeKind = "taken" | "digitized" | "modified" | "gps" | "created" | "printed" | "metadata" | "history" | "recorded" | "sent" | "received" | "proof";
+export type TimeSource = "exif" | "xmp" | "pdf" | "office" | "odf" | "email" | "file" | "proofmode";
 
 export interface TimeEntry extends TimeValue {
   kind: TimeKind;
@@ -55,6 +56,7 @@ export interface Evidence {
   // 文件打開時會連線的位址與會執行的程式各有幾項（文件開啟前檢查，src/tools/doc-check/）
   docCheck?: { connect: number; code: number };
   provenance?: Provenance; // 來源標示（provenance.ts），有找到才有
+  proofmode?: ProofModeEvidence; // ProofMode 的證明檔（proofmode.ts）
 }
 
 // 信件（.eml）：寄件驗證的結果、主旨與附件。解析與判斷跟「信件檢查」共用（src/tools/email/）
@@ -375,6 +377,27 @@ function examineEmail(ev: Evidence, bytes: Uint8Array) {
   ev.email = { subject: msg.subject, verdict: a.verdict, domain: a.domain, notes: a.notes, attachments: msg.attachments };
 }
 
+// --- ProofMode 的證明檔 ---
+
+// 感測器資料裡的時間、位置與裝置併進查證的時間線與檔案卡片，其他欄位在畫面上完整列出
+async function examineZip(ev: Evidence, bytes: Uint8Array) {
+  const proof = await examineProofMode(bytes);
+  if (!proof) return;
+  ev.proofmode = proof;
+  for (const item of proof.items) {
+    const field = (key: string) => item.fields.find(([k]) => k === key)?.[1];
+    addTime(ev, "proof", "proofmode", isoTime(field("Proof Generated")), item.media?.name);
+    addTime(ev, "created", "proofmode", isoTime(field("File Created")), item.media?.name);
+    addTime(ev, "modified", "proofmode", isoTime(field("File Modified")), item.media?.name);
+    addUnique(ev.devices, [field("Manufacturer"), field("Hardware")].filter(Boolean).join(" ") || undefined);
+    const lat = Number(field("Location.Latitude"));
+    const lon = Number(field("Location.Longitude"));
+    if (field("Location.Latitude") && field("Location.Longitude") && Number.isFinite(lat) && Number.isFinite(lon) && (lat !== 0 || lon !== 0)) {
+      addUnique(ev.locations, { lat, lon }, (a, b) => a.lat === b.lat && a.lon === b.lon);
+    }
+  }
+}
+
 // --- 其他格式：清除中繼資料的檢查結果 ---
 
 const UTC_FORMATS: Format[] = ["mp4", "mov", "m4a"]; // mvhd 的時間是 UTC
@@ -410,6 +433,7 @@ export async function examine(bytes: Uint8Array, format: Format, findings: Findi
     else if (OOXML.includes(format)) await examineOoxml(ev, bytes);
     else if (ODF.includes(format)) await examineOdf(ev, bytes);
     else if (format === "eml") examineEmail(ev, bytes);
+    else if (format === "zip") await examineZip(ev, bytes);
   } catch {
     // 結構有問題的檔案，讀到哪裡算哪裡
   }

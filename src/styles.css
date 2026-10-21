@@ -3251,3 +3251,15 @@ button.link {
     padding: 0.3rem 0.15rem;
   }
 }
+
+/* ProofMode 的每一份證明 */
+.verify-proof {
+  border-top: 1px solid var(--line);
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+}
+
+.verify-proof ul {
+  margin: 0 0 0.4rem;
+  padding-left: 1.1rem;
+}
