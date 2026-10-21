@@ -6,8 +6,7 @@ import asyncifyMjs from "../../node_modules/@huggingface/transformers/node_modul
 import asyncifyWasm from "../../node_modules/@huggingface/transformers/node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.asyncify.wasm?url";
 import plainMjs from "../../node_modules/@huggingface/transformers/node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.mjs?url";
 import plainWasm from "../../node_modules/@huggingface/transformers/node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.wasm?url";
-import { type Part, joinParts, partName } from "../tools/transcribe/parts.ts";
-import { REMOTE_ERROR, assetsUrl, hfUrl, readVerified } from "../tools/transcribe/remote.ts";
+import { type Part, assetsUrl, cachedModel, downloadVerified, forgetDownloads, hfUrl, joinParts, partName } from "../core/models.ts";
 import { MODELS, type ModelId, type RawChunk, SAMPLE_RATE, type Segment, cleanSegments, maxTokens, speechPieces } from "../tools/transcribe/segments.ts";
 import { MIN_EMBED_SECONDS, assignSpeakers, normalize } from "../tools/transcribe/speakers.ts";
 import type { Device } from "../tools/transcribe/device.ts";
@@ -18,8 +17,8 @@ import type { Embedder } from "./speaker-embed.ts";
 // 逐字稿的辨識在這個 Web Worker 裡執行，畫面不會卡住。用 Transformers.js 跑 Whisper，
 // 模型與 WebAssembly 都從自己的網域載入：關掉 Transformers.js 內建的 Hugging Face 下載，
 // 也不另外寫進 Transformers.js 自己的快取（離線快取由 service worker 處理，見
-// src/sw/sw-template.js）。標成 remote 的大模型例外，讀者選擇之後由 remoteFetch 從
-// Hugging Face 下載，比對 SHA-256 之後存進同一個快取。錄音只在這個分頁的記憶體裡，不會送出去。
+// src/sw/sw-template.js）。別的網域的模型例外，讀者選擇之後由 remoteFetch 下載，
+// 比對 SHA-256 之後存進同一個快取（src/core/models.ts）。錄音只在這個分頁的記憶體裡，不會送出去。
 
 // 長錄音分段送進來（src/ui/audio-stream.ts 每次解碼約 10 分鐘），一段處理完回覆 done，
 // 畫面才送下一段，記憶體裡同時只有一段。
@@ -51,7 +50,6 @@ let files: Record<string, number> = {};
 let downloadTotal = 0;
 const reportDownload = () => post({ type: "download", loaded: Object.values(files).reduce((a, b) => a + b, 0), total: downloadTotal });
 
-const MODEL_CACHE = "gears-models";
 // Transformers.js 會把 env.fetch 的錯誤換成「找不到檔案」，下載失敗的原因另外記下來回報
 let remoteError: Error | null = null;
 
@@ -72,63 +70,21 @@ function counted(response: Response, file: string): Response {
   return new Response(body, { status: response.status, statusText: response.statusText, headers: response.headers });
 }
 
-// 別的網域的模型檔（src/tools/transcribe/remote.ts）：先找快取，沒有就下載、比對 SHA-256，
-// 存進快取再交給 Transformers.js。快取的網址跟 small、base 一樣用自己網域的路徑，畫面判斷
-// 「已下載」與刪除模型時不必分開處理。service worker 只快取自己網域的請求，所以由這裡存
-//
-// 同一個檔案同時有好幾個請求時共用同一次下載。存進快取的回傳 null，存不進去的（無痕視窗的
-// 配額很小）把內容留在這裡，載入完才放掉
-const downloads = new Map<string, Promise<Uint8Array<ArrayBuffer> | null>>();
-
-async function remoteFetch(model: ModelId, file: string, url: string): Promise<Response> {
+// 別的網域的模型檔：先找快取，沒有就下載、比對 SHA-256，存進快取再交給 Transformers.js
+// （src/core/models.ts 的 cachedModel）。快取的網址跟 small、base 一樣用自己網域的路徑，
+// 畫面判斷「已下載」與刪除模型時不必分開處理。service worker 只快取自己網域的請求，所以由這裡存
+function remoteFetch(model: ModelId, file: string, url: string): Promise<Response> {
   const info = MODELS[model];
   const sha256 = (info.files as Record<string, string>)[file];
   // Transformers.js 會試著讀一些選用的檔案，清單以外的當作不存在，不送出請求
-  if (!sha256) return new Response(null, { status: 404 });
-  // Firefox 的無痕視窗不能用 Cache API，那時每次都重新下載
-  const cache = await caches.open(MODEL_CACHE).catch(() => null);
-  const hit = await cache?.match(url);
-  if (hit) return hit;
-  let job = downloads.get(url);
-  if (!job) {
-    job = download(model, file, sha256, url, cache);
-    downloads.set(url, job);
-  }
-  const data = await job;
-  const stored = data ? undefined : await cache?.match(url);
-  return stored ?? new Response(data, { headers: { "content-type": "application/octet-stream", "content-length": String(data?.length ?? 0) } });
-}
-
-const remoteGet = (url: string) =>
-  fetch(url, { credentials: "omit", referrerPolicy: "no-referrer", cache: "no-store" }).catch((error: Error) => {
-    throw new Error(`${REMOTE_ERROR}: ${error.message}`);
-  });
-
-async function download(model: ModelId, file: string, sha256: string, url: string, cache: Cache | null): Promise<Uint8Array<ArrayBuffer> | null> {
-  const info = MODELS[model];
+  if (!sha256) return Promise.resolve(new Response(null, { status: 404 }));
   const at = (name: string) => (info.host === "hf" ? hfUrl(info.repo, info.revision, name) : assetsUrl(info.dir, name));
-  const onBytes = (n: number) => {
-    files[file] = n;
-    reportDownload();
-  };
-  // 切成好幾段的檔案逐段下載、比對、接回來，每段都比對過，不必再算整個檔案
   const parts = (info.parts as Record<string, Part[]>)[file];
-  const data = parts
-    ? await joinParts(parts, (i) => remoteGet(at(partName(file, i))), onBytes).catch((error: Error) => {
-        throw new Error(error.message.startsWith(REMOTE_ERROR) ? error.message : `${REMOTE_ERROR}: ${error.message}`);
-      })
-    : await remoteGet(at(file)).then((response) => {
-        if (!response.ok) throw new Error(`${REMOTE_ERROR}: HTTP ${response.status} (${file})`);
-        return readVerified(response, sha256, onBytes);
-      });
-  if (!cache) return data;
-  const headers = { "content-type": "application/octet-stream", "content-length": String(data.length) };
-  return cache.put(url, new Response(data, { headers })).then(
-    () => null,
-    (error: Error) => {
-      console.warn("[gears] 模型存不進快取：", file, error.message);
-      return data;
-    },
+  return cachedModel(url, () =>
+    downloadVerified({ url: at, file, sha256, parts }, (n) => {
+      files[file] = n;
+      reportDownload();
+    }),
   );
 }
 
@@ -156,7 +112,7 @@ async function load(model: ModelId, base: string, threads: number, device: Devic
       });
     if (!url.pathname.startsWith(dir)) return fetch(input, { ...init, cache: "no-store" });
     const file = url.pathname.slice(dir.length);
-    // 切成好幾段的檔案逐段下載、比對、接回來（src/tools/transcribe/parts.ts）
+    // 切成好幾段的檔案逐段下載、比對、接回來（src/core/models.ts）
     const parts = (MODELS[model].parts as Record<string, Part[]>)[file];
     if (parts)
       return joinParts(
@@ -184,7 +140,7 @@ async function load(model: ModelId, base: string, threads: number, device: Devic
     // 回應的內容不讀。大模型會因此多下載一次，這些沒讀完的連線還會佔住瀏覽器對同一個主機的
     // 連線數。實測 Firefox 從開始到能辨識，base 要兩分鐘（改了之後 9 秒），用多個核心時約四分之一
     // 的機率整個停住。下載進度改由 env.fetch 計算（counted）
-  }).finally(() => downloads.clear())) as unknown as Pipeline;
+  }).finally(forgetDownloads)) as unknown as Pipeline;
   loaded = { model, device, asr };
   return asr;
 }

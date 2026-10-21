@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { expect, test } from "@playwright/test";
-import { type Part, joinParts, partName } from "../../src/tools/transcribe/parts.ts";
+import { type Part, joinParts, partName } from "../../src/core/models.ts";
 
 const sha256 = (data: Uint8Array) => createHash("sha256").update(data).digest("hex");
 

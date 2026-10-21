@@ -8,7 +8,7 @@ import { NOT_FOUND, labIds, pageIds } from "./src/pages.ts";
 import { toolIds } from "./src/tools/index.ts";
 import benchModels from "./src/tools/llm-bench/models.json" with { type: "json" };
 import whisper from "./src/tools/transcribe/models.json" with { type: "json" };
-import { ASSETS_MODELS } from "./src/tools/transcribe/remote.ts";
+import { ASSETS_MODELS } from "./src/core/models.ts";
 import speakerModel from "./src/tools/transcribe/speaker-model.json" with { type: "json" };
 import { ANALYTICS_ENDPOINT } from "./src/ui/analytics-endpoint.ts";
 import ogImages from "./src/og-images.json" with { type: "json" };
@@ -49,7 +49,7 @@ const FEEDBACK_ENDPOINT = ONION ? FEEDBACK_ENDPOINT_ONION : FEEDBACK_ENDPOINT_CL
 const CSP = policy(ONION ? `'self' ${FEEDBACK_ENDPOINT}` : `'self' ${ANALYTICS_ENDPOINT} ${FEEDBACK_ENDPOINT}`);
 
 // 伺服器用標頭送的 CSP 多開兩個地方，給逐字稿的 Worker 下載別的網域的模型（見
-// src/tools/transcribe/remote.ts）。Worker 只吃標頭的 CSP。頁面同時有標頭與 meta 標籤時兩者
+// src/core/models.ts）。Worker 只吃標頭的 CSP。頁面同時有標頭與 meta 標籤時兩者
 // 都要符合，頁面本身仍然只能連自己的網域。
 // - Hugging Face（讀者選擇之後才連）：huggingface.co 限定在每個模型的下載路徑，不開放上傳用的
 //   API，下載會轉址到 *.hf.co 的 CDN（轉址之後 CSP 不比對路徑，只能寫主機）。語言模型速度量測的

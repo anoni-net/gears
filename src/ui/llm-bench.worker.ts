@@ -9,8 +9,7 @@ import asyncifyWasm from "../../node_modules/@huggingface/transformers/node_modu
 import plainMjs from "../../node_modules/@huggingface/transformers/node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.mjs?url";
 import plainWasm from "../../node_modules/@huggingface/transformers/node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.wasm?url";
 import { cleanOutput, messages } from "../tools/llm-bench/prompt.ts";
-import { type Part, joinParts, partName } from "../tools/transcribe/parts.ts";
-import { ASSETS_MODELS, REMOTE_ERROR, assetsUrl, readVerified } from "../tools/transcribe/remote.ts";
+import { ASSETS_MODELS, type Part, assetsUrl, downloadVerified } from "../core/models.ts";
 
 export interface BenchRequest {
   repo: string;
@@ -56,11 +55,6 @@ function counted(response: Response, key: string): Response {
   return new Response(body, { status: response.status, statusText: response.statusText, headers: response.headers });
 }
 
-const remoteGet = (url: string) =>
-  fetch(url, { credentials: "omit", referrerPolicy: "no-referrer", cache: "no-store" }).catch((error: Error) => {
-    throw new Error(`${REMOTE_ERROR}: ${error.message}（${url}）`);
-  });
-
 // Transformers.js 4.3.1 下載外部權重檔（.onnx_data）失敗時不會把錯誤往上傳，載入會一直停住。
 // 下載出錯時直接回報，頁面收到就結束這個 Worker
 const fail = (error: Error): never => {
@@ -69,19 +63,12 @@ const fail = (error: Error): never => {
 };
 
 // 社群轉檔的模型：只下載清單上的檔案，比對 SHA-256，切成好幾段的檔案逐段比對、接回來
+// （src/core/models.ts）。存進 Transformers.js 自己的快取，不經過 gears-models
 async function fromAssets(assets: NonNullable<BenchRequest["assets"]>, file: string): Promise<Response> {
   const sha256 = assets.files[file];
   // 清單外的檔案（Transformers.js 會試著讀一些選用的設定檔）當成不存在
   if (!sha256) return new Response(null, { status: 404 });
-  const parts = assets.parts[file];
-  const total = parts ? parts.reduce((n, p) => n + p.bytes, 0) : 0;
-  const data = parts
-    ? await joinParts(parts, (i) => remoteGet(assetsUrl(assets.dir, partName(file, i))), (n) => report(file, n, total))
-    : await remoteGet(assetsUrl(assets.dir, file)).then((response) => {
-        if (!response.ok) throw new Error(`${REMOTE_ERROR}: HTTP ${response.status}（${file}）`);
-        const length = Number(response.headers.get("content-length")) || 0;
-        return readVerified(response, sha256, (n) => report(file, n, length));
-      });
+  const data = await downloadVerified({ url: (name) => assetsUrl(assets.dir, name), file, sha256, parts: assets.parts[file] }, (n, total) => report(file, n, total));
   return new Response(data, { headers: { "content-type": "application/octet-stream", "content-length": String(data.length) } });
 }
 

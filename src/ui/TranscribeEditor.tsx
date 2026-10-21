@@ -4,8 +4,7 @@ import { tray } from "../state.ts";
 import { MODELS, MODEL_IDS, type ModelId, SAMPLE_RATE, type Segment, clock, mergeSegments, toSrt, toTxt } from "../tools/transcribe/segments.ts";
 import { type Device, type GpuInfo, gpuUsable } from "../tools/transcribe/device.ts";
 import { LANGUAGES, type Language, modelsFor, preferredModel } from "../tools/transcribe/languages.ts";
-import { type Part, partName } from "../tools/transcribe/parts.ts";
-import { ASSETS_MODELS, REMOTE_ERROR } from "../tools/transcribe/remote.ts";
+import { ASSETS_MODELS, type Part, REMOTE_ERROR, isCached, partName, removeCached } from "../core/models.ts";
 import { IS_ONION } from "../site.ts";
 import speakerModel from "../tools/transcribe/speaker-model.json" with { type: "json" };
 import { navigate } from "../router.ts";
@@ -39,7 +38,6 @@ const STALLED = "stalled";
 type Engine = "transformers" | "sherpa";
 const engineOf = (id: ModelId) => MODELS[id].engine as Engine;
 const newWorker = (engine: Engine) => new Worker(`${engine === "sherpa" ? sherpaWorkerUrl : workerUrl}?n=${++workers}`, { type: "module" });
-const MODEL_CACHE = "gears-models";
 // 超過 1 GB 的寫成 1.6 GB，比 1561 MB 好讀
 const mb = (bytes: number) => (bytes >= 1e9 ? `${(bytes / 1e9).toFixed(1)} GB` : `${Math.round(bytes / 1e6)} MB`);
 const modelUrl = (id: ModelId) => `${BASE}models/whisper/${MODELS[id].dir}/`;
@@ -67,19 +65,14 @@ const DEFAULT_THREADS = ISOLATED
 
 // 模型有沒有存在這台裝置的瀏覽器裡（service worker 的快取，大模型由 Worker 存進同一個快取）。
 // 看那個裝置用的最後一個檔案，解碼器最後才下載
-async function isDownloaded(id: ModelId, device: Device): Promise<boolean> {
-  if (!("caches" in self)) return false;
-  const cache = await caches.open(MODEL_CACHE).catch(() => null);
+function isDownloaded(id: ModelId, device: Device): Promise<boolean> {
   const file = Object.keys(modelFiles(id, device)).at(-1)!;
-  // 切成好幾段的檔案看最後一段（src/tools/transcribe/parts.ts）
+  // 切成好幾段的檔案看最後一段（src/core/models.ts）
   const parts = (MODELS[id] as { parts?: Record<string, Part[]> }).parts?.[file];
-  return !!(await cache?.match(`${modelUrl(id)}${parts ? partName(file, parts.length - 1) : file}`));
+  return isCached(`${modelUrl(id)}${parts ? partName(file, parts.length - 1) : file}`);
 }
 
-async function removeModel(id: ModelId) {
-  const cache = await caches.open(MODEL_CACHE);
-  for (const request of await cache.keys()) if (request.url.startsWith(modelUrl(id))) await cache.delete(request);
-}
+const removeModel = (id: ModelId) => removeCached(modelUrl(id));
 
 type Phase =
   | { kind: "idle" }
