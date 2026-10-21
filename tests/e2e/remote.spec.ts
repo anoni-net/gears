@@ -27,7 +27,7 @@ test("打開分享連結、按加入，兩端的確認碼相同，接收之後�
 
   // 打開連結不自動連線，讀完 # 就從網址清掉
   await receiver.goto(link);
-  await expect(receiver.getByTestId("remote-status")).toContainText("按「加入」之後才會連線");
+  await expect(receiver.getByTestId("remote-invite")).toContainText("按下「加入」才會連線");
   expect(new URL(receiver.url()).hash).toBe("");
   await expect(receiver.getByTestId("remote-privacy")).toContainText("看不到內容");
   await receiver.getByRole("button", { name: "加入", exact: true }).click();
@@ -98,7 +98,7 @@ test("上一個連結出錯之後，在同一個分頁貼上新的連結也接�
   await expect(receiver.getByTestId("remote-status")).toContainText("連結已經用過");
   const link = await startSender(sender);
   await pasteInAddressBar(receiver, link);
-  await expect(receiver.getByTestId("remote-status")).toContainText("按「加入」之後才會連線");
+  await expect(receiver.getByTestId("remote-invite")).toContainText("按下「加入」才會連線");
   expect(new URL(receiver.url()).hash).toBe("");
   await receiver.getByRole("button", { name: "加入", exact: true }).click();
   await expect(receiver.getByTestId("remote-incoming").locator("li")).toHaveCount(2, { timeout: 20_000 });
@@ -123,7 +123,7 @@ test("傳送進行中貼上另一個連結時先問讀者，可以改用新的�
   // 再貼一次，改用新的連結
   await pasteInAddressBar(receiver, second);
   await receiver.getByRole("button", { name: "改用新的連結" }).click();
-  await expect(receiver.getByTestId("remote-status")).toContainText("按「加入」之後才會連線");
+  await expect(receiver.getByTestId("remote-invite")).toContainText("按下「加入」才會連線");
   // 原本的送出端收到對方離開
   await expect(sender.getByTestId("remote-status")).toContainText("對方已經離開", { timeout: 20_000 });
   await other.close();
@@ -220,7 +220,7 @@ test("暫存區沒有檔案也能產生連結，連上之後只互傳文字訊�
   await expect(sender.getByTestId("remote-privacy")).toBeVisible();
   await sender.getByRole("button", { name: "產生連結", exact: true }).click();
   await receiver.goto(await sender.getByTestId("remote-link").inputValue());
-  await expect(receiver.getByTestId("remote-status")).toContainText("連上之後也能互傳文字訊息、視訊通話");
+  await expect(receiver.getByTestId("remote-invite")).toContainText("連上之後也能互傳文字訊息、視訊通話");
   await receiver.getByRole("button", { name: "加入", exact: true }).click();
   for (const page of [sender, receiver]) await expect(page.getByTestId("remote-status")).toHaveText("已經連上，可以互傳文字訊息或視訊通話。", { timeout: 20_000 });
   await expect(receiver.getByTestId("remote-confirm").locator("strong")).toHaveText(await sender.getByTestId("remote-confirm").locator("strong").innerText());
