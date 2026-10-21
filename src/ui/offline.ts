@@ -5,7 +5,9 @@ import type { TraySnapshot } from "../core/tray.ts";
 // 開發伺服器不註冊，免得改了程式卻一直拿到舊的。
 //
 // 換版本要重新載入頁面，暫存區只在記憶體裡，重新載入就沒了。所以：
-// - 暫存區是空的、畫面上也沒有填到一半的東西（idle）時，等分頁切到背景就直接換，不出現提示
+// - 暫存區是空的、畫面上也沒有填到一半的東西（idle）時不出現提示。讀者還沒操作過這個頁面就直接換，
+//   已經在操作的等分頁切到背景再換，換上之後都顯示「已換上新版本」
+// - 瀏覽器只在整頁載入時檢查 sw.js，站內換頁不算。分頁切回前景時、開著的分頁每小時另外檢查一次
 // - 有檔案時，讀者按下重新載入，新版本接手之後先把暫存區交給它在記憶體裡暫放，重新載入的頁面再拿回來。
 //   暫放失敗就不重新載入，提示讀者先下載需要的檔案
 
@@ -26,8 +28,20 @@ export interface Carry {
 
 // 讀者按了「重新載入」（或沒有東西會遺失、分頁切到背景）才換版本
 let requested = false;
+// 讀者在這個頁面按過、打過字沒有。還沒有的話，換版本時畫面閃一下不會打斷任何事
+let touched = false;
+if (typeof window !== "undefined") {
+  const touch = () => {
+    touched = true;
+    window.removeEventListener("pointerdown", touch, true);
+    window.removeEventListener("keydown", touch, true);
+  };
+  window.addEventListener("pointerdown", touch, true);
+  window.addEventListener("keydown", touch, true);
+}
+// 開著的分頁多久檢查一次新版本
+const CHECK_MS = 60 * 60 * 1000;
 let reloading = false;
-let silent = false;
 
 // 等新版本接手的上限。等著的那一版已經被更新的一版取代、或瀏覽器沒有切換時等不到，
 // 超過這個時間就交給目前的版本暫放、重新載入，按鈕不會停在那裡沒有反應
@@ -74,7 +88,9 @@ export const isReloading = () => reloading;
 function reload(carried: boolean) {
   if (reloading) return;
   reloading = true;
-  history.replaceState({ ...(history.state ?? {}), [UPDATED]: !silent, [CARRIED]: carried }, "");
+  // 自動換上的也顯示「已換上新版本」。原本不顯示，讀者重新整理之後還是舊版、切出去再回來才換好，
+  // 不知道中間發生了什麼（2026-10-22）
+  history.replaceState({ ...(history.state ?? {}), [UPDATED]: true, [CARRIED]: carried }, "");
   location.reload();
 }
 
@@ -111,7 +127,6 @@ export function useOffline(idle: boolean, carry: Carry): OfflineState {
   const start = async (quiet: boolean) => {
     if (requested) return;
     requested = true;
-    silent = quiet;
     if (!quiet) setUpdating(true);
     // 按下時再查一次，提示出現之後可能又有更新的一版裝好了
     const reg = await navigator.serviceWorker.getRegistration(import.meta.env.BASE_URL).catch(() => undefined);
@@ -151,8 +166,16 @@ export function useOffline(idle: boolean, carry: Carry): OfflineState {
         });
       });
     };
+    let registration: ServiceWorkerRegistration | null = null;
+    // 檢查新版本。沒有網路時會失敗，下次再試
+    const check = () => {
+      if (!document.hidden) void registration?.update().catch(() => {});
+    };
+    const timer = setInterval(check, CHECK_MS);
+    document.addEventListener("visibilitychange", check);
     sw.register(`${import.meta.env.BASE_URL}sw.js`, { scope: import.meta.env.BASE_URL })
       .then((reg) => {
+        registration = reg;
         watch(reg);
         return sw.ready;
       })
@@ -160,14 +183,16 @@ export function useOffline(idle: boolean, carry: Carry): OfflineState {
       .catch(() => {});
     return () => {
       alive = false;
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", check);
     };
   }, []);
 
-  // 沒有東西會遺失時，等分頁切到背景再換，讀者回來時已經是新版本
+  // 沒有東西會遺失時不出現提示。讀者還沒操作過就直接換，已經在操作的等分頁切到背景再換，回來時已經是新版本
   useEffect(() => {
     if (!waiting || !idle) return;
     const check = () => {
-      if (document.hidden) void start(true);
+      if (document.hidden || !touched) void start(true);
     };
     check();
     document.addEventListener("visibilitychange", check);
