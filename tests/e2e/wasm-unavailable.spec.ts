@@ -2,6 +2,7 @@ import type { Page } from "@playwright/test";
 import { existsSync, readFileSync } from "node:fs";
 import { GENERATED } from "../global-setup.ts";
 import { wav } from "../helpers/audio.ts";
+import { textPdf } from "../helpers/text-pdf.ts";
 import { expect, test } from "./guard.ts";
 
 // iPhone、iPad 與 Mac 的鎖定模式會關掉 WebAssembly（src/ui/wasm.ts）。這裡把頁面的 WebAssembly
@@ -59,4 +60,16 @@ test("QR code 與條碼讀取：說明只能讀 QR code，QR code 照樣讀得�
   await expect(page.getByText("只能讀 QR code，讀不了登機證與商品條碼")).toBeVisible();
   await page.getByTestId("qr-input").setInputFiles({ name: "q.png", mimeType: "image/png", buffer: Buffer.from(qrPng(encodeQr("https://anoni.net/", "M"), 6)) });
   await expect(page.getByTestId("qr-text")).toHaveText("https://anoni.net/");
+});
+
+test("遮蔽 PDF：有文字層時不必辨識，照樣找得到個資", async ({ page }) => {
+  await page.goto("./redact/");
+  await page.getByTestId("file-input").setInputFiles({ name: "contact.pdf", mimeType: "application/pdf", buffer: await textPdf() });
+  await expect(page.getByText("第 1 頁，共 1 頁")).toBeVisible({ timeout: 15000 });
+  await expect(page.getByTestId("redact-auto-status")).toContainText("自動尋找在你的瀏覽器裡執行", { timeout: 15000 });
+  await page.getByRole("button", { name: "找電話、Email 等個資" }).click();
+  await expect(page.getByTestId("redact-auto-status")).toHaveText("加了 2 個框，請逐一確認，框錯的點一下就會拿掉。");
+  // 找人臉一定要 WebAssembly
+  await page.getByRole("button", { name: "找人臉" }).click();
+  await expect(page.getByTestId("redact-auto-status")).toContainText("關掉了 WebAssembly");
 });

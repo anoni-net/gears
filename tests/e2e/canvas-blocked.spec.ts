@@ -3,6 +3,7 @@ import { encodeQr, qrPng } from "../../src/tools/qrcode/index.ts";
 import { expect, test } from "./guard.ts";
 import { existsSync, readFileSync } from "node:fs";
 import { SCENES_WEBM } from "../global-setup.ts";
+import { textPdf } from "../helpers/text-pdf.ts";
 
 // Tor Browser 在讀者允許之前，讀取 canvas 的像素一律得到亂數（src/ui/canvas-access.ts）。
 // 這裡把 getImageData 換成回傳亂數，window.allowCanvas() 模擬讀者在網址列按了允許
@@ -121,4 +122,13 @@ test("影片的關鍵影格：讀不到 canvas 時說明，允許之後按「再
   await allow(page);
   await page.getByRole("button", { name: "再試一次" }).click();
   await expect(page.getByTestId("frames-status")).toContainText(/挑出 \d+ 格/, { timeout: 60_000 });
+});
+
+test("遮蔽 PDF：讀文字層不必讀 canvas，讀者還沒允許也找得到個資", async ({ page }) => {
+  await page.goto("./redact/");
+  await page.getByTestId("file-input").setInputFiles({ name: "contact.pdf", mimeType: "application/pdf", buffer: await textPdf() });
+  await expect(page.getByText("第 1 頁，共 1 頁")).toBeVisible({ timeout: 15000 });
+  await expect(page.getByTestId("redact-auto-status")).toContainText("自動尋找在你的瀏覽器裡執行", { timeout: 15000 });
+  await page.getByRole("button", { name: "找電話、Email 等個資" }).click();
+  await expect(page.getByTestId("redact-auto-status")).toHaveText("加了 2 個框，請逐一確認，框錯的點一下就會拿掉。");
 });
