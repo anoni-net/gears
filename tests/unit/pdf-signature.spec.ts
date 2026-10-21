@@ -3,7 +3,8 @@ import { examine } from "../../src/tools/verify/examine.ts";
 import { readFileSync } from "node:fs";
 import * as pkijs from "pkijs";
 import { pemToDer, verifyPdfSignature } from "../../src/tools/verify/pdf-signature.ts";
-import { makeCert, signedPdf } from "../helpers/signed-pdf.ts";
+import { type TestCert, makeCert, signedPdf } from "../helpers/signed-pdf.ts";
+import type { TrustStore } from "../../src/tools/verify/pdf-signature.ts";
 
 const day = 86_400_000;
 const now = Date.now();
@@ -72,6 +73,88 @@ test("簽署者的憑證已經過期，簽章裡寫的簽署時間還在效期�
   const { root, leaf } = await setup(new Date(now - 30 * day));
   const result = await check(await signedPdf(leaf, { signedAt: new Date(now - 60 * day) }), [root.der]);
   expect(result).toMatchObject({ signature: "valid", chain: "trusted-at-signing" });
+});
+
+async function tsaSetup() {
+  const tsaRoot = await makeCert({ cn: "Gears Test TSA Root", ca: true, serial: 11, from: new Date(now - 3650 * day), to: new Date(now + 3650 * day) });
+  const tsa = await makeCert({ cn: "Gears Test TSA", issuer: tsaRoot, serial: 12, from: new Date(now - 3650 * day), to: new Date(now + 3650 * day) });
+  return { tsaRoot, tsa };
+}
+
+async function verify(pdf: Uint8Array, trust: TrustStore) {
+  const sig = (await examine(pdf, "pdf")).signatures[0]!;
+  return verifyPdfSignature(pdf, { byteRange: sig.byteRange!, contents: sig.contents! }, trust);
+}
+
+test("附在簽章上的時間戳記：時間戳記服務接到內建的根憑證", async () => {
+  const { root, leaf } = await setup();
+  const { tsaRoot, tsa } = await tsaSetup();
+  const at = new Date(now - day);
+  const result = await verify(await signedPdf(leaf, { timestamp: { tsa, at } }), { roots: [root.der, tsaRoot.der], intermediates: [] });
+  expect(result).toMatchObject({ kind: "signature", signature: "valid", chain: "trusted" });
+  expect(result.timestamp).toMatchObject({ imprint: "match", signature: "valid", chain: "trusted", time: at.toISOString() });
+  expect(result.timestamp!.tsa).toContain("CN=Gears Test TSA");
+  expect(result.timestamp!.root).toContain("CN=Gears Test TSA Root");
+});
+
+test("時間戳記服務的根憑證只在時間戳記服務的清單裡：照樣採信", async () => {
+  const { root, leaf } = await setup();
+  const { tsaRoot, tsa } = await tsaSetup();
+  const pdf = await signedPdf(leaf, { timestamp: { tsa, at: new Date(now - day) } });
+  expect((await verify(pdf, { roots: [root.der], intermediates: [], tsaRoots: [tsaRoot.der] })).timestamp!.chain).toBe("trusted");
+  // 簽署者的憑證鏈不採用時間戳記服務的清單
+  expect((await verify(await signedPdf(tsa), { roots: [], intermediates: [], tsaRoots: [tsaRoot.der] })).chain).toBe("untrusted");
+});
+
+test("簽署者的憑證已經過期，時間戳記證明的時間在效期內", async () => {
+  const { root, leaf } = await setup(new Date(now - 30 * day));
+  const { tsaRoot, tsa } = await tsaSetup();
+  // 簽署端自己填的時間在過期之後，只有時間戳記能證明是過期之前簽的
+  const pdf = await signedPdf(leaf, { signedAt: new Date(now), timestamp: { tsa, at: new Date(now - 60 * day) } });
+  const result = await verify(pdf, { roots: [root.der, tsaRoot.der], intermediates: [] });
+  expect(result).toMatchObject({ signature: "valid", chain: "trusted-at-timestamp" });
+  expect(result.root).toContain("CN=Gears Test Root");
+});
+
+test("時間戳記服務不受信任：不採用它的時間，退回簽章裡寫的時間", async () => {
+  const { root, leaf } = await setup(new Date(now - 30 * day));
+  const { tsa } = await tsaSetup();
+  const pdf = await signedPdf(leaf, { signedAt: new Date(now - 60 * day), timestamp: { tsa, at: new Date(now - 60 * day) } });
+  const result = await verify(pdf, { roots: [root.der], intermediates: [] });
+  expect(result.timestamp).toMatchObject({ imprint: "match", signature: "valid", chain: "untrusted" });
+  expect(result.timestamp!.root).toBeUndefined();
+  expect(result.chain).toBe("trusted-at-signing");
+});
+
+test("時間戳記的雜湊值跟簽章值對不上", async () => {
+  const { root, leaf } = await setup(new Date(now - 30 * day));
+  const { tsaRoot, tsa } = await tsaSetup();
+  const pdf = await signedPdf(leaf, { signedAt: new Date(now), timestamp: { tsa, at: new Date(now - 60 * day), wrong: true } });
+  const result = await verify(pdf, { roots: [root.der, tsaRoot.der], intermediates: [] });
+  expect(result.timestamp).toMatchObject({ imprint: "mismatch", chain: "untrusted" });
+  expect(result.chain).toBe("untrusted");
+});
+
+async function documentTimestamp(tsa: TestCert, tamper = false) {
+  const pdf = await signedPdf(tsa, { document: true, tamper, timestamp: { tsa, at: new Date(now - day) } });
+  expect((await examine(pdf, "pdf")).signatures[0]!.subFilter).toBe("ETSI.RFC3161");
+  return pdf;
+}
+
+test("整份文件的時間戳記", async () => {
+  const { tsaRoot, tsa } = await tsaSetup();
+  const result = await verify(await documentTimestamp(tsa), { roots: [], intermediates: [], tsaRoots: [tsaRoot.der] });
+  expect(result).toMatchObject({ kind: "document", integrity: "intact", signature: "valid", chain: "trusted" });
+  expect(result.signer).toContain("CN=Gears Test TSA");
+  expect(result.timestamp!.time).toBe(new Date(now - day).toISOString());
+  expect((await verify(await documentTimestamp(tsa), { roots: [], intermediates: [] })).chain).toBe("untrusted");
+});
+
+test("整份文件的時間戳記：蓋完之後內容被改過", async () => {
+  const { tsaRoot, tsa } = await tsaSetup();
+  const result = await verify(await documentTimestamp(tsa, true), { roots: [], intermediates: [], tsaRoots: [tsaRoot.der] });
+  expect(result).toMatchObject({ kind: "document", integrity: "changed", signature: "invalid" });
+  expect(result.timestamp!.imprint).toBe("mismatch");
 });
 
 test("內建的 GRCA 根憑證與下屬憑證機構：pkijs 讀得出來，效期內的都接得到根憑證", async () => {

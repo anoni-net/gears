@@ -1,6 +1,6 @@
 import type * as Pkijs from "pkijs";
 
-// PDF 數位簽章的驗證（anoni-net/gears#128 的第一、二層），用 pkijs（BSD-3-Clause）解析 CMS 與 X.509，
+// PDF 數位簽章的驗證（anoni-net/gears#128），用 pkijs（BSD-3-Clause）解析 CMS 與 X.509，
 // 密碼運算交給瀏覽器的 crypto.subtle：
 //
 // 1. 簽章本身：依 /ByteRange 取出簽署的範圍算摘要，比對 CMS 裡的 messageDigest，再用簽署者憑證的
@@ -8,6 +8,9 @@ import type * as Pkijs from "pkijs";
 // 2. 簽署者：用簽章附的憑證與內建的中繼憑證建憑證鏈，接到內建的根憑證（台灣政府憑證總管理中心
 //    GRCA 的三代根憑證）才算確認身分。現在驗不過時，再用簽章裡簽署端自己填的時間驗一次：憑證
 //    過期之後簽的、還是過期之前簽的，沒有時間戳記就分不出來，畫面上寫明
+// 3. 時間戳記（RFC 3161）：附在簽章上的（證明簽章值在那個時間已經存在），或整份文件的時間戳記
+//    （/SubFilter 為 ETSI.RFC3161，直接證明簽署的範圍）。驗時間戳記服務的簽章與憑證鏈，接到內建的
+//    根憑證才採信，簽署者的憑證現在過期時，用時間戳記證明的時間再驗一次
 //
 // 只給線索：簽章有效不代表文件的內容是真的，法律上的效力也不在這裡判斷
 
@@ -19,6 +22,16 @@ export interface PdfSignatureInput {
 export interface TrustStore {
   roots: Uint8Array[]; // DER
   intermediates: Uint8Array[];
+  tsaRoots?: Uint8Array[]; // 時間戳記服務另外採信的根憑證（C2PA 正式清單裡的時間戳記服務清單）
+}
+
+export interface TimestampCheck {
+  time?: string; // 時間戳記證明的時間（genTime）
+  tsa?: string; // 時間戳記服務憑證的主體
+  imprint: "match" | "mismatch"; // 時間戳記裡的雜湊值跟它證明的資料一不一樣
+  signature: "valid" | "invalid";
+  chain: "trusted" | "untrusted";
+  root?: string;
 }
 
 export interface PdfSignatureCheck {
@@ -30,8 +43,10 @@ export interface PdfSignatureCheck {
   validFrom?: string;
   validTo?: string;
   signingTime?: string; // 簽署端自己填的時間（signingTime），不是時間戳記
-  chain: "trusted" | "trusted-at-signing" | "untrusted" | "not-checked";
+  chain: "trusted" | "trusted-at-timestamp" | "trusted-at-signing" | "untrusted" | "not-checked";
   root?: string; // 憑證鏈接到的根憑證
+  kind?: "signature" | "document"; // document：整份文件的時間戳記，簽署者就是時間戳記服務
+  timestamp?: TimestampCheck;
 }
 
 type Lib = typeof Pkijs;
@@ -108,6 +123,52 @@ async function chainAt(lib: Lib, signer: Pkijs.Certificate, certs: Pkijs.Certifi
   }
 }
 
+const parseCert = (lib: Lib, der: Uint8Array) => {
+  try {
+    return lib.Certificate.fromBER(toBuffer(der));
+  } catch {
+    return undefined;
+  }
+};
+const certsOf = (lib: Lib, list: Uint8Array[] = []) => list.map((d) => parseCert(lib, d)).filter((c): c is Pkijs.Certificate => !!c);
+const embeddedOf = (lib: Lib, signed: Pkijs.SignedData) => (signed.certificates ?? []).filter((c): c is Pkijs.Certificate => c instanceof lib.Certificate);
+
+// 時間戳記（TimeStampToken）是一份 CMS，內容是 TSTInfo：雜湊演算法、它證明的資料的雜湊值與時間。
+// pkijs 驗簽章時一併比對雜湊值（data 是它證明的資料）
+async function verifyToken(lib: Lib, token: Pkijs.SignedData, covered: Uint8Array, trust: TrustStore): Promise<{ check: TimestampCheck; at?: Date }> {
+  const check: TimestampCheck = { imprint: "match", signature: "invalid", chain: "untrusted" };
+  let at: Date | undefined;
+  try {
+    const tst = lib.TSTInfo.fromBER(toBuffer(new Uint8Array(token.encapContentInfo.eContent!.valueBlock.valueHexView)));
+    at = tst.genTime;
+    check.time = at.toISOString();
+  } catch {
+    return { check };
+  }
+  let tsaCert: Pkijs.Certificate | null | undefined;
+  try {
+    const result = await token.verify({ signer: 0, data: toBuffer(covered), extendedMode: true, checkChain: false });
+    tsaCert = result.signerCertificate;
+    check.signature = result.signatureVerified ? "valid" : "invalid";
+  } catch (e) {
+    const err = e as { message?: string; signerCertificate?: Pkijs.Certificate | null };
+    tsaCert = err.signerCertificate;
+    if (/TSTInfo verification is failed/.test(err.message ?? "")) check.imprint = "mismatch";
+  }
+  if (!tsaCert) return { check, at };
+  check.tsa = nameText(tsaCert.subject);
+  if (check.signature !== "valid" || check.imprint !== "match") return { check, at };
+  const roots = [...certsOf(lib, trust.roots), ...certsOf(lib, trust.tsaRoots)];
+  const cas = [...embeddedOf(lib, token), ...certsOf(lib, trust.intermediates)];
+  // 時間戳記服務的憑證也可能已經過期，看它簽發當時
+  const path = (await chainAt(lib, tsaCert, cas, roots, new Date())) ?? (at ? await chainAt(lib, tsaCert, cas, roots, at) : undefined);
+  if (path) {
+    check.chain = "trusted";
+    check.root = nameText(path.at(-1)!.subject);
+  }
+  return { check, at };
+}
+
 export async function verifyPdfSignature(bytes: Uint8Array, input: PdfSignatureInput, trust: TrustStore): Promise<PdfSignatureCheck> {
   const lib: Lib = await import("pkijs");
   const asn1: typeof import("asn1js") = await import("asn1js");
@@ -126,6 +187,20 @@ export async function verifyPdfSignature(bytes: Uint8Array, input: PdfSignatureI
   const data = signedBytes(bytes, input.byteRange);
   const signerInfo = signed.signerInfos[0];
   if (!data || !signerInfo) return out;
+
+  // 整份文件的時間戳記：簽署者是時間戳記服務，證明簽署的範圍在那個時間已經存在
+  if (signed.encapContentInfo.eContentType === "1.2.840.113549.1.9.16.1.4") {
+    const { check } = await verifyToken(lib, signed, data, trust);
+    out.kind = "document";
+    out.timestamp = check;
+    out.integrity = check.imprint === "match" ? "intact" : "changed";
+    out.signature = check.imprint === "match" ? check.signature : "invalid";
+    out.signer = check.tsa;
+    out.chain = check.chain;
+    out.root = check.root;
+    return out;
+  }
+  out.kind = "signature";
 
   const time = signingTime(signerInfo);
   if (time) out.signingTime = time.toISOString();
@@ -154,19 +229,29 @@ export async function verifyPdfSignature(bytes: Uint8Array, input: PdfSignatureI
   out.validTo = signerCert.notAfter.value.toISOString();
   if (out.signature !== "valid") return out;
 
-  // 第二層：憑證鏈接到內建的根憑證。先看現在，驗不過再看簽署端自己填的時間
-  const parse = (der: Uint8Array) => {
+  // 第三層：附在簽章上的時間戳記，證明簽章值（signerInfo.signature）在那個時間已經存在
+  let trustedAt: Date | undefined;
+  const tokenAttr = signerInfo.unsignedAttrs?.attributes.find((a) => a.type === "1.2.840.113549.1.9.16.2.14");
+  if (tokenAttr?.values[0]) {
     try {
-      return lib.Certificate.fromBER(toBuffer(der));
+      const info = new lib.ContentInfo({ schema: tokenAttr.values[0] });
+      const { check, at } = await verifyToken(lib, new lib.SignedData({ schema: info.content }), new Uint8Array(signerInfo.signature.valueBlock.valueHexView), trust);
+      out.timestamp = check;
+      if (check.chain === "trusted") trustedAt = at;
     } catch {
-      return undefined;
+      out.timestamp = { imprint: "mismatch", signature: "invalid", chain: "untrusted" };
     }
-  };
-  const roots = trust.roots.map(parse).filter((c): c is Pkijs.Certificate => !!c);
-  const embedded = (signed.certificates ?? []).filter((c): c is Pkijs.Certificate => c instanceof lib.Certificate);
-  const intermediates = [...embedded, ...trust.intermediates.map(parse).filter((c): c is Pkijs.Certificate => !!c)];
+  }
+
+  // 第二層：憑證鏈接到內建的根憑證。先看現在，驗不過再看時間戳記證明的時間，最後才看簽署端自己填的
+  const roots = certsOf(lib, trust.roots);
+  const intermediates = [...embeddedOf(lib, signed), ...certsOf(lib, trust.intermediates)];
   let path = await chainAt(lib, signerCert, intermediates, roots, new Date());
   out.chain = path ? "trusted" : "untrusted";
+  if (!path && trustedAt) {
+    path = await chainAt(lib, signerCert, intermediates, roots, trustedAt);
+    if (path) out.chain = "trusted-at-timestamp";
+  }
   if (!path && time) {
     path = await chainAt(lib, signerCert, intermediates, roots, time);
     if (path) out.chain = "trusted-at-signing";

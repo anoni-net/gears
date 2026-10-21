@@ -1,5 +1,6 @@
 import { EXTENSION, type Format } from "../../core/bytes.ts";
 import type { Evidence, PersonRole, TimeEntry } from "./examine.ts";
+import type { PdfSignatureCheck } from "./pdf-signature.ts";
 import type { TimeValue } from "./times.ts";
 
 // 把一批檔案的線索放在一起：時間排成一條線、同一個值出現在哪些檔案，再比對出需要留意的
@@ -40,7 +41,8 @@ export type WarningCode =
   | "c2pa-changed"
   | "c2pa-invalid"
   | "c2pa-revoked"
-  | "pdf-signature-invalid";
+  | "pdf-signature-invalid"
+  | "pdf-timestamp-invalid";
 
 export interface Warning {
   code: WarningCode;
@@ -132,6 +134,9 @@ function fileWarnings(f: CaseFile): Warning[] {
   if (ev.signatures.length && !ev.signatures.some((s) => s.coversWhole)) out.push({ code: "signed-then-modified", files: [f.index] });
   // 簽章跟簽署的內容對不上：簽完之後涵蓋的範圍被改過，或簽章本身被改過
   if (ev.signatures.some((s) => s.check?.signature === "invalid")) out.push({ code: "pdf-signature-invalid", files: [f.index] });
+  // 附在簽章上的時間戳記驗不過。整份文件的時間戳記對不上時，簽章本身就算驗不過，列在上一項
+  const badStamp = (c?: PdfSignatureCheck) => c?.kind === "signature" && !!c.timestamp && (c.timestamp.imprint === "mismatch" || c.timestamp.signature === "invalid");
+  if (ev.signatures.some((s) => badStamp(s.check))) out.push({ code: "pdf-timestamp-invalid", files: [f.index] });
   if (ev.revisions.length) out.push({ code: "pdf-revisions", files: [f.index], value: String(ev.revisions.length + 1) });
   if (ev.docCheck?.connect) out.push({ code: "doc-connects", files: [f.index], value: String(ev.docCheck.connect) });
   else if (ev.docCheck?.code) out.push({ code: "doc-code", files: [f.index] });
