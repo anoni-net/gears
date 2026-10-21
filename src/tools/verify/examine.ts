@@ -1,13 +1,14 @@
 import type * as PdfLib from "pdf-lib";
 import type { Format } from "../../core/bytes.ts";
 import type { Finding } from "../../core/tool.ts";
-import { decodeUtf8, walkXml } from "../../core/xml.ts";
+import { decodeUtf8, unescapeXml, walkXml } from "../../core/xml.ts";
 import { entryData, readZip } from "../../core/zip.ts";
 import { type Note, type Verdict, assess } from "../email/assess.ts";
 import { parseEmail } from "../email/parse.ts";
 import { CHECK_FORMATS, checkDocument } from "../doc-check/index.ts";
 import { extractExif } from "../redact/keep-exif.ts";
 import { parseExif } from "../strip-metadata/exif.ts";
+import { IPTC_EXT, type Provenance, TC260, emptyProvenance, fromPngTexts, hasC2pa, parseA1111, parseTc260, pngTexts, type Tc260Label } from "./provenance.ts";
 import { type TimeValue, anyTime, exifTime, gpsTime, isoTime, pdfTime } from "./times.ts";
 
 // 查證：讀出檔案裡可以用來驗證的資訊。跟清除中繼資料讀的是同一批欄位，清除時當成風險，
@@ -53,6 +54,7 @@ export interface Evidence {
   email?: EmailEvidence;
   // 文件打開時會連線的位址與會執行的程式各有幾項（文件開啟前檢查，src/tools/doc-check/）
   docCheck?: { connect: number; code: number };
+  provenance?: Provenance; // 來源標示（provenance.ts），有找到才有
 }
 
 // 信件（.eml）：寄件驗證的結果、主旨與附件。解析與判斷跟「信件檢查」共用（src/tools/email/）
@@ -74,6 +76,14 @@ function addTime(ev: Evidence, kind: TimeKind, source: TimeSource, value: TimeVa
   if (!value) return;
   if (ev.times.some((t) => t.kind === kind && t.sort === value.sort && t.text === value.text && t.offset === value.offset)) return;
   ev.times.push({ ...value, kind, source, note });
+}
+
+const prov = (ev: Evidence) => (ev.provenance ??= emptyProvenance());
+
+function addTc260(ev: Evidence, label: Tc260Label | undefined) {
+  if (!label) return;
+  const same = (a: Tc260Label) => JSON.stringify({ ...a, where: "" }) === JSON.stringify({ ...label, where: "" });
+  if (!ev.provenance?.tc260.some(same)) prov(ev).tc260.push(label);
 }
 
 const addPerson = (ev: Evidence, role: PersonRole, value: string | undefined) =>
@@ -116,6 +126,8 @@ export function readXmp(ev: Evidence, packet: string) {
     else if (ns === NS.exif && local === "DateTimeOriginal") addTime(ev, "taken", "xmp", isoTime(value));
     else if (ns === NS.xmp && local === "CreatorTool") addUnique(ev.software, value.slice(0, 120));
     else if (ns === NS.pdf && local === "Producer") addUnique(ev.software, value.slice(0, 120));
+    else if (ns === IPTC_EXT) iptc(ev, local, value);
+    else if (ns === TC260 && local === "AIGC") addTc260(ev, parseTc260(value, "xmp"));
   };
   try {
     walkXml(packet, (el, text) => {
@@ -127,7 +139,8 @@ export function readXmp(ev: Evidence, packet: string) {
           if (inHistory && a.ns === NS.stEvt) {
             if (event) event[a.local] = a.value;
           } else {
-            field(a.ns, a.local, a.value);
+            // 屬性的值還沒解開跳脫，GB 45438 的 JSON 寫成屬性時引號是 &quot;
+            field(a.ns, a.local, a.ns === IPTC_EXT || a.ns === TC260 ? unescapeXml(a.value) : a.value);
           }
         }
         return;
@@ -151,6 +164,17 @@ export function readXmp(ev: Evidence, packet: string) {
   if (events.length) ev.traces.push({ code: "xmp-history", count: events.length });
 }
 
+// IPTC 的數位來源類型與 2025.1 加入的四個 AI 欄位
+function iptc(ev: Evidence, local: string, value: string) {
+  const text = value.trim();
+  if (!text) return;
+  if (local === "DigitalSourceType") prov(ev).digitalSource = text.split("/").filter(Boolean).at(-1)?.slice(0, 80);
+  else if (local === "AISystemUsed") prov(ev).aiSystem = text.slice(0, 200);
+  else if (local === "AISystemVersionUsed") prov(ev).aiVersion = text.slice(0, 80);
+  else if (local === "AIPromptInformation") prov(ev).prompt = text.slice(0, 4000);
+  else if (local === "AIPromptWriterName") prov(ev).promptWriter = text.slice(0, 120);
+}
+
 // --- 照片：EXIF ---
 
 const PHOTO: Format[] = ["jpeg", "png", "webp", "heic", "avif"];
@@ -168,6 +192,13 @@ function examinePhoto(ev: Evidence, bytes: Uint8Array, format: Format) {
   addUnique(ev.serials, info.serial);
   addPerson(ev, "owner", info.owner);
   addUnique(ev.software, info.software);
+  // UserComment 可能是 GB 45438 的隱式標識，或 Stable Diffusion WebUI 寫進 JPEG、WebP 的生成參數
+  if (info.userComment) {
+    const label = parseTc260(info.userComment, "exif");
+    const generator = label ? undefined : parseA1111(info.userComment);
+    addTc260(ev, label);
+    if (generator) prov(ev).generators.push(generator);
+  }
   if (info.latitude !== undefined && info.longitude !== undefined) {
     addUnique(ev.locations, { lat: info.latitude, lon: info.longitude }, (a, b) => a.lat === b.lat && a.lon === b.lon);
   }
@@ -391,6 +422,16 @@ export async function examine(bytes: Uint8Array, format: Format, findings: Findi
     }
   }
   if (format !== "pdf" && format !== "eml") for (const packet of xmpPackets(bytes)) readXmp(ev, packet);
+  if (format === "png") {
+    try {
+      const found = fromPngTexts(await pngTexts(bytes));
+      for (const g of found.generators) if (!ev.provenance?.generators.some((x) => x.tool === g.tool)) prov(ev).generators.push(g);
+      for (const label of found.tc260) addTc260(ev, label);
+    } catch {
+      // 讀不完整的 chunk 就略過
+    }
+  }
+  if (hasC2pa(bytes, format)) prov(ev).c2pa = true;
   if (!PHOTO.includes(format) && format !== "pdf" && format !== "eml" && !OOXML.includes(format) && !ODF.includes(format)) fromFindings(ev, findings, format);
   ev.times.sort((a, b) => a.sort - b.sort);
   return ev;

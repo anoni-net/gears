@@ -7,13 +7,17 @@ const bytes = (text: string) => new TextEncoder().encode(text);
 
 export interface TiffValue {
   tag: number;
-  type: 2 | 3 | 4 | 5; // ASCII、SHORT、LONG、RATIONAL
-  value: string | number[]; // RATIONAL 寫成 [分子, 分母, 分子, 分母, …]
+  type: 2 | 3 | 4 | 5 | 7; // ASCII、SHORT、LONG、RATIONAL、UNDEFINED
+  value: string | number[] | Uint8Array; // RATIONAL 寫成 [分子, 分母, 分子, 分母, …]，UNDEFINED 是位元組
 }
 
 const SIZE = { 2: 1, 3: 2, 4: 4, 5: 8 } as const;
 
 function valueBytes(v: TiffValue): { data: Uint8Array; count: number } {
+  if (v.type === 7) {
+    const data = v.value as Uint8Array;
+    return { data, count: data.length };
+  }
   if (v.type === 2) {
     const data = bytes(`${v.value as string}\0`);
     return { data, count: data.length };

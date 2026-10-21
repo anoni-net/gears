@@ -204,6 +204,7 @@ Tesseract 的 WebAssembly 會把執行紀錄寫到標準錯誤輸出，瀏覽器
 - 時間線：所有檔案的時間排在一起，標出是哪一種時間、來源與時區。沒有時區的不猜，依字面排序，畫面上說明（`times.ts`）
 - 裝置、序號、軟體、人名，同一個值出現在哪幾個檔案。位置只列座標，不畫地圖、不換算地址
 - 編輯痕跡：照片內嵌的縮圖跟主圖並排、XMP 的編輯紀錄、Office 與 LibreOffice 的修訂次數與編輯時間、PDF 的數位簽章（只看簽章涵蓋到哪裡，不驗證憑證），以及 PDF 的版本紀錄（見下方）
+- 來源標示（`provenance.ts`，見下方「來源標示」）：IPTC 的數位來源類型與 AI 欄位、GB 45438 的隱式標識、生成工具寫下的參數，以及有沒有 C2PA 內容憑證
 - 需要留意的地方（`summary.ts`）：內容相同、副檔名跟格式不符、修改早於建立、拍攝時間跟 GPS 時間對不上（有時區時差 5 分鐘以上，沒有時區時差距不接近任何真實的時區）、記錄的軟體是影像編輯軟體、簽章之後還有加入內容、PDF 有舊版本
 
 畫面的順序照讀者想問的（2026-10-16 首次試用時回饋全部攤開不好讀）：最上面一行總覽，接著是需要留意的地方，每一項是短標題加一句可能的原因。再來是每個檔案一張卡片，只列開始與最後修改的時間、裝置、軟體、人名、位置與其他痕跡，雜湊值、序號與所有的時間收在「完整資訊」裡。兩個以上的檔案才顯示檔案之間的關聯（出現在兩個以上檔案的值），合併的時間線預設收起來。沒有資料的區塊不顯示。檔案一律用檔名稱呼，不讓讀者在編號之間對照。匯出的紀錄用同一套說法（`src/ui/verify-report.ts`），技術資訊照樣全部寫出。
@@ -217,13 +218,28 @@ PDF 的版本紀錄：每一個 `%%EOF` 是一次存檔的結尾，切到那裡�
 
 測試用的 PDF 由 `tests/helpers/pdf-incremental.ts` 照規格做成真正的增量更新（檔尾接上改過的物件、新的交互參照表與 `/Prev`），poppler 的 `pdfinfo`、`pdftotext` 讀得出兩個版本各自的內容。
 
-只給線索，不下真假的判決：中繼資料很容易改，有矛盾不代表造假，沒有矛盾也不代表是真的，畫面與匯出的紀錄開頭都寫明。誤差分析與 AI 生成偵測的分數常被誤讀成判決，不做。也不提供填入假的中繼資料，假資料跟檔案的解析度、壓縮參數與內部結構對不上，比空白更顯眼。
+只給線索，不下真假的判決：中繼資料很容易改，有矛盾不代表造假，沒有矛盾也不代表是真的，沒有 AI 生成的標示也不代表不是 AI 產生的，畫面與匯出的紀錄開頭都寫明。誤差分析與 AI 生成偵測的分數常被誤讀成判決，不做。來源標示讀的是檔案自己宣告的產生方式，跟 EXIF 的相機型號是同一類線索，不從像素推算分數。也不提供填入假的中繼資料，假資料跟檔案的解析度、壓縮參數與內部結構對不上，比空白更顯眼。
 
 查證紀錄可以下載成 Markdown，開頭是產生的時間（裝置的時鐘與時區）與建置的 commit，接著是雜湊值。也可以放進暫存區（來源記成 `verify`，查證只算讀者自己加入的檔案，所以不會算進這一批），接著用 age 加密。紀錄裡有從檔案讀出來的人名與位置，畫面上提醒讀者小心保管。
 
 查證處理的是整個暫存區，在它的畫面加入檔案時留在原畫面（見「工具模組」的 `tray`）。
 
-照片讀 EXIF（`extractExif` 支援的格式，`parseExif` 補上了拍攝、數位化、修改三種時間與各自的時區、GPS 的 UTC 時間與縮圖的位置），PDF 用 pdf-lib 讀文件資訊、XMP、簽章與舊版本，Office 讀 `docProps/core.xml` 與 `app.xml`，LibreOffice 讀 `meta.xml`，XMP 在其他格式裡用 `<x:xmpmeta` 搜尋。其他格式用加入暫存區時清除中繼資料的檢查結果，MP4、MOV、M4A 的時間是 UTC。單元測試在 `tests/unit/verify.spec.ts`。本機另外用 Pillow 寫入 EXIF 的照片、python-docx 產生的 Word 與 Chromium 列印的 PDF 驗證過。
+照片讀 EXIF（`extractExif` 支援的格式，`parseExif` 補上了拍攝、數位化、修改三種時間與各自的時區、GPS 的 UTC 時間、縮圖的位置與 UserComment），PDF 用 pdf-lib 讀文件資訊、XMP、簽章與舊版本，Office 讀 `docProps/core.xml` 與 `app.xml`，LibreOffice 讀 `meta.xml`，XMP 在其他格式裡用 `<x:xmpmeta` 搜尋。其他格式用加入暫存區時清除中繼資料的檢查結果，MP4、MOV、M4A 的時間是 UTC。單元測試在 `tests/unit/verify.spec.ts`。本機另外用 Pillow 寫入 EXIF 的照片、python-docx 產生的 Word 與 Chromium 列印的 PDF 驗證過。
+
+### 來源標示
+
+越來越多生成服務、相機與編修軟體在檔案裡寫入來源標示，查證把它們讀出來，列在檔案卡片的「來源標示」（規劃見 #127，這是第一階段）：
+
+- IPTC 的數位來源類型（`Iptc4xmpExt:DigitalSourceType`）與 2025.1 加入的 `AISystemUsed`、`AISystemVersionUsed`、`AIPromptInformation`、`AIPromptWriterName`，都在 XMP 裡。數位來源類型的代碼對照 IPTC 的詞彙換成讀得懂的說法（`DIGITAL_SOURCE_TYPES`，含已停用的三個），代碼附在括號裡
+- GB 45438-2025 的隱式標識，照 TC260 的圖片實踐指南（TC260-PG-20259A）讀三個位置：XMP 的 `TC260:AIGC`（命名空間 `http://www.tc260.org.cn/ns/AIGC/1.0/`）、EXIF 的 UserComment 與 PNG 關鍵字為 `AIGC` 的 `tEXt`，後兩者的 JSON 外面多包一層 `{"AIGC":{…}}`。預留欄位有內容時只寫「附有安全防護資訊，還沒有驗證」，SM2 簽章與 SM3 雜湊在第二階段評估
+- 生成工具寫下的參數：Stable Diffusion WebUI 的 `parameters`（JPEG 與 WebP 寫在 EXIF 的 UserComment）、ComfyUI 的 `prompt` 與 `workflow`、NovelAI 的 `Software`、`Source`、`Description` 與 `Comment`。PNG 壓縮過的 `zTXt`、`iTXt` 用 `DecompressionStream` 解開
+- C2PA 內容憑證，位置照官方的 c2pa-rs：JPEG 的 APP11（JUMBF 的 `jumd` 類型以 `c2pa` 開頭）、PNG 的 `caBX`、WebP、WAV 與 AVI 的 `C2PA` chunk、HEIF、AVIF、MP4、MOV 與 M4A 最上層的 C2PA `uuid` box、JPEG XL 的 `jumb` box、TIFF 的標籤 `0xCD41`、GIF 的 `C2PA_GIF` 延伸。這一版只辨識有沒有，畫面上寫明還沒驗證簽章。JPEG XL 用 brotli 壓縮過的 `brob` 讀不到標籤，不算
+
+除了 C2PA，這些標示都沒有簽章，誰都能寫入或修改，卡片上的說明寫明。提示詞在卡片上只列前 120 個字，完整的收在「完整資訊」，匯出的紀錄全部寫出。
+
+GB 45438 的服務提供者編碼（TC260-PG-20252A，27 碼）拆成主體類型、綁定方式、號碼與服務擴展碼。個人的編碼以明文帶著身分證號、手機號碼、護照號碼或網號，查證照實列出，不遮起來：讀者手上可能是收到別人的檔案，也可能是自己的檔案，兩種情況都要先看到檔案裡實際有什麼，再決定要不要清除中繼資料。`Label` 的 1 由實踐指南的範例確認，2 與 3 的意思取自廠商的實作說明，標準的附錄 E 讀過之後再核對。TC260 的實踐指南聲明未經授權不得抄襲或翻譯，程式與文件只寫相容實作需要的欄位名稱與位置。
+
+單元測試在 `tests/unit/verify-provenance.spec.ts`，服務提供者編碼與號碼都是編出來的，不沿用指南裡的範例。
 
 ## 面對面傳送
 
