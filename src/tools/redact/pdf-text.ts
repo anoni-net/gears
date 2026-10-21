@@ -1,9 +1,9 @@
 import type { Box } from "./index.ts";
-import { type PiiMatch, findPiiInText } from "./pii.ts";
+import { type PiiMatch, findPiiInLineTexts } from "./pii.ts";
 
 // PDF 遮蔽的自動尋找改讀 PDF 本身的文字層，不必先畫成圖片再辨識（src/ui/redact-detect.ts 的
 // findPdfText）。pdf.js 的 getTextContent() 給出一段一段的文字與位置，這裡排成一行一行、估出每個字
-// 的範圍，再用跟辨識結果同一套規則（pii.ts 的 findPiiInText）找個資。
+// 的範圍，再用跟辨識結果同一套規則（pii.ts 的 findPiiInLineTexts）找個資。
 //
 // 位置的算法照 pdf.js 自己的文字層（TextLayer 的 #appendText）：段落的原點在基線上，沿著
 // 書寫方向的角度展開，往上是字高乘上 ascent。座標已經換算到畫布，跟遮蔽框是同一套。
@@ -138,17 +138,12 @@ function clip(box: Box, width: number, height: number): Box | null {
 // 英數當成要修正的習慣，所以只在這裡換，不改 findPiiInText
 const halfwidth = (text: string) => text.replace(/[\uff01-\uff5e\u3000]/g, (c) => (c === "\u3000" ? " " : String.fromCharCode(c.charCodeAt(0) - 0xfee0)));
 
-// 每一行裡的個資，比對到的字合成一個框
+// 每一行裡的個資，比對到的字合成一個框。段落換行把 Email 拆成兩行時，上下兩行接起來比對
 export function findPiiInLines(lines: TextLine[], width: number, height: number): PiiMatch[] {
-  const out: PiiMatch[] = [];
-  for (const line of lines) {
-    for (const m of findPiiInText(halfwidth(line.text))) {
-      const boxes = line.boxes.slice(m.start, m.end).filter((b): b is Box => !!b);
-      const box = boxes.length ? clip(union(boxes), width, height) : null;
-      if (box) out.push({ kind: m.kind, text: line.text.slice(m.start, m.end), box });
-    }
-  }
-  return out;
+  return findPiiInLineTexts(lines, halfwidth).flatMap((m) => {
+    const box = clip(m.box, width, height);
+    return box ? [{ ...m, box }] : [];
+  });
 }
 
 // 「框起所有文字」：每一行有字母、數字或漢字的範圍

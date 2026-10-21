@@ -59,6 +59,18 @@ test("電話拆成兩段時合成一個框，中間有空隙時補空白也比�
   expect(match!.box.x + match!.box.w).toBeCloseTo(SCALE * 113 + 5);
 });
 
+test("段落換行拆開的 Email：上下兩行接起來比對，兩行各給一個框", () => {
+  // 行距 14 點，下一行的基線低 14 點、左邊對齊
+  const lines = textLines([run("請寫信到 tips@exam", 50, 300, 10, 80, { eol: true }), run("ple.org 聯絡", 50, 286, 10, 50)]);
+  expect(lines.map((l) => l.text)).toEqual(["請寫信到 tips@exam", "ple.org 聯絡"]);
+  const matches = findPiiInLines(lines, W, W);
+  expect(matches.map((m) => [m.kind, m.text])).toEqual([
+    ["email", "tips@example.org"],
+    ["email", "tips@example.org"],
+  ]);
+  expect(matches[1]!.box.y).toBeGreaterThan(matches[0]!.box.y + matches[0]!.box.h * 0.5);
+});
+
 test("直書的段落往下展開", () => {
   const lines = textLines([run("電話0912345678", 50, 300, 10, 75, { vertical: true })]);
   const [box] = lineBoxes(lines, W, W);
