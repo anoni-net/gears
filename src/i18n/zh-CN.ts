@@ -621,7 +621,7 @@ export const zhCN: Record<MessageKey, string> = {
   "segment.doc-revisions-accepted": "修订（依你的选择全部接受，删除的文本一并拿掉）",
   "findings.removed": "原本找到的 {n} 项信息拿掉了。",
   "findings.exifKept": "遮蔽时依你的选择保留了拍摄的时间、地点与相机型号，原文件的缩略图与相机厂商的私有数据已经拿掉。",
-  "findings.reencoded": "遮蔽时重新生成了整张图，原文件的元数据不会带过去。需要保留原文件的拍摄信息时（例如当作证据），请另外留一份原文件。",
+  "findings.reencoded": "{tool}时重新生成了整张图，原文件的元数据不会带过去。需要保留原文件的拍摄信息时（例如当作证据），请另外留一份原文件。",
   "finding.location": "拍摄位置",
   "finding.device": "相机或手机型号",
   "finding.serial": "机身序号",

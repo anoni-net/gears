@@ -631,7 +631,7 @@ export const zhTW = {
   "segment.doc-revisions-accepted": "追蹤修訂（依你的選擇全部接受，刪除的文字一併拿掉）",
   "findings.removed": "原本找到的 {n} 項資訊拿掉了。",
   "findings.exifKept": "遮蔽時依你的選擇保留了拍攝的時間、地點與相機型號，原檔的縮圖與相機廠商的私有資料已經拿掉。",
-  "findings.reencoded": "遮蔽時重新產生了整張圖，原檔的中繼資料不會帶過去。需要保留原檔的拍攝資訊時（例如當作證據），請另外留一份原檔。",
+  "findings.reencoded": "{tool}時重新產生了整張圖，原檔的中繼資料不會帶過去。需要保留原檔的拍攝資訊時（例如當作證據），請另外留一份原檔。",
   "finding.location": "拍攝位置",
   "finding.device": "相機或手機型號",
   "finding.serial": "機身序號",

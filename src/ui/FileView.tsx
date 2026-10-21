@@ -6,7 +6,7 @@ import { list, t, tDynamic } from "../i18n/index.ts";
 import { tray } from "../state.ts";
 import { editorTools, fileTools } from "../tools/index.ts";
 import { FileEditorView } from "./registry.tsx";
-import { IconCircle } from "./Icon.tsx";
+import { Icon, IconCircle } from "./Icon.tsx";
 import { TOOL_META } from "./tool-meta.ts";
 import { useObjectUrl } from "./hooks.ts";
 import { QrContentView } from "./QrContentView.tsx";
@@ -237,7 +237,11 @@ function RemovedNote({ version, previous }: { version: Version; previous: Versio
   return (
     <p class="hint" data-testid="removed-note">
       {t("findings.removed", { n: gone.length })}
-      {reencoded ? t(version.report?.kept.some((r) => r.code === "exif-kept") ? "findings.exifKept" : "findings.reencoded") : null}
+      {reencoded
+        ? version.report?.kept.some((r) => r.code === "exif-kept")
+          ? t("findings.exifKept")
+          : t("findings.reencoded", { tool: tDynamic(`tool.${version.tool}`) })
+        : null}
     </p>
   );
 }
@@ -374,27 +378,45 @@ function noInspectMessage(version: Version, signature: boolean) {
   return "file.unsupported" as const;
 }
 
-function ShelfItem({ entry, busy, onAct }: { entry: ShelfEntry; busy: boolean; onAct(): void }) {
+// 工具列的一項。建議的工具是卡片，附上理由與完整說明；其他工具收成一行，第二行用桌面上那句讀者會遇到的情況
+// （desk.when）。圖示不用分類色：分類色在桌面上幫讀者找工具，在這裡讀者在意的是下一步，綠色與玫瑰紅又會跟
+// 已處理、清空暫存區的顏色混在一起。整個檔案畫面只有一顆實心按鈕（primary），還沒處理時是第一個建議的工具
+function ShelfItem({ entry, busy, primary, onAct }: { entry: ShelfEntry; busy: boolean; primary: boolean; onAct(): void }) {
   const { id, kind, actionable, applied, reason } = entry;
   const label = kind === "create" ? t("tools.open") : tDynamic(`tool.${id}.${applied && kind === "editor" ? "again" : "action"}`);
+  const action = !actionable ? (
+    applied ? null : <span class="hint nothing">{t("tools.nothing")}</span>
+  ) : (
+    <button type="button" class={primary ? "primary" : ""} disabled={busy} onClick={onAct}>
+      {busy && kind === "file" ? t("tools.busy") : label}
+    </button>
+  );
+  if (!reason)
+    return (
+      <li class="compact" title={tDynamic(`tool.${id}.desc`)}>
+        <Icon name={TOOL_META[id]!.icon} />
+        <span class="shelf-name">
+          <strong>{tDynamic(`tool.${id}`)}</strong>
+          {applied ? <span class="badge done">{t("tools.done")}</span> : null}
+          <small>{tDynamic(`desk.when.${id}`)}</small>
+        </span>
+        {/* 處理檔案的工具沒有東西可處理時不顯示按鈕，免得讀者以為還要按。需要編輯畫面的工具可以再做一次 */}
+        {action}
+      </li>
+    );
   return (
-    <li class={reason ? "recommended" : undefined}>
-      <IconCircle name={TOOL_META[id]!.icon} cat={TOOL_META[id]!.cat} />
+    <li class="recommended">
+      <span class="ic">
+        <Icon name={TOOL_META[id]!.icon} />
+      </span>
       <span class="shelf-name">
         <strong>{tDynamic(`tool.${id}`)}</strong>
         {applied ? <span class="badge done">{t("tools.done")}</span> : null}
-        {reason ? <span class="badge">{t("tools.recommended")}</span> : null}
-        {reason ? <small class="reason">{reasonText(reason)}</small> : null}
+        <span class="badge suggest">{t("tools.recommended")}</span>
+        <small class="reason">{reasonText(reason)}</small>
         <small>{tDynamic(`tool.${id}.desc`)}</small>
       </span>
-      {/* 處理檔案的工具沒有東西可處理時不顯示按鈕，免得讀者以為還要按。需要編輯畫面的工具可以再做一次 */}
-      {!actionable ? (
-        applied ? null : <span class="hint nothing">{t("tools.nothing")}</span>
-      ) : (
-        <button type="button" class={reason ? "primary" : ""} disabled={busy} onClick={onAct}>
-          {busy && kind === "file" ? t("tools.busy") : label}
-        </button>
-      )}
+      {action}
     </li>
   );
 }
@@ -430,6 +452,9 @@ function QrInImage({ blob, onOpenTool }: { blob: Blob; onOpenTool: Props["onOpen
     </section>
   );
 }
+
+// 要在圖上操作的編輯畫面，用整個寬度（FileView 的 wide）
+const WIDE_EDITORS = new Set(["redact", "print-dots", "pdf-pages", "video-frames"]);
 
 export function FileView({ file, others, index, busy, preferred, onOpenTool }: Props) {
   const current = file.versions.at(-1)!;
@@ -472,17 +497,28 @@ export function FileView({ file, others, index, busy, preferred, onOpenTool }: P
   const groups = buildShelf({ file, others, preferred, signals });
   // 從空白開始的工具：查證整理的就是暫存區的檔案，其他的把這個檔案帶過去
   const openCreate = (id: string) => onOpenTool(id, id === "verify" ? undefined : `tray:${file.id}`);
+  // 整個檔案畫面只有一顆實心按鈕：處理過的是下載，還沒處理的是第一個建議的工具
+  const primaryId = current.tool ? null : groups.flatMap((g) => g.entries).find((e) => e.reason && e.actionable)?.id;
   const act = (entry: ShelfEntry) =>
     entry.kind === "create" ? openCreate(entry.id) : entry.kind === "editor" ? setEditing(entry.id) : void run(entry.id);
 
   const steps = file.versions.length > 1 || !!file.versions[0]!.tool;
+  // 要在圖上操作的編輯畫面（框選、勾頁面、挑影格）本身就是預覽，用整個寬度。其他的編輯畫面放在右欄，
+  // 左邊的預覽與處理紀錄留著：看著照片選尺寸、選加密方式，畫面不會整個換掉
+  const wide = !!editing && WIDE_EDITORS.has(editing);
+  const editorRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    // 從下方的工具列打開時，編輯畫面在預覽的旁邊或下面，捲過去
+    const top = editorRef.current?.getBoundingClientRect().top;
+    if (top !== undefined && (top < 0 || top > window.innerHeight * 0.6)) editorRef.current!.scrollIntoView({ block: "start" });
+  }, [editing]);
 
   return (
     // 版面：檔名與下載同一列，下面兩欄。左欄是檔案本身（預覽與處理紀錄），右欄是裡面還有什麼、接下來的工具。
     // 手機上排成一欄：處理過的先看預覽與這一步做了什麼再下載（遮蔽完馬上看得到框有沒有蓋對），
     // 還沒處理的先看找到的資訊（styles.css）
     <section
-      class={`file${isImage || media || steps ? " has-main" : ""}${current.tool ? " processed" : ""}`}
+      class={`file${(isImage || media || steps) && !wide ? " has-main" : ""}${current.tool ? " processed" : ""}${editing ? " editing" : ""}`}
       aria-labelledby="file-title"
       ref={section}
     >
@@ -497,9 +533,18 @@ export function FileView({ file, others, index, busy, preferred, onOpenTool }: P
 
       {current.tool && !editing ? <Output version={current} name={outputName(file, index)} /> : null}
 
-
+      {/* 左欄是檔案本身：現在的樣子，以及怎麼變成這樣。右欄是動作：找到的資訊與工具，或是打開的編輯畫面。處理紀錄放在預覽下面，看結果時順著讀到這一步做了什麼。
+          原本橫跨兩欄放在最上面，份量比找到的資訊與工具還重，預覽下方又留著一大塊空白（2026-10-22 的使用回饋）。
+          只有原檔時不顯示，工具建立的檔案（QR code 產生器、面對面傳送收到的）顯示是哪個工具建立的 */}
+      {(isImage || media || steps) && !wide ? (
+        <div class="file-main">
+          {isImage ? <Preview url={preview} blob={current.blob} format={current.format} key={preview} /> : null}
+          {media ? <MediaPreview blob={current.blob} format={current.format} /> : null}
+          {steps ? <Steps file={file} busy={busy || !!editing} /> : null}
+        </div>
+      ) : null}
       {editing ? (
-        <section class="editor" aria-labelledby="editor-title">
+        <section class={wide ? "editor wide" : "editor"} aria-labelledby="editor-title" ref={editorRef}>
           <h3 id="editor-title" class="tool-title">
             <IconCircle name={TOOL_META[editing]!.icon} cat={TOOL_META[editing]!.cat} />
             {tDynamic(`tool.${editing}`)}
@@ -529,52 +574,39 @@ export function FileView({ file, others, index, busy, preferred, onOpenTool }: P
           ) : null}
         </section>
       ) : (
-        <>
-          {/* 左欄是檔案本身：現在的樣子，以及怎麼變成這樣。處理紀錄放在預覽下面，看結果時順著讀到這一步做了什麼。
-              原本橫跨兩欄放在最上面，份量比找到的資訊與工具還重，預覽下方又留著一大塊空白（2026-10-22 的使用回饋）。
-              只有原檔時不顯示，工具建立的檔案（QR code 產生器、面對面傳送收到的）顯示是哪個工具建立的 */}
-          {isImage || media || steps ? (
-            <div class="file-main">
-              {isImage ? <Preview url={preview} blob={current.blob} format={current.format} key={preview} /> : null}
-              {media ? <MediaPreview blob={current.blob} format={current.format} /> : null}
-              {steps ? <Steps file={file} busy={busy} /> : null}
+        <div class="panel">
+          {canInspect ? (
+            <>
+              <h3>{t("findings.title")}</h3>
+              <Findings
+                version={current}
+                busy={busy}
+                onApply={current.large ? undefined : (options) => void run("strip-metadata", options)}
+              />
+            </>
+          ) : (
+            <p class="note">{t(noInspectMessage(current, !!signals.signature))}</p>
+          )}
+
+          {isImage && file.versions[0]!.tool === null ? <QrInImage blob={current.blob} onOpenTool={onOpenTool} /> : null}
+
+          <h3>{t("tools.title")}</h3>
+          {groups.map((group) => (
+            <div class="shelf-group" key={group.id}>
+              <h4>{tDynamic(`desk.group.${group.id}`)}</h4>
+              <ul class="shelf">
+                {group.entries.map((entry) => (
+                  <ShelfItem key={entry.id} entry={entry} busy={busy} primary={entry.id === primaryId} onAct={() => act(entry)} />
+                ))}
+              </ul>
             </div>
+          ))}
+          {error ? (
+            <p class="error" role="alert">
+              {error}
+            </p>
           ) : null}
-
-          <div class="panel">
-            {canInspect ? (
-              <>
-                <h3>{t("findings.title")}</h3>
-                <Findings
-                  version={current}
-                  busy={busy}
-                  onApply={current.large ? undefined : (options) => void run("strip-metadata", options)}
-                />
-              </>
-            ) : (
-              <p class="note">{t(noInspectMessage(current, !!signals.signature))}</p>
-            )}
-
-            {isImage && file.versions[0]!.tool === null ? <QrInImage blob={current.blob} onOpenTool={onOpenTool} /> : null}
-
-            <h3>{t("tools.title")}</h3>
-            {groups.map((group) => (
-              <div class="shelf-group" key={group.id}>
-                <h4>{tDynamic(`desk.group.${group.id}`)}</h4>
-                <ul class="shelf">
-                  {group.entries.map((entry) => (
-                    <ShelfItem key={entry.id} entry={entry} busy={busy} onAct={() => act(entry)} />
-                  ))}
-                </ul>
-              </div>
-            ))}
-            {error ? (
-              <p class="error" role="alert">
-                {error}
-              </p>
-            ) : null}
-          </div>
-        </>
+        </div>
       )}
     </section>
   );

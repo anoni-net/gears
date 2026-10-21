@@ -141,8 +141,12 @@ button:hover:not(:disabled),
   align-items: center;
 }
 
-button:disabled {
-  opacity: 0.6;
+/* 停用的按鈕用灰底灰字。原本把主色調淡，淺青色看起來像另一種還能按的按鈕 */
+button:disabled,
+button.primary:disabled {
+  background: var(--fill);
+  border-color: var(--line);
+  color: var(--muted);
   cursor: not-allowed;
 }
 
@@ -635,26 +639,25 @@ h4 {
   margin-top: 0;
 }
 
-/* 左欄的卡片：預覽與處理紀錄包在一起，處理紀錄讀起來是預覽的說明 */
+/* 左欄的燈箱：預覽與處理紀錄放在淡藍灰的底上，右欄維持白底，「左邊是檔案、右邊是動作」靠底色分開，
+   不再多加框線。整個檔案畫面只有這一處有色面 */
 .file-main {
   display: grid;
   gap: 0.75rem;
   min-width: 0;
-  padding: 0.5rem;
-  border: 1px solid var(--line);
+  padding: 0.75rem;
   border-radius: var(--radius);
-  background: var(--surface);
+  background: var(--fill);
 }
 
 .file-main > .preview {
   border: 0;
   padding: 0;
-  border-radius: calc(var(--radius) - 2px);
-  background: var(--fill);
+  background: transparent;
 }
 
 .file-main > .steps {
-  padding: 0 0.25rem 0.25rem;
+  padding: 0 0.25rem;
 }
 
 @media (max-width: 63.99rem) {
@@ -675,8 +678,9 @@ h4 {
       "main panel";
   }
 
-  /* 還沒處理、沒有下載時，右欄從頂端開始 */
-  .file:not(.processed) {
+  /* 還沒處理或打開編輯畫面時沒有下載，右欄從頂端開始 */
+  .file:not(.processed),
+  .file.editing {
     grid-template-areas:
       "head panel"
       "main panel"
@@ -690,7 +694,8 @@ h4 {
       "panel panel";
   }
 
-  .file:not(.has-main):not(.processed) {
+  .file:not(.has-main):not(.processed),
+  .file.editing:not(.has-main) {
     grid-template-areas:
       "head head"
       "panel panel";
@@ -700,9 +705,11 @@ h4 {
   .file > .output { grid-area: output; }
   .file > .file-main { grid-area: main; }
   .file > .panel { grid-area: panel; }
-  .file > .editor { grid-column: 1 / -1; }
+  .file > .editor { grid-area: panel; }
 
-  .file:not(.has-main) > .panel {
+  /* 沒有預覽的文件只有一欄，字太長不好讀 */
+  .file:not(.has-main) > .panel,
+  .file:not(.has-main) > .editor:not(.wide) {
     max-width: 40rem;
   }
 
@@ -864,13 +871,18 @@ h4 {
   gap: 0.4rem;
 }
 
+/* 會透露身分的資訊：白底、左側一條橘色細線，標題用橘字。原本是整片橘底的卡片，四張疊起來
+   右欄上半全是橘色，真正要讀者注意的只有標題那幾個字 */
 .findings li {
-  background: var(--warn-bg);
-  color: var(--warn);
-  border-radius: 8px;
-  padding: 0.5rem 0.75rem;
+  border-left: 3px solid var(--warn);
+  padding: 0.2rem 0 0.2rem 0.75rem;
   display: flex;
   flex-direction: column;
+}
+
+.findings li > span {
+  color: var(--warn);
+  font-weight: 600;
 }
 
 .findings code {
@@ -886,7 +898,10 @@ h4 {
 }
 
 .content-findings .findings li {
-  background: var(--fill);
+  border-left-color: var(--line);
+}
+
+.content-findings .findings li > span {
   color: var(--text);
 }
 
@@ -1270,6 +1285,38 @@ button.pick-files .icon {
   background: transparent;
   border: 1px solid var(--ok);
   color: var(--ok);
+}
+
+/* 建議用主色的外框，不用橘色：橘色留給會透露身分的資訊 */
+.badge.suggest {
+  background: transparent;
+  border: 1px solid var(--link);
+  color: var(--link);
+}
+
+/* 不是建議的工具收成一行：圖示、名稱、讀者會遇到的情況與按鈕，沒有外框，行與行之間一條細線 */
+.shelf li.compact {
+  border: 0;
+  border-radius: 0;
+  border-bottom: 1px solid var(--hair);
+  background: transparent;
+  padding: 0.45rem 0.25rem;
+}
+
+.shelf li.compact > svg {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  color: var(--icon);
+}
+
+.shelf li.compact .shelf-name small {
+  font-size: 0.85rem;
+}
+
+.shelf li.compact button {
+  min-height: 2.25rem;
+  padding: 0.25rem 0.8rem;
 }
 
 .shelf .nothing {
@@ -1978,6 +2025,18 @@ button.pick-files .icon {
 .redact-actions p {
   margin: 0;
   color: var(--muted);
+}
+
+.redact-actions .check {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+/* 觸控裝置用不到鍵盤操作的說明。畫布用 aria-describedby 接著它，隱藏之後讀螢幕軟體照樣唸得到 */
+@media (pointer: coarse) {
+  #redact-keys {
+    display: none;
+  }
 }
 
 /* 逐字稿 */

@@ -620,7 +620,7 @@ export const en: Record<MessageKey, string> = {
   "segment.doc-revisions-accepted": "Tracked changes (all accepted as you chose, with deleted text removed)",
   "findings.removed": "{n} of the items found earlier were removed.",
   "findings.exifKept": "As you chose, redaction kept the capture time, location and camera model. The original thumbnail and the camera maker's private data were removed.",
-  "findings.reencoded": "Redaction re-created the whole image, so the original metadata isn't carried over. If you need the original capture details (for example, as evidence), keep a separate copy of the original.",
+  "findings.reencoded": "This step ({tool}) re-created the whole image, so the original metadata isn't carried over. If you need the original capture details (for example, as evidence), keep a separate copy of the original.",
   "finding.location": "Where it was taken",
   "finding.device": "Camera or phone model",
   "finding.serial": "Device serial number",
