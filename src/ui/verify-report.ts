@@ -2,7 +2,7 @@ import { AUDIO_FORMATS, EXTENSION, type Format, VIDEO_FORMATS, isPhoto } from ".
 import { list, t, tDynamic } from "../i18n/index.ts";
 import type { Evidence, TimeEntry } from "../tools/verify/examine.ts";
 import { DIGITAL_SOURCE_TYPES, type Provenance } from "../tools/verify/provenance.ts";
-import { C2PA_ACTIONS, type C2paAction } from "../tools/verify/c2pa.ts";
+import { C2PA_ACTIONS, CAWG_ACCOUNT_TYPES, CAWG_TRAINING_KINDS, CAWG_TRAINING_USES, type C2paAccount, type C2paAction } from "../tools/verify/c2pa.ts";
 import { isoTime } from "../tools/verify/times.ts";
 import type { ProofItem, SigResult } from "../tools/verify/proofmode.ts";
 import { providerText } from "./provider-text.ts";
@@ -103,6 +103,16 @@ const actionText = (a: C2paAction) => {
   return detail ? t("verify.c2pa.actionWith", { action: name, detail }) : name;
 };
 
+const known = (list: readonly string[], value: string | undefined, prefix: string) => (value && list.includes(value) ? tDynamic(`${prefix}.${value}`) : value);
+
+// 身分聲明裡的帳號照實列出（跟服務提供者編碼裡的個人號碼同一個原則），讀者看過再決定怎麼保管
+const accountText = (a: C2paAccount) => {
+  const value = [a.provider, a.username ?? a.name, a.uri ? `<${a.uri}>` : undefined].filter(Boolean).join(" ");
+  const time = a.verifiedAt ? isoTime(a.verifiedAt) : undefined;
+  const text = t("verify.c2pa.account", { type: known(CAWG_ACCOUNT_TYPES, a.type, "verify.c2pa.accountType") ?? t("verify.c2pa.accountType.other"), value: value || "-" });
+  return time ? t("verify.c2pa.accountVerified", { text, time: timeText(time) }) : text;
+};
+
 // 內容憑證：第二階段驗證過的列出結果，還沒驗證（或沒辦法驗證）的說明原因
 function c2paLines(p: Provenance): string[] {
   const result = p.c2paCheck;
@@ -120,7 +130,15 @@ function c2paLines(p: Provenance): string[] {
   if (c.generator) out.push(t("verify.c2pa.generator", { value: c.generator }));
   if (c.actions.length) out.push(t("verify.c2pa.actions", { value: list(c.actions.map(actionText)) }));
   if (c.ingredients) out.push(t("verify.c2pa.ingredients", { n: c.ingredients }));
-  if (c.identity) out.push(t("verify.c2pa.identity"));
+  for (const id of c.identities) {
+    out.push(id.kind === "ica" ? t("verify.c2pa.identity.ica", { name: id.issuer ?? "-" }) : t("verify.c2pa.identity.x509", { name: id.signer && id.issuer && id.signer !== id.issuer ? `${id.signer}（${id.issuer}）` : (id.signer ?? id.issuer ?? "-") }));
+    for (const a of id.accounts) out.push(accountText(a));
+  }
+  if (c.identityStatus) out.push(tDynamic(`verify.c2pa.identity.${c.identityStatus}`));
+  if (c.training.length) {
+    const items = c.training.map((x) => t("verify.c2pa.trainingItem", { kind: known(CAWG_TRAINING_KINDS, x.kind, "verify.c2pa.trainingKind") ?? x.kind, use: known(CAWG_TRAINING_USES, x.use, "verify.c2pa.trainingUse") ?? x.use }));
+    out.push(t("verify.c2pa.training", { value: list(items) }));
+  }
   return out;
 }
 

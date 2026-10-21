@@ -185,3 +185,24 @@ test("C2PA 內容憑證：用 c2pa-web 驗證，列出信任清單、撤銷狀�
   await expect(changed.getByText("內容在簽署之後被改過", { exact: true })).toBeVisible();
   await expect(page.locator(".verify-warnings").getByText("內容在簽署之後被改過")).toBeVisible();
 });
+
+test("C2PA 內容憑證：身分聲明的帳號與 AI 訓練的標示，影片也驗證", async ({ page }) => {
+  test.skip(!hasC2paFixtures(), "沒有 C2PA 的測試圖");
+  await page.goto("./verify/");
+  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.getByRole("button", { name: "選擇檔案" }).first().click()]);
+  await chooser.setFiles([
+    { name: "identity.jpg", mimeType: "image/jpeg", buffer: readFileSync(c2paFixture("adobe_connected_identities.jpg")) },
+    { name: "training.jpg", mimeType: "image/jpeg", buffer: readFileSync(c2paFixture("C_with_CAWG_data.jpg")) },
+    { name: "clip.mp4", mimeType: "video/mp4", buffer: readFileSync(c2paFixture("video1.mp4")) },
+  ]);
+  const card = (name: string) => page.locator(".verify-card").filter({ has: page.getByRole("heading", { name }) });
+  const identity = card("identity.jpg");
+  await expect(identity.getByText("身分聲明：由 did:web:connected-identities.identity-stage.adobe.com 簽發，列出創作者驗證過的帳號")).toBeVisible({ timeout: 30000 });
+  await expect(identity.getByText(/^社群帳號：behance testuser23 <https:\/\/net\.s2stagehance\.com\/testuser23>，驗證時間 2025-04-09 22:45:26/)).toBeVisible();
+  // 驗證簽發者要連線取得 did:web 的金鑰，頁面的 CSP 擋下，內容憑證本身照樣有效
+  await expect(identity.getByText("身分聲明的簽發者要連線才能確認，這裡不連線，列出的帳號沒有經過驗證")).toBeVisible();
+  await expect(identity.getByText("C2PA 內容憑證：驗證沒有通過")).toHaveCount(0);
+  await expect(card("training.jpg").getByText("創作者對 AI 使用的標示：不允許用於 AI 推論、不允許用於生成式 AI 訓練")).toBeVisible({ timeout: 30000 });
+  await expect(card("clip.mp4").getByText("C2PA 內容憑證：簽章有效，但簽署者不在信任清單裡，無法確認是誰簽的")).toBeVisible({ timeout: 30000 });
+});
+

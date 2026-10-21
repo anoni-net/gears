@@ -9,12 +9,20 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 // - XCA.jpg：簽署之後影像資料被改過（assertion.dataHash.mismatch）
 // - E-sig-CA.jpg：簽章被改壞（claimSignature.mismatch）
 // - ocsp.jpg：Adobe Photoshop 簽的，簽署者在過渡信任清單裡，附有 OCSP 回應（沒有被撤銷）
+// - C_with_CAWG_data.jpg：用 X.509 憑證簽的 CAWG 身分聲明，標示不允許拿去做 AI 訓練與推論
+// - adobe_connected_identities.jpg：Adobe 測試環境簽發的身分聲明，帶著一個驗證過的 Behance 測試帳號
+// - video1.mp4：帶內容憑證的影片
 const COMMIT = "60f7cbdc69ab7a2554fcc87eb4df77050814b2cf";
+// 大部分在 sdk/tests/fixtures，身分聲明的測試檔在另一個目錄
+const PATHS: Record<string, string> = { "adobe_connected_identities.jpg": "sdk/src/identity/tests/fixtures/claim_aggregation" };
 export const C2PA_FIXTURES: Record<string, string> = {
   "C.jpg": "a2d14755db55de67a47c04090340d8266e892367be4104a45626d7a6fa6e9ffd",
   "XCA.jpg": "81f20702a2e81611b29aa773f811b59ade6095acd3d089d6ffdae6b591d6d5a5",
   "E-sig-CA.jpg": "20dc072a4c843d3b7d7cb4f4002fbb4d8f20d7ee859ca726f2458c1e0358a98c",
   "ocsp.jpg": "49a6b089bf3fe610960ef91b2beb81c86b62e7d531c97f33fc029841d864b2cb",
+  "C_with_CAWG_data.jpg": "fa0b257c863cb5b367135a017813ce0c1fbfc690a03e94acdd047c25c2d1ed46",
+  "adobe_connected_identities.jpg": "d17c8bf620a2d1bff2395e2b7c597d17aaf7b823dc30f1521aa777813da43aa4",
+  "video1.mp4": "b310ba339ca89950e3c921754566d5e44ef52c45dd1ddbbfe1383c8e7761cfd0",
 };
 
 export const c2paFixture = (name: string) => `tests/.generated/c2pa-${name}`;
@@ -27,7 +35,7 @@ export async function fetchC2paFixtures() {
     const path = c2paFixture(name);
     if (existsSync(path) && sha(readFileSync(path)) === hash) continue;
     try {
-      const res = await fetch(`https://raw.githubusercontent.com/contentauth/c2pa-rs/${COMMIT}/sdk/tests/fixtures/${name}`);
+      const res = await fetch(`https://raw.githubusercontent.com/contentauth/c2pa-rs/${COMMIT}/${PATHS[name] ?? "sdk/tests/fixtures"}/${name}`);
       const data = new Uint8Array(await res.arrayBuffer());
       if (!res.ok || sha(data) !== hash) throw new Error(`${name}: ${res.status}`);
       writeFileSync(path, data);
