@@ -1,1 +1,0 @@
-import{s as e}from"./analytics-Bat_f9_F.js";function t(t,n){e(`save`,{how:`download`});let r=URL.createObjectURL(t),i=document.createElement(`a`);i.href=r,i.download=n,document.body.append(i),i.click(),i.remove(),setTimeout(()=>URL.revokeObjectURL(r),1e4)}export{t};
