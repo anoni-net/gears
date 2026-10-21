@@ -229,3 +229,26 @@ test("PDF 數位簽章：驗證簽章與憑證鏈，簽完之後被改過的列�
   await expect(page.locator(".verify-warnings").getByText("數位簽章驗證沒有通過")).toBeVisible();
 });
 
+
+test("PDF 的時間戳記：附在簽章上的與整份文件的，對不上的列在需要留意的地方", async ({ page }) => {
+  const day = 86_400_000;
+  const root = await makeCert({ cn: "Gears Test Root", ca: true, serial: 1, from: new Date(Date.now() - 3650 * day), to: new Date(Date.now() + 3650 * day) });
+  const leaf = await makeCert({ cn: "測試簽署人", issuer: root, serial: 2, from: new Date(Date.now() - day), to: new Date(Date.now() + 365 * day) });
+  const tsa = await makeCert({ cn: "Gears Test TSA", issuer: root, serial: 3, from: new Date(Date.now() - day), to: new Date(Date.now() + 365 * day) });
+  const at = new Date(Date.now() - 3600_000);
+  await page.goto("./verify/");
+  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.getByRole("button", { name: "選擇檔案" }).first().click()]);
+  await chooser.setFiles([
+    { name: "stamped.pdf", mimeType: "application/pdf", buffer: Buffer.from(await signedPdf(leaf, { timestamp: { tsa, at } })) },
+    { name: "wrong-stamp.pdf", mimeType: "application/pdf", buffer: Buffer.from(await signedPdf(leaf, { timestamp: { tsa, at, wrong: true } })) },
+    { name: "document.pdf", mimeType: "application/pdf", buffer: Buffer.from(await signedPdf(tsa, { document: true, timestamp: { tsa, at } })) },
+  ]);
+  const card = (name: string) => page.locator(".verify-card").filter({ has: page.getByRole("heading", { name }) });
+  // 測試的根憑證不在內建的清單裡，時間戳記服務也接不到
+  await expect(card("stamped.pdf").getByText(/^時間戳記：.*由 .*CN=Gears Test TSA.* 簽署。時間戳記服務接不到內建的信任清單/)).toBeVisible({ timeout: 30000 });
+  await expect(card("wrong-stamp.pdf").getByText("時間戳記跟它證明的內容對不上，可能被換過")).toBeVisible({ timeout: 30000 });
+  await expect(page.locator(".verify-warnings").getByText("時間戳記驗證沒有通過")).toBeVisible();
+  const doc = card("document.pdf");
+  await expect(doc.getByText(/^整份文件的時間戳記，證明簽署的範圍在 .* 已經存在/)).toBeVisible({ timeout: 30000 });
+  await expect(doc.getByText("簽章正確，簽完之後涵蓋的範圍沒有被改過")).toBeVisible();
+});

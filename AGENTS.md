@@ -245,19 +245,20 @@ GB 45438 的服務提供者編碼（TC260-PG-20252A，27 碼）拆成主體類�
 
 ### PDF 數位簽章的驗證
 
-PDF 帶著數位簽章時，查證用 `pkijs`（3.4.2，鎖定版本，BSD-3-Clause）驗證（#128），程式在 `src/tools/verify/pdf-signature.ts`，瀏覽器端的載入在 `src/ui/pdf-signature-check.ts`。兩層的結果分開列出，不合成一個「有效」：
+PDF 帶著數位簽章時，查證用 `pkijs`（3.4.2，鎖定版本，BSD-3-Clause）驗證（#128），程式在 `src/tools/verify/pdf-signature.ts`，瀏覽器端的載入在 `src/ui/pdf-signature-check.ts`。每一層的結果分開列出，不合成一個「有效」：
 
 - 簽章本身：依 `/ByteRange` 取出簽署的範圍算摘要，比對 CMS 裡的 `messageDigest`，再用簽署者憑證的公鑰驗簽章值。對不上的列在需要留意的地方（`pdf-signature-invalid`），簽完之後又加了內容的仍然列 `signed-then-modified`
-- 簽署者：用簽章附的憑證與內建的中繼憑證建憑證鏈，接到內建的根憑證才算確認身分。現在驗不過時，再用簽章裡簽署端自己填的時間驗一次，過了就寫明「以簽章裡寫的時間來看當時有效，但這個時間由簽署端自己填寫」
+- 簽署者：用簽章附的憑證與內建的中繼憑證建憑證鏈，接到內建的根憑證才算確認身分。現在驗不過時，先用時間戳記證明的時間再驗一次，沒有可信的時間戳記才用簽章裡簽署端自己填的時間，過了就寫明「以簽章裡寫的時間來看當時有效，但這個時間由簽署端自己填寫」
+- 時間戳記（RFC 3161）有兩種：附在簽章上的（簽章的 unsigned attribute `1.2.840.113549.1.9.16.2.14`，證明簽章值在那個時間已經存在），以及整份文件的時間戳記（`/SubFilter` 為 `ETSI.RFC3161`，CMS 的內容是 TSTInfo，直接證明簽署的範圍）。驗時間戳記裡的雜湊值、時間戳記服務的簽章與憑證鏈，接到內建的根憑證才採信它的時間。附在簽章上的時間戳記對不上或驗不過時，列在需要留意的地方（`pdf-timestamp-invalid`），整份文件的時間戳記對不上就是簽章驗不過（`pdf-signature-invalid`）
 - 簽署者憑證的主體、簽發者與效期照實列出。自然人憑證的主體有姓名，跟服務提供者編碼裡的個人號碼同一個原則
 
 pkijs 的憑證鏈引擎先拿掉重複的憑證（留前面那一張），再把清單的最後一張當成要驗證的憑證。簽署者的憑證也附在簽章裡，直接把它跟中繼憑證一起放進去，最後一張會變成某張中繼憑證，自己做的憑證會被當成接到 GRCA（2026-10-21 發現，有回歸測試）。所以中繼憑證只放 CA、拿掉簽署者本身，驗完再確認路徑的第一張就是簽署者。
 
-信任清單第一版只有台灣政府憑證總管理中心（GRCA）的三代根憑證與下屬憑證機構（內政部、工商、政府、組織及團體憑證管理中心，含已過期的第一代，留著驗證過期之前簽的文件），建置時內嵌在 `src/tools/verify/pdf-trust/`，由 `node scripts/pdf-trust.mjs` 從 grca.nat.gov.tw 下載。根憑證的 SHA-256 指紋寫死在腳本裡：GRCA1、GRCA2 跟 CCADB 上 Microsoft 的根憑證清單相同，GRCA3 比對的是數位發展部說明文件列的 SHA-1 末碼。下屬憑證機構的憑證不鎖指紋，腳本確認它是由根憑證簽的，查證時也照樣驗。每月跟 C2PA 的信任清單一起核對（`--check`）。歐盟的 LOTL 之後另外評估。
+信任清單第一版只有台灣政府憑證總管理中心（GRCA）的三代根憑證與下屬憑證機構（內政部、工商、政府、組織及團體憑證管理中心，含已過期的第一代，留著驗證過期之前簽的文件），建置時內嵌在 `src/tools/verify/pdf-trust/`，由 `node scripts/pdf-trust.mjs` 從 grca.nat.gov.tw 下載。根憑證的 SHA-256 指紋寫死在腳本裡：GRCA1、GRCA2 跟 CCADB 上 Microsoft 的根憑證清單相同，GRCA3 比對的是數位發展部說明文件列的 SHA-1 末碼。下屬憑證機構的憑證不鎖指紋，腳本確認它是由根憑證簽的，查證時也照樣驗。每月跟 C2PA 的信任清單一起核對（`--check`）。時間戳記服務除了 GRCA，另外採信 C2PA 正式清單裡的時間戳記服務清單（`src/tools/verify/c2pa-trust/official-tsa.pem`，見「內容憑證的驗證」），簽署者的憑證鏈不用這份。歐盟的 LOTL 之後另外評估。
 
 密碼運算用瀏覽器的 `crypto.subtle`，只在 HTTPS 這類安全的頁面才有，沒有時卡片上寫明沒有驗證。onion 版在 Tor Browser 上能不能用還沒有實測。pkijs 在 PDF 帶著簽章時才下載，打包後約 330 KB（壓縮後約 68 KB），沒有對外的網址。授權與相依套件寫在 `licenses/pkijs.txt`，`@noble/hashes` 是 1.8.0，跟工作台其他地方的 2.4.0 是不同的一份。
 
-單元測試在 `tests/unit/pdf-signature.spec.ts`，測試用的 PDF 由 `tests/helpers/signed-pdf.ts` 在測試裡產生根憑證、中繼憑證與簽署者的憑證並簽署（ECDSA P-256，adbe.pkcs7.detached），也確認內建的 GRCA 憑證鏈 pkijs 驗得過。真實的自然人憑證簽出來的檔案沒有放進測試，憑證裡有本人的姓名。
+單元測試在 `tests/unit/pdf-signature.spec.ts`，測試用的 PDF 由 `tests/helpers/signed-pdf.ts` 在測試裡產生根憑證、中繼憑證、簽署者與時間戳記服務的憑證並簽署（ECDSA P-256，adbe.pkcs7.detached 與 ETSI.RFC3161），也確認內建的 GRCA 憑證鏈 pkijs 驗得過。真實的自然人憑證簽出來的檔案沒有放進測試，憑證裡有本人的姓名。
 
 ### 內容憑證的驗證
 
