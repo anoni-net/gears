@@ -1,0 +1,1 @@
+var e=`/assets/c2pa_bg-DOowNFv_.wasm`;export{e as default};

@@ -1,1 +1,0 @@
-import{s as e,t}from"./sha2-DOkirqsL.js";var n=8388608;async function r(r,i){let a=t.create();for(let e=0;e<r.size;e+=n)a.update(new Uint8Array(await r.slice(e,e+n).arrayBuffer())),i?.(Math.min(e+n,r.size)/r.size);return e(a.digest())}export{r as t};
