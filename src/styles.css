@@ -2444,6 +2444,53 @@ button.link {
   font-size: 0.85rem;
 }
 
+/* 已下載的模型：一列一個用途，名稱、大小、刪除。窄螢幕上名稱占滿一行，大小與按鈕並排在下一行 */
+.storage-list {
+  list-style: none;
+  padding: 0;
+}
+
+.storage-list li {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--hair);
+}
+
+.storage-name {
+  min-width: 0;
+}
+
+@media (max-width: 36rem) {
+  .storage-list li {
+    grid-template-columns: 1fr auto;
+  }
+
+  .storage-name {
+    grid-column: 1 / -1;
+  }
+}
+
+.storage-name small {
+  display: block;
+  color: var(--muted);
+}
+
+.storage-size {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.storage-total {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+}
+
 /* 寫作習慣檢查：可以直接修正的用淡綠，要讀者自己改的用淡橘，個資用淡紅 */
 .writing-style .buttons {
   margin: 0.75rem 0;

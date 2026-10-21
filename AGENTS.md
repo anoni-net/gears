@@ -536,7 +536,7 @@ ProofMode（Guardian Project 給人權紀錄者的 Android App）拍照時不改
 
 ## 建議與回饋
 
-讀者在「建議與回饋」許願新功能、回報問題，或寫下哪裡不好用（`/gears/feedback/`，畫面在 `src/ui/FeedbackPage.tsx`，送出在 `src/feedback.ts`）。原本叫「許願區」，回報問題放在許願底下不自然，2026-10-18 改名，許願新功能改寫在說明裡。入口有兩個：桌面最下面一行的「使用者區」，以及頁尾的「建議與回饋」。使用者區放跟 Gears 本身有關、不是工具的頁面（`src/ui/tool-meta.ts` 的 `USER_PAGES`），目前是範例與建議與回饋，之後的設定也放這裡。2026-10-19 起桌面改成清單，使用者區從一組卡片縮成一行連結，畫面上不寫「使用者區」這個標題，只留給讀螢幕軟體（`aria-label`）。
+讀者在「建議與回饋」許願新功能、回報問題，或寫下哪裡不好用（`/gears/feedback/`，畫面在 `src/ui/FeedbackPage.tsx`，送出在 `src/feedback.ts`）。原本叫「許願區」，回報問題放在許願底下不自然，2026-10-18 改名，許願新功能改寫在說明裡。入口有兩個：桌面最下面一行的「使用者區」，以及頁尾的「建議與回饋」。使用者區放跟 Gears 本身有關、不是工具的頁面（`src/ui/tool-meta.ts` 的 `USER_PAGES`），目前是範例、建議與回饋、已下載的模型，之後的設定也放這裡。2026-10-19 起桌面改成清單，使用者區從一組卡片縮成一行連結，畫面上不寫「使用者區」這個標題，只留給讀螢幕軟體（`aria-label`）。
 
 - 表單由 Gears 自己畫，送到社群自架的 Formbricks（`form.anoni.net`），用它給網頁用的公開 API（`/api/v1/client/<環境>/responses`），不需要金鑰。不嵌入 Formbricks 的頁面：整個網站送了 `Cross-Origin-Embedder-Policy: require-corp`，別的網站的頁面嵌不進來，讀者也不必認識另一個服務。畫面上不提 Formbricks
 - CSP 的 `connect-src` 只開送出的那一個路徑（`FEEDBACK_ENDPOINT_CLEARNET`，meta 標籤與標頭都有）。onion 版送到 `form.<onion>` 的同一個路徑（`FEEDBACK_ENDPOINT_ONION`），兩個網址分成兩個常數，建置時沒用到的會被拿掉，onion 版的產物裡沒有 clearnet 的網址
@@ -574,6 +574,7 @@ ProofMode（Guardian Project 給人權紀錄者的 Android App）拍照時不改
 - 用到時才存的這些檔案放在不隨版本清掉的快取（`gears-keep`，#142）。工作台一天常部署好幾次，原本放在隨版本清掉的快取，每次換版本之後第一次找人臉或個資都要重新下載約 23 MB。網址不變，建置時 `vite.config.ts` 的 `serviceWorker()` 替每個檔案算內容的雜湊，寫進 `sw.js` 的 `LAZY`，service worker 存的時候在回應加上 `x-gears-hash`。讀的時候雜湊對不上就重新下載，新版本接手時刪掉內容變了或不在清單上的。存進去的內容已經解壓縮，原本的 `content-encoding` 與 `content-length` 拿掉。這份清單也算進 service worker 的版本，只換了用到時才存的檔案時一樣會換一版
 - 逐字稿的 Whisper 模型存在另一個不隨版本清掉的快取（`gears-models`），換新版本時不必重新下載 80 到 250 MB。網址帶著模型的版本，清單以外的在新版本接手時刪掉。畫面上標出已下載的模型，可以刪除
 - 模型檔的下載、比對 SHA-256、切段與這個快取共用 `src/core/models.ts`（#142）：`downloadVerified` 下載並比對，`cachedModel` 先找快取、同一個檔案同時有好幾個請求時共用一次下載、存不進去時這次照樣使用，`isCached`、`removeCached` 給畫面判斷「已下載」與刪除。逐字稿、sherpa-onnx 與語言模型速度量測的 Worker 都用它，量測頁只用下載與比對，快取留給 Transformers.js。分辨說話者的 `speaker-embed.ts` 只能匯入 Transformers.js 與 onnxruntime（見上方「逐字稿」），不用這裡，靠 service worker 快取
+- 已下載的模型（`/gears/storage/`，畫面在 `src/ui/StoragePage.tsx`，分類在 `src/core/storage.ts`，#142）：讀 `gears-models`、`gears-keep` 與量測頁的 `transformers-cache`，逐字稿的模型一個一列，其他依用途分列（分辨說話者、找人臉、辨識文字、執行模型的程式、pdf.js 的資料、驗證內容憑證），列出大小，可以逐列刪除或全部刪除，刪除之後下次用到時再下載。工作台本身的頁面與程式（`gears-<版本>`）是離線使用要用的，不列進來。大小用快取裡每個回應的 `blob().size` 加總，快取的內容在磁碟上，不會整個讀進記憶體。不能用 Cache API 時（私密瀏覽、Tor Browser）說明每次都要重新下載。入口在桌面的使用者區，逐字稿畫面原本的「刪除模型」保留
 - 只存工作台自己的檔案。讀者放進暫存區的檔案只在記憶體裡，不寫進快取，只有換版本的那一刻經過 service worker（見下一項）
 - 換版本要重新載入頁面，暫存區只在記憶體裡，重新載入就沒了（`src/ui/offline.ts`）。暫存區是空的、畫面上也沒有填到一半的東西時（桌面、授權頁、還沒選檔案的工具說明，從空白開始的工具不算），不出現提示，等分頁切到背景（`visibilitychange`）就直接換，讀者回來時已經是新版本。暫存區有檔案時，畫面上方提示，讀者按「重新載入」才換上，避免同一個分頁混用新舊程式
 - 帶著暫存區換版本：新版本接手之後，頁面把暫存區（`tray.snapshot()`，檔案的每個版本、檢查結果與選取的檔案）用 `postMessage` 交給它，service worker 只放在自己的記憶體裡，用 `waitUntil` 撐到重新載入的頁面拿走（`tray.restore()`），最多 60 秒就放掉，不寫進快取或任何儲存空間。Blob 是參照，大檔案不會多複製一份。交給的對象是重新載入之後會接手的那一個：等新版本接手完成（`activated`）再交給它，不用固定的等待時間，電腦忙的時候新版本比較晚接手，交給舊版本的話它在重新載入的途中就被換掉了。新版本被更新的一版取代，或 8 秒內沒有接手，就交給目前的版本，重新載入不會讓等著的版本接手。5 秒內沒有回應就不重新載入，提示讀者先下載需要的檔案，再按一次才清空暫存區重新載入。2026-10-17 在 Chromium、WebKit、Firefox 實測過（含 50 MB 的檔案），測試也在這三種核心與 iPhone 尺寸執行。這個流程由舊頁面的程式交出、新版本的 service worker 收下，之後的版本都要保留 `sw-template.js` 的 `hold` 與 `take`
@@ -665,7 +666,7 @@ node scripts/fetch-165.mjs   # 下載並整理成 public/data/165.txt
 
 - 能不用 canvas 輸出圖檔就不用。Brave 預設會擾動 canvas 讀出來的像素，QR code 的 PNG 由 `src/core/png-encode.ts` 直接寫位元組。遮蔽與 QR code 讀取必須解碼影像，只能用 canvas：遮蔽輸出後抽查每個框是否夠黑，門檻容許這點雜訊。QR code 讀取對雜訊不敏感
 - 用到 WebAssembly 的功能（逐字稿、遮蔽的自動尋找、HEIC 的解碼器、QR code 以外的條碼）先用 `src/ui/wasm.ts` 的 `wasmAvailable()` 檢查。iPhone、iPad 與 Mac 的鎖定模式會關掉 Safari 的 WebAssembly，不檢查的話讀者要等模型下載完才失敗，收到的還是「記憶體不夠」這類錯誤的原因。檢查時實際編譯一個 8 個位元組的空模組，只看 `typeof WebAssembly` 不夠。逐字稿一打開就說明、開始的按鈕不能按，自動尋找請讀者手動框選，HEIC 說明載入不了解碼器。瀏覽器測試（`tests/e2e/wasm-unavailable.spec.ts`）把頁面的 `WebAssembly` 拿掉來模擬
-- 工具以外的頁面（`src/pages.ts` 的 `pageIds`：授權與來源、語言模型速度量測、建議與回饋、範例）不顯示暫存區，版面改成單欄（`.workbench.solo`），寬度上限跟首頁暫存區旁邊那一欄相同（52rem），靠左對齊頁首的 logo。原本撐滿整個版面，從桌面點進範例時內容突然變寬（2026-10-20 遇到）。頁面一律顯示捲軸（`html { overflow-y: scroll }`）：首頁不長，高一點的螢幕不需要捲動，範例頁需要，捲軸出現時置中的頁首會往左移半個捲軸寬，兩頁來回切換時 logo 左右跳。`scrollbar-gutter: stable` 也能固定位置，但不捲動的頁面會在頁首右邊留一條白色的空位。暫存區的檔案仍在記憶體裡，回到桌面就看得到
+- 工具以外的頁面（`src/pages.ts` 的 `pageIds`：授權與來源、語言模型速度量測、建議與回饋、範例、遠端傳送的伺服器說明、已下載的模型）不顯示暫存區，版面改成單欄（`.workbench.solo`），寬度上限跟首頁暫存區旁邊那一欄相同（52rem），靠左對齊頁首的 logo。原本撐滿整個版面，從桌面點進範例時內容突然變寬（2026-10-20 遇到）。頁面一律顯示捲軸（`html { overflow-y: scroll }`）：首頁不長，高一點的螢幕不需要捲動，範例頁需要，捲軸出現時置中的頁首會往左移半個捲軸寬，兩頁來回切換時 logo 左右跳。`scrollbar-gutter: stable` 也能固定位置，但不捲動的頁面會在頁首右邊留一條白色的空位。暫存區的檔案仍在記憶體裡，回到桌面就看得到
 - 站內導覽不用一般的 `<a href>`。一般的連結會重新載入頁面，暫存區只在記憶體裡，會整個清空。改用 `src/router.ts` 的 `navigate()`，外觀要像連結時用 `button.link`。`navigate()` 換頁之後捲回頂端，不然瀏覽器會沿用原本的捲動位置，手機上從桌面下方點進比較長的頁面時，畫面停在新頁面的最底部（2026-10-18 建議與回饋遇到）
 - 檔案畫面處理完之後，下載放在工具列表之前，接著是處理報告與退回上一步。原本下載在最後面，手機上要捲過好幾組工具才看得到，最顯眼的按鈕反而是建議的下一個工具。手機上平常先看檢查結果、預覽排在後面，處理完之後預覽排回前面（`.columns.processed`），遮蔽完馬上看得到框有沒有蓋對。編輯畫面套用之後捲回檔案的開頭（2026-10-19 的使用回饋）
 - 沒有找到中繼資料不用綠色：暫存區的狀態寫「沒有中繼資料」、用灰色，檔案畫面另外說明只檢查了中繼資料，截圖裡的電話要用遮蔽、文件打開時會不會連線要用開啟前檢查（`findings.scope`）。綠色讀起來像「這個檔案安全」，只留給加密完成
