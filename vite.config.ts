@@ -198,7 +198,8 @@ function toolPages(): Plugin {
 }
 
 // 離線使用：建置完成後列出輸出目錄裡的檔案，產生 /gears/sw.js（範本在 src/sw/sw-template.js）。
-// vendor/、models/ 底下的辨識模型與 onnxruntime 的 WebAssembly（約 14 MB）很大，不預先存，
+// vendor/、models/ 底下的辨識模型、onnxruntime 的 WebAssembly（約 14 MB）與查證驗證內容憑證的
+// c2pa 的 WebAssembly（約 9 MB）很大，不預先存，
 // 用到時才存（src/sw/sw-template.js 的 LAZY）。版本是所有檔案內容的雜湊，
 // 任何檔案改了（包括每月更新的 165 清單），瀏覽器就會裝新的 service worker
 function serviceWorker(base: string): Plugin {
@@ -216,7 +217,7 @@ function serviceWorker(base: string): Plugin {
         }
       };
       walk(dist);
-      const lazy = (f: string) => f.startsWith("vendor/") || f.startsWith("models/") || /^assets\/ort-wasm-/.test(f);
+      const lazy = (f: string) => f.startsWith("vendor/") || f.startsWith("models/") || /^assets\/(ort-wasm-|c2pa_bg-)/.test(f);
       const precache = files.filter((f) => !lazy(f) && f !== "sw.js" && !f.endsWith(".map")).sort();
       const hash = createHash("sha256");
       for (const f of precache) hash.update(f).update(readFileSync(join(dist, f)));

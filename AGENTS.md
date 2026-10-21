@@ -8,7 +8,7 @@
 - 上傳端點不經過 Cloudflare。Cloudflare 在邊緣解開 TLS，經過的檔案對它是明文。兩端之間另有加密、Cloudflare 只經手密文的通道可以經過，畫面上要寫明 Cloudflare 看得到 IP 與時間（遠端傳送的 clearnet 入口，見下方「遠端傳送的轉送服務」）
 - 伺服器不保存讀者的檔案，加密過的也一樣。遠端傳送的轉送服務只在轉給對方的途中經手，對方不在時直接丟掉，兩端一律同時在線（見下方「遠端傳送的轉送服務」）
 - 頁面能連線的對象寫死在 CSP 裡（`vite.config.ts`），新增任何對外連線都要改那裡，並在畫面上標示。頁面的 meta 標籤只有自己的網域、使用統計的送出網址（`https://aa.anoni.net/api/send`，見下方「使用統計」）與建議與回饋的送出網址（見下方「建議與回饋」）。逐字稿的大模型從 Hugging Face 下載（見下方「逐字稿」），只開在伺服器送的 CSP 標頭 <!-- docs-style-lint: disable-line -->
-- 執行期的相依套件只有 `preact`、`qrcode-generator`（QR code 產生）、`jsqr`（QR code 讀取）、`zxing-wasm`（QR code 以外的條碼，見下方「QR code 的內容格式」）、`age-encryption`（加密，連同它相依的 noble 系列）、`libheif-js`（HEIC 解碼，LGPL-3.0，見下方「HEIC」）、`pdf-lib`（PDF 的解析與寫出，見下方「文件」）、`pdfjs-dist`（PDF 的遮蔽，見下方「PDF 的遮蔽」），以及遮蔽的自動尋找用的 `onnxruntime-web` 與 `tesseract.js`（見下方「遮蔽的自動尋找」）、逐字稿用的 `@huggingface/transformers` 與 `opencc-js`（見下方「逐字稿」，分辨說話者用的 onnxruntime 是 Transformers.js 帶的那一份），以及查證計算 SHA-256 用的 `@noble/hashes`（age 加密原本就相依它，鎖定同一個版本，見下方「查證」）、遠端傳送的加密用的 `@noble/curves` 與 `@noble/ciphers`（同樣是 age 加密已經帶進來的版本，見下方「遠端傳送的轉送服務」）、下載的軟體驗證用的 `openpgp`（LGPL-3.0，見下方「下載的軟體驗證」，查證的 ProofMode 證明檔也用它）。新增套件前先想能不能自己寫，必要時鎖定確切的版本。工具用到的套件在打開工具時才載入
+- 執行期的相依套件只有 `preact`、`qrcode-generator`（QR code 產生）、`jsqr`（QR code 讀取）、`zxing-wasm`（QR code 以外的條碼，見下方「QR code 的內容格式」）、`age-encryption`（加密，連同它相依的 noble 系列）、`libheif-js`（HEIC 解碼，LGPL-3.0，見下方「HEIC」）、`pdf-lib`（PDF 的解析與寫出，見下方「文件」）、`pdfjs-dist`（PDF 的遮蔽，見下方「PDF 的遮蔽」），以及遮蔽的自動尋找用的 `onnxruntime-web` 與 `tesseract.js`（見下方「遮蔽的自動尋找」）、逐字稿用的 `@huggingface/transformers` 與 `opencc-js`（見下方「逐字稿」，分辨說話者用的 onnxruntime 是 Transformers.js 帶的那一份），以及查證計算 SHA-256 用的 `@noble/hashes`（age 加密原本就相依它，鎖定同一個版本，見下方「查證」）、遠端傳送的加密用的 `@noble/curves` 與 `@noble/ciphers`（同樣是 age 加密已經帶進來的版本，見下方「遠端傳送的轉送服務」）、下載的軟體驗證用的 `openpgp`（LGPL-3.0，見下方「下載的軟體驗證」，查證的 ProofMode 證明檔也用它），以及查證驗證內容憑證用的 `@contentauth/c2pa-web`（MIT，見下方「內容憑證的驗證」）。新增套件前先想能不能自己寫，必要時鎖定確切的版本。工具用到的套件在打開工具時才載入
 - 結構有問題的檔案就停下來，不交出一份沒處理乾淨的檔案
 
 ## 支援的瀏覽器
@@ -228,12 +228,12 @@ PDF 的版本紀錄：每一個 `%%EOF` 是一次存檔的結尾，切到那裡�
 
 ### 來源標示
 
-越來越多生成服務、相機與編修軟體在檔案裡寫入來源標示，查證把它們讀出來，列在檔案卡片的「來源標示」（規劃見 #127，這是第一階段）：
+越來越多生成服務、相機與編修軟體在檔案裡寫入來源標示，查證把它們讀出來，列在檔案卡片的「來源標示」（規劃見 #127）：
 
 - IPTC 的數位來源類型（`Iptc4xmpExt:DigitalSourceType`）與 2025.1 加入的 `AISystemUsed`、`AISystemVersionUsed`、`AIPromptInformation`、`AIPromptWriterName`，都在 XMP 裡。數位來源類型的代碼對照 IPTC 的詞彙換成讀得懂的說法（`DIGITAL_SOURCE_TYPES`，含已停用的三個），代碼附在括號裡
 - GB 45438-2025 的隱式標識，照 TC260 的圖片實踐指南（TC260-PG-20259A）讀三個位置：XMP 的 `TC260:AIGC`（命名空間 `http://www.tc260.org.cn/ns/AIGC/1.0/`）、EXIF 的 UserComment 與 PNG 關鍵字為 `AIGC` 的 `tEXt`，後兩者的 JSON 外面多包一層 `{"AIGC":{…}}`。預留欄位有內容時只寫「附有安全防護資訊，還沒有驗證」，SM2 簽章與 SM3 雜湊在第二階段評估
 - 生成工具寫下的參數：Stable Diffusion WebUI 的 `parameters`（JPEG 與 WebP 寫在 EXIF 的 UserComment）、ComfyUI 的 `prompt` 與 `workflow`、NovelAI 的 `Software`、`Source`、`Description` 與 `Comment`。PNG 壓縮過的 `zTXt`、`iTXt` 用 `DecompressionStream` 解開
-- C2PA 內容憑證，位置照官方的 c2pa-rs：JPEG 的 APP11（JUMBF 的 `jumd` 類型以 `c2pa` 開頭）、PNG 的 `caBX`、WebP、WAV 與 AVI 的 `C2PA` chunk、HEIF、AVIF、MP4、MOV 與 M4A 最上層的 C2PA `uuid` box、JPEG XL 的 `jumb` box、TIFF 的標籤 `0xCD41`、GIF 的 `C2PA_GIF` 延伸。這一版只辨識有沒有，畫面上寫明還沒驗證簽章。JPEG XL 用 brotli 壓縮過的 `brob` 讀不到標籤，不算
+- C2PA 內容憑證，位置照官方的 c2pa-rs：JPEG 的 APP11（JUMBF 的 `jumd` 類型以 `c2pa` 開頭）、PNG 的 `caBX`、WebP、WAV 與 AVI 的 `C2PA` chunk、HEIF、AVIF、MP4、MOV 與 M4A 最上層的 C2PA `uuid` box、JPEG XL 的 `jumb` box、TIFF 的標籤 `0xCD41`、GIF 的 `C2PA_GIF` 延伸。JPEG XL 用 brotli 壓縮過的 `brob` 讀不到標籤，不算。找到之後接著完整驗證（見下方「內容憑證的驗證」）
 
 除了 C2PA，這些標示都沒有簽章，誰都能寫入或修改，卡片上的說明寫明。提示詞在卡片上只列前 120 個字，完整的收在「完整資訊」，匯出的紀錄全部寫出。
 
@@ -242,6 +242,22 @@ GB 45438 的服務提供者編碼（TC260-PG-20252A，27 碼）拆成主體類�
 清除中繼資料的檢查與報告把這兩種標示列成單獨的一項（`c2pa`、`aigc`），讀者看得到拿掉的是什麼。內容憑證可能帶著創作者的名字與身分聲明，原本除了 HEIF 都已經清掉（見下方「HEIC」），只是報告裡歸成其他區段或其他程式自訂的區段。GB 45438 的標識照查證的原則，服務提供者編碼在檢查結果裡拆開列出（`src/ui/provider-text.ts`），個人的號碼完整顯示，讀者看過再決定要不要清除。XMP 與 EXIF 本來就整段拿掉，標識跟著拿掉，PNG 的 `tEXt` 也是。
 
 單元測試在 `tests/unit/verify-provenance.spec.ts` 與 `tests/unit/strip-provenance.spec.ts`，服務提供者編碼與號碼都是編出來的，不沿用指南裡的範例。
+
+### 內容憑證的驗證
+
+找到 C2PA 內容憑證時，查證用官方的 `@contentauth/c2pa-web`（0.15.4，鎖定版本，c2pa-rs 編成的 WebAssembly）完整驗證（`src/ui/c2pa-check.ts`），結果由 `src/tools/verify/c2pa.ts` 整理成卡片上的幾行，同一套說法用在匯出的紀錄：
+
+- 簽章有效或無效、內容在簽署之後有沒有被改過。被改過、簽章無效、簽署者的憑證已被撤銷，列在需要留意的地方（`c2pa-changed`、`c2pa-invalid`、`c2pa-revoked`）
+- 簽署者在不在信任清單裡：先用 C2PA 的正式清單，簽署者不受信任時改用過渡清單（Interim Trust List）再驗一次，跟官方的一致性工具相同。用過渡清單通過的另外標明，過渡清單 2026-01-01 起凍結，不再新增簽署者，舊的照樣有效，較早的 Adobe、OpenAI 圖片多半用它
+- 簽署者的名稱與組織、簽署時間（標明是受信任的時間戳記服務證明，還是簽署端自己填的）
+- 撤銷狀態只讀簽署時附在檔案裡的 OCSP 回應。沒有附的寫明「沒有檢查」：2025-09 Nikon 撤銷過相機的憑證，那些照片的簽章在密碼學上仍然驗得過
+- 產生的軟體、動作紀錄（動作與數位來源類型換成讀得懂的說法，`C2PA_ACTIONS`）、素材的數量、有沒有 CAWG 的身分聲明（內容還沒有列出）
+
+不連線：遠端的資訊清單（`remoteManifestFetch`）與線上的撤銷查詢（`ocspFetch`）都關掉，信任清單直接給內容，不給網址。c2pa-web 在遇到內容憑證時才下載，Worker 從 `blob:` 網址建立（CSP 的 `worker-src` 本來就允許），WebAssembly 約 9 MB（壓縮後約 3.4 MB），service worker 用到時才存（`assets/c2pa_bg-*`）。升級前一樣在套件裡搜尋對外的網址，0.15.4 沒有。WebAssembly 被關掉時（鎖定模式、Tor Browser 的部分設定），卡片上說明沒有辦法驗證。
+
+信任清單建置時內嵌在 `src/tools/verify/c2pa-trust/`，由 `node scripts/c2pa-trust.mjs` 從官方的 repo 下載，來源的 commit 記在 `sources.json`：正式清單取自 c2pa-org/conformance-public（CC BY 4.0），過渡清單取自 contentauth/verify-site（Apache-2.0），授權與出處寫在 `licenses/c2pa.txt`。每月跟下載的軟體驗證的公鑰一起核對一次（`node scripts/c2pa-trust.mjs --check`），有變就更新、開 PR。
+
+單元測試在 `tests/unit/verify-c2pa.spec.ts`，用 c2pa-web 裡同一份 WebAssembly 在 Node 裡驗證。測試圖取自 c2pa-rs 的測試資料（MIT 或 Apache-2.0），照片不進 repo，`tests/global-setup.ts` 在測試開始前下載到 `tests/.generated/`，鎖定 commit 並比對 SHA-256（`tests/helpers/c2pa-fixtures.ts`），下載不了時略過。瀏覽器測試（`tests/e2e/verify.spec.ts`）確認 c2pa-web 在正式建置的 CSP 底下載入、驗證並列出結果。
 
 ### ProofMode 的證明檔
 
@@ -399,7 +415,7 @@ ProofMode（Guardian Project 給人權紀錄者的 Android App）拍照時不改
 - openpgp.js 依簽章的建立時間檢查金鑰，子金鑰之後到期，到期前簽的檔案照樣驗得過，撤銷的子金鑰驗不過
 - openpgp.js 透過 `src/tools/software-verify/openpgp.ts` 動態載入，打包成獨立的 `openpgp-*.js`（LGPL 要求可以換成自行編譯的版本），授權全文在 `licenses/openpgp.txt`。6.3.2 裡只有預設的 armor 註解有 `openpgpjs.org` 的網址，沒有對外連線
 - 公鑰在 `src/tools/software-verify/keys.ts`，由 `node scripts/signing-keys.mjs` 從官方的來源下載，比對主金鑰的指紋（寫在 `SIGNERS`，取自官方說明頁），拿掉其他人的認證簽章再寫回，同時列出每把子金鑰的效期。`--check` 只比對，跟 `keys.ts` 不同時以非零值結束
-- 每月跟著文件站的例行查證核對一次：執行 `node scripts/signing-keys.mjs --check`，有變就更新、開 PR，並看一下有沒有快到期的子金鑰。官方換主金鑰時腳本會停下來，要先讀過公告再手動改 `SIGNERS` 的指紋
+- 每月跟著文件站的例行查證核對一次：執行 `node scripts/signing-keys.mjs --check`，有變就更新、開 PR，並看一下有沒有快到期的子金鑰。查證的 C2PA 信任清單同時核對（`node scripts/c2pa-trust.mjs --check`，見「內容憑證的驗證」）。官方換主金鑰時腳本會停下來，要先讀過公告再手動改 `SIGNERS` 的指紋
 - 測試用官方真正的簽章（`tests/helpers/signed/`）：Tor Browser 15.0.25 的 `sha256sums-signed-build.txt` 與簽章，以及 Tails 7.14 映像檔的簽章（只確認簽署的子金鑰在內建的公鑰裡）
 
 ## 寫作習慣檢查
@@ -523,7 +539,7 @@ ProofMode（Guardian Project 給人權紀錄者的 Android App）拍照時不改
 
 第一次開啟之後，沒有網路也能使用。service worker 的範本在 `src/sw/sw-template.js`，建置時 `vite.config.ts` 的 `serviceWorker()` 列出 `dist/` 的檔案、算出版本（所有檔案內容的雜湊），輸出成 `/gears/sw.js`。
 
-- 安裝時先存頁面、程式、圖示與 165 清單，約 7 MB，其中 PDF 遮蔽的 pdf.js 約 1.7 MB（壓縮後約 500 KB），條碼的 zxing-wasm 約 950 KB（壓縮後約 420 KB，暫存區的圖片都會用到，所以預先存）。人臉與文字辨識的模型與 WebAssembly、pdf.js 的 CMap 與字型（`vendor/`、`models/`、`assets/ort-wasm-*`）用到時才存
+- 安裝時先存頁面、程式、圖示與 165 清單，約 7 MB，其中 PDF 遮蔽的 pdf.js 約 1.7 MB（壓縮後約 500 KB），條碼的 zxing-wasm 約 950 KB（壓縮後約 420 KB，暫存區的圖片都會用到，所以預先存）。人臉與文字辨識的模型與 WebAssembly、pdf.js 的 CMap 與字型、驗證內容憑證的 c2pa（`vendor/`、`models/`、`assets/ort-wasm-*`、`assets/c2pa_bg-*`）用到時才存
 - 逐字稿的 Whisper 模型存在另一個不隨版本清掉的快取（`gears-models`），換新版本時不必重新下載 80 到 250 MB。網址帶著模型的版本，清單以外的在新版本接手時刪掉。畫面上標出已下載的模型，可以刪除
 - 只存工作台自己的檔案。讀者放進暫存區的檔案只在記憶體裡，不寫進快取，只有換版本的那一刻經過 service worker（見下一項）
 - 換版本要重新載入頁面，暫存區只在記憶體裡，重新載入就沒了（`src/ui/offline.ts`）。暫存區是空的、畫面上也沒有填到一半的東西時（桌面、授權頁、還沒選檔案的工具說明，從空白開始的工具不算），不出現提示，等分頁切到背景（`visibilitychange`）就直接換，讀者回來時已經是新版本。暫存區有檔案時，畫面上方提示，讀者按「重新載入」才換上，避免同一個分頁混用新舊程式
@@ -775,5 +791,6 @@ iPhone 預設拍出來的是 HEIC，在網頁上選照片時交出來的也是�
 - 遮蔽的自動尋找用 [YuNet](https://github.com/opencv/opencv_zoo/tree/main/models/face_detection_yunet) 模型（MIT）與 [onnxruntime-web](https://github.com/microsoft/onnxruntime) 1.30.0（MIT）、[Tesseract.js](https://github.com/naptha/tesseract.js) 7.0.0 與 tessdata_best 的語言資料（Apache-2.0），見 `licenses/redact-detect.txt`
 - 逐字稿用 [Transformers.js](https://github.com/huggingface/transformers.js) 4.3.1（Apache-2.0）、Whisper small 與 base 的 ONNX 檔（onnx-community，原始模型的模型卡標示 Apache-2.0）、讀者選擇之後從 Hugging Face 下載的 large-v3-turbo（模型卡標示 MIT）、分辨說話者用的 3D-Speaker CAM++（Apache-2.0，ONNX 檔取自 sherpa-onnx）、[opencc-js](https://github.com/nk2028/opencc-js) 1.4.2（MIT，字典 Apache-2.0），見 `licenses/transcribe.txt`
 - 下載的軟體驗證用 [OpenPGP.js](https://github.com/openpgpjs/openpgpjs) 6.3.2（LGPL-3.0），內建 Tor Project 與 Tails 公開的簽章公鑰，見 `licenses/openpgp.txt`
+- 查證驗證內容憑證用 [c2pa-web](https://github.com/contentauth/c2pa-js) 0.15.4（MIT，裡面是 [c2pa-rs](https://github.com/contentauth/c2pa-rs) 編成的 WebAssembly），內建 C2PA 的正式信任清單（CC BY 4.0）與過渡信任清單（Apache-2.0），見 `licenses/c2pa.txt`
 - QR code 以外的條碼用 [zxing-wasm](https://github.com/Sec-ant/zxing-wasm) 3.1.4（MIT），它是 [ZXing-C++](https://github.com/zxing-cpp/zxing-cpp)（Apache-2.0）編譯成的 WebAssembly，見 `licenses/zxing.txt`
 - 165 反詐騙清單見上方，部署時下載，不進版控

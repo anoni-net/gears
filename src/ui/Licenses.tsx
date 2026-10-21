@@ -16,6 +16,7 @@ const ENTRIES: { id: string; url?: string; text?: string }[] = [
   { id: "pdf-lib", url: fileUrl("pdf-lib") },
   { id: "libheif", url: fileUrl("libheif") },
   { id: "openpgp", url: fileUrl("openpgp") },
+  { id: "c2pa", url: fileUrl("c2pa") },
   { id: "zxing", url: fileUrl("zxing") },
   { id: "material-design-icons", url: fileUrl("material-design-icons") },
   // 資料：授權寫在說明裡，沒有獨立的授權檔

@@ -1,5 +1,6 @@
 import { ascii, type Format, indexOf, startsWith, u32be, u32le } from "../../core/bytes.ts";
 import { unescapeXml, walkXml } from "../../core/xml.ts";
+import type { C2paCheck } from "./c2pa.ts";
 
 // 來源標示：檔案自己宣告的產生方式。IPTC 的數位來源類型與 AI 欄位、GB 45438 的隱式標識、
 // 生成工具寫下的參數，以及有沒有 C2PA 內容憑證。只讀檔案寫了什麼，不從像素推算任何分數。
@@ -40,6 +41,8 @@ export interface Provenance {
   generators: Generator[];
   tc260: Tc260Label[];
   c2pa: boolean;
+  // 內容憑證的完整驗證（第二階段，src/ui/c2pa-check.ts），在瀏覽器裡由查證的畫面補上
+  c2paCheck?: { check: C2paCheck } | { error: "wasm-unavailable" | "unreadable" };
 }
 
 // IPTC 數位來源類型的詞彙（cv.iptc.org/newscodes/digitalsourcetype，含已退役的三個），畫面上換成讀得懂的說法

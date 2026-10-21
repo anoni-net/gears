@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { encodeQr, qrPng } from "../src/tools/qrcode/index.ts";
+import { fetchC2paFixtures } from "./helpers/c2pa-fixtures.ts";
 
 export const GENERATED = "tests/.generated";
 export const QR_TEXT = "https://anoni.net/gears/";
@@ -38,9 +39,10 @@ function makeVideo() {
   }
 }
 
-export default function globalSetup() {
+export default async function globalSetup() {
   mkdirSync(GENERATED, { recursive: true });
   makeVideo();
+  await fetchC2paFixtures();
   const qr = `${GENERATED}/qr.png`;
   writeFileSync(qr, qrPng(encodeQr(QR_TEXT, "M"), 8));
   const script = "scripts/make-test-images.py";

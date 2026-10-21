@@ -36,7 +36,10 @@ export type WarningCode =
   | "email-remote-content"
   | "doc-connects"
   | "doc-code"
-  | "proofmode-mismatch";
+  | "proofmode-mismatch"
+  | "c2pa-changed"
+  | "c2pa-invalid"
+  | "c2pa-revoked";
 
 export interface Warning {
   code: WarningCode;
@@ -129,6 +132,11 @@ function fileWarnings(f: CaseFile): Warning[] {
   if (ev.revisions.length) out.push({ code: "pdf-revisions", files: [f.index], value: String(ev.revisions.length + 1) });
   if (ev.docCheck?.connect) out.push({ code: "doc-connects", files: [f.index], value: String(ev.docCheck.connect) });
   else if (ev.docCheck?.code) out.push({ code: "doc-code", files: [f.index] });
+  // C2PA 內容憑證：簽署之後內容被改過、簽章無效、簽署者的憑證已被撤銷（只看檔案內附的資料）
+  const c2pa = ev.provenance?.c2paCheck && "check" in ev.provenance.c2paCheck ? ev.provenance.c2paCheck.check : undefined;
+  if (c2pa?.problems.includes("content-changed")) out.push({ code: "c2pa-changed", files: [f.index] });
+  else if (c2pa?.problems.includes("signature-invalid")) out.push({ code: "c2pa-invalid", files: [f.index] });
+  if (c2pa?.problems.includes("revoked")) out.push({ code: "c2pa-revoked", files: [f.index], value: c2pa.signer });
   // ProofMode：照片或感測器資料跟簽章對不上，代表簽完之後被改過，或證明檔跟照片不是同一組
   const pm = ev.proofmode;
   const broken = pm?.items.filter((i) => i.mediaSig.kind === "bad" || i.proofSig.kind === "bad" || (!i.media && pm.unmatched.length));

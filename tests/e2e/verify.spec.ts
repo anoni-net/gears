@@ -2,6 +2,8 @@ import { createHash } from "node:crypto";
 import { bytes, insertIntoJpeg, segment, syntheticJpeg } from "../helpers/fixtures.ts";
 import { incrementalPdf } from "../helpers/pdf-incremental.ts";
 import { proofModeBundle } from "../helpers/proofmode.ts";
+import { c2paFixture, hasC2paFixtures } from "../helpers/c2pa-fixtures.ts";
+import { readFileSync } from "node:fs";
 import { downloadFrom, expect, test } from "./guard.ts";
 
 const sha256 = (data: Uint8Array) => createHash("sha256").update(data).digest("hex");
@@ -161,4 +163,25 @@ test("ProofMode 的證明檔：簽章、公鑰指紋與感測器資料，照片�
   const report = Buffer.from(file.data).toString("utf8");
   expect(report).toContain("- ProofMode 的證明檔，1 份證明");
   expect(report).toContain("        - Wifi MAC：02:00:00:00:00:00");
+});
+
+test("C2PA 內容憑證：用 c2pa-web 驗證，列出信任清單、撤銷狀態與動作，內容被改過的列在需要留意的地方", async ({ page }) => {
+  test.skip(!hasC2paFixtures(), "沒有 C2PA 的測試圖");
+  await page.goto("./verify/");
+  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.getByRole("button", { name: "選擇檔案" }).first().click()]);
+  await chooser.setFiles([
+    { name: "photoshop.jpg", mimeType: "image/jpeg", buffer: readFileSync(c2paFixture("ocsp.jpg")) },
+    { name: "changed.jpg", mimeType: "image/jpeg", buffer: readFileSync(c2paFixture("XCA.jpg")) },
+  ]);
+  const cards = page.locator(".verify-card");
+  const signed = cards.filter({ has: page.getByRole("heading", { name: "photoshop.jpg" }) });
+  await expect(signed.getByText("C2PA 內容憑證：簽章有效，簽署者在 C2PA 的過渡信任清單裡（2026 年起不再新增簽署者）")).toBeVisible({ timeout: 30000 });
+  await expect(signed.getByText("簽署者：Adobe C2PA（Adobe Inc.）")).toBeVisible();
+  await expect(signed.getByText("檔案內附的撤銷資料顯示憑證沒有被撤銷")).toBeVisible();
+  await expect(signed.getByText(/^動作紀錄：開啟既有的檔案（用生成式 AI 編修過（compositeWithTrainedAlgorithmicMedia））/)).toBeVisible();
+
+  const changed = cards.filter({ has: page.getByRole("heading", { name: "changed.jpg" }) });
+  await expect(changed.getByText("C2PA 內容憑證：驗證沒有通過")).toBeVisible({ timeout: 30000 });
+  await expect(changed.getByText("內容在簽署之後被改過", { exact: true })).toBeVisible();
+  await expect(page.locator(".verify-warnings").getByText("內容在簽署之後被改過")).toBeVisible();
 });

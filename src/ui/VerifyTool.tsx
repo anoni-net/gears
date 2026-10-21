@@ -66,7 +66,13 @@ function analyze(file: TrayFile): Promise<Result> {
       const hash = await sha256Blob(original.blob);
       // 太大、沒有整個讀進記憶體的檔案，只用加入暫存區時的檢查結果
       const bytes = original.large ? new Uint8Array(0) : new Uint8Array(await original.blob.arrayBuffer());
-      return { hash, evidence: await examine(bytes, original.format, original.findings) };
+      const evidence = await examine(bytes, original.format, original.findings);
+      // 有內容憑證時接著完整驗證，c2pa-web 這時才下載
+      if (evidence.provenance?.c2pa && !original.large) {
+        const { checkC2pa } = await import("./c2pa-check.ts");
+        evidence.provenance.c2paCheck = await checkC2pa(original.blob, original.format);
+      }
+      return { hash, evidence };
     })();
     cache.set(original.blob, job);
   }
