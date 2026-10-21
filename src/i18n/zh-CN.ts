@@ -599,6 +599,7 @@ export const zhCN: Record<MessageKey, string> = {
   "remote.privacy.page": "完整的说明",
   "history.title": "处理记录",
   "history.found": "找到 {n} 项可能透露身份的信息",
+  "history.step": "第 {n} 步",
   "history.current": "当前版本",
   "history.undo": "撤销这一步",
   "file.unsupported": "这种文件还没有办法检查里面的元数据，可以加密之后再交出去。",

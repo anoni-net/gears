@@ -257,25 +257,23 @@ function Steps({ file, busy }: { file: TrayFile; busy: boolean }) {
     i > 0 ? tDynamic(`tool.${x.tool}`) : x.tool ? tDynamic(`file.version.${x.tool}`) : t("file.original");
   const metadata = (x: Version) => x.findings.filter((f) => !CONTENT_FINDINGS.includes(f.code));
   const inspectable = fileTools.some((tool) => tool.accepts(versions[0]!.format));
-  const detail =
+  // 選中那一步的說明。步驟按鈕已經寫了工具名稱，這裡不再重複，只寫是第幾步、是不是目前的版本，
+  // 復原放在同一行，報告接在下面
+  const meta =
     at === 0 ? (
-      inspectable ? (
-        <>
-          <p class="hint">{metadata(v).length ? t("history.found", { n: metadata(v).length }) : t("tray.clean")}</p>
-          {metadata(v).length ? <FindingList findings={metadata(v)} /> : null}
-        </>
-      ) : null
+      inspectable ? (metadata(v).length ? t("history.found", { n: metadata(v).length }) : t("tray.clean")) : null
+    ) : at === last ? (
+      t("history.current")
+    ) : (
+      t("history.step", { n: at })
+    );
+  const body =
+    at === 0 ? (
+      metadata(v).length && inspectable ? <FindingList findings={metadata(v)} /> : null
     ) : (
       <>
         <RemovedNote version={v} previous={versions[at - 1]!} />
         {v.report ? <ReportView report={v.report} /> : null}
-        {at === last ? (
-          <p class="actions">
-            <button type="button" onClick={() => tray.undo(file.id)} disabled={busy}>
-              {t("history.undo")}
-            </button>
-          </p>
-        ) : null}
       </>
     );
   return (
@@ -297,13 +295,17 @@ function Steps({ file, busy }: { file: TrayFile; busy: boolean }) {
           </li>
         ))}
       </ol>
-      {detail ? (
+      {meta || body ? (
         <div id="step-detail" class="step-detail" data-testid="step-detail">
-          <p class="step-title">
-            <strong>{label(v, at)}</strong>
-            {at === last ? <span class="badge">{t("history.current")}</span> : null}
-          </p>
-          {detail}
+          <div class="step-meta">
+            <span>{meta}</span>
+            {at === last && at > 0 ? (
+              <button type="button" class="link" onClick={() => tray.undo(file.id)} disabled={busy}>
+                {t("history.undo")}
+              </button>
+            ) : null}
+          </div>
+          {body}
         </div>
       ) : null}
     </section>
@@ -473,12 +475,14 @@ export function FileView({ file, others, index, busy, preferred, onOpenTool }: P
   const act = (entry: ShelfEntry) =>
     entry.kind === "create" ? openCreate(entry.id) : entry.kind === "editor" ? setEditing(entry.id) : void run(entry.id);
 
+  const steps = file.versions.length > 1 || !!file.versions[0]!.tool;
+
   return (
-    // 版面依讀者的順序：檔名與下載、做過的步驟、檔案現在的樣子與裡面的資訊、接下來的工具。
-    // 寬螢幕上檔名與下載同一列、步驟橫跨兩欄，預覽在左、資訊與工具在右，預覽捲動時留在畫面上。
-    // 手機上排成一欄：處理過的先看預覽再下載（遮蔽完馬上看得到框有沒有蓋對），還沒處理的先看找到的資訊（styles.css）
+    // 版面：檔名與下載同一列，下面兩欄。左欄是檔案本身（預覽與處理紀錄），右欄是裡面還有什麼、接下來的工具。
+    // 手機上排成一欄：處理過的先看預覽與這一步做了什麼再下載（遮蔽完馬上看得到框有沒有蓋對），
+    // 還沒處理的先看找到的資訊（styles.css）
     <section
-      class={`file${isImage || media ? " has-preview" : ""}${current.tool ? " processed" : ""}`}
+      class={`file${isImage || media || steps ? " has-main" : ""}${current.tool ? " processed" : ""}`}
       aria-labelledby="file-title"
       ref={section}
     >
@@ -493,8 +497,6 @@ export function FileView({ file, others, index, busy, preferred, onOpenTool }: P
 
       {current.tool && !editing ? <Output version={current} name={outputName(file, index)} /> : null}
 
-      {/* 只有原檔時不顯示。工具建立的檔案（QR code 產生器、面對面傳送收到的）顯示是哪個工具建立的 */}
-      {file.versions.length > 1 || file.versions[0]!.tool ? <Steps file={file} busy={busy} /> : null}
 
       {editing ? (
         <section class="editor" aria-labelledby="editor-title">
@@ -528,8 +530,16 @@ export function FileView({ file, others, index, busy, preferred, onOpenTool }: P
         </section>
       ) : (
         <>
-          {isImage ? <Preview url={preview} blob={current.blob} format={current.format} key={preview} /> : null}
-          {media ? <MediaPreview blob={current.blob} format={current.format} /> : null}
+          {/* 左欄是檔案本身：現在的樣子，以及怎麼變成這樣。處理紀錄放在預覽下面，看結果時順著讀到這一步做了什麼。
+              原本橫跨兩欄放在最上面，份量比找到的資訊與工具還重，預覽下方又留著一大塊空白（2026-10-22 的使用回饋）。
+              只有原檔時不顯示，工具建立的檔案（QR code 產生器、面對面傳送收到的）顯示是哪個工具建立的 */}
+          {isImage || media || steps ? (
+            <div class="file-main">
+              {isImage ? <Preview url={preview} blob={current.blob} format={current.format} key={preview} /> : null}
+              {media ? <MediaPreview blob={current.blob} format={current.format} /> : null}
+              {steps ? <Steps file={file} busy={busy} /> : null}
+            </div>
+          ) : null}
 
           <div class="panel">
             {canInspect ? (

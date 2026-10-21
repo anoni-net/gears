@@ -598,6 +598,7 @@ export const en: Record<MessageKey, string> = {
   "remote.privacy.page": "Full details",
   "history.title": "What has been done",
   "history.found": "{n} items that could identify you were found",
+  "history.step": "Step {n}",
   "history.current": "Current version",
   "history.undo": "Undo this step",
   "file.unsupported": "Metadata in this kind of file can't be checked yet. You can encrypt it before handing it over.",
