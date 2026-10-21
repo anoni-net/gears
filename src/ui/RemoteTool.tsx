@@ -527,7 +527,7 @@ export function RemoteTool(_props: CreateToolProps) {
       case "sharing":
         return t("remote.waiting");
       case "invited":
-        return t("remote.invite");
+        return "";
       case "connecting":
         return t("nearby.connecting");
       case "awaiting":
@@ -640,13 +640,21 @@ export function RemoteTool(_props: CreateToolProps) {
     );
     actions = cancel;
   } else if (phase.kind === "invited") {
-    body = privacy;
-    actions = (
+    // 收到連結的人第一次看到這個工具，上面的工具說明寫的是送出的那一方。要做的事（加入）放在最前面的
+    // 卡片裡，經過伺服器的說明接在按鈕下面，按下「加入」之前仍然看得到
+    body = (
       <>
-        <button type="button" class="primary" onClick={() => void join(phase.invite)}>
-          {t("remote.join")}
-        </button>
-        {cancel}
+        <div class="remote-invite" data-testid="remote-invite">
+          <h3>{t("remote.inviteTitle")}</h3>
+          <p>{t("remote.invite")}</p>
+          <div class="buttons">
+            <button type="button" class="primary" onClick={() => void join(phase.invite)}>
+              {t("remote.join")}
+            </button>
+            {cancel}
+          </div>
+        </div>
+        {privacy}
       </>
     );
   } else if (phase.kind === "review") {
