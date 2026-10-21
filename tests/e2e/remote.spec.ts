@@ -29,7 +29,13 @@ test("打開分享連結、按加入，兩端的確認碼相同，接收之後�
   await receiver.goto(link);
   await expect(receiver.getByTestId("remote-invite")).toContainText("按下「加入」才會連線");
   expect(new URL(receiver.url()).hash).toBe("");
-  await expect(receiver.getByTestId("remote-privacy")).toContainText("看不到內容");
+  // 各方可得知的資訊對照表：中繼伺服器與 Cloudflare 無法得知內容，對方無法得知你的 IP
+  // 傳送的路線：你、Cloudflare、中繼伺服器、對方
+  await expect(receiver.getByTestId("remote-route").locator(".node")).toHaveText(["你", "Cloudflare", "中繼伺服器", "對方"]);
+  const who = receiver.getByTestId("remote-who");
+  await expect(who.locator("thead th")).toHaveText(["中繼伺服器", "Cloudflare", "對方"]);
+  await expect(who.locator("tbody tr").nth(0).locator("td")).toHaveText(["可得知", "可得知", "無法得知"]);
+  await expect(who.locator("tbody tr").nth(2).locator("td")).toHaveText(["無法得知", "無法得知", "可得知"]);
   await receiver.getByRole("button", { name: "加入", exact: true }).click();
 
   await expect(receiver.getByTestId("remote-incoming").locator("li")).toHaveCount(2, { timeout: 20_000 });
@@ -250,7 +256,7 @@ test("告知畫面連到遠端傳送的伺服器說明，在新分頁打開，�
   await page.goto("./remote-server/");
   await expect(page).toHaveTitle("遠端傳送的伺服器 | Gears 檔案工作台");
   const section = page.getByTestId("remote-server");
-  await expect(section.getByRole("heading", { level: 3 })).toHaveText(["經過的伺服器", "伺服器看得到與看不到的內容", "保存的資料", "加密的方式", "使用的限制", "濫用的回報"]);
+  await expect(section.getByRole("heading", { level: 3 })).toHaveText(["經過的伺服器", "伺服器可得知與無法讀取的資訊", "保存的資料", "加密的方式", "使用的限制", "濫用的回報"]);
   await expect(section).toContainText("不保存檔案");
   await expect(section).toContainText("whisper@anoni.net");
   await page.getByRole("button", { name: "回到遠端傳送" }).click();
