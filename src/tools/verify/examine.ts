@@ -8,6 +8,7 @@ import { parseEmail } from "../email/parse.ts";
 import { CHECK_FORMATS, checkDocument } from "../doc-check/index.ts";
 import { extractExif } from "../redact/keep-exif.ts";
 import { parseExif } from "../strip-metadata/exif.ts";
+import type { PdfSignatureCheck } from "./pdf-signature.ts";
 import { type ProofModeEvidence, examineProofMode } from "./proofmode.ts";
 import { IPTC_EXT, type Provenance, TC260, emptyProvenance, fromPngTexts, hasC2pa, parseA1111, parseTc260, pngTexts, type Tc260Label } from "./provenance.ts";
 import { type TimeValue, anyTime, exifTime, gpsTime, isoTime, pdfTime } from "./times.ts";
@@ -38,6 +39,10 @@ export interface Signature {
   name?: string;
   time?: TimeValue;
   coversWhole: boolean; // 簽章涵蓋到檔案結尾，簽完之後沒有再加內容
+  subFilter?: string; // adbe.pkcs7.detached、ETSI.CAdES.detached 這類
+  byteRange?: number[];
+  contents?: Uint8Array; // CMS（DER），驗證在 src/tools/verify/pdf-signature.ts
+  check?: PdfSignatureCheck; // 驗證的結果，在瀏覽器裡由查證的畫面補上（src/ui/pdf-signature-check.ts）
 }
 
 export interface Evidence {
@@ -277,7 +282,16 @@ async function examinePdf(ev: Evidence, bytes: Uint8Array) {
     const range = obj.lookup(lib.PDFName.of("ByteRange"));
     if (!(range instanceof lib.PDFArray) || range.size() !== 4 || !obj.has(lib.PDFName.of("Contents"))) continue;
     const nums = range.asArray().map((n) => (n instanceof lib.PDFNumber ? n.asNumber() : 0));
-    ev.signatures.push({ name: str(obj, "Name"), time: pdfTime(str(obj, "M")), coversWhole: nums[2]! + nums[3]! >= fileEnd });
+    const contents = obj.lookup(lib.PDFName.of("Contents"));
+    const subFilter = obj.lookup(lib.PDFName.of("SubFilter"));
+    ev.signatures.push({
+      name: str(obj, "Name"),
+      time: pdfTime(str(obj, "M")),
+      coversWhole: nums[2]! + nums[3]! >= fileEnd,
+      subFilter: subFilter instanceof lib.PDFName ? subFilter.decodeText() : undefined,
+      byteRange: nums,
+      contents: contents instanceof lib.PDFHexString ? contents.asBytes() : contents instanceof lib.PDFString ? contents.asBytes() : undefined,
+    });
   }
 
   // 線性化（快速網頁檢視）的 PDF 開頭有一段給第一頁用的交互參照，第一個 %%EOF 不是一個版本

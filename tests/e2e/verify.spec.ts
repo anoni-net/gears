@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { bytes, insertIntoJpeg, segment, syntheticJpeg } from "../helpers/fixtures.ts";
 import { incrementalPdf } from "../helpers/pdf-incremental.ts";
 import { proofModeBundle } from "../helpers/proofmode.ts";
+import { makeCert, signedPdf } from "../helpers/signed-pdf.ts";
 import { c2paFixture, hasC2paFixtures } from "../helpers/c2pa-fixtures.ts";
 import { readFileSync } from "node:fs";
 import { downloadFrom, expect, test } from "./guard.ts";
@@ -204,5 +205,27 @@ test("C2PA 內容憑證：身分聲明的帳號與 AI 訓練的標示，影片�
   await expect(identity.getByText("C2PA 內容憑證：驗證沒有通過")).toHaveCount(0);
   await expect(card("training.jpg").getByText("創作者對 AI 使用的標示：不允許用於 AI 推論、不允許用於生成式 AI 訓練")).toBeVisible({ timeout: 30000 });
   await expect(card("clip.mp4").getByText("C2PA 內容憑證：簽章有效，但簽署者不在信任清單裡，無法確認是誰簽的")).toBeVisible({ timeout: 30000 });
+});
+
+test("PDF 數位簽章：驗證簽章與憑證鏈，簽完之後被改過的列在需要留意的地方", async ({ page }) => {
+  const day = 86_400_000;
+  const root = await makeCert({ cn: "Gears Test Root", ca: true, serial: 1, from: new Date(Date.now() - 3650 * day), to: new Date(Date.now() + 3650 * day) });
+  const leaf = await makeCert({ cn: "測試簽署人", issuer: root, serial: 2, from: new Date(Date.now() - day), to: new Date(Date.now() + 365 * day) });
+  await page.goto("./verify/");
+  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.getByRole("button", { name: "選擇檔案" }).first().click()]);
+  await chooser.setFiles([
+    { name: "signed.pdf", mimeType: "application/pdf", buffer: Buffer.from(await signedPdf(leaf)) },
+    { name: "tampered.pdf", mimeType: "application/pdf", buffer: Buffer.from(await signedPdf(leaf, { tamper: true })) },
+  ]);
+  const card = (name: string) => page.locator(".verify-card").filter({ has: page.getByRole("heading", { name }) });
+  const signed = card("signed.pdf");
+  await expect(signed.getByText("簽章正確，簽完之後涵蓋的範圍沒有被改過")).toBeVisible({ timeout: 30000 });
+  await expect(signed.getByText(/^簽署者的憑證：.*CN=測試簽署人/)).toBeVisible();
+  // 測試的根憑證不在內建的清單裡
+  await expect(signed.getByText(/^憑證鏈接不到內建的信任清單/)).toBeVisible();
+
+  const tampered = card("tampered.pdf");
+  await expect(tampered.getByText("簽署的範圍在簽完之後被改過")).toBeVisible({ timeout: 30000 });
+  await expect(page.locator(".verify-warnings").getByText("數位簽章驗證沒有通過")).toBeVisible();
 });
 

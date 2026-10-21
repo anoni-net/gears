@@ -39,7 +39,8 @@ export type WarningCode =
   | "proofmode-mismatch"
   | "c2pa-changed"
   | "c2pa-invalid"
-  | "c2pa-revoked";
+  | "c2pa-revoked"
+  | "pdf-signature-invalid";
 
 export interface Warning {
   code: WarningCode;
@@ -129,6 +130,8 @@ function fileWarnings(f: CaseFile): Warning[] {
   const editor = ev.software.find((s) => EDITORS.test(s));
   if (editor) out.push({ code: "editing-software", files: [f.index], value: editor });
   if (ev.signatures.length && !ev.signatures.some((s) => s.coversWhole)) out.push({ code: "signed-then-modified", files: [f.index] });
+  // 簽章跟簽署的內容對不上：簽完之後涵蓋的範圍被改過，或簽章本身被改過
+  if (ev.signatures.some((s) => s.check?.signature === "invalid")) out.push({ code: "pdf-signature-invalid", files: [f.index] });
   if (ev.revisions.length) out.push({ code: "pdf-revisions", files: [f.index], value: String(ev.revisions.length + 1) });
   if (ev.docCheck?.connect) out.push({ code: "doc-connects", files: [f.index], value: String(ev.docCheck.connect) });
   else if (ev.docCheck?.code) out.push({ code: "doc-code", files: [f.index] });

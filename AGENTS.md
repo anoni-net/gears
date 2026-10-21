@@ -8,7 +8,7 @@
 - 上傳端點不經過 Cloudflare。Cloudflare 在邊緣解開 TLS，經過的檔案對它是明文。兩端之間另有加密、Cloudflare 只經手密文的通道可以經過，畫面上要寫明 Cloudflare 看得到 IP 與時間（遠端傳送的 clearnet 入口，見下方「遠端傳送的轉送服務」）
 - 伺服器不保存讀者的檔案，加密過的也一樣。遠端傳送的轉送服務只在轉給對方的途中經手，對方不在時直接丟掉，兩端一律同時在線（見下方「遠端傳送的轉送服務」）
 - 頁面能連線的對象寫死在 CSP 裡（`vite.config.ts`），新增任何對外連線都要改那裡，並在畫面上標示。頁面的 meta 標籤只有自己的網域、使用統計的送出網址（`https://aa.anoni.net/api/send`，見下方「使用統計」）與建議與回饋的送出網址（見下方「建議與回饋」）。逐字稿的大模型從 Hugging Face 下載（見下方「逐字稿」），只開在伺服器送的 CSP 標頭 <!-- docs-style-lint: disable-line -->
-- 執行期的相依套件只有 `preact`、`qrcode-generator`（QR code 產生）、`jsqr`（QR code 讀取）、`zxing-wasm`（QR code 以外的條碼，見下方「QR code 的內容格式」）、`age-encryption`（加密，連同它相依的 noble 系列）、`libheif-js`（HEIC 解碼，LGPL-3.0，見下方「HEIC」）、`pdf-lib`（PDF 的解析與寫出，見下方「文件」）、`pdfjs-dist`（PDF 的遮蔽，見下方「PDF 的遮蔽」），以及遮蔽的自動尋找用的 `onnxruntime-web` 與 `tesseract.js`（見下方「遮蔽的自動尋找」）、逐字稿用的 `@huggingface/transformers` 與 `opencc-js`（見下方「逐字稿」，分辨說話者用的 onnxruntime 是 Transformers.js 帶的那一份），以及查證計算 SHA-256 用的 `@noble/hashes`（age 加密原本就相依它，鎖定同一個版本，見下方「查證」）、遠端傳送的加密用的 `@noble/curves` 與 `@noble/ciphers`（同樣是 age 加密已經帶進來的版本，見下方「遠端傳送的轉送服務」）、下載的軟體驗證用的 `openpgp`（LGPL-3.0，見下方「下載的軟體驗證」，查證的 ProofMode 證明檔也用它），以及查證驗證內容憑證用的 `@contentauth/c2pa-web`（MIT，見下方「內容憑證的驗證」）。新增套件前先想能不能自己寫，必要時鎖定確切的版本。工具用到的套件在打開工具時才載入
+- 執行期的相依套件只有 `preact`、`qrcode-generator`（QR code 產生）、`jsqr`（QR code 讀取）、`zxing-wasm`（QR code 以外的條碼，見下方「QR code 的內容格式」）、`age-encryption`（加密，連同它相依的 noble 系列）、`libheif-js`（HEIC 解碼，LGPL-3.0，見下方「HEIC」）、`pdf-lib`（PDF 的解析與寫出，見下方「文件」）、`pdfjs-dist`（PDF 的遮蔽，見下方「PDF 的遮蔽」），以及遮蔽的自動尋找用的 `onnxruntime-web` 與 `tesseract.js`（見下方「遮蔽的自動尋找」）、逐字稿用的 `@huggingface/transformers` 與 `opencc-js`（見下方「逐字稿」，分辨說話者用的 onnxruntime 是 Transformers.js 帶的那一份），以及查證計算 SHA-256 用的 `@noble/hashes`（age 加密原本就相依它，鎖定同一個版本，見下方「查證」）、遠端傳送的加密用的 `@noble/curves` 與 `@noble/ciphers`（同樣是 age 加密已經帶進來的版本，見下方「遠端傳送的轉送服務」）、下載的軟體驗證用的 `openpgp`（LGPL-3.0，見下方「下載的軟體驗證」，查證的 ProofMode 證明檔也用它），以及查證驗證內容憑證用的 `@contentauth/c2pa-web`（MIT，見下方「內容憑證的驗證」）、驗證 PDF 數位簽章用的 `pkijs` 與 `asn1js`（BSD-3-Clause，見下方「PDF 數位簽章的驗證」）。新增套件前先想能不能自己寫，必要時鎖定確切的版本。工具用到的套件在打開工具時才載入
 - 結構有問題的檔案就停下來，不交出一份沒處理乾淨的檔案
 
 ## 支援的瀏覽器
@@ -203,7 +203,7 @@ Tesseract 的 WebAssembly 會把執行紀錄寫到標準錯誤輸出，瀏覽器
 - 檔案與雜湊值：格式、大小、加入暫存區的時間（`TrayFile.addedAt`）、SHA-256。用 `@noble/hashes` 一次讀 8 MB 分段計算，幾 GB 的影片也不必整個讀進記憶體，HTTP 頁面上也能用（`crypto.subtle` 只在 HTTPS 才有，而且不能分段）
 - 時間線：所有檔案的時間排在一起，標出是哪一種時間、來源與時區。沒有時區的不猜，依字面排序，畫面上說明（`times.ts`）
 - 裝置、序號、軟體、人名，同一個值出現在哪幾個檔案。位置只列座標，不畫地圖、不換算地址
-- 編輯痕跡：照片內嵌的縮圖跟主圖並排、XMP 的編輯紀錄、Office 與 LibreOffice 的修訂次數與編輯時間、PDF 的數位簽章（只看簽章涵蓋到哪裡，不驗證憑證），以及 PDF 的版本紀錄（見下方）
+- 編輯痕跡：照片內嵌的縮圖跟主圖並排、XMP 的編輯紀錄、Office 與 LibreOffice 的修訂次數與編輯時間、PDF 的數位簽章（簽章、憑證鏈與涵蓋的範圍，見下方「PDF 數位簽章的驗證」），以及 PDF 的版本紀錄（見下方）
 - 來源標示（`provenance.ts`，見下方「來源標示」）：IPTC 的數位來源類型與 AI 欄位、GB 45438 的隱式標識、生成工具寫下的參數，以及有沒有 C2PA 內容憑證
 - 需要留意的地方（`summary.ts`）：內容相同、副檔名跟格式不符、修改早於建立、拍攝時間跟 GPS 時間對不上（有時區時差 5 分鐘以上，沒有時區時差距不接近任何真實的時區）、記錄的軟體是影像編輯軟體、簽章之後還有加入內容、PDF 有舊版本
 
@@ -242,6 +242,22 @@ GB 45438 的服務提供者編碼（TC260-PG-20252A，27 碼）拆成主體類�
 清除中繼資料的檢查與報告把這兩種標示列成單獨的一項（`c2pa`、`aigc`），讀者看得到拿掉的是什麼。內容憑證可能帶著創作者的名字與身分聲明，原本除了 HEIF 都已經清掉（見下方「HEIC」），只是報告裡歸成其他區段或其他程式自訂的區段。GB 45438 的標識照查證的原則，服務提供者編碼在檢查結果裡拆開列出（`src/ui/provider-text.ts`），個人的號碼完整顯示，讀者看過再決定要不要清除。XMP 與 EXIF 本來就整段拿掉，標識跟著拿掉，PNG 的 `tEXt` 也是。
 
 單元測試在 `tests/unit/verify-provenance.spec.ts` 與 `tests/unit/strip-provenance.spec.ts`，服務提供者編碼與號碼都是編出來的，不沿用指南裡的範例。
+
+### PDF 數位簽章的驗證
+
+PDF 帶著數位簽章時，查證用 `pkijs`（3.4.2，鎖定版本，BSD-3-Clause）驗證（#128），程式在 `src/tools/verify/pdf-signature.ts`，瀏覽器端的載入在 `src/ui/pdf-signature-check.ts`。兩層的結果分開列出，不合成一個「有效」：
+
+- 簽章本身：依 `/ByteRange` 取出簽署的範圍算摘要，比對 CMS 裡的 `messageDigest`，再用簽署者憑證的公鑰驗簽章值。對不上的列在需要留意的地方（`pdf-signature-invalid`），簽完之後又加了內容的仍然列 `signed-then-modified`
+- 簽署者：用簽章附的憑證與內建的中繼憑證建憑證鏈，接到內建的根憑證才算確認身分。現在驗不過時，再用簽章裡簽署端自己填的時間驗一次，過了就寫明「以簽章裡寫的時間來看當時有效，但這個時間由簽署端自己填寫」
+- 簽署者憑證的主體、簽發者與效期照實列出。自然人憑證的主體有姓名，跟服務提供者編碼裡的個人號碼同一個原則
+
+pkijs 的憑證鏈引擎先拿掉重複的憑證（留前面那一張），再把清單的最後一張當成要驗證的憑證。簽署者的憑證也附在簽章裡，直接把它跟中繼憑證一起放進去，最後一張會變成某張中繼憑證，自己做的憑證會被當成接到 GRCA（2026-10-21 發現，有回歸測試）。所以中繼憑證只放 CA、拿掉簽署者本身，驗完再確認路徑的第一張就是簽署者。
+
+信任清單第一版只有台灣政府憑證總管理中心（GRCA）的三代根憑證與下屬憑證機構（內政部、工商、政府、組織及團體憑證管理中心，含已過期的第一代，留著驗證過期之前簽的文件），建置時內嵌在 `src/tools/verify/pdf-trust/`，由 `node scripts/pdf-trust.mjs` 從 grca.nat.gov.tw 下載。根憑證的 SHA-256 指紋寫死在腳本裡：GRCA1、GRCA2 跟 CCADB 上 Microsoft 的根憑證清單相同，GRCA3 比對的是數位發展部說明文件列的 SHA-1 末碼。下屬憑證機構的憑證不鎖指紋，腳本確認它是由根憑證簽的，查證時也照樣驗。每月跟 C2PA 的信任清單一起核對（`--check`）。歐盟的 LOTL 之後另外評估。
+
+密碼運算用瀏覽器的 `crypto.subtle`，只在 HTTPS 這類安全的頁面才有，沒有時卡片上寫明沒有驗證。onion 版在 Tor Browser 上能不能用還沒有實測。pkijs 在 PDF 帶著簽章時才下載，打包後約 330 KB（壓縮後約 68 KB），沒有對外的網址。授權與相依套件寫在 `licenses/pkijs.txt`，`@noble/hashes` 是 1.8.0，跟工作台其他地方的 2.4.0 是不同的一份。
+
+單元測試在 `tests/unit/pdf-signature.spec.ts`，測試用的 PDF 由 `tests/helpers/signed-pdf.ts` 在測試裡產生根憑證、中繼憑證與簽署者的憑證並簽署（ECDSA P-256，adbe.pkcs7.detached），也確認內建的 GRCA 憑證鏈 pkijs 驗得過。真實的自然人憑證簽出來的檔案沒有放進測試，憑證裡有本人的姓名。
 
 ### 內容憑證的驗證
 
@@ -419,7 +435,7 @@ ProofMode（Guardian Project 給人權紀錄者的 Android App）拍照時不改
 - openpgp.js 依簽章的建立時間檢查金鑰，子金鑰之後到期，到期前簽的檔案照樣驗得過，撤銷的子金鑰驗不過
 - openpgp.js 透過 `src/tools/software-verify/openpgp.ts` 動態載入，打包成獨立的 `openpgp-*.js`（LGPL 要求可以換成自行編譯的版本），授權全文在 `licenses/openpgp.txt`。6.3.2 裡只有預設的 armor 註解有 `openpgpjs.org` 的網址，沒有對外連線
 - 公鑰在 `src/tools/software-verify/keys.ts`，由 `node scripts/signing-keys.mjs` 從官方的來源下載，比對主金鑰的指紋（寫在 `SIGNERS`，取自官方說明頁），拿掉其他人的認證簽章再寫回，同時列出每把子金鑰的效期。`--check` 只比對，跟 `keys.ts` 不同時以非零值結束
-- 每月跟著文件站的例行查證核對一次：執行 `node scripts/signing-keys.mjs --check`，有變就更新、開 PR，並看一下有沒有快到期的子金鑰。查證的 C2PA 信任清單同時核對（`node scripts/c2pa-trust.mjs --check`，見「內容憑證的驗證」）。官方換主金鑰時腳本會停下來，要先讀過公告再手動改 `SIGNERS` 的指紋
+- 每月跟著文件站的例行查證核對一次：執行 `node scripts/signing-keys.mjs --check`，有變就更新、開 PR，並看一下有沒有快到期的子金鑰。查證的 C2PA 信任清單與 PDF 簽章的 GRCA 憑證同時核對（`node scripts/c2pa-trust.mjs --check`、`node scripts/pdf-trust.mjs --check`，見「內容憑證的驗證」與「PDF 數位簽章的驗證」）。官方換主金鑰時腳本會停下來，要先讀過公告再手動改 `SIGNERS` 的指紋
 - 測試用官方真正的簽章（`tests/helpers/signed/`）：Tor Browser 15.0.25 的 `sha256sums-signed-build.txt` 與簽章，以及 Tails 7.14 映像檔的簽章（只確認簽署的子金鑰在內建的公鑰裡）
 
 ## 寫作習慣檢查
@@ -795,6 +811,7 @@ iPhone 預設拍出來的是 HEIC，在網頁上選照片時交出來的也是�
 - 遮蔽的自動尋找用 [YuNet](https://github.com/opencv/opencv_zoo/tree/main/models/face_detection_yunet) 模型（MIT）與 [onnxruntime-web](https://github.com/microsoft/onnxruntime) 1.30.0（MIT）、[Tesseract.js](https://github.com/naptha/tesseract.js) 7.0.0 與 tessdata_best 的語言資料（Apache-2.0），見 `licenses/redact-detect.txt`
 - 逐字稿用 [Transformers.js](https://github.com/huggingface/transformers.js) 4.3.1（Apache-2.0）、Whisper small 與 base 的 ONNX 檔（onnx-community，原始模型的模型卡標示 Apache-2.0）、讀者選擇之後從 Hugging Face 下載的 large-v3-turbo（模型卡標示 MIT）、分辨說話者用的 3D-Speaker CAM++（Apache-2.0，ONNX 檔取自 sherpa-onnx）、[opencc-js](https://github.com/nk2028/opencc-js) 1.4.2（MIT，字典 Apache-2.0），見 `licenses/transcribe.txt`
 - 下載的軟體驗證用 [OpenPGP.js](https://github.com/openpgpjs/openpgpjs) 6.3.2（LGPL-3.0），內建 Tor Project 與 Tails 公開的簽章公鑰，見 `licenses/openpgp.txt`
+- 查證驗證 PDF 數位簽章用 [pkijs](https://github.com/PeculiarVentures/PKI.js) 3.4.2（BSD-3-Clause）與它相依的 asn1js 等套件，內建台灣政府憑證總管理中心公開的根憑證與下屬憑證機構的憑證，見 `licenses/pkijs.txt`
 - 查證驗證內容憑證用 [c2pa-web](https://github.com/contentauth/c2pa-js) 0.15.4（MIT，裡面是 [c2pa-rs](https://github.com/contentauth/c2pa-rs) 編成的 WebAssembly），內建 C2PA 的正式信任清單（CC BY 4.0）與過渡信任清單（Apache-2.0），見 `licenses/c2pa.txt`
 - QR code 以外的條碼用 [zxing-wasm](https://github.com/Sec-ant/zxing-wasm) 3.1.4（MIT），它是 [ZXing-C++](https://github.com/zxing-cpp/zxing-cpp)（Apache-2.0）編譯成的 WebAssembly，見 `licenses/zxing.txt`
 - 165 反詐騙清單見上方，部署時下載，不進版控
