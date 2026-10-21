@@ -3,8 +3,8 @@ import { examine } from "../../src/tools/verify/examine.ts";
 import { readFileSync } from "node:fs";
 import * as pkijs from "pkijs";
 import { pemToDer, verifyPdfSignature } from "../../src/tools/verify/pdf-signature.ts";
-import { type TestCert, makeCert, signedPdf } from "../helpers/signed-pdf.ts";
-import type { TrustStore } from "../../src/tools/verify/pdf-signature.ts";
+import { type TestCert, crl, makeCert, ocspResponse, signedPdf } from "../helpers/signed-pdf.ts";
+import type { PdfSignatureCheck, TrustStore } from "../../src/tools/verify/pdf-signature.ts";
 
 const day = 86_400_000;
 const now = Date.now();
@@ -157,6 +157,87 @@ test("整份文件的時間戳記：蓋完之後內容被改過", async () => {
   expect(result.timestamp!.imprint).toBe("mismatch");
 });
 
+async function verifyWithDss(pdf: Uint8Array, trust: TrustStore) {
+  const ev = await examine(pdf, "pdf");
+  const sig = ev.signatures[0]!;
+  return verifyPdfSignature(pdf, { byteRange: sig.byteRange!, contents: sig.contents!, dss: ev.dss }, trust);
+}
+
+test("撤銷狀態：簽章裡附的 OCSP 回應，由簽發者簽的", async () => {
+  const { root, leaf } = await setup();
+  const at = new Date(now - day);
+  const pdf = await signedPdf(leaf, { revocation: { where: "cms", ocsps: [await ocspResponse(leaf, root, { status: "good", at })] } });
+  const result = await verify(pdf, { roots: [root.der], intermediates: [] });
+  expect(result.revocation).toEqual({ status: "good", source: "ocsp", checkedAt: at.toISOString() });
+});
+
+test("撤銷狀態：/DSS 裡的 OCSP 回應由授權的回應者簽，憑證已被撤銷", async () => {
+  const { root, leaf } = await setup();
+  const responder = await makeCert({ cn: "Gears Test OCSP", issuer: root, serial: 21, from: new Date(now - 2 * day), to: new Date(now - day / 2), eku: ["1.3.6.1.5.5.7.3.9"] });
+  const revokedAt = new Date(now - 3 * day);
+  const at = new Date(now - day);
+  // 回應者的憑證現在已經過期，回應產生時還在效期內
+  const pdf = await signedPdf(leaf, { revocation: { where: "dss", ocsps: [await ocspResponse(leaf, root, { status: "revoked", at, revokedAt, responder })] } });
+  const ev = await examine(pdf, "pdf");
+  expect(ev.dss?.ocsps).toHaveLength(1);
+  const result = await verifyWithDss(pdf, { roots: [root.der], intermediates: [] });
+  expect(result.revocation).toMatchObject({ status: "revoked", source: "ocsp", revokedAt: revokedAt.toISOString() });
+  expect(result.revocation!.afterTimestamp).toBeUndefined();
+});
+
+test("撤銷狀態：沒有 OCSP 簽署用途的回應者、別人簽的回應都不採信", async () => {
+  const { root, leaf } = await setup();
+  const at = new Date(now - day);
+  const noEku = await makeCert({ cn: "Gears Test Not OCSP", issuer: root, serial: 22, from: new Date(now - 2 * day), to: new Date(now + day) });
+  const otherRoot = await makeCert({ cn: "Other Root", ca: true, serial: 23, from: new Date(now - 2 * day), to: new Date(now + day) });
+  const stranger = await makeCert({ cn: "Gears Test OCSP", issuer: otherRoot, serial: 24, from: new Date(now - 2 * day), to: new Date(now + day), eku: ["1.3.6.1.5.5.7.3.9"] });
+  for (const responder of [noEku, stranger]) {
+    const pdf = await signedPdf(leaf, { revocation: { where: "cms", ocsps: [await ocspResponse(leaf, root, { status: "revoked", at, responder })] } });
+    expect((await verify(pdf, { roots: [root.der], intermediates: [] })).revocation).toEqual({ status: "unverified", source: "ocsp" });
+  }
+});
+
+test("撤銷狀態：/DSS 裡的撤銷清單", async () => {
+  const { root, leaf } = await setup();
+  const at = new Date(now - day);
+  // 撤銷清單的時間用 UTCTime，只到秒
+  const revokedAt = new Date(Math.floor((now - 2 * day) / 1000) * 1000);
+  const listed = await signedPdf(leaf, { revocation: { where: "dss", crls: [await crl(root, at, [{ serial: 2, at: revokedAt }])] } });
+  expect((await verifyWithDss(listed, { roots: [root.der], intermediates: [] })).revocation).toMatchObject({ status: "revoked", source: "crl", revokedAt: revokedAt.toISOString() });
+  const clean = await signedPdf(leaf, { revocation: { where: "cms", crls: [await crl(root, at, [{ serial: 99, at: revokedAt }])] } });
+  expect((await verify(clean, { roots: [root.der], intermediates: [] })).revocation).toMatchObject({ status: "good", source: "crl" });
+  // 別人簽的撤銷清單
+  const other = await makeCert({ cn: "Gears Test Root", ca: true, serial: 1, from: new Date(now - 2 * day), to: new Date(now + day) });
+  const forged = await signedPdf(leaf, { revocation: { where: "dss", crls: [await crl(other, at, [{ serial: 2, at: revokedAt }])] } });
+  expect((await verifyWithDss(forged, { roots: [root.der], intermediates: [] })).revocation).toEqual({ status: "unverified", source: "crl" });
+});
+
+test("撤銷狀態：撤銷的時間晚於可信的時間戳記", async () => {
+  const { root, leaf } = await setup();
+  const { tsaRoot, tsa } = await tsaSetup();
+  const ocsp = await ocspResponse(leaf, root, { status: "revoked", at: new Date(now - day), revokedAt: new Date(now - 2 * day) });
+  const pdf = await signedPdf(leaf, { timestamp: { tsa, at: new Date(now - 10 * day) }, revocation: { where: "cms", ocsps: [ocsp] } });
+  const result = await verify(pdf, { roots: [root.der], intermediates: [], tsaRoots: [tsaRoot.der] });
+  expect(result.revocation).toMatchObject({ status: "revoked", afterTimestamp: true });
+});
+
+test("撤銷狀態：沒有撤銷資料時沒有檢查，憑證鏈接不到時不檢查", async () => {
+  const { root, leaf } = await setup();
+  const pdf = await signedPdf(leaf);
+  expect((await verify(pdf, { roots: [root.der], intermediates: [] })).revocation).toEqual({ status: "not-checked" });
+  expect((await verify(pdf, { roots: [], intermediates: [] })).revocation).toBeUndefined();
+});
+
+test("/DSS 裡的中繼憑證用來建憑證鏈", async () => {
+  const root = await makeCert({ cn: "Gears Test Root", ca: true, serial: 1, from: new Date(now - 3650 * day), to: new Date(now + 3650 * day) });
+  const mid = await makeCert({ cn: "Gears Test CA", ca: true, issuer: root, serial: 3, from: new Date(now - 3650 * day), to: new Date(now + 3650 * day) });
+  const leaf = await makeCert({ cn: "測試簽署人", issuer: mid, serial: 4, from: new Date(now - day), to: new Date(now + 365 * day) });
+  const pdf = await signedPdf(leaf, { revocation: { where: "dss", certs: [mid.der], ocsps: [await ocspResponse(leaf, mid, { status: "good", at: new Date(now - day) })] } });
+  const result = await verifyWithDss(pdf, { roots: [root.der], intermediates: [] });
+  expect(result.chain).toBe("trusted");
+  expect(result.revocation).toMatchObject({ status: "good", source: "ocsp" });
+});
+
 test("內建的 GRCA 根憑證與下屬憑證機構：pkijs 讀得出來，效期內的都接得到根憑證", async () => {
   const roots = pemToDer(readFileSync("src/tools/verify/pdf-trust/grca-roots.pem", "utf8")).map((d) => pkijs.Certificate.fromBER(d.slice().buffer));
   const cas = pemToDer(readFileSync("src/tools/verify/pdf-trust/gpki-cas.pem", "utf8")).map((d) => pkijs.Certificate.fromBER(d.slice().buffer));
@@ -170,3 +251,24 @@ test("內建的 GRCA 根憑證與下屬憑證機構：pkijs 讀得出來，效�
   }
 });
 
+
+test("撤銷狀態的說明與需要留意的地方", async () => {
+  const { traceLines } = await import("../../src/ui/verify-report.ts");
+  const { summarize } = await import("../../src/tools/verify/summary.ts");
+  const base = { integrity: "intact", signature: "valid", chain: "trusted", root: "CN=Root", signer: "CN=測試簽署人", kind: "signature" } as const;
+  const evidence = (revocation: PdfSignatureCheck["revocation"]) => {
+    const ev = { times: [], devices: [], serials: [], software: [], people: [], locations: [], traces: [], revisions: [], signatures: [{ coversWhole: true, check: { ...base, revocation } }] };
+    return ev as unknown as Parameters<typeof traceLines>[0];
+  };
+  const lines = (r: PdfSignatureCheck["revocation"]) => traceLines(evidence(r)).join("\n");
+  const codes = (r: PdfSignatureCheck["revocation"]) => summarize([{ index: 1, name: "a.pdf", format: "pdf", size: 1, evidence: evidence(r) }]).warnings.map((w) => w.code);
+
+  expect(lines({ status: "good", source: "ocsp", checkedAt: "2026-10-01T00:00:00.000Z" })).toContain("撤銷狀態：檔案裡附的撤銷資料（OCSP 回應，");
+  expect(lines({ status: "revoked", source: "crl", revokedAt: "2026-10-01T00:00:00.000Z" })).toContain("憑證已被撤銷：檔案裡附的撤銷資料（憑證撤銷清單）寫著撤銷的時間是");
+  expect(lines({ status: "revoked", source: "ocsp", revokedAt: "2026-10-01T00:00:00.000Z", afterTimestamp: true })).toContain("可信的時間戳記證明簽章在撤銷之前就已經存在");
+  expect(lines({ status: "unverified", source: "ocsp" })).toContain("撤銷狀態沒有確認");
+  expect(lines({ status: "not-checked" })).toContain("撤銷狀態沒有檢查");
+  expect(codes({ status: "revoked", source: "crl" })).toContain("pdf-signature-revoked");
+  expect(codes({ status: "revoked", source: "crl", afterTimestamp: true })).not.toContain("pdf-signature-revoked");
+  expect(codes({ status: "good", source: "crl" })).not.toContain("pdf-signature-revoked");
+});

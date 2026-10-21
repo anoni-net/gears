@@ -108,6 +108,12 @@ function signatureLines(c: PdfSignatureCheck): string[] {
   else if (c.chain === "trusted-at-timestamp") out.push(t("verify.pdfsig.chain.trusted-at-timestamp", { root: c.root ?? "-" }));
   else if (c.chain === "trusted-at-signing") out.push(t("verify.pdfsig.chain.trusted-at-signing", { root: c.root ?? "-" }));
   else if (c.chain === "untrusted") out.push(t("verify.pdfsig.chain.untrusted"));
+  const r = c.revocation;
+  if (r) {
+    const vars = { source: r.source ? tDynamic(`verify.pdfsig.revocation.source.${r.source}`) : "-", time: time(r.checkedAt), revoked: time(r.revokedAt) };
+    const key = r.status === "revoked" && r.afterTimestamp ? "revoked-after" : r.status;
+    out.push(tDynamic(`verify.pdfsig.revocation.${key}`, vars));
+  }
   return out;
 }
 

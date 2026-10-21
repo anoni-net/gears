@@ -8,7 +8,7 @@ import { parseEmail } from "../email/parse.ts";
 import { CHECK_FORMATS, checkDocument } from "../doc-check/index.ts";
 import { extractExif } from "../redact/keep-exif.ts";
 import { parseExif } from "../strip-metadata/exif.ts";
-import type { PdfSignatureCheck } from "./pdf-signature.ts";
+import type { PdfSignatureCheck, RevocationData } from "./pdf-signature.ts";
 import { type ProofModeEvidence, examineProofMode } from "./proofmode.ts";
 import { IPTC_EXT, type Provenance, TC260, emptyProvenance, fromPngTexts, hasC2pa, parseA1111, parseTc260, pngTexts, type Tc260Label } from "./provenance.ts";
 import { type TimeValue, anyTime, exifTime, gpsTime, isoTime, pdfTime } from "./times.ts";
@@ -56,6 +56,7 @@ export interface Evidence {
   thumbnail?: Uint8Array; // 照片內嵌的縮圖（JPEG）
   revisions: number[]; // PDF：較早版本的結尾位置，不含最後一版
   signatures: Signature[];
+  dss?: RevocationData; // PDF 長期驗證存下的憑證、OCSP 回應與撤銷清單（/DSS）
   pages?: number; // PDF 的頁數
   email?: EmailEvidence;
   // 文件打開時會連線的位址與會執行的程式各有幾項（文件開啟前檢查，src/tools/doc-check/）
@@ -292,6 +293,28 @@ async function examinePdf(ev: Evidence, bytes: Uint8Array) {
       byteRange: nums,
       contents: contents instanceof lib.PDFHexString ? contents.asBytes() : contents instanceof lib.PDFString ? contents.asBytes() : undefined,
     });
+  }
+
+  // PAdES 長期驗證把驗證用的資料存在文件目錄的 /DSS，每一項是一個 stream
+  const dss = doc.catalog.lookup(lib.PDFName.of("DSS"));
+  if (dss instanceof lib.PDFDict && ev.signatures.length) {
+    const list = (key: string) => {
+      const arr = dss.lookup(lib.PDFName.of(key));
+      if (!(arr instanceof lib.PDFArray)) return [];
+      const out: Uint8Array[] = [];
+      for (const ref of arr.asArray().slice(0, 100)) {
+        const stream = context.lookup(ref);
+        if (!(stream instanceof lib.PDFRawStream)) continue;
+        try {
+          const data = lib.decodePDFRawStream(stream).decode();
+          if (data.length <= 2 * 1024 * 1024) out.push(data);
+        } catch {
+          // 解不開就略過
+        }
+      }
+      return out;
+    };
+    ev.dss = { certs: list("Certs"), ocsps: list("OCSPs"), crls: list("CRLs") };
   }
 
   // 線性化（快速網頁檢視）的 PDF 開頭有一段給第一頁用的交互參照，第一個 %%EOF 不是一個版本

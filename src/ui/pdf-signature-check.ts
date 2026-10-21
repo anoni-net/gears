@@ -1,5 +1,5 @@
 import type { Signature } from "../tools/verify/examine.ts";
-import { type TrustStore, pemToDer, verifyPdfSignature } from "../tools/verify/pdf-signature.ts";
+import { type RevocationData, type TrustStore, pemToDer, verifyPdfSignature } from "../tools/verify/pdf-signature.ts";
 
 // PDF 數位簽章的驗證（#128）。pkijs（BSD-3-Clause，見 licenses/pkijs.txt）在 PDF 帶著簽章時才下載，
 // 密碼運算用瀏覽器的 crypto.subtle，只在 HTTPS 這類安全的頁面才有，沒有時說明沒有驗證。
@@ -17,7 +17,7 @@ async function loadTrust(): Promise<TrustStore> {
   return { roots: pemToDer(roots.default), intermediates: pemToDer(cas.default), tsaRoots: pemToDer(tsa.default) };
 }
 
-export async function checkPdfSignatures(bytes: Uint8Array, signatures: Signature[]): Promise<void> {
+export async function checkPdfSignatures(bytes: Uint8Array, signatures: Signature[], dss?: RevocationData): Promise<void> {
   for (const sig of signatures) {
     if (!sig.contents || !sig.byteRange) continue;
     if (!globalThis.crypto?.subtle) {
@@ -25,7 +25,7 @@ export async function checkPdfSignatures(bytes: Uint8Array, signatures: Signatur
       continue;
     }
     try {
-      sig.check = await verifyPdfSignature(bytes, { byteRange: sig.byteRange, contents: sig.contents }, await (trust ??= loadTrust()));
+      sig.check = await verifyPdfSignature(bytes, { byteRange: sig.byteRange, contents: sig.contents, dss }, await (trust ??= loadTrust()));
     } catch {
       sig.check = { integrity: "unknown", signature: "unsupported", chain: "not-checked" };
     }

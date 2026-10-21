@@ -1,5 +1,5 @@
 import * as asn1js from "asn1js";
-import { PDFDocument, PDFHexString, StandardFonts } from "pdf-lib";
+import { PDFDocument, PDFHexString, PDFName, StandardFonts } from "pdf-lib";
 import * as pkijs from "pkijs";
 
 // 測試用的 PDF 數位簽章：在測試裡產生根憑證與簽署者的憑證（ECDSA P-256），照 PDF 的做法
@@ -25,7 +25,7 @@ function name(cn: string, org: string) {
   return n;
 }
 
-export async function makeCert(opts: { cn: string; org?: string; issuer?: TestCert; ca?: boolean; serial: number; from: Date; to: Date }): Promise<TestCert> {
+export async function makeCert(opts: { cn: string; org?: string; issuer?: TestCert; ca?: boolean; serial: number; from: Date; to: Date; eku?: string[] }): Promise<TestCert> {
   const keys = (await subtle.generateKey(KEY, true, ["sign", "verify"])) as CryptoKeyPair;
   const cert = new pkijs.Certificate();
   cert.version = 2;
@@ -39,6 +39,10 @@ export async function makeCert(opts: { cn: string; org?: string; issuer?: TestCe
     new pkijs.Extension({ extnID: "2.5.29.19", critical: true, extnValue: new pkijs.BasicConstraints({ cA: !!opts.ca }).toSchema().toBER(false), parsedValue: new pkijs.BasicConstraints({ cA: !!opts.ca }) }),
     new pkijs.Extension({ extnID: "2.5.29.15", critical: true, extnValue: new asn1js.BitString({ valueHex: usage.buffer }).toBER(false) }),
   ];
+  if (opts.eku) {
+    const eku = new pkijs.ExtKeyUsage({ keyPurposes: opts.eku });
+    cert.extensions.push(new pkijs.Extension({ extnID: "2.5.29.37", extnValue: eku.toSchema().toBER(false), parsedValue: eku }));
+  }
   await cert.subjectPublicKeyInfo.importKey(keys.publicKey);
   await cert.sign(opts.issuer?.key ?? keys.privateKey, "SHA-256");
   return { cert, key: keys.privateKey, der: new Uint8Array(cert.toSchema(true).toBER(false)) };
@@ -86,6 +90,39 @@ export async function timestampToken(tsa: TestCert, data: Uint8Array, at: Date, 
   return new pkijs.ContentInfo({ contentType: "1.2.840.113549.1.7.2", content: signed.toSchema(true) }).toSchema() as asn1js.Sequence;
 }
 
+// OCSP 回應：issuer 是被查詢的憑證的簽發者，responder 給了就由它簽（委託的回應者），否則由簽發者簽
+export async function ocspResponse(cert: TestCert, issuer: TestCert, opts: { status: "good" | "revoked"; at: Date; revokedAt?: Date; responder?: TestCert }): Promise<Uint8Array> {
+  const signer = opts.responder ?? issuer;
+  const basic = new pkijs.BasicOCSPResponse();
+  basic.tbsResponseData.responderID = signer.cert.subject;
+  basic.tbsResponseData.producedAt = opts.at;
+  const certID = new pkijs.CertID();
+  await certID.createForCertificate(cert.cert, { hashAlgorithm: "SHA-256", issuerCertificate: issuer.cert });
+  const certStatus =
+    opts.status === "good"
+      ? new asn1js.Primitive({ idBlock: { tagClass: 3, tagNumber: 0 } })
+      : new asn1js.Constructed({ idBlock: { tagClass: 3, tagNumber: 1 }, value: [new asn1js.GeneralizedTime({ valueDate: opts.revokedAt ?? opts.at })] });
+  basic.tbsResponseData.responses.push(new pkijs.SingleResponse({ certID, certStatus, thisUpdate: opts.at }));
+  basic.certs = [signer.cert];
+  await basic.sign(signer.key, "SHA-256");
+  const response = new pkijs.OCSPResponse({
+    responseStatus: new asn1js.Enumerated({ value: 0 }),
+    responseBytes: new pkijs.ResponseBytes({ responseType: "1.3.6.1.5.5.7.48.1.1", response: new asn1js.OctetString({ valueHex: basic.toSchema().toBER(false) }) }),
+  });
+  return new Uint8Array(response.toSchema().toBER(false));
+}
+
+// 憑證撤銷清單：revoked 列出被撤銷的序號與撤銷的時間
+export async function crl(issuer: TestCert, at: Date, revoked: { serial: number; at: Date }[]): Promise<Uint8Array> {
+  const list = new pkijs.CertificateRevocationList();
+  list.version = 1;
+  list.issuer = issuer.cert.subject;
+  list.thisUpdate = new pkijs.Time({ type: 0, value: at });
+  if (revoked.length) list.revokedCertificates = revoked.map((r) => new pkijs.RevokedCertificate({ userCertificate: new asn1js.Integer({ value: r.serial }), revocationDate: new pkijs.Time({ type: 0, value: r.at }) }));
+  await list.sign(issuer.key, "SHA-256");
+  return new Uint8Array(list.toSchema(true).toBER(false));
+}
+
 const PLACEHOLDER = 9_999_999_999;
 const CONTENTS_SIZE = 8192; // CMS 的空位，16 進位寫成兩倍長
 
@@ -94,6 +131,8 @@ export interface SignOptions {
   tamper?: boolean;
   timestamp?: { tsa: TestCert; at: Date; wrong?: boolean }; // 附在簽章上的時間戳記，wrong 時雜湊值對不上
   document?: boolean; // 整份文件的時間戳記：signer 是時間戳記服務，時間取 timestamp.at
+  // 撤銷資料放在簽章裡（adbe-revocationInfoArchival）或文件的 /DSS
+  revocation?: { where: "cms" | "dss"; ocsps?: Uint8Array[]; crls?: Uint8Array[]; certs?: Uint8Array[] };
 }
 
 export async function signedPdf(signer: TestCert, opts: SignOptions = {}): Promise<Uint8Array> {
@@ -109,6 +148,11 @@ export async function signedPdf(signer: TestCert, opts: SignOptions = {}): Promi
     Name: "Test Signer",
   });
   doc.context.register(sig);
+  const rev = opts.revocation;
+  if (rev?.where === "dss") {
+    const streams = (list: Uint8Array[] = []) => doc.context.obj(list.map((b) => doc.context.register(doc.context.stream(b))));
+    doc.catalog.set(PDFName.of("DSS"), doc.context.obj({ Certs: streams(rev.certs), OCSPs: streams(rev.ocsps), CRLs: streams(rev.crls) }));
+  }
   const bytes = await doc.save({ useObjectStreams: false });
 
   const text = new TextDecoder("latin1").decode(bytes);
@@ -135,6 +179,15 @@ export async function signedPdf(signer: TestCert, opts: SignOptions = {}): Promi
   return out;
 }
 
+// Adobe 的 adbe-revocationInfoArchival：[0] 是 CRL、[1] 是 OCSP 回應
+function archival(rev: NonNullable<SignOptions["revocation"]>) {
+  const parse = (b: Uint8Array) => asn1js.fromBER(b.slice().buffer).result;
+  const value: asn1js.AsnType[] = [];
+  if (rev.crls?.length) value.push(new asn1js.Constructed({ idBlock: { tagClass: 3, tagNumber: 0 }, value: [new asn1js.Sequence({ value: rev.crls.map(parse) })] }));
+  if (rev.ocsps?.length) value.push(new asn1js.Constructed({ idBlock: { tagClass: 3, tagNumber: 1 }, value: [new asn1js.Sequence({ value: rev.ocsps.map(parse) })] }));
+  return new pkijs.Attribute({ type: "1.2.840.113583.1.1.8", values: [new asn1js.Sequence({ value })] });
+}
+
 async function detached(signer: TestCert, digest: ArrayBuffer, opts: SignOptions): Promise<Uint8Array> {
   const signed = new pkijs.SignedData({
     version: 1,
@@ -149,6 +202,7 @@ async function detached(signer: TestCert, digest: ArrayBuffer, opts: SignOptions
             new pkijs.Attribute({ type: "1.2.840.113549.1.9.3", values: [new asn1js.ObjectIdentifier({ value: "1.2.840.113549.1.7.1" })] }),
             new pkijs.Attribute({ type: "1.2.840.113549.1.9.4", values: [new asn1js.OctetString({ valueHex: digest })] }),
             new pkijs.Attribute({ type: "1.2.840.113549.1.9.5", values: [new asn1js.UTCTime({ valueDate: opts.signedAt ?? new Date() })] }),
+            ...(opts.revocation?.where === "cms" ? [archival(opts.revocation)] : []),
           ],
         }),
       }),
