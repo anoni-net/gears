@@ -9,14 +9,12 @@ export interface Guard {
 }
 
 // 已知、不代表問題的主控台錯誤：
-// - WebAssembly 寫到標準錯誤輸出的訊息，瀏覽器一律當成 console.error。這是正常的執行紀錄：
-//   Tesseract 讀只含 LSTM 的語言資料時，舊引擎的參數找不到
 // - Firefox 在 WebRTC 連不上時自己印的建議（面對面傳送不設 STUN，連不上時畫面上另有說明）
 // - 查證驗證 CAWG 身分聲明時，c2pa-rs 會連線取得簽發者的 did:web 金鑰（/.well-known/did.json），
 //   設定關不掉（c2pa-rs issue #1645），CSP 擋下是預期的結果。Firefox 與 WebKit 會在主控台留下紀錄，
 //   Chromium 不會。只放過這一個路徑，其他被 connect-src 擋下的連線照樣算錯誤
 const DID_WEB = /\/\.well-known\/did\.json\b.*connect-src|connect-src\)? at https:\/\/[^ ]+\/\.well-known\/did\.json /;
-const BENIGN = [/^Warning: Parameter not found: /, /WebRTC: ICE failed, add a STUN server/, DID_WEB];
+const BENIGN = [/WebRTC: ICE failed, add a STUN server/, DID_WEB];
 
 // 錄 trace 時，Playwright 在 Chromium 會從頁面讀 blob: 的圖片做快照，被 connect-src 擋下。
 // CI 只在重試時錄 trace（playwright.config.ts），重試時才忽略這一種，第一次執行照樣嚴格檢查

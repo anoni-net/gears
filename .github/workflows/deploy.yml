@@ -45,12 +45,14 @@ jobs:
           cache: npm
       - run: npm ci
 
-      # sherpa-onnx 的 WebAssembly（約 14 MB）跟著網站部署，依清單快取
+      # sherpa-onnx 的 WebAssembly（約 14 MB）與遮蔽的文字辨識模型（約 21 MB）跟著網站部署，依清單快取
       - uses: actions/cache@v6.1.0
         with:
-          path: public/vendor/sherpa
-          key: sherpa-${{ hashFiles('src/tools/transcribe/sherpa-runtime.json') }}
-      - run: node scripts/fetch-whisper.mjs sherpa
+          path: |
+            public/vendor/sherpa
+            public/models/ppocr
+          key: sherpa-ppocr-${{ hashFiles('src/tools/transcribe/sherpa-runtime.json', 'src/tools/redact/ppocr-models.json') }}
+      - run: node scripts/fetch-whisper.mjs sherpa ppocr
 
       - name: 165 反詐騙清單
         run: |

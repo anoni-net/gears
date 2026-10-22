@@ -1,5 +1,5 @@
-遮蔽的自動尋找：YuNet（onnxruntime-web）與 Tesseract
-=====================================================
+遮蔽的自動尋找：YuNet、PP-OCRv5 與 onnxruntime-web
+====================================================
 
 遮蔽畫面的「找人臉」與「找電話、Email 等個資」在讀者按下按鈕時，才從本站載入以下檔案，
 在瀏覽器裡執行，圖片不會上傳。
@@ -11,21 +11,29 @@
   工作台用的 yunet-2023mar-dynamic.onnx 把輸入的高、寬改成可變的，權重與運算沒有動，
   由 scripts/make-yunet.py 從官方檔案產生，SHA-256：
   57acd73224bfbe2a2d6d28431da2e7c5b1d643717407e7cf2cae3d4a07ce2c14
+
+文字辨識（原封不動使用）
+- PaddleOCR 的 PP-OCRv5 mobile 文字偵測與文字辨識模型（Apache-2.0，Copyright (c) PaddlePaddle Authors）
+  原始碼：https://github.com/PaddlePaddle/PaddleOCR
+  偵測：https://huggingface.co/PaddlePaddle/PP-OCRv5_mobile_det_onnx
+    commit e6f4fa85f00e168c862bc462aebca69eef9b3d3d 的 inference.onnx，
+    SHA-256：a431985659dc921974177a95adcfbb90fd9e51989a5e04d70d0b75f597b6e61d
+  辨識：https://huggingface.co/PaddlePaddle/PP-OCRv5_mobile_rec_onnx
+    commit ed152b8b495f84de93cda5709d768548a9127622 的 inference.onnx，
+    SHA-256：da72dc72ca4dc220df0dfde68c1dedc31c58d3e76a25871122e5056227d50092
+  字典（18,383 字）取自同一個 commit 的 inference.yml（PostProcess.character_dict），
+  由 scripts/make-ppocr-dict.py 轉成 JSON
+- 前後處理（DB 後處理、旋轉裁切、CTC 解碼）是工作台照 PaddleOCR 的做法自己寫的
+  （src/tools/redact/ppocr.ts），沒有使用 PaddleOCR 的程式碼
+
+執行模型
 - onnxruntime-web 1.30.0（MIT，Copyright (c) Microsoft Corporation）：ort.wasm.bundle 與
   ort-wasm-simd-threaded.wasm，原封不動使用
   原始碼：https://github.com/microsoft/onnxruntime
   WebAssembly 裡編譯進去的第三方元件與授權列在
   https://github.com/microsoft/onnxruntime/blob/main/ThirdPartyNotices.txt
 
-文字辨識（原封不動使用）
-- tesseract.js 7.0.0 與 tesseract.js-core 7.0.0（Apache-2.0）
-  原始碼：https://github.com/naptha/tesseract.js、https://github.com/naptha/tesseract.js-core
-- 語言資料 chi_tra、eng（4.0.0_best_int），來自 tesseract-ocr/tessdata_best（Apache-2.0），
-  透過 @tesseract.js-data/chi_tra、@tesseract.js-data/eng 1.0.0（MIT）取得
-- 一起打包的相依套件：wasm-feature-detect 1.9.0（Apache-2.0）、idb-keyval 6.3.0（Apache-2.0）、
-  bmp-js 0.1.0（MIT）、is-url 1.2.4（MIT）、regenerator-runtime 0.13.11（MIT）
-
-以下是授權全文。Apache-2.0 各套件相同，只列一份。
+以下是授權全文。
 
 
 ---- MIT License（YuNet）----
@@ -79,7 +87,7 @@ SOFTWARE.
 
 
 
----- Apache License 2.0 ----
+---- Apache License 2.0（PP-OCRv5）----
 
                                  Apache License
                            Version 2.0, January 2004
@@ -282,77 +290,3 @@ SOFTWARE.
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
-
-
-
----- bmp-js ----
-
-The MIT License (MIT)
-
-Copyright (c) 2014 @丝刀口
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-
-
----- is-url ----
-
-MIT LICENSE
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
-
-
----- regenerator-runtime ----
-
-MIT License
-
-Copyright (c) 2014-present, Facebook, Inc.
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.

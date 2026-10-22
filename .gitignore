@@ -9,5 +9,6 @@ public/vendor/
 public/samples/
 public/models/whisper/
 public/models/speaker/
+public/models/ppocr/
 deploy/
 dist-server/
