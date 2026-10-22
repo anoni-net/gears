@@ -256,7 +256,7 @@ GB 45438 的服務提供者編碼（TC260-PG-20252A，27 碼）拆成主體類�
 
 PDF 帶著數位簽章時，查證用 `pkijs`（3.4.2，鎖定版本，BSD-3-Clause）驗證（#128），程式在 `src/tools/verify/pdf-signature.ts`，瀏覽器端的載入在 `src/ui/pdf-signature-check.ts`。每一層的結果分開列出，不合成一個「有效」：
 
-- 簽章本身：依 `/ByteRange` 取出簽署的範圍算摘要，比對 CMS 裡的 `messageDigest`，再用簽署者憑證的公鑰驗簽章值。對不上的列在需要留意的地方（`pdf-signature-invalid`），簽完之後又加了內容的仍然列 `signed-then-modified`
+- 簽章本身：依 `/ByteRange` 取出簽署的範圍算摘要，比對 CMS 裡的 `messageDigest`，再用簽署者憑證的公鑰驗簽章值。對不上的列在需要留意的地方（`pdf-signature-invalid`），簽完之後又改了內容的列 `signed-then-modified`（見下方「簽完之後加上的驗證資料」）
 - 簽署者：用簽章附的憑證與內建的中繼憑證建憑證鏈，接到內建的根憑證才算確認身分。現在驗不過時，先用時間戳記證明的時間再驗一次，沒有可信的時間戳記才用簽章裡簽署端自己填的時間，過了就寫明「以簽章裡寫的時間來看當時有效，但這個時間由簽署端自己填寫」
 - 時間戳記（RFC 3161）有兩種：附在簽章上的（簽章的 unsigned attribute `1.2.840.113549.1.9.16.2.14`，證明簽章值在那個時間已經存在），以及整份文件的時間戳記（`/SubFilter` 為 `ETSI.RFC3161`，CMS 的內容是 TSTInfo，直接證明簽署的範圍）。驗時間戳記裡的雜湊值、時間戳記服務的簽章與憑證鏈，接到內建的根憑證才採信它的時間。附在簽章上的時間戳記對不上或驗不過時，列在需要留意的地方（`pdf-timestamp-invalid`），整份文件的時間戳記對不上就是簽章驗不過（`pdf-signature-invalid`）
 - 撤銷狀態只讀檔案裡已經存好的資料：簽章裡附的（Adobe 的 adbe-revocationInfoArchival 與 CMS 的 crls），以及 PAdES 長期驗證存在文件目錄 `/DSS` 的 OCSP 回應與憑證撤銷清單，不連線查詢。`/DSS` 裡的憑證也拿來建憑證鏈。只檢查簽署者的憑證，憑證鏈接到內建的根憑證才檢查，接不到的話分不出撤銷資料是誰簽的。OCSP 回應要由簽發者或它授權的回應者簽（回應者的憑證由簽發者簽發、有 OCSP 簽署的用途、回應產生時在效期內），撤銷清單要由簽發者簽。pkijs 的 `BasicOCSPResponse.verify` 用現在的時間驗回應者的憑證鏈，回應者的憑證效期通常只有幾天，存在檔案裡的舊回應都會失敗，所以這一段自己判斷。撤銷的時間晚於可信的時間戳記時，寫明簽章在撤銷之前就已經存在，其他被撤銷的列在需要留意的地方（`pdf-signature-revoked`）
@@ -268,7 +268,18 @@ pkijs 的憑證鏈引擎先拿掉重複的憑證（留前面那一張），再�
 
 密碼運算用瀏覽器的 `crypto.subtle`，只在 HTTPS 這類安全的頁面才有，沒有時卡片上寫明沒有驗證。onion 版在 Tor Browser 上能不能用還沒有實測。pkijs 在 PDF 帶著簽章時才下載，打包後約 330 KB（壓縮後約 68 KB），沒有對外的網址。授權與相依套件寫在 `licenses/pkijs.txt`，`@noble/hashes` 是 1.8.0，跟工作台其他地方的 2.4.0 是不同的一份。
 
-單元測試在 `tests/unit/pdf-signature.spec.ts`，測試用的 PDF 由 `tests/helpers/signed-pdf.ts` 在測試裡產生根憑證、中繼憑證、簽署者與時間戳記服務的憑證並簽署（ECDSA P-256，adbe.pkcs7.detached 與 ETSI.RFC3161），也確認內建的 GRCA 憑證鏈 pkijs 驗得過。真實的自然人憑證簽出來的檔案沒有放進測試，憑證裡有本人的姓名。
+單元測試在 `tests/unit/pdf-signature.spec.ts`，測試用的 PDF 由 `tests/helpers/signed-pdf.ts` 在測試裡產生根憑證、中繼憑證、簽署者與時間戳記服務的憑證並簽署（ECDSA P-256，adbe.pkcs7.detached 與 ETSI.RFC3161），也確認內建的 GRCA 憑證鏈 pkijs 驗得過。簽完之後的增量更新在 `tests/unit/pdf-updates.spec.ts`，用 `tests/helpers/pdf-incremental.ts` 的 `appendUpdate` 在簽好的 PDF 後面接上各種更新。另外用 pyHanko（MIT）簽出 B-LT 與 B-LTA 的檔案（RSA 的時間戳記服務、`/DSS` 裡的撤銷清單），確認四層驗證都通過、簽完之後的更新只算驗證資料：`tests/global-setup.ts` 用 `uv run --with pyhanko==0.29.0` 執行 `scripts/make-test-pades.py` 產生到 `tests/.generated/`，不進版控，產生不了時略過。真實的自然人憑證簽出來的檔案沒有放進測試，憑證裡有本人的姓名。
+
+#### 簽完之後加上的驗證資料
+
+PAdES 長期驗證在簽完之後用增量更新加上 `/DSS` 與文件時間戳記，簽章涵蓋不到。原本這種檔案一律列成「簽章之後還有修改」，正常的長期驗證檔案看起來像被改過。`src/tools/verify/pdf-updates.ts` 把簽章涵蓋的那個版本跟最後的版本逐一比對物件，改動的物件都屬於下列幾種，才算只加入驗證資料，不列 `signed-then-modified`，卡片上寫明簽完之後只加入了長期驗證的資料與文件時間戳記：
+
+- `/DSS` 底下的物件：新加的，或在兩個版本都掛在 `/DSS` 底下。既有的物件只有原本就在 `/DSS` 底下才能改，否則把頁面的內容掛到 `/DSS` 底下再改掉，就會被當成驗證資料
+- 文件時間戳記的簽章字典、指到它的簽章欄位，以及欄位與外觀用到的物件，都要是新加的
+- 文件目錄只改了 `/DSS`、`/Extensions`、`/Version`、`/Metadata`、`/AcroForm`，`/AcroForm` 的 `/Fields` 與頁面的 `/Annots` 只多了上面那些簽章欄位
+- XMP 與文件資訊：寫入的工具常順便更新修改時間與軟體名稱，pyHanko 每次增量更新都會重寫 XMP。不算內容，卡片上另外寫明中繼資料有更新，請讀者在版本紀錄裡比對
+
+其他的改動（頁面內容、一般的註解、表單的值、文件目錄的其他鍵）照樣列 `signed-then-modified`。
 
 ### 內容憑證的驗證
 

@@ -9,6 +9,7 @@ import { CHECK_FORMATS, checkDocument } from "../doc-check/index.ts";
 import { extractExif } from "../redact/keep-exif.ts";
 import { parseExif } from "../strip-metadata/exif.ts";
 import type { PdfSignatureCheck, RevocationData } from "./pdf-signature.ts";
+import { type LaterUpdates, laterUpdates } from "./pdf-updates.ts";
 import { type ProofModeEvidence, examineProofMode } from "./proofmode.ts";
 import { IPTC_EXT, type Provenance, TC260, emptyProvenance, fromPngTexts, hasC2pa, parseA1111, parseTc260, pngTexts, type Tc260Label } from "./provenance.ts";
 import { type TimeValue, anyTime, exifTime, gpsTime, isoTime, pdfTime } from "./times.ts";
@@ -39,6 +40,7 @@ export interface Signature {
   name?: string;
   time?: TimeValue;
   coversWhole: boolean; // 簽章涵蓋到檔案結尾，簽完之後沒有再加內容
+  later?: LaterUpdates; // 沒有涵蓋到結尾時，之後的增量更新是不是只加入驗證用的資料
   subFilter?: string; // adbe.pkcs7.detached、ETSI.CAdES.detached 這類
   byteRange?: number[];
   contents?: Uint8Array; // CMS（DER），驗證在 src/tools/verify/pdf-signature.ts
@@ -315,6 +317,15 @@ async function examinePdf(ev: Evidence, bytes: Uint8Array) {
       return out;
     };
     ev.dss = { certs: list("Certs"), ocsps: list("OCSPs"), crls: list("CRLs") };
+  }
+
+  // 長期驗證的資料與文件時間戳記在簽完之後才加進去，簽章涵蓋不到，跟簽完之後改了內容分開
+  const later = new Map<number, LaterUpdates | undefined>();
+  for (const sig of ev.signatures) {
+    if (sig.coversWhole || !sig.byteRange) continue;
+    const end = sig.byteRange[2]! + sig.byteRange[3]!;
+    if (!later.has(end)) later.set(end, await laterUpdates(lib, bytes, end, doc));
+    sig.later = later.get(end);
   }
 
   // 線性化（快速網頁檢視）的 PDF 開頭有一段給第一頁用的交互參照，第一個 %%EOF 不是一個版本
