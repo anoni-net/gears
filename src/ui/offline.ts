@@ -5,8 +5,8 @@ import type { TraySnapshot } from "../core/tray.ts";
 // 開發伺服器不註冊，免得改了程式卻一直拿到舊的。
 //
 // 換版本要重新載入頁面，暫存區只在記憶體裡，重新載入就沒了。所以：
-// - 暫存區是空的、畫面上也沒有填到一半的東西（idle）時不出現提示。讀者還沒操作過這個頁面就直接換，
-//   已經在操作的等分頁切到背景再換，換上之後都顯示「已換上新版本」
+// - 暫存區是空的、畫面上也沒有填到一半的東西（idle）時：讀者還沒操作過這個頁面就直接換。已經在操作的，
+//   出現一行比較輕的提示，讀者按重新載入或分頁切到背景時換。換上之後都顯示「已換上新版本」
 // - 瀏覽器只在整頁載入時檢查 sw.js，站內換頁不算。分頁切回前景時、開著的分頁每小時另外檢查一次
 // - 有檔案時，讀者按下重新載入，新版本接手之後先把暫存區交給它在記憶體裡暫放，重新載入的頁面再拿回來。
 //   暫放失敗就不重新載入，提示讀者先下載需要的檔案
@@ -14,6 +14,7 @@ import type { TraySnapshot } from "../core/tray.ts";
 export interface OfflineState {
   ready: boolean; // 這個頁面已經由 service worker 提供，沒有網路也能開啟
   update: (() => void) | null; // 有新版本時，換上並重新載入
+  idle: boolean; // 沒有東西會遺失，提示不提暫存區
   updating: boolean; // 按了重新載入，等新版本接手
   carryFailed: boolean; // 沒辦法把暫存區帶到新版本，再按一次會直接重新載入
   updated: "kept" | "lost" | "plain" | null; // 這次載入是剛換上新版本，暫存區有沒有帶過來
@@ -201,8 +202,10 @@ export function useOffline(idle: boolean, carry: Carry): OfflineState {
 
   return {
     ready,
-    // 沒有東西會遺失時不出現提示
-    update: carryFailed ? () => reload(false) : waiting && !idle ? () => void start(false) : null,
+    // 沒有東西會遺失、讀者還沒操作過時直接換，不出現提示。已經在操作的，提示也出現，原本只等分頁切到背景、
+    // 畫面上什麼都不顯示，讀者要切到從空白開始的工具或放進檔案才看得到提示（2026-10-22 的使用回饋）
+    update: carryFailed ? () => reload(false) : waiting && (!idle || touched) ? () => void start(false) : null,
+    idle,
     updating,
     carryFailed,
     updated,

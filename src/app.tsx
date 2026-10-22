@@ -351,7 +351,7 @@ export function App() {
       {offline.update && (!working || offline.updating) ? (
         <div class="frame">
           <div class="update-bar" role="status">
-            <span>{t(offline.carryFailed ? "app.updateCarryFailed" : "app.update")}</span>
+            <span>{t(offline.carryFailed ? "app.updateCarryFailed" : offline.idle ? "app.updateIdle" : "app.update")}</span>
             <button type="button" class="primary" onClick={offline.update} disabled={offline.updating}>
               {t(offline.updating ? "app.updating" : "app.updateReload")}
             </button>

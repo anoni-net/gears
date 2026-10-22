@@ -157,15 +157,16 @@ test.describe("換上新版本", () => {
     await expect(page.getByRole("button", { name: "重新載入" })).toBeHidden();
   });
 
-  test("暫存區是空的、讀者已經在操作：不出現提示，分頁切到背景才換，回來時顯示已換上新版本", async ({ page }) => {
+  test("暫存區是空的、讀者已經在操作：出現較輕的提示，分頁切到背景也會換，回來時顯示已換上新版本", async ({ page }) => {
     await page.goto("./");
     await expect(page.getByTestId("offline-ready")).toBeVisible({ timeout: 30_000 });
     // 讀者點過頁面
     await page.getByRole("heading", { name: "暫存區" }).click();
     await serveNewVersion(page, "e2e-idle");
     await expect.poll(() => page.evaluate(async () => !!(await navigator.serviceWorker.getRegistration())?.waiting), { timeout: 30_000 }).toBe(true);
-    await page.waitForTimeout(500);
-    await expect(page.getByRole("button", { name: "重新載入" })).toBeHidden();
+    // 沒有東西會遺失，提示不提暫存區
+    await expect(page.getByText("檔案工作台有新版本，重新載入就會換上。")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole("button", { name: "重新載入" })).toBeVisible();
     expect(await page.evaluate(() => caches.keys())).not.toEqual(["gears-e2e-idle"]);
     const loaded = page.waitForEvent("load", { timeout: 15_000 });
     await page.evaluate(() => {
@@ -175,6 +176,16 @@ test.describe("換上新版本", () => {
     await loaded;
     await expect.poll(() => page.evaluate(() => caches.keys())).toEqual(["gears-e2e-idle"]);
     await expect(page.getByText(/^已換上新版本（\d{4}\.\d{2}\.\d{2} \d{2}:\d{2}）。$/)).toBeVisible({ timeout: 10_000 });
+  });
+
+  test("暫存區是空的、讀者已經在操作：按下重新載入就換上新版本", async ({ page }) => {
+    await page.goto("./");
+    await expect(page.getByTestId("offline-ready")).toBeVisible({ timeout: 30_000 });
+    await page.getByRole("heading", { name: "暫存區" }).click();
+    await serveNewVersion(page, "e2e-idle-click");
+    await page.getByRole("button", { name: "重新載入" }).click({ timeout: 30_000 });
+    await expect(page.getByText(/^已換上新版本（\d{4}\.\d{2}\.\d{2} \d{2}:\d{2}）。$/)).toBeVisible({ timeout: 15_000 });
+    await expect.poll(() => page.evaluate(() => caches.keys())).toEqual(["gears-e2e-idle-click"]);
   });
 
   test("分頁切回前景時檢查新版本，不必重新整理", async ({ page }) => {
