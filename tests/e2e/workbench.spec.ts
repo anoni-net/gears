@@ -96,13 +96,19 @@ test("桌面的圖示標籤：卡片上的圖示帶著補充說明，最下方�
     }),
   );
   for (const offset of offsets) expect(offset).toBeLessThanOrEqual(2);
-  // 每個標籤一個代表色，卡片與圖示說明一致，也不會被卡片的灰色文字蓋掉
+  // 標籤一律中性灰，卡片與圖示說明一致，不同標籤也是同一個顏色
   const color = (selector: string) => page.locator(selector).first().evaluate((el) => getComputedStyle(el).color);
-  const muted = await color(".tool-row-when");
+  const colors = new Set<string>();
   for (const tag of ["model", "camera"]) {
     expect(await color(`.tool-rows .tag-${tag}`), tag).toBe(await color(`#tag-legend .tag-${tag}`));
-    expect(await color(`.tool-rows .tag-${tag}`), tag).not.toBe(muted);
+    colors.add(await color(`.tool-rows .tag-${tag}`));
   }
+  expect(colors.size).toBe(1);
+  // 圖示圈一組一個顏色
+  const groupColors = await page.locator(".tool-group").evaluateAll((groups) =>
+    groups.map((g) => new Set([...g.querySelectorAll(".tool-row .ic")].map((ic) => getComputedStyle(ic).color)).size),
+  );
+  expect(groupColors).toEqual([1, 1, 1]);
   // 範例與建議與回饋在最下面同一區
   await expect(page.locator(".desk-more").getByRole("button", { name: "範例" })).toBeVisible();
   await expect(page.locator(".desk-more").getByRole("button", { name: "建議與回饋" })).toBeVisible();

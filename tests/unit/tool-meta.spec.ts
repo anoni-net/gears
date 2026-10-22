@@ -3,15 +3,18 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { toolIds } from "../../src/tools/index.ts";
 import { ICON_PATHS } from "../../src/ui/icon-paths.ts";
-import { TOOL_GROUPS, TOOL_META } from "../../src/ui/tool-meta.ts";
+import { GROUP_CAT, TOOL_GROUPS, TOOL_META } from "../../src/ui/tool-meta.ts";
 
-test("每個工具都有圖示與類別", () => {
-  for (const id of toolIds) {
-    const meta = TOOL_META[id];
-    expect(meta, id).toBeDefined();
-    expect(Object.hasOwn(ICON_PATHS, meta!.icon), id).toBe(true);
-    expect(["privacy", "secure"]).toContain(meta!.cat);
-  }
+test("每個工具都有圖示，圖示圈的顏色跟著桌面的分組", () => {
+  for (const group of TOOL_GROUPS)
+    for (const id of group.tools) {
+      const meta = TOOL_META[id];
+      expect(meta, id).toBeDefined();
+      expect(Object.hasOwn(ICON_PATHS, meta!.icon), id).toBe(true);
+      expect(meta!.cat, id).toBe(GROUP_CAT[group.id]);
+    }
+  // 三組三個顏色
+  expect(new Set(Object.values(GROUP_CAT)).size).toBe(TOOL_GROUPS.length);
 });
 
 test("每個工具剛好出現在桌面的一組", () => {
@@ -37,9 +40,8 @@ test("每個標籤都有圖示與三個語系的說明，每個工具最多兩�
   const css = readFileSync(join(import.meta.dirname, "../../src/styles.css"), "utf8");
   for (const tag of TAG_ORDER) {
     expect(Object.hasOwn(ICON_PATHS, TAGS[tag].icon), tag).toBe(true);
-    // 代表色：淺色與深色模式各一，卡片與圖示說明共用 .tag-<id>
-    expect(css.match(new RegExp(`--tag-${tag}: #`, "g"))?.length, `--tag-${tag}`).toBe(2);
-    expect(css, `.tag-${tag}`).toContain(`.tool-tag.tag-${tag} {`);
+    // 標籤一律中性灰，不另訂代表色
+    expect(css, `--tag-${tag}`).not.toContain(`--tag-${tag}:`);
   }
   for (const id of toolIds) {
     const tags = TOOL_META[id]!.tags ?? [];
