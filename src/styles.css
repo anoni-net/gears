@@ -21,10 +21,9 @@
   /* 圖示的分類色，工作台用到個人隱私與機敏與安全兩類 */
   --cat-privacy: #2e7d32;
   --cat-secure: #a53453;
+  --cat-observe: #026a9d;
   /* 桌面圖示標籤的代表色（src/ui/tool-tags.ts），取自品牌素材頁「圖示的分類色」裡工作台的圖示圈
      沒用到的兩色：本機模型用開發與技術的靛藍，相機用匿名支付的橘色 */
-  --tag-model: #4d57b7;
-  --tag-camera: #c25400;
 
   --action: #c25400;
   --danger: #d32f2f;
@@ -64,8 +63,7 @@
     --n-300: #3c6070;
     --cat-privacy: #81c784;
     --cat-secure: #f996a9;
-    --tag-model: #a3b2fe;
-    --tag-camera: #ffa040;
+    --cat-observe: #69c1fc;
     --action: #ffa040;
     --danger: #e57373;
     --danger-text: #e57373;
@@ -449,6 +447,10 @@ html:lang(en) .site-header__product {
 
 .cat-secure {
   --topic: var(--cat-secure);
+}
+
+.cat-observe {
+  --topic: var(--cat-observe);
 }
 
 /* 使用者區（建議與回饋、之後的設定）不是工具，用品牌主色，跟兩類工具分開 */
@@ -3262,8 +3264,10 @@ button.link {
 }
 
 /* 每個標籤一個代表色，卡片與圖示說明用同一個樣式：淡底色、外框與同色的圖示 */
+/* 圖示標籤一律中性灰。標籤是打開之前的提醒，不是分類，靠圖示本身（大腦、相機）分辨。
+   2026-10-22 以前各借一個品牌分類色（開發與技術的靛藍、匿名支付的橘），跟圖示圈的分類色混在一起 */
 .tool-tag {
-  --tag-color: var(--link);
+  --tag-color: var(--icon);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -3274,17 +3278,9 @@ button.link {
   color: var(--tag-color);
 }
 
-/* 標籤也是 span，要用比工具列的文字高的優先順序蓋回代表色 */
+/* 標籤也是 span，要用比工具列的文字高的優先順序蓋回標籤的顏色 */
 .tool-row-text .tool-tags .tool-tag {
   color: var(--tag-color);
-}
-
-.tool-tag.tag-model {
-  --tag-color: var(--tag-model);
-}
-
-.tool-tag.tag-camera {
-  --tag-color: var(--tag-camera);
 }
 
 .tool-tag .icon {

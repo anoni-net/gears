@@ -18,5 +18,6 @@ export function IconCircle({ name, cat }: { name: IconName; cat: Category }) {
   );
 }
 
-// 品牌素材頁「圖示的分類色」裡的類別，工作台的工具用到其中兩類。user 是桌面的使用者區，用品牌主色
-export type Category = "privacy" | "secure" | "user";
+// 品牌素材頁「圖示的分類色」裡的類別，工作台的工具用到其中三類，一組一類（src/ui/tool-meta.ts 的 GROUP_CAT）。
+// user 是桌面的使用者區，用品牌主色
+export type Category = "privacy" | "secure" | "observe" | "user";
