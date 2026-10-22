@@ -25,6 +25,7 @@ export const en: Record<MessageKey, string> = {
   "app.analytics.onion": "The onion version doesn't record usage statistics.",
   "app.offlineReady": "The workbench is stored in this device's browser and opens without a network connection.",
   "app.update": "A new version of Gears is available. The files in the tray stay after reloading, but results you have not applied or downloaded are lost.",
+  "app.updateIdle": "A new version of Gears is available. Reload to switch to it.",
   "app.updateReload": "Reload",
   "app.updating": "Updating…",
   "app.updated": "Updated to version {version}.",

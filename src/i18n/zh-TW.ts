@@ -25,6 +25,7 @@ export const zhTW = {
   "app.analytics.onion": "onion 版不記錄使用統計。",
   "app.offlineReady": "工作台已經存在這台裝置的瀏覽器裡，沒有網路也能開啟。",
   "app.update": "檔案工作台有新版本。重新載入之後，暫存區的檔案會留著，還沒套用或下載的結果會消失。",
+  "app.updateIdle": "檔案工作台有新版本，重新載入就會換上。",
   "app.updateReload": "重新載入",
   "app.updating": "更新中…",
   "app.updated": "已換上新版本（{version}）。",
