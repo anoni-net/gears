@@ -603,15 +603,29 @@ h4 {
   padding: 0 0.75rem;
 }
 
-/* 檔案畫面（src/ui/FileView.tsx）。手機排成一欄：處理過的依序是檔名、預覽與處理紀錄、下載、
-   找到的資訊與工具，遮蔽完馬上看得到框有沒有蓋對。還沒處理的先看找到的資訊與按鈕，
-   預覽放在後面，也不讓它佔掉整個畫面。沒有預覽的文件，處理紀錄一律在找到的資訊上面 */
+/* 檔案畫面（src/ui/FileView.tsx）。檔名與下載同一列，接著是預覽與處理紀錄，最後是找到的資訊與工具。
+   手機排成一欄，順序一樣：處理紀錄的位置固定，第一次處理之後第一步出現在原本就看得到的地方，
+   處理前後版面也不會跳動（2026-10-22 起。原本還沒處理時先排找到的資訊、預覽排到工具列之後，
+   處理之後又跳回檔名下面） */
 .file {
   min-width: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 1.25rem 1.5rem;
   align-items: start;
+}
+
+.file-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem 1.5rem;
+}
+
+.file-head > div {
+  flex: 1 1 16rem;
+  min-width: 0;
 }
 
 .file-head h2 {
@@ -623,22 +637,50 @@ h4 {
   margin: 0.25rem 0 0;
 }
 
-.file > .file-head { order: 1; }
-.file > .panel { order: 2; }
-.file > .file-main { order: 3; }
-.file.processed > .file-main,
-.file:not(.has-preview) > .file-main { order: 2; }
-.file:not(.has-preview):not(.processed) > .panel { order: 3; }
-.file.processed > .output { order: 3; }
-.file.processed > .panel { order: 4; }
-.file > .editor { order: 5; }
-
-.file > .output {
+/* 下載與分享在檔名的右邊，說明是按鈕下的一行小字 */
+.file-head .output {
+  flex: 0 1 auto;
   margin: 0;
 }
 
-.file > .output h3 {
-  margin-top: 0;
+.file-head .output .hint {
+  max-width: 24rem;
+  font-size: 0.85rem;
+}
+
+/* 窄螢幕上下載與分享排在檔名的右邊、不換行，說明只留給讀螢幕軟體（下載連結的 aria-describedby）。
+   換行的話，處理之後按鈕多出一列，預覽與處理紀錄整個往下推 */
+@media (max-width: 39.99rem) {
+  .file-head {
+    flex-wrap: nowrap;
+  }
+
+  .file-head > div {
+    flex-basis: auto;
+  }
+
+  .file-head .output .hint {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .file-head .output .buttons {
+    flex-wrap: nowrap;
+  }
+}
+
+@media (min-width: 40rem) {
+  .file-head .output {
+    text-align: right;
+  }
+
+  .file-head .output .buttons {
+    justify-content: flex-end;
+  }
 }
 
 /* 左欄的燈箱：預覽與處理紀錄放在淡藍灰的底上，右欄維持白底，「左邊是檔案、右邊是動作」靠底色分開，
@@ -662,59 +704,31 @@ h4 {
   padding: 0 0.25rem;
 }
 
+/* 手機上預覽約三成畫面高，找到的資訊與工具往下捲一點就看得到 */
 @media (max-width: 63.99rem) {
-  .file-main .preview img {
-    max-height: 40vh;
+  .file-main .preview img,
+  .file-main .preview video {
+    max-height: 30vh;
   }
 }
 
-/* 寬螢幕：檔名與下載同一列，下面兩欄。左欄預覽與處理紀錄，右欄找到的資訊與工具 */
+/* 寬螢幕：檔名與下載同一列，下面兩欄，左欄預覽與處理紀錄，右欄找到的資訊與工具。右欄不論處理前後
+   都從預覽的高度開始。沒有預覽的文件排成一欄（寬度上限 40rem），處理紀錄在上面，左右兩欄的話
+   左邊只有一小塊處理紀錄，下面又空一大片 */
 @media (min-width: 64rem) {
-  .file {
+  .file.has-preview {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    /* 交出去比檔名高，跨兩列，左欄的預覽緊接在檔名下面，不被撐出一段空白 */
-    grid-template-rows: auto auto 1fr;
-    grid-template-areas:
-      "head output"
-      "main output"
-      "main panel";
-  }
-
-  /* 還沒處理或打開編輯畫面時沒有下載，右欄從頂端開始 */
-  .file:not(.processed),
-  .file.editing {
-    grid-template-areas:
-      "head panel"
-      "main panel"
-      "main panel";
-  }
-
-  /* 沒有預覽的文件排成一欄：檔名與下載、處理紀錄、找到的資訊與工具。左右兩欄的話，
-     左邊只有一小塊處理紀錄，下面又空一大片 */
-  .file:not(.has-preview) {
-    grid-template-columns: minmax(0, 40rem) minmax(0, 1fr);
-    grid-template-rows: auto auto auto;
-    grid-template-areas:
-      "head output"
-      "main main"
-      "panel panel";
-  }
-
-  .file:not(.has-preview):not(.processed),
-  .file.editing:not(.has-preview) {
     grid-template-areas:
       "head head"
-      "main main"
-      "panel panel";
+      "main panel";
   }
 
-  .file > .file-head { grid-area: head; }
-  .file > .output { grid-area: output; }
-  .file > .file-main { grid-area: main; }
-  .file > .panel { grid-area: panel; }
-  .file > .editor { grid-area: panel; }
+  .file.has-preview > .file-head { grid-area: head; }
+  .file.has-preview > .file-main { grid-area: main; }
+  .file.has-preview > .panel,
+  .file.has-preview > .editor { grid-area: panel; }
 
-  /* 沒有預覽的文件只有一欄，字太長不好讀 */
+  .file:not(.has-preview) > .file-head,
   .file:not(.has-preview) > .file-main,
   .file:not(.has-preview) > .panel,
   .file:not(.has-preview) > .editor:not(.wide) {

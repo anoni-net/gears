@@ -337,15 +337,16 @@ function RecipientNote({ version }: { version: Version }) {
   );
 }
 
+// 下載與分享，放在檔名那一列的右邊。原本是一個有「交出去」標題的區塊，處理之後才出現，放在右欄頂端
+// 或檔名旁邊的窄欄裡，把整列撐高，檔名下面空出一大塊（2026-10-22 的使用回饋）
 function Output({ version, name }: { version: Version; name: string }) {
   const url = useObjectUrl(version.blob);
   const file = new File([version.blob], name, { type: version.blob.type });
   const canShare = typeof navigator.canShare === "function" && navigator.canShare({ files: [file] });
   return (
-    <section class="output" aria-labelledby="output-title">
-      <h3 id="output-title">{t("output.title")}</h3>
+    <section class="output" aria-label={t("output.title")}>
       <div class="buttons">
-        <a class="button primary" href={url} download={name} onClick={() => track("save", { how: "download" })}>
+        <a class="button primary" href={url} download={name} aria-describedby="output-note" onClick={() => track("save", { how: "download" })}>
           {t("output.download")}
         </a>
         {canShare ? (
@@ -362,8 +363,9 @@ function Output({ version, name }: { version: Version; name: string }) {
           </button>
         ) : null}
       </div>
-      <p class="hint">{t("output.nameNote")}</p>
-      {version.tool === "encrypt" ? <RecipientNote version={version} /> : null}
+      <p class="hint" id="output-note">
+        {t("output.nameNote")}
+      </p>
     </section>
   );
 }
@@ -519,24 +521,24 @@ export function FileView({ file, others, index, busy, preferred, onOpenTool }: P
   }, [editing]);
 
   return (
-    // 版面：檔名與下載同一列，下面兩欄。左欄是檔案本身（預覽與處理紀錄），右欄是裡面還有什麼、接下來的工具。
-    // 手機上排成一欄：處理過的先看預覽與這一步做了什麼再下載（遮蔽完馬上看得到框有沒有蓋對），
-    // 還沒處理的先看找到的資訊（styles.css）
+    // 版面：檔名與下載同一列，接著是檔案本身（預覽與處理紀錄），最後是找到的資訊與工具。寬螢幕上
+    // 檔案本身在左欄、找到的資訊與工具在右欄，手機上排成一欄，順序一樣（styles.css）
     <section
-      class={`file${(isImage || media) && !wide ? " has-preview" : ""}${current.tool ? " processed" : ""}${editing ? " editing" : ""}`}
+      class={`file${(isImage || media) && !wide ? " has-preview" : ""}`}
       aria-labelledby="file-title"
       ref={section}
     >
       <div class="file-head">
-        <h2 id="file-title">{file.name}</h2>
-        {file.sample ? (
-          <p class="hint" data-testid="sample-note">
-            {t("file.sample")}
-          </p>
-        ) : null}
+        <div>
+          <h2 id="file-title">{file.name}</h2>
+          {file.sample ? (
+            <p class="hint" data-testid="sample-note">
+              {t("file.sample")}
+            </p>
+          ) : null}
+        </div>
+        {current.tool && !editing ? <Output version={current} name={outputName(file, index)} /> : null}
       </div>
-
-      {current.tool && !editing ? <Output version={current} name={outputName(file, index)} /> : null}
 
       {/* 左欄是檔案本身：現在的樣子，以及怎麼變成這樣。右欄是動作：找到的資訊與工具，或是打開的編輯畫面。
           處理紀錄放在預覽下面，看結果時順著讀到這一步做了什麼。只有原檔時也顯示，第一次處理之後，
@@ -580,6 +582,8 @@ export function FileView({ file, others, index, busy, preferred, onOpenTool }: P
         </section>
       ) : (
         <div class="panel">
+          {/* 加密之後給對方的說明，比較長，放在右欄最上面，不擠在檔名那一列 */}
+          {current.tool === "encrypt" ? <RecipientNote version={current} /> : null}
           {canInspect ? (
             <>
               <h3>{t("findings.title")}</h3>
