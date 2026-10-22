@@ -48,7 +48,7 @@ test("從任務把 HEIC 轉成 JPEG，下載的 JPEG 沒有中繼資料", async 
   const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.getByRole("button", { name: /打不開的 iPhone 照片/ }).click()]);
   await chooser.setFiles(heic(PHOTO));
   await page.getByRole("button", { name: "轉成 JPEG", exact: true }).click();
-  await expect(page.getByText("轉成 JPEG 後", { exact: true })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByTestId("history-current").getByText("HEIC 轉 JPEG", { exact: true })).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText("沒有找到可能透露身分的中繼資料。")).toBeVisible();
   expect(isGreen(await pixel(page, 0.2, 0.2))).toBe(true);
 
@@ -73,7 +73,7 @@ test("遮蔽 HEIC：解碼之後框選塗黑，輸出 JPEG", async ({ page }) =>
   await page.mouse.move(b.x + b.width * 0.45, b.y + b.height * 0.45);
   await page.mouse.up();
   await page.getByRole("button", { name: "套用遮蔽" }).click();
-  await expect(page.getByText("遮蔽後", { exact: true })).toBeVisible();
+  await expect(page.getByTestId("history-current").getByText("遮蔽", { exact: true })).toBeVisible();
   expect(Math.max(...(await pixel(page, 0.2, 0.2)))).toBeLessThanOrEqual(24);
   expect(isRed(await pixel(page, 0.8, 0.8))).toBe(true);
 });

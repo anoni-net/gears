@@ -132,15 +132,30 @@ test("JPEG：找出位置、清除、下載，旋轉方向保留", async ({ page
   expect(parseExif(out.subarray(exifAt + 6)).orientation).toBe(6);
 });
 
-test("退回上一步，再清空暫存區", async ({ page }) => {
+test("處理紀錄列出每一步，復原之後再清空暫存區", async ({ page }) => {
   const jpeg = insertIntoJpeg(await canvasImage(page, "image/jpeg"), exifSegment(sampleTiff()));
   await addFile(page, "photo.jpg", "image/jpeg", jpeg);
   await page.getByRole("button", { name: "清除", exact: true }).click();
   await expect(page.getByText("沒有找到可能透露身分的中繼資料。")).toBeVisible();
 
-  await page.getByRole("button", { name: "退回上一步" }).click();
+  // 不必復原就看得到這一步做了什麼：處理紀錄列出原檔與清除中繼資料，最新的一步展開處理報告
+  const history = page.getByTestId("history");
+  await expect(history).toContainText("原檔");
+  await expect(page.getByTestId("history-current")).toContainText("清除中繼資料");
+  await expect(page.getByTestId("step-detail")).toContainText("目前的版本");
+  await expect(page.getByTestId("step-detail")).toContainText("拿掉的");
+  // 點原檔，看得到原本找到的資訊，不必先復原
+  await history.getByRole("button", { name: "原檔" }).click();
+  await expect(page.getByTestId("step-detail")).toContainText("拍攝位置");
+  await expect(page.getByRole("button", { name: "復原這一步" })).toHaveCount(0);
+  await history.getByRole("button", { name: /清除中繼資料/ }).click();
+
+  await page.getByRole("button", { name: "復原這一步" }).click();
   await expect(page.getByText("拍攝位置", { exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "退回上一步" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "復原這一步" })).toHaveCount(0);
+  // 復原之後處理紀錄只剩原檔，仍然顯示
+  await expect(history.locator(".step")).toHaveCount(1);
+  await expect(page.getByTestId("step-detail")).toContainText("之後每處理一步都會列在這裡");
 
   // 第一次按下只是確認，檔案還在
   await page.getByRole("button", { name: "清空暫存區" }).click();
@@ -266,8 +281,15 @@ test("做了第二個工具之後，前面處理過的仍標示已處理", async
   await expect(redact.getByText("已處理")).toBeVisible();
   await expect(redact.getByRole("button", { name: "再框選一次" })).toBeVisible();
 
-  // 退回上一步，遮蔽的版本拿掉，已處理也跟著消失
-  await page.getByRole("button", { name: "退回上一步" }).click();
+  // 原檔與兩步都列在處理紀錄，最新的一步選中、下面顯示它的報告
+  const steps = page.getByTestId("history").locator(".step");
+  await expect(steps).toHaveCount(3);
+  await expect(steps.nth(1)).toHaveAttribute("aria-pressed", "false");
+  await expect(steps.nth(2)).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByTestId("step-detail")).toContainText("塗成實心黑色的範圍");
+
+  // 復原這一步，遮蔽的版本拿掉，已處理也跟著消失
+  await page.getByRole("button", { name: "復原這一步" }).click();
   await expect(redact.getByText("已處理")).toHaveCount(0);
   await expect(redact.getByRole("button", { name: "開始框選" })).toBeVisible();
   await expect(strip.getByText("已處理")).toBeVisible();
@@ -281,7 +303,7 @@ test("先遮蔽：說明中繼資料是重新產生整張圖時一起拿掉的",
   await page.getByRole("button", { name: "套用遮蔽" }).click();
 
   const note = page.getByTestId("removed-note");
-  await expect(note).toContainText("上一步（遮蔽）拿掉了原本找到的 7 項資訊。遮蔽時重新產生了整張圖");
+  await expect(note).toContainText("原本找到的 7 項資訊拿掉了。遮蔽時重新產生了整張圖");
   // 已經沒有中繼資料，清除中繼資料不顯示按鈕
   const strip = page.locator(".shelf li", { hasText: "清除中繼資料" });
   await expect(strip.getByRole("button")).toHaveCount(0);
@@ -395,18 +417,24 @@ test("網址打錯時說明找不到這一頁，可以回到桌面", async ({ pa
   await expect(page.locator(".tray")).toBeVisible();
 });
 
-test("處理完之後下載在工具列表之前，窄螢幕上預覽排在下載前面", async ({ page }) => {
+test("下載在檔名那一列，處理前後右欄與預覽的位置不變", async ({ page }) => {
   const jpeg = insertIntoJpeg(await canvasImage(page, "image/jpeg"), exifSegment(sampleTiff()));
   await addFile(page, "photo.jpg", "image/jpeg", jpeg);
-  await page.getByRole("button", { name: "清除", exact: true }).click();
   await previewLoaded(page);
   const file = page.locator("section.file");
-  const downloadY = (await file.getByRole("link", { name: "下載" }).boundingBox())!.y;
-  const toolsY = (await file.getByRole("heading", { name: "工具", exact: true }).boundingBox())!.y;
-  expect(downloadY).toBeLessThan(toolsY);
-  // 手機上處理完要先確認結果，預覽在下載上方
-  const previewY = (await file.locator(".preview").boundingBox())!.y;
-  if ((page.viewportSize()?.width ?? 1280) < 1024) expect(previewY).toBeLessThan(downloadY);
+  // 頁面上的位置，不受捲動影響（按「清除」之前 Playwright 會先把按鈕捲進畫面）
+  const y = (sel: string) => file.locator(sel).first().evaluate((el) => el.getBoundingClientRect().top + window.scrollY);
+  const before = { main: await y(".file-main"), panel: await y(".panel") };
+  await page.getByRole("button", { name: "清除", exact: true }).click();
+  await previewLoaded(page);
+  // 下載在檔名那一列，不另外佔一塊
+  const head = file.locator(".file-head");
+  await expect(head.getByRole("link", { name: "下載" })).toBeVisible();
+  expect(await y(".file-head .output")).toBeLessThan(await y(".file-main"));
+  // 處理之後預覽與右欄不會被往下推（檔名那一列可能因為下載多出幾 px，不能多出一整塊）
+  expect(Math.abs((await y(".file-main")) - before.main)).toBeLessThan(40);
+  // 寬螢幕的右欄也不動。手機排成一欄，處理紀錄多了報告，排在後面的內容本來就會往下
+  if ((page.viewportSize()?.width ?? 1280) >= 1024) expect(Math.abs((await y(".panel")) - before.panel)).toBeLessThan(40);
   // 沒有找到中繼資料不用綠色，說明只檢查了中繼資料
   await expect(page.getByText("只檢查了中繼資料。")).toBeVisible();
   await expect(page.locator(".tray .item .status")).toHaveClass(/muted/);

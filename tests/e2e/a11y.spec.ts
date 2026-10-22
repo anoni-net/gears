@@ -76,7 +76,7 @@ test("逐字稿的編輯畫面沒有無障礙問題", async ({ page }) => {
 test("PDF 的遮蔽畫面（換頁列）沒有無障礙問題", async ({ page }) => {
   await page.goto("./redact/");
   await page.getByTestId("file-input").setInputFiles({ name: "a.pdf", mimeType: "application/pdf", buffer: Buffer.from(await syntheticPdf()) });
-  await expect(page.getByTestId("redact-auto-status")).toContainText("自動尋找在你的瀏覽器裡執行", { timeout: 15000 });
+  await expect(page.getByTestId("redact-auto-status")).toContainText("側臉、戴口罩的臉", { timeout: 15000 });
   await expect(page.getByText(/第 1 頁，共 \d+ 頁/)).toBeVisible();
   expect(await audit(page)).toEqual([]);
 });

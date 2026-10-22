@@ -76,12 +76,12 @@ test("遮蔽：讀不到 canvas 時不產生雜訊圖，框留著，允許之後
 
   await page.getByRole("button", { name: "套用遮蔽" }).click();
   await expect(page.getByRole("alert")).toContainText("網址列跳出詢問");
-  await expect(page.getByText("遮蔽後", { exact: true })).toHaveCount(0);
+  await expect(page.getByTestId("history-current").getByText("遮蔽", { exact: true })).toHaveCount(0);
   await expect(page.getByText("已經框了 1 個範圍")).toBeVisible();
 
   await allow(page);
   await page.getByRole("button", { name: "套用遮蔽" }).click();
-  await expect(page.getByText("遮蔽後", { exact: true })).toBeVisible();
+  await expect(page.getByTestId("history-current").getByText("遮蔽", { exact: true })).toBeVisible();
 });
 
 test("列印追蹤點：讀不到 canvas 時不判斷、不輸出，允許之後再套用", async ({ page }) => {
@@ -91,14 +91,14 @@ test("列印追蹤點：讀不到 canvas 時不判斷、不輸出，允許之後
   await expect(page.getByTestId("print-dots-status")).toBeEmpty();
   await page.getByRole("button", { name: "套用" }).click();
   await expect(page.getByRole("alert")).toContainText("網址列跳出詢問");
-  await expect(page.getByText("去掉追蹤點後", { exact: true })).toHaveCount(0);
+  await expect(page.getByTestId("history-current").getByText("列印追蹤點", { exact: true })).toHaveCount(0);
 
   await allow(page);
   await page.getByRole("button", { name: "只看黃色" }).click();
   await expect(page.getByTestId("print-dots-status")).toContainText("沒有找到");
   await expect(page.getByRole("alert")).toHaveCount(0);
   await page.getByRole("button", { name: "套用" }).click();
-  await expect(page.getByText("去掉追蹤點後", { exact: true })).toBeVisible();
+  await expect(page.getByTestId("history-current").getByText("列印追蹤點", { exact: true })).toBeVisible();
 });
 
 test("縮成常見尺寸：讀不到 canvas 時不輸出，允許之後再按一次", async ({ page }) => {
@@ -106,11 +106,11 @@ test("縮成常見尺寸：讀不到 canvas 時不輸出，允許之後再按一
   await page.getByTestId("file-input").setInputFiles({ name: "photo.jpg", mimeType: "image/jpeg", buffer: await image(page, "image/jpeg") });
   await page.getByRole("button", { name: "縮小並重新壓縮" }).click();
   await expect(page.getByRole("alert")).toContainText("網址列跳出詢問");
-  await expect(page.getByText("縮成常見尺寸後", { exact: true })).toHaveCount(0);
+  await expect(page.getByTestId("history-current").getByText("縮成常見尺寸", { exact: true })).toHaveCount(0);
 
   await allow(page);
   await page.getByRole("button", { name: "縮小並重新壓縮" }).click();
-  await expect(page.getByText("縮成常見尺寸後", { exact: true })).toBeVisible();
+  await expect(page.getByTestId("history-current").getByText("縮成常見尺寸", { exact: true })).toBeVisible();
 });
 
 test("影片的關鍵影格：讀不到 canvas 時說明，允許之後按「再試一次」", async ({ page }) => {
@@ -128,7 +128,7 @@ test("遮蔽 PDF：讀文字層不必讀 canvas，讀者還沒允許也找得到
   await page.goto("./redact/");
   await page.getByTestId("file-input").setInputFiles({ name: "contact.pdf", mimeType: "application/pdf", buffer: await textPdf() });
   await expect(page.getByText("第 1 頁，共 1 頁")).toBeVisible({ timeout: 15000 });
-  await expect(page.getByTestId("redact-auto-status")).toContainText("自動尋找在你的瀏覽器裡執行", { timeout: 15000 });
+  await expect(page.getByTestId("redact-auto-status")).toContainText("側臉、戴口罩的臉", { timeout: 15000 });
   await page.getByRole("button", { name: "找電話、Email 等個資" }).click();
   await expect(page.getByTestId("redact-auto-status")).toHaveText("加了 2 個框，請逐一確認，框錯的點一下就會拿掉。");
 });

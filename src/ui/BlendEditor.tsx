@@ -89,6 +89,7 @@ export function BlendEditor({ blob, onDone, onCancel }: FileEditorProps) {
     );
   }
 
+  const smallest = !!bitmap && LONG_EDGES.every((edge) => targetSize(bitmap.width, bitmap.height, edge).width === bitmap.width);
   return (
     <div class="blend">
       <p class="hint">{t("blend.intro")}</p>
@@ -97,6 +98,8 @@ export function BlendEditor({ blob, onDone, onCancel }: FileEditorProps) {
       ) : (
         <p class="hint">{t("printDots.loading")}</p>
       )}
+      {/* 原圖比每一個選項都小時，「不放大，只重新壓縮」寫一次，不在每個選項下面重複 */}
+      {smallest ? <p class="hint">{t("blend.noResize")}</p> : null}
       <fieldset class="choices">
         <legend>{t("blend.size")}</legend>
         {LONG_EDGES.map((edge) => {
@@ -106,7 +109,7 @@ export function BlendEditor({ blob, onDone, onCancel }: FileEditorProps) {
               <input type="radio" name="blend-size" checked={longEdge === edge} onChange={() => setLongEdge(edge)} />
               <span>
                 {t("blend.edge", { n: edge })}
-                {size ? (
+                {size && !smallest ? (
                   <small class="hint">
                     {size.width === bitmap!.width ? t("blend.noResize") : t("blend.result", { w: size.width, h: size.height })}
                   </small>

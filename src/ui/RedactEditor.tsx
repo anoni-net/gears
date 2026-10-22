@@ -535,16 +535,17 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
         {/* 處理中蓋在圖片上，不佔版面 */}
         {running ? <AutoProgress label={t(auto!.kind === "faces" ? "redact.findFaces" : auto!.kind === "lines" ? "redact.findLines" : "redact.findText")} value={auto!.progress ?? null} /> : null}
       </div>
-      {exif ? (
-        <label class="check">
-          <input type="checkbox" checked={keepExif} onChange={(e) => setKeepExif((e.currentTarget as HTMLInputElement).checked)} />
-          <span>
-            {t("redact.keepExif")}
-            <small>{t("redact.keepExifNote")}</small>
-          </span>
-        </label>
-      ) : null}
+      {/* 保留拍攝資訊是套用前的選項，放在固定於底部的完成列裡，按下套用之前一定看得到 */}
       <div class="redact-actions">
+        {exif ? (
+          <label class="check">
+            <input type="checkbox" checked={keepExif} onChange={(e) => setKeepExif((e.currentTarget as HTMLInputElement).checked)} />
+            <span>
+              {t("redact.keepExif")}
+              <small>{t("redact.keepExifNote")}</small>
+            </span>
+          </label>
+        ) : null}
         <p aria-live="polite">
           {corner
             ? t("redact.cornerSet")

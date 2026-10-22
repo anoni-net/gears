@@ -291,7 +291,6 @@ export function EmailTool({ preset, onOpenTool }: CreateToolProps) {
           ))}
         </ul>
       </details>
-      <p class="hint">{t("email.privacy")}</p>
       {msg ? <Result msg={msg} onOpenTool={onOpenTool} /> : null}
     </div>
   );

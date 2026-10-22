@@ -18,7 +18,7 @@ test("加密任何檔案：產生密語、加密、下載，再在工作台裡�
   expect(passphrase.split(" ")).toHaveLength(6);
   await page.getByRole("button", { name: "加密", exact: true }).click();
 
-  await expect(page.getByText("加密後", { exact: true })).toBeVisible({ timeout: 60_000 });
+  await expect(page.getByTestId("history-current").getByText("加密", { exact: true })).toBeVisible({ timeout: 60_000 });
   await expect(page.getByText("用密語加密（age，scrypt）")).toBeVisible();
   await expect(page.locator(".tray .item")).toContainText("已加密");
   const encrypted = await downloadFrom(page, () => page.getByRole("link", { name: "下載" }).click());
@@ -33,7 +33,7 @@ test("加密任何檔案：產生密語、加密、下載，再在工作台裡�
   await page.getByRole("button", { name: "開始解密" }).click();
   await page.getByLabel("密語或私鑰").fill(passphrase);
   await page.locator(".age").getByRole("button", { name: "解密" }).click();
-  await expect(page.getByText("解密後", { exact: true })).toBeVisible({ timeout: 60_000 });
+  await expect(page.getByTestId("history-current").getByText("解密", { exact: true })).toBeVisible({ timeout: 60_000 });
   const decrypted = await downloadFrom(page, () => page.getByRole("link", { name: "下載" }).click());
   expect(decrypted.name).toBe("gears-1.pdf");
   expect(Buffer.from(decrypted.data)).toEqual(pdf);

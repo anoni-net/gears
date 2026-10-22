@@ -67,7 +67,7 @@ test("從任務選檔案，直接打開遮蔽畫面，塗黑之後產生新版�
   await expect(page.getByText("已經框了 1 個範圍")).toBeVisible();
   await page.getByRole("button", { name: "套用遮蔽" }).click();
 
-  await expect(page.getByText("遮蔽後", { exact: true })).toBeVisible();
+  await expect(page.getByTestId("history-current").getByText("遮蔽", { exact: true })).toBeVisible();
   await expect(page.getByText("塗成實心黑色的範圍")).toBeVisible();
   await expect(page.getByText("1 個範圍")).toBeVisible();
   const inside = await pixel(page, 0.25, 0.35);
@@ -96,7 +96,7 @@ test("從工具列打開，點一下框好的範圍可以刪掉，取消不產�
 
   await page.getByRole("button", { name: "取消" }).click();
   await expect(page.getByTestId("redact-canvas")).toHaveCount(0);
-  await expect(page.getByText("遮蔽後", { exact: true })).toHaveCount(0);
+  await expect(page.getByTestId("history-current").getByText("遮蔽", { exact: true })).toHaveCount(0);
 });
 
 test("JPEG 遮蔽後重新編碼，原本的中繼資料一起拿掉", async ({ page }) => {

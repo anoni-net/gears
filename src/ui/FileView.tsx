@@ -6,7 +6,7 @@ import { list, t, tDynamic } from "../i18n/index.ts";
 import { tray } from "../state.ts";
 import { editorTools, fileTools } from "../tools/index.ts";
 import { FileEditorView } from "./registry.tsx";
-import { IconCircle } from "./Icon.tsx";
+import { Icon, IconCircle } from "./Icon.tsx";
 import { TOOL_META } from "./tool-meta.ts";
 import { useObjectUrl } from "./hooks.ts";
 import { QrContentView } from "./QrContentView.tsx";
@@ -94,26 +94,6 @@ function MediaPreview({ blob, format }: { blob: Blob; format: Version["format"] 
   );
 }
 
-function versionLabel(v: Version) {
-  return v.tool ? tDynamic(`file.version.${v.tool}`) : t("file.original");
-}
-
-// 跟上一個版本比，說明這一步拿掉了哪些資訊。遮蔽這類會重新編碼的工具，中繼資料是
-// 順帶拿掉的，讀者沒有主動要求，不說的話看起來像資料平白消失。
-function RemovedNote({ version, previous }: { version: Version; previous?: Version }) {
-  if (!previous || !version.tool) return null;
-  const now = new Set(version.findings.map((f) => f.code));
-  const gone = previous.findings.filter((f) => !now.has(f.code));
-  if (!gone.length) return null;
-  const reencoded = version.report?.removed.some((r) => r.code === "reencode");
-  return (
-    <p class="note" data-testid="removed-note">
-      {t("findings.removed", { tool: tDynamic(`tool.${version.tool}`), n: gone.length })}
-      {reencoded ? t(version.report?.kept.some((r) => r.code === "exif-kept") ? "findings.exifKept" : "findings.reencoded") : null}
-    </p>
-  );
-}
-
 function FindingList({ findings }: { findings: Version["findings"] }) {
   return (
     <ul class="findings">
@@ -166,7 +146,7 @@ function ContentChoices({ version, busy, onApply }: { version: Version; busy: bo
 }
 
 // 文件的註解、追蹤修訂與附加檔案是內容，清除之後仍然在，跟中繼資料分開列
-function Findings({ version, previous, busy, onApply }: { version: Version; previous?: Version; busy?: boolean; onApply?: (options: RunOptions) => void }) {
+function Findings({ version, busy, onApply }: { version: Version; busy?: boolean; onApply?: (options: RunOptions) => void }) {
   const metadata = version.findings.filter((f) => !CONTENT_FINDINGS.includes(f.code));
   const content = version.findings.filter((f) => CONTENT_FINDINGS.includes(f.code));
   return (
@@ -179,7 +159,6 @@ function Findings({ version, previous, busy, onApply }: { version: Version; prev
           <p class="hint">{t("findings.scope")}</p>
         </>
       )}
-      <RemovedNote version={version} previous={previous} />
       {content.length ? (
         <div class="content-findings" data-testid="content-findings">
           <h4>{t("findings.content")}</h4>
@@ -192,6 +171,23 @@ function Findings({ version, previous, busy, onApply }: { version: Version; prev
   );
 }
 
+// 處理報告的「處理方式」：這一步實際做的事，例如重新壓縮、塗黑、加密。原本跟拿掉的資訊混在
+// 「拿掉的」底下，「用一般的參數重新壓縮」讀起來像被拿掉的東西（2026-10-22 的使用回饋）
+const DONE_CODES = new Set([
+  "reencode",
+  "blend-resize",
+  "blend-reencode",
+  "redaction",
+  "pdf-pages",
+  "print-dots-yellow",
+  "print-dots-bw",
+  "heic-converted",
+  "age-passphrase",
+  "age-recipients",
+  "age-armor",
+  "age-decrypted",
+]);
+
 function ReportView({ report }: { report: Report }) {
   const rows = (items: Report["removed"]) =>
     items.map((item, i) => (
@@ -202,12 +198,22 @@ function ReportView({ report }: { report: Report }) {
         {item.bytes !== undefined ? <small>{t("report.bytes", { n: item.bytes.toLocaleString() })}</small> : null}
       </li>
     ));
+  const all = [...report.removed, ...(report.notes ?? [])];
+  const done = all.filter((item) => DONE_CODES.has(item.code));
+  const removed = report.removed.filter((item) => !DONE_CODES.has(item.code));
+  const notes = (report.notes ?? []).filter((item) => !DONE_CODES.has(item.code));
   return (
     <div class="report">
-      {report.removed.length ? (
+      {done.length ? (
+        <div>
+          <h4>{t("report.done")}</h4>
+          <ul>{rows(done)}</ul>
+        </div>
+      ) : null}
+      {removed.length ? (
         <div>
           <h4>{t("report.removed")}</h4>
-          <ul>{rows(report.removed)}</ul>
+          <ul>{rows(removed)}</ul>
         </div>
       ) : null}
       {report.kept.length ? (
@@ -216,8 +222,103 @@ function ReportView({ report }: { report: Report }) {
           <ul>{rows(report.kept)}</ul>
         </div>
       ) : null}
-      {report.notes?.length ? <ul>{rows(report.notes)}</ul> : null}
+      {notes.length ? <ul>{rows(notes)}</ul> : null}
     </div>
+  );
+}
+
+// 這一步跟上一個版本比，原本找到的資訊少了幾項。遮蔽這類會重新編碼的工具，中繼資料是
+// 順帶拿掉的，讀者沒有主動要求，不說的話看起來像資料平白消失。
+function RemovedNote({ version, previous }: { version: Version; previous: Version }) {
+  const now = new Set(version.findings.map((f) => f.code));
+  const gone = previous.findings.filter((f) => !now.has(f.code));
+  if (!gone.length) return null;
+  const reencoded = version.report?.removed.some((r) => r.code === "reencode");
+  return (
+    <p class="hint" data-testid="removed-note">
+      {t("findings.removed", { n: gone.length })}
+      {reencoded
+        ? version.report?.kept.some((r) => r.code === "exif-kept")
+          ? t("findings.exifKept")
+          : t("findings.reencoded", { tool: tDynamic(`tool.${version.tool}`) })
+        : null}
+    </p>
+  );
+}
+
+// 處理紀錄：檔名下方一排步驟，原檔與之後每一步各一個按鈕，下面顯示選中那一步做了什麼。
+// 原本是一行很小的「原檔 → 清除中繼資料後」，報告只看得到最新一步，讀者要退回上一步才知道剛才做了什麼；
+// 改成收合清單之後，手機上仍然不會注意到（2026-10-22 的使用回饋）。新增一步或復原之後回到最新的一步，可以復原
+function Steps({ file, busy }: { file: TrayFile; busy: boolean }) {
+  const versions = file.versions;
+  const last = versions.length - 1;
+  const [picked, setPicked] = useState(last);
+  useEffect(() => setPicked(last), [last]);
+  const at = Math.min(picked, last);
+  const v = versions[at]!;
+  // QR code 產生器、面對面傳送這類工具放進來的檔案，第一步寫出是哪個工具建立的
+  const label = (x: Version, i: number) =>
+    i > 0 ? tDynamic(`tool.${x.tool}`) : x.tool ? tDynamic(`file.version.${x.tool}`) : t("file.original");
+  const metadata = (x: Version) => x.findings.filter((f) => !CONTENT_FINDINGS.includes(f.code));
+  const inspectable = fileTools.some((tool) => tool.accepts(versions[0]!.format));
+  // 選中那一步的說明。步驟按鈕已經寫了工具名稱，這裡不再重複，只寫是第幾步、是不是目前的版本，
+  // 復原放在同一行，報告接在下面
+  const meta =
+    at === 0 ? (
+      inspectable ? (metadata(v).length ? t("history.found", { n: metadata(v).length }) : t("tray.clean")) : null
+    ) : at === last ? (
+      t("history.current")
+    ) : (
+      t("history.step", { n: at })
+    );
+  // 只有原檔時，找到的資訊已經列在右欄，這裡不再列一次，說明之後每一步都會列在這裡。
+  // 處理過之後點回原檔，才列出原本找到的細項，可以跟現在比對
+  const body =
+    at === 0 ? (
+      last === 0 ? (
+        <p class="hint">{t("history.empty")}</p>
+      ) : metadata(v).length && inspectable ? (
+        <FindingList findings={metadata(v)} />
+      ) : null
+    ) : (
+      <>
+        <RemovedNote version={v} previous={versions[at - 1]!} />
+        {v.report ? <ReportView report={v.report} /> : null}
+      </>
+    );
+  return (
+    <section class="steps" aria-labelledby="steps-title" data-testid="history">
+      <h3 id="steps-title">{t("history.title")}</h3>
+      <ol class="step-track">
+        {versions.map((x, i) => (
+          <li key={x.id} aria-current={i === last ? "step" : undefined} data-testid={i === last && i > 0 ? "history-current" : undefined}>
+            <button
+              type="button"
+              class={i === last ? "step current" : "step"}
+              aria-pressed={i === at}
+              aria-controls="step-detail"
+              onClick={() => setPicked(i)}
+            >
+              {i > 0 ? <span class="step-no" aria-hidden="true">{i}</span> : null}
+              <span class="step-name">{label(x, i)}</span>
+            </button>
+          </li>
+        ))}
+      </ol>
+      {meta || body ? (
+        <div id="step-detail" class="step-detail" data-testid="step-detail">
+          <div class="step-meta">
+            <span>{meta}</span>
+            {at === last && at > 0 ? (
+              <button type="button" class="link" onClick={() => tray.undo(file.id)} disabled={busy}>
+                {t("history.undo")}
+              </button>
+            ) : null}
+          </div>
+          {body}
+        </div>
+      ) : null}
+    </section>
   );
 }
 
@@ -236,15 +337,16 @@ function RecipientNote({ version }: { version: Version }) {
   );
 }
 
+// 下載與分享，放在檔名那一列的右邊。原本是一個有「交出去」標題的區塊，處理之後才出現，放在右欄頂端
+// 或檔名旁邊的窄欄裡，把整列撐高，檔名下面空出一大塊（2026-10-22 的使用回饋）
 function Output({ version, name }: { version: Version; name: string }) {
   const url = useObjectUrl(version.blob);
   const file = new File([version.blob], name, { type: version.blob.type });
   const canShare = typeof navigator.canShare === "function" && navigator.canShare({ files: [file] });
   return (
-    <section class="output" aria-labelledby="output-title">
-      <h3 id="output-title">{t("output.title")}</h3>
+    <section class="output" aria-label={t("output.title")}>
       <div class="buttons">
-        <a class="button primary" href={url} download={name} onClick={() => track("save", { how: "download" })}>
+        <a class="button primary" href={url} download={name} aria-describedby="output-note" onClick={() => track("save", { how: "download" })}>
           {t("output.download")}
         </a>
         {canShare ? (
@@ -261,8 +363,9 @@ function Output({ version, name }: { version: Version; name: string }) {
           </button>
         ) : null}
       </div>
-      <p class="hint">{t("output.nameNote")}</p>
-      {version.tool === "encrypt" ? <RecipientNote version={version} /> : null}
+      <p class="hint" id="output-note">
+        {t("output.nameNote")}
+      </p>
     </section>
   );
 }
@@ -283,27 +386,45 @@ function noInspectMessage(version: Version, signature: boolean) {
   return "file.unsupported" as const;
 }
 
-function ShelfItem({ entry, busy, onAct }: { entry: ShelfEntry; busy: boolean; onAct(): void }) {
+// 工具列的一項。建議的工具是卡片，附上理由與完整說明；其他工具收成一行，第二行用桌面上那句讀者會遇到的情況
+// （desk.when）。圖示不用分類色：分類色在桌面上幫讀者找工具，在這裡讀者在意的是下一步，綠色與玫瑰紅又會跟
+// 已處理、清空暫存區的顏色混在一起。整個檔案畫面只有一顆實心按鈕（primary），還沒處理時是第一個建議的工具
+function ShelfItem({ entry, busy, primary, onAct }: { entry: ShelfEntry; busy: boolean; primary: boolean; onAct(): void }) {
   const { id, kind, actionable, applied, reason } = entry;
   const label = kind === "create" ? t("tools.open") : tDynamic(`tool.${id}.${applied && kind === "editor" ? "again" : "action"}`);
+  const action = !actionable ? (
+    applied ? null : <span class="hint nothing">{t("tools.nothing")}</span>
+  ) : (
+    <button type="button" class={primary ? "primary" : ""} disabled={busy} onClick={onAct}>
+      {busy && kind === "file" ? t("tools.busy") : label}
+    </button>
+  );
+  if (!reason)
+    return (
+      <li class="compact" title={tDynamic(`tool.${id}.desc`)}>
+        <Icon name={TOOL_META[id]!.icon} />
+        <span class="shelf-name">
+          <strong>{tDynamic(`tool.${id}`)}</strong>
+          {applied ? <span class="badge done">{t("tools.done")}</span> : null}
+          <small>{tDynamic(`desk.when.${id}`)}</small>
+        </span>
+        {/* 處理檔案的工具沒有東西可處理時不顯示按鈕，免得讀者以為還要按。需要編輯畫面的工具可以再做一次 */}
+        {action}
+      </li>
+    );
   return (
-    <li class={reason ? "recommended" : undefined}>
-      <IconCircle name={TOOL_META[id]!.icon} cat={TOOL_META[id]!.cat} />
+    <li class="recommended">
+      <span class="ic">
+        <Icon name={TOOL_META[id]!.icon} />
+      </span>
       <span class="shelf-name">
         <strong>{tDynamic(`tool.${id}`)}</strong>
         {applied ? <span class="badge done">{t("tools.done")}</span> : null}
-        {reason ? <span class="badge">{t("tools.recommended")}</span> : null}
-        {reason ? <small class="reason">{reasonText(reason)}</small> : null}
+        <span class="badge suggest">{t("tools.recommended")}</span>
+        <small class="reason">{reasonText(reason)}</small>
         <small>{tDynamic(`tool.${id}.desc`)}</small>
       </span>
-      {/* 處理檔案的工具沒有東西可處理時不顯示按鈕，免得讀者以為還要按。需要編輯畫面的工具可以再做一次 */}
-      {!actionable ? (
-        applied ? null : <span class="hint nothing">{t("tools.nothing")}</span>
-      ) : (
-        <button type="button" class={reason ? "primary" : ""} disabled={busy} onClick={onAct}>
-          {busy && kind === "file" ? t("tools.busy") : label}
-        </button>
-      )}
+      {action}
     </li>
   );
 }
@@ -339,6 +460,9 @@ function QrInImage({ blob, onOpenTool }: { blob: Blob; onOpenTool: Props["onOpen
     </section>
   );
 }
+
+// 要在圖上操作的編輯畫面，用整個寬度（FileView 的 wide）
+const WIDE_EDITORS = new Set(["redact", "print-dots", "pdf-pages", "video-frames"]);
 
 export function FileView({ file, others, index, busy, preferred, onOpenTool }: Props) {
   const current = file.versions.at(-1)!;
@@ -381,28 +505,53 @@ export function FileView({ file, others, index, busy, preferred, onOpenTool }: P
   const groups = buildShelf({ file, others, preferred, signals });
   // 從空白開始的工具：查證整理的就是暫存區的檔案，其他的把這個檔案帶過去
   const openCreate = (id: string) => onOpenTool(id, id === "verify" ? undefined : `tray:${file.id}`);
+  // 整個檔案畫面只有一顆實心按鈕：處理過的是下載，還沒處理的是第一個建議的工具
+  const primaryId = current.tool ? null : groups.flatMap((g) => g.entries).find((e) => e.reason && e.actionable)?.id;
   const act = (entry: ShelfEntry) =>
     entry.kind === "create" ? openCreate(entry.id) : entry.kind === "editor" ? setEditing(entry.id) : void run(entry.id);
 
+  // 要在圖上操作的編輯畫面（框選、勾頁面、挑影格）本身就是預覽，用整個寬度。其他的編輯畫面放在右欄，
+  // 左邊的預覽與處理紀錄留著：看著照片選尺寸、選加密方式，畫面不會整個換掉
+  const wide = !!editing && WIDE_EDITORS.has(editing);
+  const editorRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    // 從下方的工具列打開時，編輯畫面在預覽的旁邊或下面，捲過去
+    const top = editorRef.current?.getBoundingClientRect().top;
+    if (top !== undefined && (top < 0 || top > window.innerHeight * 0.6)) editorRef.current!.scrollIntoView({ block: "start" });
+  }, [editing]);
+
   return (
-    <section class="file" aria-labelledby="file-title" ref={section}>
-      <h2 id="file-title">{file.name}</h2>
-      {file.sample ? (
-        <p class="hint" data-testid="sample-note">
-          {t("file.sample")}
-        </p>
+    // 版面：檔名與下載同一列，接著是檔案本身（預覽與處理紀錄），最後是找到的資訊與工具。寬螢幕上
+    // 檔案本身在左欄、找到的資訊與工具在右欄，手機上排成一欄，順序一樣（styles.css）
+    <section
+      class={`file${(isImage || media) && !wide ? " has-preview" : ""}`}
+      aria-labelledby="file-title"
+      ref={section}
+    >
+      <div class="file-head">
+        <div>
+          <h2 id="file-title">{file.name}</h2>
+          {file.sample ? (
+            <p class="hint" data-testid="sample-note">
+              {t("file.sample")}
+            </p>
+          ) : null}
+        </div>
+        {current.tool && !editing ? <Output version={current} name={outputName(file, index)} /> : null}
+      </div>
+
+      {/* 左欄是檔案本身：現在的樣子，以及怎麼變成這樣。右欄是動作：找到的資訊與工具，或是打開的編輯畫面。
+          處理紀錄放在預覽下面，看結果時順著讀到這一步做了什麼。只有原檔時也顯示，第一次處理之後，
+          第一步出現在原本就看得到的地方（2026-10-22 的使用回饋）。沒有預覽的文件排成一欄，處理紀錄在上面 */}
+      {!wide ? (
+        <div class="file-main">
+          {isImage ? <Preview url={preview} blob={current.blob} format={current.format} key={preview} /> : null}
+          {media ? <MediaPreview blob={current.blob} format={current.format} /> : null}
+          <Steps file={file} busy={busy || !!editing} />
+        </div>
       ) : null}
-
-      <ol class="versions" aria-label={t("file.versions")}>
-        {file.versions.map((v) => (
-          <li key={v.id} aria-current={v === current ? "step" : undefined}>
-            {versionLabel(v)}
-          </li>
-        ))}
-      </ol>
-
       {editing ? (
-        <section class="editor" aria-labelledby="editor-title">
+        <section class={wide ? "editor wide" : "editor"} aria-labelledby="editor-title" ref={editorRef}>
           <h3 id="editor-title" class="tool-title">
             <IconCircle name={TOOL_META[editing]!.icon} cat={TOOL_META[editing]!.cat} />
             {tDynamic(`tool.${editing}`)}
@@ -419,7 +568,7 @@ export function FileView({ file, others, index, busy, preferred, onOpenTool }: P
                 .then(() => {
                   setEditing(null);
                   // 編輯畫面很長，套用的按鈕在底部。關掉之後畫面變短，停在原處的話看到的是工具列表，
-                  // 捲回檔案的開頭，預覽與下載就在眼前
+                  // 捲回檔案的開頭，下載、步驟與預覽就在眼前
                   if ((section.current?.getBoundingClientRect().top ?? 0) < 0) section.current?.scrollIntoView({ block: "start" });
                 })
                 .catch(() => setError(t("tool.error.verify")));
@@ -432,18 +581,14 @@ export function FileView({ file, others, index, busy, preferred, onOpenTool }: P
           ) : null}
         </section>
       ) : (
-      // processed：手機上處理完的預覽排在前面，遮蔽完馬上看得到框有沒有蓋對（styles.css）
-      <div class={`columns${isImage || media ? "" : " single"}${current.tool ? " processed" : ""}`}>
-        {isImage ? <Preview url={preview} blob={current.blob} format={current.format} key={preview} /> : null}
-        {media ? <MediaPreview blob={current.blob} format={current.format} /> : null}
-
         <div class="panel">
+          {/* 加密之後給對方的說明，比較長，放在右欄最上面，不擠在檔名那一列 */}
+          {current.tool === "encrypt" ? <RecipientNote version={current} /> : null}
           {canInspect ? (
             <>
               <h3>{t("findings.title")}</h3>
               <Findings
                 version={current}
-                previous={file.versions.at(-2)}
                 busy={busy}
                 onApply={current.large ? undefined : (options) => void run("strip-metadata", options)}
               />
@@ -451,18 +596,6 @@ export function FileView({ file, others, index, busy, preferred, onOpenTool }: P
           ) : (
             <p class="note">{t(noInspectMessage(current, !!signals.signature))}</p>
           )}
-
-          {/* 處理完的下載放在工具列表之前。原本在最後面，手機上要捲過好幾組工具才看得到，
-              最顯眼的按鈕反而是建議的下一個工具（2026-10-19 的使用回饋） */}
-          {current.tool ? <Output version={current} name={outputName(file, index)} /> : null}
-          {current.report ? <ReportView report={current.report} /> : null}
-          {file.versions.length > 1 ? (
-            <p class="actions">
-              <button type="button" onClick={() => tray.undo(file.id)} disabled={busy}>
-                {t("file.undo")}
-              </button>
-            </p>
-          ) : null}
 
           {isImage && file.versions[0]!.tool === null ? <QrInImage blob={current.blob} onOpenTool={onOpenTool} /> : null}
 
@@ -472,7 +605,7 @@ export function FileView({ file, others, index, busy, preferred, onOpenTool }: P
               <h4>{tDynamic(`desk.group.${group.id}`)}</h4>
               <ul class="shelf">
                 {group.entries.map((entry) => (
-                  <ShelfItem key={entry.id} entry={entry} busy={busy} onAct={() => act(entry)} />
+                  <ShelfItem key={entry.id} entry={entry} busy={busy} primary={entry.id === primaryId} onAct={() => act(entry)} />
                 ))}
               </ul>
             </div>
@@ -483,7 +616,6 @@ export function FileView({ file, others, index, busy, preferred, onOpenTool }: P
             </p>
           ) : null}
         </div>
-      </div>
       )}
     </section>
   );

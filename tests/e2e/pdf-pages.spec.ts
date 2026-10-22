@@ -38,7 +38,7 @@ test("從任務選 PDF，勾選第一頁與第三頁，第二頁與文件資訊�
   await expect(page.locator(".page-thumb.drawn")).toHaveCount(3, { timeout: 15000 });
   await apply.click();
 
-  await expect(page.getByText("選擇頁面後", { exact: true })).toBeVisible({ timeout: 15000 });
+  await expect(page.getByTestId("history-current").getByText("PDF 頁面選取", { exact: true })).toBeVisible({ timeout: 15000 });
   await expect(page.getByText("沒有選的 1 頁")).toBeVisible();
   await expect(page.getByText("選中的 2 頁，頁面上的內容保留原樣")).toBeVisible();
   // 三頁共用同一個字型，提醒字型裡可能還有其他頁的字
@@ -61,7 +61,7 @@ test("轉成圖片：只留下選中的頁面，字型與文字層都不帶過�
   await page.getByRole("checkbox", { name: "第 2 頁" }).check({ timeout: 15000 });
   await page.getByRole("checkbox", { name: /轉成圖片/ }).check();
   await page.getByRole("button", { name: "只留下選中的頁面" }).click();
-  await expect(page.getByText("選擇頁面後", { exact: true })).toBeVisible({ timeout: 15000 });
+  await expect(page.getByTestId("history-current").getByText("PDF 頁面選取", { exact: true })).toBeVisible({ timeout: 15000 });
   await expect(page.getByText("沒有選的 2 頁")).toBeVisible();
   await expect(page.getByText("每一頁轉成圖片，原檔的文字、字型、中繼資料、附件與表單都不帶過去")).toBeVisible();
 

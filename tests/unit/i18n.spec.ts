@@ -18,9 +18,12 @@ test("每個代碼與工具都有正體中文的字串", () => {
     ...TOOL_GROUPS.flatMap((group) => group.tools.map((id) => `desk.when.${id}`)),
     // 檔案畫面的工具列：按鈕用動詞，需要編輯畫面的工具還有「再做一次」
     ...[...fileTools, ...editorTools].map((tool) => `tool.${tool.id}.action`),
+    // 工具頁還沒選檔案時的使用方式，每個工具三步（src/ui/ToolIntro.tsx）
+    ...[...fileTools, ...editorTools].flatMap((tool) => [1, 2, 3].map((n) => `howto.${tool.id}.${n}`)),
     ...editorTools.map((tool) => `tool.${tool.id}.again`),
-    // 會在暫存區留下版本的工具，版本列要有名稱
-    ...[...fileTools, ...editorTools, ...createTools.filter((tool) => tool.output === "file")].map((tool) => `file.version.${tool.id}`),
+    // 產生檔案放進暫存區的工具，處理紀錄的第一步寫出是哪個工具建立的（src/ui/FileView.tsx 的 History）
+    // 逐字稿與影片的關鍵影格也會把產生的檔案放進暫存區
+    ...[...createTools.filter((tool) => tool.output === "file").map((tool) => tool.id), "transcribe", "video-frames"].map((id) => `file.version.${id}`),
     // QR code 讀取的範例與分組
     ...qrSamples.flatMap((sample) => [`qrread.sample.${sample.id}`, `qrread.samples.${sample.group}`]),
   ];

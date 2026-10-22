@@ -39,7 +39,7 @@ test("找電話、Email：辨識出兩筆個資，框起來，再把所有文字
   await page.getByRole("button", { name: /框起所有文字/ }).click();
   await expect(page.getByText("已經框了 3 個範圍")).toBeVisible();
   await page.getByRole("button", { name: "套用遮蔽" }).click();
-  await expect(page.getByText("遮蔽後", { exact: true })).toBeVisible();
+  await expect(page.getByTestId("history-current").getByText("遮蔽", { exact: true })).toBeVisible();
 });
 
 test("找人臉：模型在 CSP 底下載入，沒有人臉時說明沒有找到", async ({ page }) => {
