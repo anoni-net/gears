@@ -600,6 +600,7 @@ export const zhCN: Record<MessageKey, string> = {
   "history.title": "处理记录",
   "history.found": "找到 {n} 项可能透露身份的信息",
   "history.step": "第 {n} 步",
+  "history.empty": "之后每处理一步都会列在这里，可以点开来看那一步做了什么，也可以撤销。",
   "history.current": "当前版本",
   "history.undo": "撤销这一步",
   "file.unsupported": "这种文件还没有办法检查里面的元数据，可以加密之后再交出去。",

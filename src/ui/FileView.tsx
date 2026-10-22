@@ -271,9 +271,15 @@ function Steps({ file, busy }: { file: TrayFile; busy: boolean }) {
     ) : (
       t("history.step", { n: at })
     );
+  // 只有原檔時，找到的資訊已經列在右欄，這裡不再列一次，說明之後每一步都會列在這裡。
+  // 處理過之後點回原檔，才列出原本找到的細項，可以跟現在比對
   const body =
     at === 0 ? (
-      metadata(v).length && inspectable ? <FindingList findings={metadata(v)} /> : null
+      last === 0 ? (
+        <p class="hint">{t("history.empty")}</p>
+      ) : metadata(v).length && inspectable ? (
+        <FindingList findings={metadata(v)} />
+      ) : null
     ) : (
       <>
         <RemovedNote version={v} previous={versions[at - 1]!} />
@@ -502,7 +508,6 @@ export function FileView({ file, others, index, busy, preferred, onOpenTool }: P
   const act = (entry: ShelfEntry) =>
     entry.kind === "create" ? openCreate(entry.id) : entry.kind === "editor" ? setEditing(entry.id) : void run(entry.id);
 
-  const steps = file.versions.length > 1 || !!file.versions[0]!.tool;
   // 要在圖上操作的編輯畫面（框選、勾頁面、挑影格）本身就是預覽，用整個寬度。其他的編輯畫面放在右欄，
   // 左邊的預覽與處理紀錄留著：看著照片選尺寸、選加密方式，畫面不會整個換掉
   const wide = !!editing && WIDE_EDITORS.has(editing);
@@ -518,7 +523,7 @@ export function FileView({ file, others, index, busy, preferred, onOpenTool }: P
     // 手機上排成一欄：處理過的先看預覽與這一步做了什麼再下載（遮蔽完馬上看得到框有沒有蓋對），
     // 還沒處理的先看找到的資訊（styles.css）
     <section
-      class={`file${(isImage || media || steps) && !wide ? " has-main" : ""}${current.tool ? " processed" : ""}${editing ? " editing" : ""}`}
+      class={`file${(isImage || media) && !wide ? " has-preview" : ""}${current.tool ? " processed" : ""}${editing ? " editing" : ""}`}
       aria-labelledby="file-title"
       ref={section}
     >
@@ -533,14 +538,14 @@ export function FileView({ file, others, index, busy, preferred, onOpenTool }: P
 
       {current.tool && !editing ? <Output version={current} name={outputName(file, index)} /> : null}
 
-      {/* 左欄是檔案本身：現在的樣子，以及怎麼變成這樣。右欄是動作：找到的資訊與工具，或是打開的編輯畫面。處理紀錄放在預覽下面，看結果時順著讀到這一步做了什麼。
-          原本橫跨兩欄放在最上面，份量比找到的資訊與工具還重，預覽下方又留著一大塊空白（2026-10-22 的使用回饋）。
-          只有原檔時不顯示，工具建立的檔案（QR code 產生器、面對面傳送收到的）顯示是哪個工具建立的 */}
-      {(isImage || media || steps) && !wide ? (
+      {/* 左欄是檔案本身：現在的樣子，以及怎麼變成這樣。右欄是動作：找到的資訊與工具，或是打開的編輯畫面。
+          處理紀錄放在預覽下面，看結果時順著讀到這一步做了什麼。只有原檔時也顯示，第一次處理之後，
+          第一步出現在原本就看得到的地方（2026-10-22 的使用回饋）。沒有預覽的文件排成一欄，處理紀錄在上面 */}
+      {!wide ? (
         <div class="file-main">
           {isImage ? <Preview url={preview} blob={current.blob} format={current.format} key={preview} /> : null}
           {media ? <MediaPreview blob={current.blob} format={current.format} /> : null}
-          {steps ? <Steps file={file} busy={busy || !!editing} /> : null}
+          <Steps file={file} busy={busy || !!editing} />
         </div>
       ) : null}
       {editing ? (

@@ -153,7 +153,9 @@ test("處理紀錄列出每一步，復原之後再清空暫存區", async ({ pa
   await page.getByRole("button", { name: "復原這一步" }).click();
   await expect(page.getByText("拍攝位置", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "復原這一步" })).toHaveCount(0);
-  await expect(history).toHaveCount(0);
+  // 復原之後處理紀錄只剩原檔，仍然顯示
+  await expect(history.locator(".step")).toHaveCount(1);
+  await expect(page.getByTestId("step-detail")).toContainText("之後每處理一步都會列在這裡");
 
   // 第一次按下只是確認，檔案還在
   await page.getByRole("button", { name: "清空暫存區" }).click();

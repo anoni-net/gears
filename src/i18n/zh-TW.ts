@@ -609,6 +609,7 @@ export const zhTW = {
   "history.title": "處理紀錄",
   "history.found": "找到 {n} 項可能透露身分的資訊",
   "history.step": "第 {n} 步",
+  "history.empty": "之後每處理一步都會列在這裡，可以點開來看那一步做了什麼，也可以復原。",
   "history.current": "目前的版本",
   "history.undo": "復原這一步",
   "file.unsupported": "這種檔案還沒有辦法檢查裡面的中繼資料，可以加密之後再交出去。",

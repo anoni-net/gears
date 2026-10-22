@@ -599,6 +599,7 @@ export const en: Record<MessageKey, string> = {
   "history.title": "What has been done",
   "history.found": "{n} items that could identify you were found",
   "history.step": "Step {n}",
+  "history.empty": "Each step you take will be listed here. Select a step to see what it did, or undo it.",
   "history.current": "Current version",
   "history.undo": "Undo this step",
   "file.unsupported": "Metadata in this kind of file can't be checked yet. You can encrypt it before handing it over.",

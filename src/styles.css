@@ -605,7 +605,7 @@ h4 {
 
 /* 檔案畫面（src/ui/FileView.tsx）。手機排成一欄：處理過的依序是檔名、預覽與處理紀錄、下載、
    找到的資訊與工具，遮蔽完馬上看得到框有沒有蓋對。還沒處理的先看找到的資訊與按鈕，
-   預覽放在後面，也不讓它佔掉整個畫面 */
+   預覽放在後面，也不讓它佔掉整個畫面。沒有預覽的文件，處理紀錄一律在找到的資訊上面 */
 .file {
   min-width: 0;
   display: grid;
@@ -626,7 +626,9 @@ h4 {
 .file > .file-head { order: 1; }
 .file > .panel { order: 2; }
 .file > .file-main { order: 3; }
-.file.processed > .file-main { order: 2; }
+.file.processed > .file-main,
+.file:not(.has-preview) > .file-main { order: 2; }
+.file:not(.has-preview):not(.processed) > .panel { order: 3; }
 .file.processed > .output { order: 3; }
 .file.processed > .panel { order: 4; }
 .file > .editor { order: 5; }
@@ -687,17 +689,22 @@ h4 {
       "main panel";
   }
 
-  .file:not(.has-main) {
-    grid-template-rows: auto auto;
+  /* 沒有預覽的文件排成一欄：檔名與下載、處理紀錄、找到的資訊與工具。左右兩欄的話，
+     左邊只有一小塊處理紀錄，下面又空一大片 */
+  .file:not(.has-preview) {
+    grid-template-columns: minmax(0, 40rem) minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
     grid-template-areas:
       "head output"
+      "main main"
       "panel panel";
   }
 
-  .file:not(.has-main):not(.processed),
-  .file.editing:not(.has-main) {
+  .file:not(.has-preview):not(.processed),
+  .file.editing:not(.has-preview) {
     grid-template-areas:
       "head head"
+      "main main"
       "panel panel";
   }
 
@@ -708,8 +715,9 @@ h4 {
   .file > .editor { grid-area: panel; }
 
   /* 沒有預覽的文件只有一欄，字太長不好讀 */
-  .file:not(.has-main) > .panel,
-  .file:not(.has-main) > .editor:not(.wide) {
+  .file:not(.has-preview) > .file-main,
+  .file:not(.has-preview) > .panel,
+  .file:not(.has-preview) > .editor:not(.wide) {
     max-width: 40rem;
   }
 
