@@ -82,8 +82,8 @@ for (const m of registry.matchAll(/^\s+"?([a-z-]+)"?: \(\) => import\("\.\/([\w.
 
 // 能從程式判斷的標籤：用到了卻沒標、標了卻沒用到，都會失敗
 const DETECT: Record<string, (sources: string[]) => boolean> = {
-  // 模型的執行環境：onnxruntime、Transformers.js、Tesseract，以及逐字稿另外載入的 sherpa-onnx
-  model: (sources) => sources.some((s) => /from "(onnxruntime-web|@huggingface\/transformers|tesseract\.js)|import\("(onnxruntime-web|@huggingface\/transformers|tesseract\.js)|vendor\/sherpa/.test(s)),
+  // 模型的執行環境：onnxruntime、Transformers.js，以及逐字稿另外載入的 sherpa-onnx
+  model: (sources) => sources.some((s) => /from "(onnxruntime-web|@huggingface\/transformers)|import\("(onnxruntime-web|@huggingface\/transformers)|vendor\/sherpa/.test(s)),
   camera: (sources) => sources.some((s) => s.includes("getUserMedia")),
 };
 

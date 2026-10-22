@@ -8,7 +8,7 @@
 - 上傳端點不經過 Cloudflare。Cloudflare 在邊緣解開 TLS，經過的檔案對它是明文。兩端之間另有加密、Cloudflare 只經手密文的通道可以經過，畫面上要寫明 Cloudflare 看得到 IP 與時間（遠端傳送的 clearnet 入口，見下方「遠端傳送的轉送服務」）
 - 伺服器不保存讀者的檔案，加密過的也一樣。遠端傳送的轉送服務只在轉給對方的途中經手，對方不在時直接丟掉，兩端一律同時在線（見下方「遠端傳送的轉送服務」）
 - 頁面能連線的對象寫死在 CSP 裡（`vite.config.ts`），新增任何對外連線都要改那裡，並在畫面上標示。頁面的 meta 標籤只有自己的網域、使用統計的送出網址（`https://aa.anoni.net/api/send`，見下方「使用統計」）與建議與回饋的送出網址（見下方「建議與回饋」）。逐字稿的大模型從 Hugging Face 下載（見下方「逐字稿」），只開在伺服器送的 CSP 標頭 <!-- docs-style-lint: disable-line -->
-- 執行期的相依套件只有 `preact`、`qrcode-generator`（QR code 產生）、`jsqr`（QR code 讀取）、`zxing-wasm`（QR code 以外的條碼，見下方「QR code 的內容格式」）、`age-encryption`（加密，連同它相依的 noble 系列）、`libheif-js`（HEIC 解碼，LGPL-3.0，見下方「HEIC」）、`pdf-lib`（PDF 的解析與寫出，見下方「文件」）、`pdfjs-dist`（PDF 的遮蔽，見下方「PDF 的遮蔽」），以及遮蔽的自動尋找用的 `onnxruntime-web` 與 `tesseract.js`（見下方「遮蔽的自動尋找」）、逐字稿用的 `@huggingface/transformers` 與 `opencc-js`（見下方「逐字稿」，分辨說話者用的 onnxruntime 是 Transformers.js 帶的那一份），以及查證計算 SHA-256 用的 `@noble/hashes`（age 加密原本就相依它，鎖定同一個版本，見下方「查證」）、遠端傳送的加密用的 `@noble/curves` 與 `@noble/ciphers`（同樣是 age 加密已經帶進來的版本，見下方「遠端傳送的轉送服務」）、下載的軟體驗證用的 `openpgp`（LGPL-3.0，見下方「下載的軟體驗證」，查證的 ProofMode 證明檔也用它），以及查證驗證內容憑證用的 `@contentauth/c2pa-web`（MIT，見下方「內容憑證的驗證」）、驗證 PDF 數位簽章用的 `pkijs` 與 `asn1js`（BSD-3-Clause，見下方「PDF 數位簽章的驗證」）。新增套件前先想能不能自己寫，必要時鎖定確切的版本。工具用到的套件在打開工具時才載入
+- 執行期的相依套件只有 `preact`、`qrcode-generator`（QR code 產生）、`jsqr`（QR code 讀取）、`zxing-wasm`（QR code 以外的條碼，見下方「QR code 的內容格式」）、`age-encryption`（加密，連同它相依的 noble 系列）、`libheif-js`（HEIC 解碼，LGPL-3.0，見下方「HEIC」）、`pdf-lib`（PDF 的解析與寫出，見下方「文件」）、`pdfjs-dist`（PDF 的遮蔽，見下方「PDF 的遮蔽」），以及遮蔽的自動尋找用的 `onnxruntime-web`（見下方「遮蔽的自動尋找」，人臉與文字辨識都用它）、逐字稿用的 `@huggingface/transformers` 與 `opencc-js`（見下方「逐字稿」，分辨說話者用的 onnxruntime 是 Transformers.js 帶的那一份），以及查證計算 SHA-256 用的 `@noble/hashes`（age 加密原本就相依它，鎖定同一個版本，見下方「查證」）、遠端傳送的加密用的 `@noble/curves` 與 `@noble/ciphers`（同樣是 age 加密已經帶進來的版本，見下方「遠端傳送的轉送服務」）、下載的軟體驗證用的 `openpgp`（LGPL-3.0，見下方「下載的軟體驗證」，查證的 ProofMode 證明檔也用它），以及查證驗證內容憑證用的 `@contentauth/c2pa-web`（MIT，見下方「內容憑證的驗證」）、驗證 PDF 數位簽章用的 `pkijs` 與 `asn1js`（BSD-3-Clause，見下方「PDF 數位簽章的驗證」）。新增套件前先想能不能自己寫，必要時鎖定確切的版本。工具用到的套件在打開工具時才載入
 - 結構有問題的檔案就停下來，不交出一份沒處理乾淨的檔案
 
 ## 支援的瀏覽器
@@ -115,7 +115,7 @@ CI（`.github/workflows/ci.yml`）依瀏覽器拆成四台機器同時執行：C
 - 只標讀者在打開之前就該知道的事：會下載大型檔案、會跳出權限詢問、會連到其他網站、還在實驗中。不拿來標功能特色。每個工具最多兩個（`MAX_TAGS`）
 - 每個標籤只有一個圖示。同一個標籤在不同工具的差別寫在補充說明（`tag.<標籤>.<工具 id>`，例如遮蔽的「自動尋找人臉與個資時用到」），圖示帶著它當名稱，讀螢幕軟體唸按鈕名稱時唸得到，滑鼠移上去也看得到。原本分成「本機模型」與「本機模型輔助」兩個，小尺寸時分不出來，2026-10-18 合併。圖示原本用三顆星（`creation`，科技業常用來代表 AI），不常用這類產品的讀者聯想不到，又帶著「魔法」的意味，2026-10-18 改成大腦
 - 每個標籤一個代表色，取自品牌素材頁「圖示的分類色」裡工作台的圖示圈沒用到的顏色（圖示圈用了個人隱私的綠與機敏與安全的紅），淺色與深色模式的對比都在 4.5 以上。標籤畫成淡底色、外框與同色圖示的小色塊，桌面與圖示說明共用 `.tool-tag.tag-<id>`。標籤也是 span，另外用 `.tool-row-text .tool-tags .tool-tag` 蓋回代表色，免得被工具列的灰色文字蓋掉，`tests/e2e/workbench.spec.ts` 比對桌面與圖示說明的顏色一致
-- 新增標籤：在 `TAGS` 加一筆，`src/styles.css` 加上 `--tag-<id>`（淺色與深色各一）與 `.tool-tag.tag-<id>`，三個語系加上 `tag.<id>`、`tag.<id>.desc` 與每個工具的補充說明。`tests/unit/tool-meta.spec.ts` 檢查圖示、字串與數量。能從程式判斷的標籤在 `DETECT` 加一條：從每個工具的畫面元件沿著 import 一路往下追，「本機模型」看有沒有用到 onnxruntime、Transformers.js、Tesseract 或 sherpa-onnx，「相機」看有沒有呼叫 `getUserMedia`，標了沒用到、用到沒標都會失敗
+- 新增標籤：在 `TAGS` 加一筆，`src/styles.css` 加上 `--tag-<id>`（淺色與深色各一）與 `.tool-tag.tag-<id>`，三個語系加上 `tag.<id>`、`tag.<id>.desc` 與每個工具的補充說明。`tests/unit/tool-meta.spec.ts` 檢查圖示、字串與數量。能從程式判斷的標籤在 `DETECT` 加一條：從每個工具的畫面元件沿著 import 一路往下追，「本機模型」看有沒有用到 onnxruntime、Transformers.js 或 sherpa-onnx，「相機」看有沒有呼叫 `getUserMedia`，標了沒用到、用到沒標都會失敗
 
 ## 遮蔽時保留拍攝資訊
 
@@ -130,12 +130,12 @@ CI（`.github/workflows/ci.yml`）依瀏覽器拆成四台機器同時執行：C
 遮蔽畫面有「找人臉」與「找電話、Email 等個資」兩個按鈕，找到的範圍直接加成框，讀者逐一確認、點一下刪掉框錯的。自動尋找一定會漏，畫面上寫明，不自動套用（`src/ui/redact-detect.ts`）。
 
 - 人臉：OpenCV 的 YuNet 模型（`public/models/yunet-2023mar-dynamic.onnx`，進版控，約 225 KB），用 onnxruntime-web 的 WebAssembly 執行，不需要 WebGL。官方模型的輸入固定 640×640，`scripts/make-yunet.py` 從官方檔案改成可變的輸入尺寸（權重不動，比對過 sha256）。整張圖縮到長邊 960 與 320 各偵測一次：960 抓合照裡的小臉，320 抓佔滿畫面的大臉（模型適合約 10 到 300 像素的臉）。縮小時每次最多縮一半，原始解析度的照片一口氣縮小會產生鋸齒，分數會掉。0.7 以上直接加成框，0.6 到 0.7 列為「可能是臉」，畫成黃色虛線，讀者點一下才變成遮蔽框，訊息區也有「全部加上」的按鈕。同一張臉在兩種尺寸都找到時只留分數最高的。解碼與合併在 `src/tools/redact/faces.ts`，有單元測試。實測 14 張照片，Chromium、WebKit、Firefox、Brave 都是 71 張臉全找到、零誤判，真臉最低 0.81，不是臉最高 0.55
-- 個資：Tesseract 用正體中文與英文辨識文字，`src/tools/redact/pii.ts` 把同一行的字接起來比對電話（含帶國碼的與部分遮住的手機號碼）、Email、台灣的身分證與居留證、香港身分證、卡號、長串數字、網址與 @帳號，再把對到的字合成一個框。換行把一段個資拆成兩行時（聊天紀錄的對話框窄，Email 與電話常被拆開），上一行的結尾與下一行的開頭都是英數或 `@ . - _ + *`、下一行在正下方而且左邊大致對齊，就接起來再比對一次，跨過換行的在兩行各給一個框，上一行只對到半截的（`02-2963-01` 接 `88`）由接起來的取代（`findPiiInLineTexts`，有單元測試）。清單裡相鄰的兩項（一行電話、下一行 Email）版面也是這樣，所以上一行的那一半已經是別種個資，或本身就是完整的 Email、網址與帳號時不接。下一行的那一半完整時照樣接，`r119` 接 `21047@example.edu.tw` 的前半段一樣認得出人。2026-10-22 用 196 張合成截圖量過，規則找得到的個資，Tesseract 蓋住的從 64% 變成 69%，PP-OCRv5 從 85% 變成 93%（#140），多出的框只有 Tesseract 的一處雜訊碎片（上一行結尾的 `@` 接下一行的英文字）。「框起所有文字」把每一行文字都框起來，還沒辨識過時先辨識。照片裡的紋路與人影常被認成「| = ~ aa」這類碎片，所以只框信心分數夠高的字（`src/tools/redact/text-lines.ts`）：含字母、數字或漢字、85 分以上（4 個字元以上的長字 75 分），一段裡有兩個以上這樣的字，或一個 3 個字元以上的字，才算有文字
+- 個資：PP-OCRv5 辨識文字（見下一項），`src/tools/redact/pii.ts` 把同一行的字接起來比對電話（含帶國碼的與部分遮住的手機號碼）、Email、台灣的身分證與居留證、香港身分證、卡號、長串數字、網址與 @帳號，再把對到的字合成一個框。換行把一段個資拆成兩行時（聊天紀錄的對話框窄，Email 與電話常被拆開），上一行的結尾與下一行的開頭都是英數或 `@ . - _ + *`、下一行在正下方而且左邊大致對齊，就接起來再比對一次，跨過換行的在兩行各給一個框，上一行只對到半截的（`02-2963-01` 接 `88`）由接起來的取代（`findPiiInLineTexts`，有單元測試）。清單裡相鄰的兩項（一行電話、下一行 Email）版面也是這樣，所以上一行的那一半已經是別種個資，或本身就是完整的 Email、網址與帳號時不接。下一行的那一半完整時照樣接，`r119` 接 `21047@example.edu.tw` 的前半段一樣認得出人。2026-10-22 用 196 張合成截圖量過，規則找得到的個資，Tesseract 蓋住的從 64% 變成 69%，PP-OCRv5 從 85% 變成 93%（#140），多出的框只有 Tesseract 的一處雜訊碎片（上一行結尾的 `@` 接下一行的英文字）。「框起所有文字」把每一行文字都框起來，還沒辨識過時先辨識。照片、頭像與標點的碎片常被認成一個字，分數都很低，所以只有一個字、辨識的分數又低於 0.6 的行不框（`keepLine`），分數低但字多的行是縮小、壓縮過的小字，裡面可能有個資，照樣框
+- 文字辨識：PaddleOCR 的 PP-OCRv5 mobile（Apache-2.0，偵測 4.8 MB、辨識 16.5 MB，單一模型辨識正體、簡體、英文與日文），2026-10-22 取代 Tesseract（#140）。用 onnxruntime-web 的單執行緒 WebAssembly 執行，跟找人臉同一份（`src/ui/ppocr.ts`），前後處理照 PaddleOCR 3.x 的預設值自己寫（`src/tools/redact/ppocr.ts`，有單元測試）：偵測的長邊上限 2560（PaddleOCR 是 4000，手機照片照 4000 算偵測的輸入要 144 MB），DB 後處理算最小外接旋轉矩形，辨識前把歪的那一行轉正再裁切，CTC 解碼，再從時間步推算一行裡每個字的位置，交給 `findPii`。只用水平的外接矩形時，轉歪 3 度的長行整行被丟掉，模擬翻拍的圖片只找得到三成的文字行。字典（18,383 字）取自辨識模型的 `inference.yml`，由 `scripts/make-ppocr-dict.py` 轉成 `src/tools/redact/ppocr-dict.json`，用到時才載入。評測（196 張合成截圖與 392 張模擬的掃描與翻拍，在社群的工作區）：字錯率截圖 4.3%、翻拍 11.7%，Tesseract 是 26% 與 40%，規則找得到的個資（含跨行比對）蓋住 94% 與 91%（Tesseract 69% 與 61%），每張的雜訊 0.07 與 0（Tesseract 0.18 與 0.77）。M5 Pro 上單執行緒一張手機截圖約 1 秒，Tesseract 約 0.3 秒。Safari 開多執行緒反而變慢，所以跟找人臉一樣只用單執行緒
 - PDF 有文字層時不辨識，直接讀文字層（見下方「PDF 的遮蔽」的自動尋找）
-- Tesseract 的 WebAssembly 與語言資料由 `scripts/copy-vendor.mjs` 從 `node_modules` 複製到 `public/vendor/`（不進版控，`npm run build` 與 `npm run dev` 之前自動執行）。onnxruntime 的 WebAssembly 由 Vite 打包到 `assets/ort-wasm-*.wasm`（檔名帶雜湊）。都是按下按鈕時才下載，人臉約 14 MB（伺服器有壓縮時約 4 MB）、文字約 9 MB
+- PP-OCRv5 的兩個模型不進版控，`node scripts/fetch-whisper.mjs ppocr` 從 Hugging Face 下載到 `public/models/ppocr/`（鎖定 commit 並比對 SHA-256，寫在 `src/tools/redact/ppocr-models.json`），CI 與部署在建置前下載，跟著網站一起部署，讀者只從自己的網域取得。onnxruntime 的 WebAssembly 由 Vite 打包到 `assets/ort-wasm-*.wasm`（檔名帶雜湊）。都是按下按鈕時才下載，人臉約 14 MB（伺服器有壓縮時約 4 MB），文字另外加上 21 MB 的模型，第一次約 35 MB
 - onnxruntime-web 只用單執行緒的 WebAssembly（`env.wasm.numThreads = 1`），多執行緒要伺服器另外送 cross-origin isolation 的標頭。升級前先在套件裡搜尋對外的網址，1.30.0 只在一段警告文字裡有說明頁的網址。先前用的 MediaPipe 1.0.0 起會把使用紀錄送到 `odml.pa.googleapis.com`，這種事要在升級時擋下來，不該靠 CSP
-- Tesseract 的語言資料不寫進 IndexedDB（`cacheMethod: "none"`），靠瀏覽器的 HTTP 快取
-- 處理中在圖片上蓋一層遮罩，中間顯示進度條：載入模型時不知道要多久，條紋來回移動，偵測時顯示百分比。按鈕下方的訊息區高度固定，所有可能出現的訊息疊在同一格、由最長的那一則撐開，換訊息時圖片不會跳動。人臉的進度依兩種尺寸的偵測推進，文字的進度取自 Tesseract 的 `logger`
+- 處理中在圖片上蓋一層遮罩，中間顯示進度條：載入模型時不知道要多久，條紋來回移動，偵測時顯示百分比。按鈕下方的訊息區高度固定，所有可能出現的訊息疊在同一格、由最長的那一則撐開，換訊息時圖片不會跳動。人臉的進度依兩種尺寸的偵測推進，文字的進度依辨識完的文字行推進
 - 授權與來源寫在 `licenses/redact-detect.txt`
 - 網址帶 `?debug-faces`（例如 `/gears/redact/?debug-faces`）時，找人臉會在主控台印出建置的 commit 與每次偵測的尺寸、分數、位置與有沒有採用，讀者回報漏判、誤判時請對方整段貼回來。只有數字與座標，不含圖片的內容。不同的瀏覽器與照片的原始解析度會讓分數略有不同，本機重現不出來時靠它
 
@@ -153,7 +153,7 @@ CI（`.github/workflows/ci.yml`）依瀏覽器拆成四台機器同時執行：C
 - 換頁時，前一頁的圖片等新的一頁畫好、畫布換過去之後才釋放，先釋放的話，畫布重畫時用的是已經關閉的圖片，主控台會出現錯誤
 - 授權全文在 `licenses/pdfjs.txt`
 
-自動尋找個資與「框起所有文字」讀 PDF 本身的文字層（#141，`src/ui/redact-detect.ts` 的 `findPdfText`，純邏輯在 `src/tools/redact/pdf-text.ts`，有單元測試），不必下載 Tesseract，也不會認錯字：
+自動尋找個資與「框起所有文字」讀 PDF 本身的文字層（#141，`src/ui/redact-detect.ts` 的 `findPdfText`，純邏輯在 `src/tools/redact/pdf-text.ts`，有單元測試），不必下載辨識模型，也不會認錯字：
 
 - `pdf-pages.ts` 的 `layout()` 用 `getTextContent()` 取得每一段文字，依 `render()` 同一個縮放換算成畫布的座標。位置照 pdf.js 自己的文字層算：原點在基線上，沿著書寫方向的角度展開，往上是字高乘上 ascent。直書不照 pdf.js，以原點為中心左右各占半個字寬，pdf.js 的文字層沿用橫書的 ascent，整欄會偏向一邊
 - pdf.js 只給整段的寬度，每個字的位置依字寬的比例分配（全形字算 1，其他 0.55，空白 0.3），每個字沿著書寫方向兩邊多留四分之一個字高，比例字型的英文才不會露出頭尾。段落依 pdf.js 的換行、基線與方向排成一行一行，同一行兩段之間超過三成字高時補一個空白
@@ -162,7 +162,7 @@ CI（`.github/workflows/ci.yml`）依瀏覽器拆成四台機器同時執行：C
 - 頁面上的圖片從 `getOperatorList()` 追蹤座標變換，算出畫在畫布上的範圍（`imageRegions`），只辨識那幾塊，結果跟文字層合在一起，重疊的框只留一個。邊長不到 16 像素的不算，蓋住六成以上的頁面時整頁辨識，算不出位置的畫法（`paintInlineImageXObjectGroup`）也是
 - 只讀文字層時不讀 canvas，也不需要 WebAssembly：Tor Browser 不必先允許，鎖定模式照樣找得到。需要辨識時才檢查，關掉 WebAssembly 時圖片裡的字略過
 
-測試（`tests/e2e/redact-pdf.spec.ts`）用 pdf-lib 組出兩頁、有文字與作者的 PDF，遮蔽之後確認檔案裡沒有原本的文字、作者與字型，每一頁都是 JPEG，框起來的地方是黑的。中文字型在本機另外驗證過兩種：LibreOffice 轉出、內嵌 Noto Serif CJK 的 PDF，以及引用未內嵌字型 `MSung-Light`、編碼 `UniCNS-UCS2-H` 的 PDF（要靠 CMap），Chromium、WebKit、Firefox 都畫得出字，自動找個資也找得到電話與 Email。改讀文字層之後，瀏覽器測試另外確認有文字層的 PDF 不下載 Tesseract、框蓋住原本的文字，貼在頁面上的圖片另外辨識（`tests/helpers/text-pdf.ts`），以及關掉 WebAssembly、讀不到 canvas 時照樣找得到。2026-10-21 在本機用 LibreOffice 匯出的中文 PDF（電話、市話、Email、@帳號、表格裡的身分證與帳號）、`MSung-Light` 的橫書與直書（全形數字）、`/Rotate 90` 的頁面，在三種瀏覽器核心截圖確認框的位置。
+測試（`tests/e2e/redact-pdf.spec.ts`）用 pdf-lib 組出兩頁、有文字與作者的 PDF，遮蔽之後確認檔案裡沒有原本的文字、作者與字型，每一頁都是 JPEG，框起來的地方是黑的。中文字型在本機另外驗證過兩種：LibreOffice 轉出、內嵌 Noto Serif CJK 的 PDF，以及引用未內嵌字型 `MSung-Light`、編碼 `UniCNS-UCS2-H` 的 PDF（要靠 CMap），Chromium、WebKit、Firefox 都畫得出字，自動找個資也找得到電話與 Email。改讀文字層之後，瀏覽器測試另外確認有文字層的 PDF 不下載辨識模型、框蓋住原本的文字，貼在頁面上的圖片另外辨識（`tests/helpers/text-pdf.ts`），以及關掉 WebAssembly、讀不到 canvas 時照樣找得到。2026-10-21 在本機用 LibreOffice 匯出的中文 PDF（電話、市話、Email、@帳號、表格裡的身分證與帳號）、`MSung-Light` 的橫書與直書（全形數字）、`/Rotate 90` 的頁面，在三種瀏覽器核心截圖確認框的位置。
 
 ## 縮成常見尺寸
 
@@ -204,8 +204,6 @@ pdf-lib 複製頁面時，頁面引用到的東西會一路複製過去，直接
 - 頁面上的作者這類中繼資料（頁面的 XMP、PieceInfo）跟著頁面過去，處理完再用清除中繼資料，畫面上寫明
 
 單元測試（`tests/unit/pdf-pages.spec.ts`）組出三頁共用 `Resources`、各頁有自己的圖片、第一頁有各種連到第二頁的參照的 PDF，確認只留一頁時其他頁的字、圖片、表單的值、作者與書籤都不在新檔裡，也確認有其他沒清掉的參照時檢查會擋下。本機另外用 Chromium 列印的 PDF（頁內連結、書籤、結構標記、只在第二頁的圖片）驗證過，圖片沒有跟過去，共用字型的提醒也正確出現。
-
-Tesseract 的 WebAssembly 會把執行紀錄寫到標準錯誤輸出，瀏覽器當成 `console.error`。瀏覽器測試的守門程式（`tests/e2e/guard.ts`）把這種已知的訊息列為例外。
 
 ## 查證
 
@@ -602,7 +600,7 @@ ProofMode（Guardian Project 給人權紀錄者的 Android App）拍照時不改
 - nginx 的 location 與快取標頭的範本在 `tools/nginx-gears.conf`，實際設定在 m6 的 `/etc/nginx/conf.d/anoninet.conf`，改了要手動同步。頁面與圖片帶 `no-transform`，Cloudflare 不在頁面注入 Web Analytics 與 JS Detections 的 script，也不用 Polish 重新壓縮圖片。其他檔案不能帶：帶了 `no-transform` 的回應 Cloudflare 完全不壓縮，連 nginx 送出的 gzip 也會解開，讀者取得的是原始大小（`.wasm` 用 `application/wasm` 送出，onnxruntime 的 WebAssembly 壓縮後約小四分之三）。pdf.js 的 `.mjs` 另外指定 JavaScript 的 MIME
 - Cloudflare：Cache Rule「gears respect origin」讓 `/gears/` 的邊緣與瀏覽器都照 nginx 的快取標頭，頁面、manifest 與 165 清單是 `no-cache`，每次回來確認，`sw.js` 另由「docs sw.js no-cache」整個不快取。Transform Rule `onion-anoni.net` 排除 `/gears`，`onion-gears` 對 `/gears/` 送 `Onion-Location`，指到 onion 版的同一頁（見下方「onion 版與 Tor Browser」）
 - 轉送服務：`build` 分支的 `server/relay.mjs`，m6 在容器裡執行，見上方「遠端傳送的轉送服務」
-- 自己建置時（例如本機預覽）先執行 `node scripts/fetch-165.mjs` 與 `node scripts/fetch-whisper.mjs`
+- 自己建置時（例如本機預覽）先執行 `node scripts/fetch-165.mjs` 與 `node scripts/fetch-whisper.mjs`（含遮蔽的文字辨識模型 `ppocr`，沒有的話找個資會失敗）
 
 ## onion 版與 Tor Browser
 
@@ -834,7 +832,7 @@ iPhone 預設拍出來的是 HEIC，在網頁上選照片時交出來的也是�
 - HEIC 解碼器來自 [libheif-js](https://github.com/catdad-experiments/libheif-js) 1.23.5（libheif 與 libde265，LGPL-3.0），見 `licenses/libheif.txt`
 - PDF 的解析與寫出用 [pdf-lib](https://github.com/Hopding/pdf-lib) 1.17.1（MIT），見 `licenses/pdf-lib.txt`
 - PDF 的遮蔽用 [pdf.js](https://github.com/mozilla/pdf.js)（pdfjs-dist 6.4.299，Apache-2.0）與它附帶的 CMap、標準字型與解碼器，見 `licenses/pdfjs.txt`
-- 遮蔽的自動尋找用 [YuNet](https://github.com/opencv/opencv_zoo/tree/main/models/face_detection_yunet) 模型（MIT）與 [onnxruntime-web](https://github.com/microsoft/onnxruntime) 1.30.0（MIT）、[Tesseract.js](https://github.com/naptha/tesseract.js) 7.0.0 與 tessdata_best 的語言資料（Apache-2.0），見 `licenses/redact-detect.txt`
+- 遮蔽的自動尋找用 [YuNet](https://github.com/opencv/opencv_zoo/tree/main/models/face_detection_yunet) 模型（MIT）、PaddleOCR 的 [PP-OCRv5](https://github.com/PaddlePaddle/PaddleOCR) mobile 模型（Apache-2.0）與 [onnxruntime-web](https://github.com/microsoft/onnxruntime) 1.30.0（MIT），見 `licenses/redact-detect.txt`
 - 逐字稿用 [Transformers.js](https://github.com/huggingface/transformers.js) 4.3.1（Apache-2.0）、Whisper small 與 base 的 ONNX 檔（onnx-community，原始模型的模型卡標示 Apache-2.0）、讀者選擇之後從 Hugging Face 下載的 large-v3-turbo（模型卡標示 MIT）、分辨說話者用的 3D-Speaker CAM++（Apache-2.0，ONNX 檔取自 sherpa-onnx）、[opencc-js](https://github.com/nk2028/opencc-js) 1.4.2（MIT，字典 Apache-2.0），見 `licenses/transcribe.txt`
 - 下載的軟體驗證用 [OpenPGP.js](https://github.com/openpgpjs/openpgpjs) 6.3.2（LGPL-3.0），內建 Tor Project 與 Tails 公開的簽章公鑰，見 `licenses/openpgp.txt`
 - 查證驗證 PDF 數位簽章用 [pkijs](https://github.com/PeculiarVentures/PKI.js) 3.4.2（BSD-3-Clause）與它相依的 asn1js 等套件，內建台灣政府憑證總管理中心公開的根憑證與下屬憑證機構的憑證，見 `licenses/pkijs.txt`

@@ -46,15 +46,17 @@ jobs:
       # 遠端傳送的轉送服務打包成單一個檔案，確認跑得起來（開房、配對、轉送）
       - if: matrix.name == 'chromium'
         run: npm run build:server && node scripts/check-relay.mjs
-      # 逐字稿的瀏覽器測試要 Whisper base、分辨說話者的 CAM++ 與 sherpa-onnx 的 WebAssembly（約 80、28、14 MB，不進 repo），依清單快取
+      # 逐字稿的瀏覽器測試要 Whisper base、分辨說話者的 CAM++ 與 sherpa-onnx 的 WebAssembly（約 80、28、14 MB），
+      # 遮蔽的自動尋找要 PP-OCRv5（約 21 MB），都不進 repo，依清單快取
       - uses: actions/cache@v6.1.0
         with:
           path: |
             public/models/whisper
             public/models/speaker
+            public/models/ppocr
             public/vendor/sherpa
-          key: whisper-base-speaker-sherpa-${{ hashFiles('src/tools/transcribe/models.json', 'src/tools/transcribe/speaker-model.json', 'src/tools/transcribe/sherpa-runtime.json') }}
-      - run: node scripts/fetch-whisper.mjs base speaker sherpa --no-webgpu
+          key: whisper-base-speaker-sherpa-ppocr-${{ hashFiles('src/tools/transcribe/models.json', 'src/tools/transcribe/speaker-model.json', 'src/tools/transcribe/sherpa-runtime.json', 'src/tools/redact/ppocr-models.json') }}
+      - run: node scripts/fetch-whisper.mjs base speaker sherpa ppocr --no-webgpu
       - run: npx playwright install --with-deps ${{ matrix.browser }}
       # 影片的關鍵影格的測試影片（H.264 MP4、VP8 WebM）由 tests/global-setup.ts 用 ffmpeg 產生，
       # GitHub 的 ubuntu 機器沒有預裝

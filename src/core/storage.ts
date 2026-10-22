@@ -40,7 +40,7 @@ export function classify(cache: string, url: string, base: string): StorageKey {
   }
   if (rest.startsWith("models/speaker/")) return { group: "speaker" };
   if (rest.startsWith("models/yunet")) return { group: "faces" };
-  if (rest.startsWith("vendor/tesseract/") || rest.startsWith("vendor/tessdata/")) return { group: "ocr" };
+  if (rest.startsWith("models/ppocr/")) return { group: "ocr" };
   if (rest.startsWith("vendor/pdfjs/")) return { group: "pdf" };
   if (rest.startsWith("vendor/sherpa/") || rest.startsWith("assets/ort-wasm-")) return { group: "runtime" };
   if (rest.startsWith("assets/c2pa_bg-")) return { group: "c2pa" };

@@ -270,7 +270,7 @@ test.describe("換上新版本", () => {
     // 內容換過的檔案（雜湊對不上）與已經不在清單上的檔案
     await page.evaluate(async () => {
       const cache = await caches.open("gears-keep");
-      await cache.put("/gears/vendor/tesseract/worker.min.js", new Response("old", { headers: { "x-gears-hash": "0000000000000000" } }));
+      await cache.put("/gears/vendor/pdfjs/cmaps/OLD.bcmap", new Response("old", { headers: { "x-gears-hash": "0000000000000000" } }));
       await cache.put("/gears/assets/ort-wasm-simd-threaded-OLD.wasm", new Response("old", { headers: { "x-gears-hash": "1111111111111111" } }));
     });
     await addFile(page);

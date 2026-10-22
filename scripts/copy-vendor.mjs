@@ -1,19 +1,11 @@
-// 遮蔽的自動尋找要用到的 WebAssembly 與模型，以及 PDF 遮蔽用的 pdf.js 資料，從 node_modules
-// 複製到 public/vendor/（不進版控）。
+// PDF 遮蔽用的 pdf.js 資料，從 node_modules 複製到 public/vendor/（不進版控）。
+// 遮蔽的文字辨識模型不在這裡，由 scripts/fetch-whisper.mjs 下載到 public/models/ppocr/。
 // 建置與開發伺服器啟動前自動執行（package.json 的 prebuild、predev）。
 // 頁面只從自己的網域載入這些檔案，CSP 不允許連到 CDN。
 import { copyFileSync, cpSync, existsSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 const FILES = [
-  // Tesseract 的文字辨識：worker 與只含 LSTM 的核心，依瀏覽器支援的指令集挑一個
-  ["tesseract.js/dist/worker.min.js", "tesseract/worker.min.js"],
-  ["tesseract.js-core/tesseract-core-lstm.wasm.js", "tesseract/tesseract-core-lstm.wasm.js"],
-  ["tesseract.js-core/tesseract-core-simd-lstm.wasm.js", "tesseract/tesseract-core-simd-lstm.wasm.js"],
-  ["tesseract.js-core/tesseract-core-relaxedsimd-lstm.wasm.js", "tesseract/tesseract-core-relaxedsimd-lstm.wasm.js"],
-  // 語言資料：正體中文與英文，best_int 版本
-  ["@tesseract.js-data/chi_tra/4.0.0_best_int/chi_tra.traineddata.gz", "tessdata/chi_tra.traineddata.gz"],
-  ["@tesseract.js-data/eng/4.0.0_best_int/eng.traineddata.gz", "tessdata/eng.traineddata.gz"],
   // pdf.js 解 JPEG 2000、JBIG2 與色彩描述檔的 WebAssembly，瀏覽器不能編譯 WebAssembly 時的替代版本
   ...["openjpeg.wasm", "openjpeg_nowasm_fallback.js", "jbig2.wasm", "jbig2_nowasm_fallback.js", "qcms_bg.wasm"].map((f) => [`pdfjs-dist/wasm/${f}`, `pdfjs/wasm/${f}`]),
 ];

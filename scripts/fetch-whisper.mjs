@@ -5,6 +5,7 @@
 //   node scripts/fetch-whisper.mjs base     只下載 base（瀏覽器測試用）
 //   node scripts/fetch-whisper.mjs speaker  只下載 CAM++
 //   node scripts/fetch-whisper.mjs sherpa   只下載 sherpa-onnx 的 WebAssembly（Omnilingual 用）
+//   node scripts/fetch-whisper.mjs ppocr    只下載遮蔽的文字辨識模型（PP-OCRv5 mobile）
 //   --no-webgpu                             不下載 WebGPU 用的 4 位元版（瀏覽器測試用，CI 沒有 GPU）
 //   node scripts/fetch-whisper.mjs --hash turbo
 //                                           只印出每個檔案的 SHA-256，不存檔（更新 models.json 用）
@@ -20,6 +21,8 @@
 // 模型（src/core/models.ts，上傳方式見 AGENTS.md）。
 // 分辨說話者的 CAM++（3D-Speaker，Apache-2.0）取自 sherpa-onnx 的 release，來源與 SHA-256 寫在
 // src/tools/transcribe/speaker-model.json，放在 public/models/speaker/。
+// 遮蔽的文字辨識用 PaddleOCR 的 PP-OCRv5 mobile（Apache-2.0），取自 Hugging Face 的 PaddlePaddle，
+// 鎖定 commit，來源與 SHA-256 寫在 src/tools/redact/ppocr-models.json，放在 public/models/ppocr/。
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
@@ -34,6 +37,7 @@ const speaker = JSON.parse(readFileSync(join(root, "src/tools/transcribe/speaker
 // sherpa-onnx 的 WebAssembly 是社群自己建置的 ES module 版，放在 assets.anoni.net，建置方式寫在那個目錄的
 // README.txt。下載到 public/vendor/sherpa/，網頁從自己的網域載入
 const sherpa = JSON.parse(readFileSync(join(root, "src/tools/transcribe/sherpa-runtime.json"), "utf8"));
+const ppocr = JSON.parse(readFileSync(join(root, "src/tools/redact/ppocr-models.json"), "utf8"));
 
 const manifest = process.argv.includes("--manifest") ? process.argv[process.argv.indexOf("--manifest") + 1] : null;
 const entries = [];
@@ -66,6 +70,14 @@ async function download(url, hash, target, label) {
 if (!manifest && (!wanted.length || wanted.includes("sherpa"))) {
   for (const [file, hash] of Object.entries(sherpa.files)) {
     await download(`https://assets.anoni.net/gears/vendor/${sherpa.dir}/${file}`, hash, join(root, "public/vendor/sherpa", file), `sherpa ${file}`);
+  }
+}
+
+// PP-OCRv5 的兩個模型合計約 21 MB，單一檔案遠小於 GitHub 的 100 MB，跟 sherpa 一樣放在 public/
+// 跟著網站一起部署，不必由 m6 另外下載，不列進模型清單
+if (!manifest && (!wanted.length || wanted.includes("ppocr"))) {
+  for (const m of [ppocr.det, ppocr.rec]) {
+    await download(`https://huggingface.co/${m.repo}/resolve/${m.revision}/inference.onnx`, m.sha256, join(root, "public/models/ppocr", m.name), `ppocr ${m.name}`);
   }
 }
 

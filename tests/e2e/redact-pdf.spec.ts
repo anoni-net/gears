@@ -161,16 +161,16 @@ async function phoneImage(page: Page): Promise<Buffer> {
   return Buffer.from(data);
 }
 
-// 記下有沒有下載 Tesseract 的程式或語言資料
+// 記下有沒有下載文字辨識的模型
 function watchOcr(page: Page): () => boolean {
   let used = false;
   page.on("request", (r) => {
-    if (/vendor\/(tesseract|tessdata)\//.test(r.url())) used = true;
+    if (/models\/ppocr\//.test(r.url())) used = true;
   });
   return () => used;
 }
 
-test("PDF 有文字層時直接讀，不下載 Tesseract，框蓋住原本的文字", async ({ page }) => {
+test("PDF 有文字層時直接讀，不下載辨識模型，框蓋住原本的文字", async ({ page }) => {
   const ocr = watchOcr(page);
   await page.goto("./redact/");
   await page.getByTestId("file-input").setInputFiles({ name: "contact.pdf", mimeType: "application/pdf", buffer: await textPdf() });

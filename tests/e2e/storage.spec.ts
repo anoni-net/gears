@@ -6,7 +6,7 @@ import { expect, test } from "./guard.ts";
 const ENTRIES: [cache: string, url: string, bytes: number][] = [
   ["gears-models", `/gears/models/whisper/${whisper.base.dir}/onnx/encoder_model_quantized.onnx`, 2_000_000],
   ["gears-keep", "/gears/models/yunet-2023mar-dynamic.onnx", 230_000],
-  ["gears-keep", "/gears/vendor/tessdata/eng.traineddata.gz", 3_000_000],
+  ["gears-keep", "/gears/models/ppocr/PP-OCRv5_mobile_rec.onnx", 3_000_000],
   ["transformers-cache", "https://huggingface.co/onnx-community/Qwen3-0.6B-ONNX/resolve/abc/onnx/model.onnx", 1_500_000],
 ];
 
@@ -34,7 +34,7 @@ test("已下載的模型：依用途列出大小，可以逐列刪除與全部�
   await expect(rows.nth(0)).toContainText("2 MB");
   await expect(rows.nth(1)).toContainText("找人臉的模型");
   await expect(rows.nth(1)).toContainText("230 KB");
-  await expect(rows.nth(2)).toContainText("辨識文字的程式與語言資料");
+  await expect(rows.nth(2)).toContainText("辨識文字的模型");
   await expect(rows.nth(3)).toContainText("語言模型速度量測的模型");
   await expect(page.getByText("合計 7 MB")).toBeVisible();
 
