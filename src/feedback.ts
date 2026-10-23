@@ -51,7 +51,7 @@ export interface FeedbackContext {
 export const feedbackReady = (w: Partial<Feedback>) => !!w.kind && (w.goal ?? "").trim().length >= FEEDBACK_LIMITS.goalMin;
 
 // label 把 feedback.kind.* 這類鍵換成該語系的文字。沒填的欄位不送
-export function feedbackPayload(w: Feedback, ctx: FeedbackContext, label: (key: string) => string) {
+export function feedbackPayload(w: Feedback, ctx: FeedbackContext, label: (key: string) => string): SurveyPayload {
   const data: Record<string, string> = {
     kind: label(`feedback.kind.${w.kind}`),
     goal: w.goal.trim(),
@@ -62,13 +62,20 @@ export function feedbackPayload(w: Feedback, ctx: FeedbackContext, label: (key: 
   if (w.current.trim()) data.current = w.current.trim();
   if (w.frequency) data.frequency = label(`feedback.frequency.${w.frequency}`);
   if (w.contact.trim()) data.contact = w.contact.trim();
-  return { surveyId: FEEDBACK_SURVEYS[ctx.locale], finished: true, data };
+  return { surveyId: FEEDBACK_SURVEYS[ctx.locale], finished: true as const, data };
 }
 
 export type FeedbackResult = "sent" | "closed" | "network" | "other";
 
+// 送到 Formbricks 公開 API 的內容。裝置量測的結果（src/bench-submit.ts）也走這裡
+export interface SurveyPayload {
+  surveyId: string;
+  finished: true;
+  data: Record<string, string>;
+}
+
 // 不帶 cookie 與 Referer，伺服器拿不到讀者在 Gears 裡的網址。問卷沒有開放（草稿或已關閉）時回 403
-export async function sendFeedback(payload: ReturnType<typeof feedbackPayload>, endpoint = FEEDBACK_ENDPOINT): Promise<FeedbackResult> {
+export async function sendFeedback(payload: SurveyPayload, endpoint = FEEDBACK_ENDPOINT): Promise<FeedbackResult> {
   let res: Response;
   try {
     res = await fetch(endpoint, {

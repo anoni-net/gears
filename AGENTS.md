@@ -463,13 +463,14 @@ ProofMode（Guardian Project 給人權紀錄者的 Android App）拍照時不改
 
 ## 裝置量測（實驗頁）
 
-`/gears/bench/`（`src/ui/BenchPage.tsx`，#157）在讀者的瀏覽器裡量 Gears 用到的模型要多久，給社群收集手機、平板與舊電腦的數字（#144），模型能不能上線、預設值怎麼訂都看這些數字。目前有文字辨識與語言模型兩個區塊，各自執行，結果合成一份 JSON，讀者按「複製結果」交給社群。只用內建的範例，不讀暫存區的檔案。
+`/gears/bench/`（`src/ui/BenchPage.tsx`，#157）在讀者的瀏覽器裡量 Gears 用到的模型要多久，給社群收集手機、平板與舊電腦的數字（#144），模型能不能上線、預設值怎麼訂都看這些數字。目前有文字辨識與語言模型兩個區塊，各自執行，結果合成一份 JSON，讀者確認過內容之後送給社群，或按「複製結果」保留。只用內建的範例，不讀暫存區的檔案。
 
 - 實驗頁的清單是 `src/pages.ts` 的 `labIds`：桌面不放入口，只從頁尾連過去，不進 sitemap，頁面帶 `<meta name="robots" content="noindex">`
 - 原本只量語言模型，網址是 `/gears/llm-bench/`。實驗頁沒有對外連結過，舊網址不轉址，打開是找不到這一頁
 - 裝置資訊（`src/ui/bench-env.ts`）：核心數、cross-origin isolation、顯示卡（WebGPU 的 adapter、`shader-f16`、是否為軟體模擬）、`navigator.deviceMemory`（只有 Chromium 有，最多回報 8）、讀不讀得到 canvas。`hardwareConcurrency` 在 Brave、Safari、Firefox 都不可信（見下方「逐字稿」），只當參考
 - 結果的 JSON 帶 `schema`（格式有變時加一）、Gears 的版本與 commit、裝置資訊、`userAgent` 與各區塊的數字，畫面上可以展開看複製的內容。讀者在語言模型區塊自己輸入的文字，連同它的改寫與從裡面取出的數字、引述，都不放進去（`llmReport`）
 - 一次只執行一個區塊（`BenchPage` 的 `busy`），量測中不出現換版本的提示（`useWorking`）
+- 送給社群（`src/ui/BenchSubmit.tsx`，送出的內容在 `src/bench-submit.ts`）：讀者選裝置類型（必填），可以補上大約的年份、記憶體與備註，按下送出才送，不會自動送出。送到 Formbricks 的「Gears 裝置量測」問卷，跟建議與回饋同一個送出網址與 `sendFeedback`，CSP 不必另外開，onion 版一樣送到 onion 的表單伺服器。三個語系共用一份問卷，選擇題一律送正體中文的選項（`BENCH_DEVICES`、`BENCH_MEMORIES`），要跟社群工作區的 `formbricks/gears_bench_survey.py` 一字不差。量測結果的 JSON 放在 `report`，問卷的上限是 5 萬字（只量文字辨識約 3 KB，2026-10-23 實測 2 萬字的內容完整存進去）。同一份結果送過之後按鈕停用，換一種設定再量才能再送。整理在社群工作區（`formbricks/gears_bench.py`），不記錄提交的人是誰
 
 ### 文字辨識
 
@@ -560,6 +561,7 @@ ProofMode（Guardian Project 給人權紀錄者的 Android App）拍照時不改
 - 表單由 Gears 自己畫，送到社群自架的 Formbricks（`form.anoni.net`），用它給網頁用的公開 API（`/api/v1/client/<環境>/responses`），不需要金鑰。不嵌入 Formbricks 的頁面：整個網站送了 `Cross-Origin-Embedder-Policy: require-corp`，別的網站的頁面嵌不進來，讀者也不必認識另一個服務。畫面上不提 Formbricks
 - CSP 的 `connect-src` 只開送出的那一個路徑（`FEEDBACK_ENDPOINT_CLEARNET`，meta 標籤與標頭都有）。onion 版送到 `form.<onion>` 的同一個路徑（`FEEDBACK_ENDPOINT_ONION`），兩個網址分成兩個常數，建置時沒用到的會被拿掉，onion 版的產物裡沒有 clearnet 的網址
 - 送出前畫面寫明送到哪裡、一併送出哪些資訊、暫存區的檔案不會送出、伺服器記下什麼（`feedback.privacy`）。請求不帶 cookie 與 Referer
+- 裝置量測的結果也送到同一個網址，送出的內容與問卷見上方「裝置量測（實驗頁）」
 - 一併送出的是讀者從哪個工具過來（`tool`，桌面是 `home`，在 `src/app.tsx` 記下）、介面的語系（`locale`）與版本（`version`），對應問卷的三個 hidden fields
 - Formbricks 每個語系一份問卷，id 寫在 `FEEDBACK_SURVEYS`。題目 id 與選項照社群工作區的 `formbricks/gears_survey.py`，選擇題存的是選項的文字，`feedback.kind.*` 與 `feedback.frequency.*` 的字串要跟那份檔案一字不差，改字時兩邊一起改
 - 問卷是草稿或已關閉時伺服器回 403，畫面說明建議與回饋暫時沒有開放。送不出去時填好的內容留著，讀者可以再按一次

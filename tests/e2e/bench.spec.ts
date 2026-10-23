@@ -54,7 +54,7 @@ test("裝置量測：文字辨識用範例截圖量出時間與字錯率，結�
   // #140 的評測裡 PP-OCRv5 在合成截圖的字錯率約 4%，三張範例都是清楚的截圖
   expect(rate).toBeLessThan(10);
 
-  await page.getByText("看複製的內容").click();
+  await page.getByText("看複製的內容", { exact: true }).click();
   const report = JSON.parse((await page.getByTestId("bench-report").textContent())!);
   expect(report.schema).toBe(1);
   expect(report.env.canvas).toBe(true);
