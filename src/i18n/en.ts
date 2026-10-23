@@ -1735,7 +1735,7 @@ export const en: Record<MessageKey, string> = {
   "feedback.error.network": "Couldn't reach the form server. What you wrote is still here, submit again once you're online.",
   "feedback.error.other": "Submitting failed. What you wrote is still here, please try again later.",
   "bench.title": "Device benchmark",
-  "bench.pageIntro": "This is a lab page, not linked from the desktop. Gears can only pick sensible model defaults if the models run well on readers' phones and computers, and nearly all of our numbers so far come from a single computer. This page measures how long several models take in your browser, using only built-in samples, never the files in your tray. When you are done, you can send the results to the community at the bottom of the page, or keep a copy with \"Copy results\".",
+  "bench.pageIntro": "Gears runs text recognition and language models in the reader's browser, so their speed depends on the device. Nearly all of our numbers so far come from a single computer. We invite you to measure once on your own phone, tablet or older computer, and the community will use the numbers to choose models and defaults. The benchmark only uses built-in samples and never reads the files in your tray. When you are done, you can send the results to the community at the bottom of the page, or keep a copy with \"Copy results\".",
   "bench.memory": " The browser reports about {gb} GB of memory.",
   "bench.llm.title": "Language model",
   "bench.ocr.title": "Text recognition",
