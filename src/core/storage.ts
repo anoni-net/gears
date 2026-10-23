@@ -8,7 +8,7 @@ import { MODEL_CACHE } from "./models.ts";
 // 三個快取：
 // - gears-models：逐字稿的模型（src/core/models.ts、service worker 的 MODEL_DIRS）
 // - gears-keep：用到時才存的辨識模型與 WebAssembly（service worker 的 LAZY）
-// - transformers-cache：語言模型速度量測的模型，由 Transformers.js 自己存
+// - transformers-cache：裝置量測的語言模型，由 Transformers.js 自己存
 
 export const KEEP_CACHE = "gears-keep";
 export const LLM_CACHE = "transformers-cache";
@@ -40,7 +40,8 @@ export function classify(cache: string, url: string, base: string): StorageKey {
   }
   if (rest.startsWith("models/speaker/")) return { group: "speaker" };
   if (rest.startsWith("models/yunet")) return { group: "faces" };
-  if (rest.startsWith("models/ppocr/")) return { group: "ocr" };
+  // 裝置量測的範例截圖（src/tools/bench/ocr.ts）跟辨識模型放在同一列
+  if (rest.startsWith("models/ppocr/") || rest.startsWith("models/bench/ocr-")) return { group: "ocr" };
   if (rest.startsWith("vendor/pdfjs/")) return { group: "pdf" };
   if (rest.startsWith("vendor/sherpa/") || rest.startsWith("assets/ort-wasm-")) return { group: "runtime" };
   if (rest.startsWith("assets/c2pa_bg-")) return { group: "c2pa" };

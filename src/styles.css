@@ -2855,12 +2855,22 @@ button.link {
   overflow-wrap: anywhere;
 }
 
-/* 語言模型速度量測（實驗頁）：模型的選項沿用逐字稿的卡片樣式 */
-.llm-bench > fieldset {
+/* 裝置量測（實驗頁）：每種模型一個區塊，選項沿用逐字稿的卡片樣式 */
+.bench-section {
+  margin-top: 2rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
+}
+
+.bench-section h3 {
+  margin: 0 0 0.5rem;
+}
+
+.bench-section > fieldset {
   margin-top: 1.25rem;
 }
 
-.llm-bench .choices .check {
+.bench-section .choices .check {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface);
@@ -2869,18 +2879,18 @@ button.link {
   cursor: pointer;
 }
 
-.llm-bench .choices .check:has(input:checked) {
+.bench-section .choices .check:has(input:checked) {
   border-color: var(--accent);
   box-shadow: 0 0 0 1px var(--accent);
   background: color-mix(in srgb, var(--accent) 8%, var(--surface));
 }
 
-.llm-bench .choices .check small {
+.bench-section .choices .check small {
   display: block;
   color: var(--muted);
 }
 
-.llm-bench .buttons {
+.bench-section .buttons {
   margin: 1.25rem 0 0.75rem;
 }
 

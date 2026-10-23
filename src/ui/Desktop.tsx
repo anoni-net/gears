@@ -79,7 +79,7 @@ export function Desktop({ onTask }: Props) {
             <li key={id}>
               <button type="button" class="link" onClick={() => navigate(id)}>
                 <Icon name={PAGE_META[id].icon} />
-                {tDynamic(`${id}.title`)}
+                {tDynamic(PAGE_META[id].label ?? `${id}.title`)}
               </button>
             </li>
           ))}

@@ -3,11 +3,11 @@
 // feedback 是建議與回饋（src/ui/FeedbackPage.tsx），samples 是範例（src/ui/SamplesPage.tsx），
 // remote-server 是遠端傳送的伺服器說明（src/ui/RemoteServerPage.tsx），storage 是已下載的模型
 // （src/ui/StoragePage.tsx）
-export const pageIds = ["licenses", "llm-bench", "feedback", "samples", "remote-server", "storage"];
+export const pageIds = ["licenses", "bench", "feedback", "samples", "remote-server", "storage"];
 
 // 網址打錯時的頁面（src/router.ts 的 parseRoute 認不得的網址）。沒有自己的網址，建置時另外產生
 // 404.html，nginx 找不到檔案時送出它（tools/nginx-gears.conf），打開之後畫面說明找不到這一頁
 export const NOT_FOUND = "not-found";
 
-// 實驗頁：桌面不放入口，不進 sitemap，也請搜尋引擎不要收錄。llm-bench 是語言模型速度量測（src/ui/LlmBench.tsx）
-export const labIds = ["llm-bench"];
+// 實驗頁：不進 sitemap，也請搜尋引擎不要收錄。bench 是裝置量測（src/ui/BenchPage.tsx），入口在桌面的使用者區
+export const labIds = ["bench"];
