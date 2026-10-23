@@ -57,7 +57,7 @@ test("裝置量測：選了裝置才能送出，送出的是畫面上的 JSON �
 
   await page.getByLabel("筆電").check();
   await page.getByLabel("大約哪一年買的（選填）").fill("2021");
-  await page.getByLabel("16 GB").check();
+  await page.getByLabel("24 GB").check();
   await page.getByRole("button", { name: "送出結果" }).click();
   await expect(page.getByTestId("bench-sent")).toContainText("收到了");
   await expect(page.getByRole("button", { name: "送出結果" })).toBeDisabled();
@@ -67,7 +67,7 @@ test("裝置量測：選了裝置才能送出，送出的是畫面上的 JSON �
   expect(body.surveyId).toBe(BENCH_SURVEY);
   expect(body.finished).toBe(true);
   // 選擇題一律送正體中文的選項，跟 formbricks/gears_bench_survey.py 相同
-  expect(body.data).toMatchObject({ device: "筆電", year: "2021", memory: "16 GB", locale: "zh-TW" });
+  expect(body.data).toMatchObject({ device: "筆電", year: "2021", memory: "24 GB", locale: "zh-TW" });
   expect(body.data).not.toHaveProperty("note");
   await page.getByText("看複製的內容", { exact: true }).click();
   expect(body.data.report).toBe(await page.getByTestId("bench-report").textContent());

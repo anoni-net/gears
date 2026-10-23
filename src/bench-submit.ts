@@ -9,7 +9,17 @@ import type { SurveyPayload } from "./feedback.ts";
 export const BENCH_SURVEY = "cmvkre5t7000t01o1697ryiv7";
 
 export const BENCH_DEVICES = { phone: "手機", tablet: "平板", laptop: "筆電", desktop: "桌機" } as const;
-export const BENCH_MEMORIES = { "4": "4 GB 以下", "8": "8 GB", "16": "16 GB", "32": "32 GB 以上", unknown: "不知道" } as const;
+// 手機常見 6、12 GB，筆電與桌機常見 8、16、24 GB。數字當鍵，Object.keys 依數字由小到大排，unknown 在最後
+export const BENCH_MEMORIES = {
+  "4": "4 GB 以下",
+  "6": "6 GB",
+  "8": "8 GB",
+  "12": "12 GB",
+  "16": "16 GB",
+  "24": "24 GB",
+  "32": "32 GB 以上",
+  unknown: "不知道",
+} as const;
 export type BenchDevice = keyof typeof BENCH_DEVICES;
 export type BenchMemory = keyof typeof BENCH_MEMORIES;
 
