@@ -407,11 +407,6 @@ export function App() {
             <button type="button" class="link" onClick={() => navigate("licenses")}>
               {t("app.footer.licenses")}
             </button>
-            {" · "}
-            {/* 實驗頁：桌面不放入口，只從頁尾連過去 */}
-            <button type="button" class="link" onClick={() => navigate("bench")}>
-              {t("app.footer.bench")}
-            </button>
           </p>
           <nav class="languages" aria-label={t("app.language")}>
             {/* 不懂中文的讀者也認得出這裡是切換語言 */}

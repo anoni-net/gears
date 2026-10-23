@@ -9,5 +9,5 @@ export const pageIds = ["licenses", "bench", "feedback", "samples", "remote-serv
 // 404.html，nginx 找不到檔案時送出它（tools/nginx-gears.conf），打開之後畫面說明找不到這一頁
 export const NOT_FOUND = "not-found";
 
-// 實驗頁：桌面不放入口，不進 sitemap，也請搜尋引擎不要收錄。bench 是裝置量測（src/ui/BenchPage.tsx）
+// 實驗頁：不進 sitemap，也請搜尋引擎不要收錄。bench 是裝置量測（src/ui/BenchPage.tsx），入口在桌面的使用者區
 export const labIds = ["bench"];

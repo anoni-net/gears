@@ -11,10 +11,10 @@ test("裝置量測：實驗頁說明下載來源，不進 sitemap，搜尋引擎
   for (const info of Object.values(models)) await expect(page.getByLabel(new RegExp(`^${info.name.replace(".", "\\.")}`))).toBeVisible();
   // 還沒量測時沒有結果可以複製
   await expect(page.getByRole("button", { name: "複製結果" })).toBeDisabled();
-  // 桌面沒有入口，從頁尾連過去
+  // 入口在桌面最下面的使用者區，頁尾沒有
   await page.goto("./");
-  await expect(page.locator("main").getByText("裝置量測")).toHaveCount(0);
-  await page.getByRole("button", { name: "裝置量測（實驗）" }).click();
+  await expect(page.locator("footer").getByRole("button", { name: "裝置量測（實驗）" })).toHaveCount(0);
+  await page.getByRole("list", { name: "使用者區" }).getByRole("button", { name: "裝置量測（實驗）" }).click();
   await expect(page).toHaveURL(/\/gears\/bench\/$/);
   await expect(page.getByRole("heading", { name: "裝置量測", level: 2 })).toBeVisible();
 

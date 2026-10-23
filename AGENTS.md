@@ -97,7 +97,7 @@ CI（`.github/workflows/ci.yml`）依瀏覽器拆成四台機器同時執行：C
 
 ## 桌面
 
-桌面依讀者的目的分成三組，每個工具一列：圖示、名稱與圖示標籤，名稱下面一行寫讀者會遇到的情況（`desk.when.<工具 id>`，例如清除中繼資料寫「照片的拍攝位置、文件的作者」），工具的完整說明放在 `title`。寬一點的畫面每組排成多欄的清單。最下面一行是範例與建議與回饋，接著是圖示說明（`src/ui/Desktop.tsx`）。
+桌面依讀者的目的分成三組，每個工具一列：圖示、名稱與圖示標籤，名稱下面一行寫讀者會遇到的情況（`desk.when.<工具 id>`，例如清除中繼資料寫「照片的拍攝位置、文件的作者」），工具的完整說明放在 `title`。寬一點的畫面每組排成多欄的清單。最下面一行是範例、建議與回饋、已下載的模型與裝置量測，接著是圖示說明（`src/ui/Desktop.tsx`）。
 
 2026-10-19 以前，三組工具上面另有 12 張「常見的情況」卡片，其中 11 張跟下面的工具卡打開同一個工具，說明也幾乎一樣，首頁有 36 張卡片，桌面要捲 3.2 個畫面、手機 8.3 個畫面。改成清單之後是 1.3 與 3.6 個畫面（Chromium，1440 寬與 iPhone 15），手機的第一個畫面就看得到第一組。情況的說法改寫進每個工具的那一列，點下去照 `src/ui/tasks.ts` 那一筆打開：處理檔案的工具直接請讀者選檔案，使用統計記成 `task`，跟原本的情況卡相同。同一個工具的第二個情況（文件的作者）與帶預設值的 Wi-Fi 拿掉，`task` 事件跨 2026-10-19 不能逐項比較。
 
@@ -465,7 +465,7 @@ ProofMode（Guardian Project 給人權紀錄者的 Android App）拍照時不改
 
 `/gears/bench/`（`src/ui/BenchPage.tsx`，#157）在讀者的瀏覽器裡量 Gears 用到的模型要多久，給社群收集手機、平板與舊電腦的數字（#144），模型能不能上線、預設值怎麼訂都看這些數字。目前有文字辨識與語言模型兩個區塊，各自執行，結果合成一份 JSON，讀者確認過內容之後送給社群，或按「複製結果」保留。只用內建的範例，不讀暫存區的檔案。
 
-- 實驗頁的清單是 `src/pages.ts` 的 `labIds`：桌面不放入口，只從頁尾連過去，不進 sitemap，頁面帶 `<meta name="robots" content="noindex">`
+- 實驗頁的清單是 `src/pages.ts` 的 `labIds`：不進 sitemap，頁面帶 `<meta name="robots" content="noindex">`。入口在桌面最下面的使用者區（`USER_PAGES`），名稱寫「裝置量測（實驗）」（`PAGE_META` 的 `label`），2026-10-23 以前只從頁尾連過去
 - 原本只量語言模型，網址是 `/gears/llm-bench/`。實驗頁沒有對外連結過，舊網址不轉址，打開是找不到這一頁
 - 裝置資訊（`src/ui/bench-env.ts`）：核心數、cross-origin isolation、顯示卡（WebGPU 的 adapter、`shader-f16`、是否為軟體模擬）、`navigator.deviceMemory`（只有 Chromium 有，最多回報 8）、讀不讀得到 canvas。`hardwareConcurrency` 在 Brave、Safari、Firefox 都不可信（見下方「逐字稿」），只當參考
 - 結果的 JSON 帶 `schema`（格式有變時加一）、Gears 的版本與 commit、裝置資訊、`userAgent` 與各區塊的數字，畫面上可以展開看複製的內容。讀者在語言模型區塊自己輸入的文字，連同它的改寫與從裡面取出的數字、引述，都不放進去（`llmReport`）
@@ -556,7 +556,7 @@ ProofMode（Guardian Project 給人權紀錄者的 Android App）拍照時不改
 
 ## 建議與回饋
 
-讀者在「建議與回饋」許願新功能、回報問題，或寫下哪裡不好用（`/gears/feedback/`，畫面在 `src/ui/FeedbackPage.tsx`，送出在 `src/feedback.ts`）。原本叫「許願區」，回報問題放在許願底下不自然，2026-10-18 改名，許願新功能改寫在說明裡。入口有兩個：桌面最下面一行的「使用者區」，以及頁尾的「建議與回饋」。使用者區放跟 Gears 本身有關、不是工具的頁面（`src/ui/tool-meta.ts` 的 `USER_PAGES`），目前是範例、建議與回饋、已下載的模型，之後的設定也放這裡。2026-10-19 起桌面改成清單，使用者區從一組卡片縮成一行連結，畫面上不寫「使用者區」這個標題，只留給讀螢幕軟體（`aria-label`）。
+讀者在「建議與回饋」許願新功能、回報問題，或寫下哪裡不好用（`/gears/feedback/`，畫面在 `src/ui/FeedbackPage.tsx`，送出在 `src/feedback.ts`）。原本叫「許願區」，回報問題放在許願底下不自然，2026-10-18 改名，許願新功能改寫在說明裡。入口有兩個：桌面最下面一行的「使用者區」，以及頁尾的「建議與回饋」。使用者區放跟 Gears 本身有關、不是工具的頁面（`src/ui/tool-meta.ts` 的 `USER_PAGES`），目前是範例、建議與回饋、已下載的模型與裝置量測，之後的設定也放這裡。2026-10-19 起桌面改成清單，使用者區從一組卡片縮成一行連結，畫面上不寫「使用者區」這個標題，只留給讀螢幕軟體（`aria-label`）。
 
 - 表單由 Gears 自己畫，送到社群自架的 Formbricks（`form.anoni.net`），用它給網頁用的公開 API（`/api/v1/client/<環境>/responses`），不需要金鑰。不嵌入 Formbricks 的頁面：整個網站送了 `Cross-Origin-Embedder-Policy: require-corp`，別的網站的頁面嵌不進來，讀者也不必認識另一個服務。畫面上不提 Formbricks
 - CSP 的 `connect-src` 只開送出的那一個路徑（`FEEDBACK_ENDPOINT_CLEARNET`，meta 標籤與標頭都有）。onion 版送到 `form.<onion>` 的同一個路徑（`FEEDBACK_ENDPOINT_ONION`），兩個網址分成兩個常數，建置時沒用到的會被拿掉，onion 版的產物裡沒有 clearnet 的網址

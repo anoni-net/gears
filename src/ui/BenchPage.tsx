@@ -12,7 +12,7 @@ import { useWorking } from "./working.ts";
 // 給社群收集手機、平板與舊電腦的數字（#144）。區塊各自執行，結果合成一份 JSON，參加的人確認過內容之後
 // 送到社群的表單伺服器（src/ui/BenchSubmit.tsx），或複製下來。
 // 原本只量語言模型，網址是 /gears/llm-bench/，舊網址不轉址。
-// 桌面不放入口，只從頁尾連過去，不進 sitemap。
+// 入口在桌面最下面的使用者區，不進 sitemap。
 
 // 結果的格式有變時加一，整理數字的人才分得出新舊
 const SCHEMA = 1;
