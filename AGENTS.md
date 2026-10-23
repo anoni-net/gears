@@ -466,7 +466,7 @@ ProofMode（Guardian Project 給人權紀錄者的 Android App）拍照時不改
 `/gears/bench/`（`src/ui/BenchPage.tsx`，#157）在讀者的瀏覽器裡量 Gears 用到的模型要多久，給社群收集手機、平板與舊電腦的數字（#144），模型能不能上線、預設值怎麼訂都看這些數字。目前有文字辨識與語言模型兩個區塊，各自執行，結果合成一份 JSON，讀者按「複製結果」交給社群。只用內建的範例，不讀暫存區的檔案。
 
 - 實驗頁的清單是 `src/pages.ts` 的 `labIds`：桌面不放入口，只從頁尾連過去，不進 sitemap，頁面帶 `<meta name="robots" content="noindex">`
-- 原本只量語言模型，網址是 `/gears/llm-bench/`。換過網址的頁面寫在 `src/pages.ts` 的 `pageAliases`：建置時舊網址照樣產生 HTML（canonical 指到新網址），打開之後 `src/router.ts` 用 `replaceState` 換成新網址，語系、查詢字串與 `#` 留著，nginx 不必設定轉址
+- 原本只量語言模型，網址是 `/gears/llm-bench/`。實驗頁沒有對外連結過，舊網址不轉址，打開是找不到這一頁
 - 裝置資訊（`src/ui/bench-env.ts`）：核心數、cross-origin isolation、顯示卡（WebGPU 的 adapter、`shader-f16`、是否為軟體模擬）、`navigator.deviceMemory`（只有 Chromium 有，最多回報 8）、讀不讀得到 canvas。`hardwareConcurrency` 在 Brave、Safari、Firefox 都不可信（見下方「逐字稿」），只當參考
 - 結果的 JSON 帶 `schema`（格式有變時加一）、Gears 的版本與 commit、裝置資訊、`userAgent` 與各區塊的數字，畫面上可以展開看複製的內容。讀者在語言模型區塊自己輸入的文字，連同它的改寫與從裡面取出的數字、引述，都不放進去（`llmReport`）
 - 一次只執行一個區塊（`BenchPage` 的 `busy`），量測中不出現換版本的提示（`useWorking`）

@@ -11,7 +11,3 @@ export const NOT_FOUND = "not-found";
 
 // 實驗頁：桌面不放入口，不進 sitemap，也請搜尋引擎不要收錄。bench 是裝置量測（src/ui/BenchPage.tsx）
 export const labIds = ["bench"];
-
-// 換過網址的頁面：舊網址照樣產生 HTML，打開之後 src/router.ts 把網址換成新的。
-// 裝置量測原本只量語言模型，網址是 llm-bench（#157）
-export const pageAliases: Record<string, string> = { "llm-bench": "bench" };

@@ -9,7 +9,7 @@ import { useWorking } from "./working.ts";
 
 // 裝置量測（實驗頁，/gears/bench/，#157）：在這台裝置的瀏覽器裡量 Gears 用到的模型要多久，
 // 給社群收集手機、平板與舊電腦的數字（#144）。區塊各自執行，結果合成一份 JSON 讓參加的人複製。
-// 原本只量語言模型，網址是 /gears/llm-bench/，舊網址由 src/router.ts 換成這一頁。
+// 原本只量語言模型，網址是 /gears/llm-bench/，舊網址不轉址。
 // 桌面不放入口，只從頁尾連過去，不進 sitemap。
 
 // 結果的格式有變時加一，整理數字的人才分得出新舊

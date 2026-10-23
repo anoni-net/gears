@@ -25,13 +25,10 @@ test("裝置量測：實驗頁說明下載來源，不進 sitemap，搜尋引擎
   expect(sitemap).not.toContain("bench");
 });
 
-test("裝置量測：舊網址 /llm-bench/ 換成 /bench/，語系與查詢字串留著", async ({ page, request }) => {
-  const html = await (await request.get("./en/llm-bench/")).text();
-  expect(html).toContain('<link rel="canonical" href="https://anoni.net/gears/en/bench/" />');
-  expect(html).toContain('<meta name="robots" content="noindex" />');
-  await page.goto("./en/llm-bench/?x=1");
-  await expect(page).toHaveURL(/\/gears\/en\/bench\/\?x=1$/);
-  await expect(page.getByRole("heading", { name: "Device benchmark", level: 2 })).toBeVisible();
+test("裝置量測：舊網址 /llm-bench/ 不轉址，是找不到的頁面", async ({ page }) => {
+  await page.goto("./llm-bench/");
+  await expect(page.getByRole("heading", { name: "找不到這一頁" })).toBeVisible();
+  await expect(page).toHaveURL(/\/gears\/llm-bench\/$/);
 });
 
 test("裝置量測：文字辨識用範例截圖量出時間與字錯率，結果的 JSON 不含自己輸入的文字", async ({ page }) => {

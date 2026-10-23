@@ -4,7 +4,7 @@ import { mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "n
 import { join, relative } from "node:path";
 import { defineConfig, type Plugin } from "vite";
 import { LOCALES, messagesOf } from "./src/i18n/index.ts";
-import { NOT_FOUND, labIds, pageAliases, pageIds } from "./src/pages.ts";
+import { NOT_FOUND, labIds, pageIds } from "./src/pages.ts";
 import { toolIds } from "./src/tools/index.ts";
 import benchModels from "./src/tools/llm-bench/models.json" with { type: "json" };
 import whisper from "./src/tools/transcribe/models.json" with { type: "json" };
@@ -189,9 +189,6 @@ function toolPages(): Plugin {
           if (!locale.prefix && !id) continue; // 正體中文的首頁就是 index.html
           this.emitFile({ type: "asset", fileName: `${locale.prefix}${id ? `${id}/` : ""}index.html`, source: localized(template, locale, id) });
         }
-        // 舊網址的頁面內容跟新的相同（canonical 指到新網址），打開之後 src/router.ts 換成新網址
-        for (const [old, id] of Object.entries(pageAliases))
-          this.emitFile({ type: "asset", fileName: `${locale.prefix}${old}/index.html`, source: localized(template, locale, id) });
       }
       // nginx 找不到檔案時送出（tools/nginx-gears.conf），語系由網址決定，打開之後畫面跟著換
       this.emitFile({ type: "asset", fileName: "404.html", source: localized(template, LOCALES[0], NOT_FOUND) });
