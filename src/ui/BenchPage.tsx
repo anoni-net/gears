@@ -49,6 +49,11 @@ export function BenchPage() {
             }) + (env.memory ? t("bench.memory", { gb: env.memory }) : "")
           : t("bench.probing")}
       </p>
+      {env && !env.secure ? (
+        <p class="notice" data-testid="bench-insecure">
+          {t("bench.insecure")}
+        </p>
+      ) : null}
 
       <OcrBench env={env} runs={ocr} setRuns={setOcr} busy={busy} setBusy={setBusy} />
       <LlmBench env={env} runs={llm} setRuns={setLlm} busy={busy} setBusy={setBusy} />

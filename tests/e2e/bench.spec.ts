@@ -8,6 +8,8 @@ test("裝置量測：實驗頁說明下載來源，不進 sitemap，搜尋引擎
   await expect(page.getByRole("heading", { name: "語言模型" })).toBeVisible();
   await expect(page.getByTestId("bench-remote")).toContainText("Hugging Face 看得到你的 IP 位址");
   await expect(page.getByTestId("bench-env")).toContainText("核心");
+  // localhost 算安全的連線，不出現要用 HTTPS 的說明
+  await expect(page.getByTestId("bench-insecure")).toHaveCount(0);
   for (const info of Object.values(models)) await expect(page.getByLabel(new RegExp(`^${info.name.replace(".", "\\.")}`))).toBeVisible();
   // 還沒量測時沒有結果可以複製
   await expect(page.getByRole("button", { name: "複製結果" })).toBeDisabled();

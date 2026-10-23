@@ -7,6 +7,7 @@ import { canvasReadable } from "./canvas-access.ts";
 export interface BenchEnv {
   cores: number;
   isolated: boolean;
+  secure: boolean; // HTTPS 這類安全的連線。不是的話瀏覽器不提供 WebGPU 與多執行緒，剪貼簿也不能用
   memory: number | null; // GB
   canvas: boolean; // 讀得到 canvas 的像素，遮蔽的自動尋找才能用
   gpu: { vendor?: string; architecture?: string; f16: boolean; fallback: boolean } | null;
@@ -16,6 +17,7 @@ export async function probeEnv(): Promise<BenchEnv> {
   const env: BenchEnv = {
     cores: navigator.hardwareConcurrency || 0,
     isolated: self.crossOriginIsolated,
+    secure: self.isSecureContext,
     memory: (navigator as { deviceMemory?: number }).deviceMemory ?? null,
     canvas: canvasReadable(),
     gpu: null,

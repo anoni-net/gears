@@ -468,6 +468,7 @@ ProofMode（Guardian Project 給人權紀錄者的 Android App）拍照時不改
 - 實驗頁的清單是 `src/pages.ts` 的 `labIds`：不進 sitemap，頁面帶 `<meta name="robots" content="noindex">`。入口在桌面最下面的使用者區（`USER_PAGES`），名稱寫「裝置量測（實驗）」（`PAGE_META` 的 `label`），2026-10-23 以前只從頁尾連過去
 - 原本只量語言模型，網址是 `/gears/llm-bench/`。實驗頁沒有對外連結過，舊網址不轉址，打開是找不到這一頁
 - 裝置資訊（`src/ui/bench-env.ts`）：核心數、cross-origin isolation、顯示卡（WebGPU 的 adapter、`shader-f16`、是否為軟體模擬）、`navigator.deviceMemory`（只有 Chromium 有，最多回報 8）、讀不讀得到 canvas。`hardwareConcurrency` 在 Brave、Safari、Firefox 都不可信（見下方「逐字稿」），只當參考
+- 不是安全的連線（`isSecureContext`，例如用區網或 Tailscale 的 IP 開 `vite preview`）時，瀏覽器不提供 WebGPU、cross-origin isolation 與剪貼簿，顯示卡與多執行緒的選項都是灰的。頁面上另外說明要用 HTTPS 打開（`bench.insecure`）。遠端預覽要量這兩項時，用 `tailscale serve` 開 HTTPS，`vite preview` 只接受 `localhost` 與 `anoni.net` 的主機名稱（`preview.allowedHosts`），中間要有一層把 Host 換成 `localhost` 的轉送
 - 結果的 JSON 帶 `schema`（格式有變時加一）、Gears 的版本與 commit、裝置資訊、`userAgent` 與各區塊的數字，畫面上可以展開看複製的內容。讀者在語言模型區塊自己輸入的文字，連同它的改寫與從裡面取出的數字、引述，都不放進去（`llmReport`）
 - 一次只執行一個區塊（`BenchPage` 的 `busy`），量測中不出現換版本的提示（`useWorking`）
 - 送給社群（`src/ui/BenchSubmit.tsx`，送出的內容在 `src/bench-submit.ts`）：讀者選裝置類型（必填），可以補上大約的年份、記憶體與備註，按下送出才送，不會自動送出。送到 Formbricks 的「Gears 裝置量測」問卷，跟建議與回饋同一個送出網址與 `sendFeedback`，CSP 不必另外開，onion 版一樣送到 onion 的表單伺服器。三個語系共用一份問卷，選擇題一律送正體中文的選項（`BENCH_DEVICES`、`BENCH_MEMORIES`），要跟社群工作區的 `formbricks/gears_bench_survey.py` 一字不差。量測結果的 JSON 放在 `report`，問卷的上限是 5 萬字（只量文字辨識約 3 KB，2026-10-23 實測 2 萬字的內容完整存進去）。同一份結果送過之後按鈕停用，換一種設定再量才能再送。整理在社群工作區（`formbricks/gears_bench.py`），不記錄提交的人是誰

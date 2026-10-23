@@ -1737,6 +1737,7 @@ export const en: Record<MessageKey, string> = {
   "bench.desk": "Device benchmark (lab)",
   "bench.pageIntro": "Gears runs text recognition and language models in the reader's browser, so their speed depends on the device. Nearly all of our numbers so far come from a single computer. We invite you to measure once on your own phone, tablet or older computer, and the community will use the numbers to choose models and defaults. The benchmark only uses built-in samples and never reads the files in your tray. When you are done, you can send the results to the community at the bottom of the page, or keep a copy with \"Copy results\".",
   "bench.memory": " The browser reports about {gb} GB of memory.",
+  "bench.insecure": "This page is not served over HTTPS, so the browser offers neither the GPU (WebGPU) nor multiple threads, only single-threaded CPU, and \"Copy results\" does not work either. Open an https:// address to measure those two.",
   "bench.llm.title": "Language model",
   "bench.ocr.title": "Text recognition",
   "bench.ocr.intro": "When redaction looks for phone numbers, emails and other personal details, it first reads the text on screen with PP-OCRv5. This measures how long that takes on three fictional screenshots. The model is about 21 MB and comes from the workbench's own domain. If you have used automatic detection in redaction, it is already downloaded. Redaction uses a single thread for now, and this also measures multiple threads and the GPU to see whether they are worth enabling.",
