@@ -12,11 +12,15 @@ export const RULES = `你是文字編輯，把使用者的文字改寫成中性�
 6. 用全形標點。
 只輸出改寫後的文字，不要加任何說明。`;
 
-// Qwen3 預設會先輸出思考過程，結尾加上 /no_think 關掉
-export function messages(text: string) {
+// Qwen3 預設會先輸出思考過程，結尾加上 /no_think 關掉。Gemma 的規則併進使用者的訊息，不用 system
+// （Gemma 3 的對話範本不接受 system），跟研究的 eval/run.mjs 相同，數字才能對照。
+// model 是 models.json 的 repo（社群轉檔的模型是 assets.anoni.net 上的目錄名稱）
+export function messages(text: string, model = "qwen3") {
+  const user = /qwen3/i.test(model) ? `${text} /no_think` : text;
+  if (/gemma/i.test(model)) return [{ role: "user", content: `${RULES}\n\n${user}` }];
   return [
     { role: "system", content: RULES },
-    { role: "user", content: `${text} /no_think` },
+    { role: "user", content: user },
   ];
 }
 

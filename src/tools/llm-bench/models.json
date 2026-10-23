@@ -67,6 +67,19 @@
     },
     "cpu": null
   },
+  "gemma4-e2b": {
+    "repo": "onnx-community/gemma-4-E2B-it-ONNX",
+    "revision": "6f21c99d7e18237f8d2ce92aadfdbfeba877f63a",
+    "source": "https://huggingface.co/google/gemma-4-E2B-it",
+    "license": "Apache-2.0",
+    "name": "Gemma 4 E2B",
+    "host": "hf",
+    "gpu": {
+      "dtype": "q4f16",
+      "bytes": 3130000000
+    },
+    "cpu": null
+  },
   "qwen3.5-0.8b": {
     "repo": "onnx-community/Qwen3.5-0.8B-ONNX",
     "revision": "8fe9dbe3fb39fe902e18df9be84b6a0ac77ae0f6",

@@ -123,7 +123,7 @@ self.onmessage = async ({ data }: MessageEvent<BenchRequest>) => {
           if (tokens % 10 === 1) post({ type: "progress", index, tokens });
         },
       });
-      const out = (await generate(messages(text), { max_new_tokens: 400, do_sample: false, streamer })) as unknown as {
+      const out = (await generate(messages(text, data.repo), { max_new_tokens: 400, do_sample: false, streamer })) as unknown as {
         generated_text: { content: string }[];
       }[];
       const end = performance.now();

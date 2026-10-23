@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { RULES, messages } from "../../src/tools/llm-bench/prompt.ts";
 import models from "../../src/tools/llm-bench/models.json" with { type: "json" };
 
 test("models.json：社群轉檔的模型列出每個檔案的 SHA-256，切段的檔案大小加總一致，每段都在 Cloudflare 的快取上限以下", () => {
@@ -26,4 +27,15 @@ test("models.json：社群轉檔的模型列出每個檔案的 SHA-256，切段�
     // models.json 的 gpu.bytes 是畫面上顯示的下載量，跟實際的檔案相差不到 5%
     expect(Math.abs(bytes - info.gpu.bytes) / info.gpu.bytes, id).toBeLessThan(0.05);
   }
+});
+
+test("提示：Qwen 加上 /no_think，Gemma 把規則併進使用者的訊息，跟研究的 eval/run.mjs 相同", () => {
+  const qwen = messages("原文", "onnx-community/Qwen3-4B-ONNX");
+  expect(qwen.map((m) => m.role)).toEqual(["system", "user"]);
+  expect(qwen[0]!.content).toBe(RULES);
+  expect(qwen[1]!.content).toBe("原文 /no_think");
+  // 社群轉檔的模型用 assets.anoni.net 上的目錄名稱
+  expect(messages("原文", "qwen3-1.7b-3231b52")[1]!.content).toBe("原文 /no_think");
+  const gemma = messages("原文", "onnx-community/gemma-4-E2B-it-ONNX");
+  expect(gemma).toEqual([{ role: "user", content: `${RULES}\n\n原文` }]);
 });

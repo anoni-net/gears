@@ -493,7 +493,8 @@ ProofMode（Guardian Project 給人權紀錄者的 Android App）拍照時不改
 - 下載進度由 `env.fetch` 自己計算，不傳 `progress_callback`（理由同逐字稿）
 - 瀏覽器裡用 CPU 只有 Qwen3 0.6B 能用（改寫品質不夠，只當 CPU 速度的參考，沒有顯示卡時預設選它）。Qwen3 1.7B 的 4 位元版是單一個 2.15 GB 的檔案，超過瀏覽器能建立的 ArrayBuffer 上限，8 位元版建立推論環境時記憶體不夠（`std::bad_alloc`，WebAssembly 最多 4 GB，還要複製一份模型）。Qwen3.5 的每一種量化版本都用到 WebAssembly 沒有實作的 `GatherBlockQuantized`（Node 的 onnxruntime 有）。Qwen3 4B 只有顯示卡版。顯示卡版的 Qwen3.5 0.8B 在 Chromium 的軟體模擬顯示卡上可以建立並完成改寫
 - 有顯示卡時預設選 Qwen3 1.7B（社群轉檔的版本，見上方）。2026-10-18 在 Apple M5 Pro 實測，每秒的詞元數 Chromium 約 93、Safari 約 67，Qwen3 4B 是 50 與 37，下載量也是 1.7B 小一半。社群轉檔上線之前曾暫時預設選 4B（#93）。實測數字見社群工作區的 `research/gears-llm/02-browser-gpu.md`
-- 提示（`prompt.ts`）只給 Worker 用，範例文字（`samples.ts`）只給頁面用，兩邊不共用模組。提示與研究的 `eval/run.mjs` 相同，數字可以跟研究報告對照
+- 提示（`prompt.ts`）只給 Worker 用，範例文字（`samples.ts`）只給頁面用，兩邊不共用模組。提示與研究的 `eval/run.mjs` 相同，數字可以跟研究報告對照：Qwen 在使用者的訊息後面加 `/no_think`，Gemma 不用 system，規則併進使用者的訊息（`messages` 依模型的 repo 切換）
+- Gemma 4 E2B（Google，Apache-2.0，#158）只有顯示卡版，從 Hugging Face 下載，文字的部分（decoder 與詞嵌入表）約 3.1 GB，`text-generation` 的 pipeline 不會下載影像與聲音的編碼器。2026-10-23 在 Apple M5 Pro 實測，已在快取時 Chromium 3.6 秒載入、每秒約 65 個詞元，Safari 4.2 秒、約 33 個。研究的評測裡它是第一個品質達到門檻的模型，放進量測頁收集手機與記憶體小的裝置能不能執行
 - 「數字與引述的變化」一欄列出改寫後少掉（`missingFacts`）與多出（`addedNumbers`）的數字與引述
 - 「複製結果」放進每一段的時間與改寫結果，讀者自己輸入的文字只放時間（見上方）
 
