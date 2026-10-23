@@ -461,11 +461,30 @@ ProofMode（Guardian Project 給人權紀錄者的 Android App）拍照時不改
 - 畫面最下面寫明改變寫作風格不會拿掉內容透露的線索（只有作者知道的細節、時間、職位與單位）
 - `facts.ts` 的 `missingFacts` 比對改寫前後的數字（中文數字換成阿拉伯數字再比）、引號裡的原話與個資，給之後用語言模型改寫時檢查有沒有改掉事實。`addedNumbers` 反過來列出改寫後多出、原文沒有的數字，研究裡 Qwen3 4B 把「大概二十幾家分店」寫成「約二十三家」，捏造的精確數字跟少了數字一樣危險。原文那一邊放寬認定，冠詞的「一個」、列舉的「一、」與序數的「第三」都算，改寫成阿拉伯數字時不會被標出來。社群工作區的 `research/gears-llm/` 用同一套規則評測模型，規則改了評測的數字也會跟著變
 
-## 語言模型速度量測（實驗頁）
+## 裝置量測（實驗頁）
 
-`/gears/llm-bench/`（`src/ui/LlmBench.tsx`，Worker 是 `src/ui/llm-bench.worker.ts`）在讀者的瀏覽器裡執行小型語言模型，改寫範例文字，量測載入時間、第一個字出現的時間與每秒的詞元數，也用寫作習慣檢查的規則看改寫有沒有少了數字或引述。給社群評估寫作風格的第二層（用語言模型改寫，研究在社群工作區的 `research/gears-llm/`）用，結論是還不能上線，這一頁讓維護者在不同的裝置上持續量測。
+`/gears/bench/`（`src/ui/BenchPage.tsx`，#157）在讀者的瀏覽器裡量 Gears 用到的模型要多久，給社群收集手機、平板與舊電腦的數字（#144），模型能不能上線、預設值怎麼訂都看這些數字。目前有文字辨識與語言模型兩個區塊，各自執行，結果合成一份 JSON，讀者按「複製結果」交給社群。只用內建的範例，不讀暫存區的檔案。
 
 - 實驗頁的清單是 `src/pages.ts` 的 `labIds`：桌面不放入口，只從頁尾連過去，不進 sitemap，頁面帶 `<meta name="robots" content="noindex">`
+- 原本只量語言模型，網址是 `/gears/llm-bench/`。換過網址的頁面寫在 `src/pages.ts` 的 `pageAliases`：建置時舊網址照樣產生 HTML（canonical 指到新網址），打開之後 `src/router.ts` 用 `replaceState` 換成新網址，語系、查詢字串與 `#` 留著，nginx 不必設定轉址
+- 裝置資訊（`src/ui/bench-env.ts`）：核心數、cross-origin isolation、顯示卡（WebGPU 的 adapter、`shader-f16`、是否為軟體模擬）、`navigator.deviceMemory`（只有 Chromium 有，最多回報 8）、讀不讀得到 canvas。`hardwareConcurrency` 在 Brave、Safari、Firefox 都不可信（見下方「逐字稿」），只當參考
+- 結果的 JSON 帶 `schema`（格式有變時加一）、Gears 的版本與 commit、裝置資訊、`userAgent` 與各區塊的數字，畫面上可以展開看複製的內容。讀者在語言模型區塊自己輸入的文字，連同它的改寫與從裡面取出的數字、引述，都不放進去（`llmReport`）
+- 一次只執行一個區塊（`BenchPage` 的 `busy`），量測中不出現換版本的提示（`useWorking`）
+
+### 文字辨識
+
+遮蔽找個資用的 PP-OCRv5（見上方「遮蔽的自動尋找」）在這台裝置上要多久（`src/ui/OcrBench.tsx`，Worker 是 `src/ui/ocr-bench.worker.ts`）。工具只用單執行緒的 WebAssembly，這裡另外量 4、8 個執行緒與 WebGPU，決定值不值得開（#140 量到 Safari 開多執行緒反而變慢，原因還沒查）。
+
+- 範例是三張固定的截圖（手機、電腦、低解析度，`public/models/bench/`，進版控），取自 #140 評測用的合成截圖，內容是虛構的、不含個資，正確答案與 SHA-256 在 `src/tools/bench/ocr-samples.json`。不在瀏覽器裡畫：各裝置的字型不同，數字就不能互相比較。檔案放在 `models/` 底下，service worker 用到時才存，「已下載的模型」算在辨識文字那一列
+- onnxruntime 第一次建立推論環境時就決定了執行緒數，每一種設定換一個 Worker。`loadPpocr` 的 `threads` 與 `webgpu` 只有這裡用，Worker 裡沒有 `document`，`ppocr.ts` 改畫在 `OffscreenCanvas` 上。WebGPU 的推論環境不能同時建立兩個（onnxruntime-web 1.30.0 會丟出 `another WebGPU EP inference session is being created`），所以依序建立
+- 每張辨識 3 次取中位數（WebGPU 的第一次包含編譯 shader 的時間，是之後的四五倍），`recognize` 的 `timing` 分開記下偵測與辨識的時間。字錯率用第一次的結果，算法跟 #140 的評測相同（`cer`，不算空白），各種設定應該一樣，差很多時代表那個設定的結果有問題
+- 讀不到 canvas 時（Brave 的防指紋、Safari 無痕、Tor Browser）不能量，畫面上說明，結果的 `env.canvas` 記成 `false`
+- 2026-10-23 在 Apple M5 Pro 上的中位數（手機截圖）：Chromium 1 執行緒 1.30 秒、4 執行緒 0.49 秒、8 執行緒 0.35 秒、WebGPU 0.24 秒。Playwright 的 WebKit 是 1.27、0.50、0.33、0.28 秒，多執行緒沒有變慢，跟 #140 在 Safari 上量到的不同，要在真的 Safari 與 iPhone 上確認
+
+### 語言模型
+
+`src/ui/LlmBench.tsx`（Worker 是 `src/ui/llm-bench.worker.ts`）執行小型語言模型，改寫範例文字，量測載入時間、第一個字出現的時間與每秒的詞元數，也用寫作習慣檢查的規則看改寫有沒有少了數字或引述。給社群評估寫作風格的第二層（用語言模型改寫，研究在社群工作區的 `research/gears-llm/`）用，結論是還不能上線。
+
 - 模型在 `src/tools/llm-bench/models.json`，從 Hugging Face 下載，鎖定 commit，伺服器送的 CSP 只開這幾個下載路徑（跟 large-v3-turbo 一樣）。Transformers.js 有幾處讀檔沒有把 `revision` 傳下去，Worker 直接把 `env.remotePathTemplate` 鎖在這個 commit。畫面上說明 Hugging Face 看得到 IP 位址、瀏覽器與下載了哪個模型
 - Qwen3 1.7B 改用社群轉檔的版本（`host` 是 `assets`），從 assets.anoni.net 的 `qwen3-1.7b-3231b52/` 下載。onnx-community 的顯示卡版把權重包在單一個 1.43 GB 的 `.onnx` 檔，瀏覽器裡建立推論環境時記憶體不夠（`std::bad_alloc`，2026-10-18 在 Apple M5 Pro 的 Chromium 實測），其他模型都把權重放在另外的 `.onnx_data` 檔。轉檔只把權重改存成外部檔案，權重與計算都沒有修改，外部權重檔再用 `scripts/split-model.mjs` 切成 400 MB 一段，轉檔的做法與實測數字見社群工作區的 `research/gears-llm/02-browser-gpu.md`。Worker 的 `env.fetch` 只下載 `files` 清單上的檔案、比對 SHA-256，切段的檔案沿用逐字稿的 `joinParts`，CSP 不必另外開（assets.anoni.net 的模型目錄已經開了），也不再開這個模型在 Hugging Face 的路徑
 - 下載的檔案存在 Transformers.js 自己的快取（`transformers-cache`），頁面上可以刪掉。`useWasmCache` 關掉：存了之後 onnxruntime 的載入程式改用 `blob:` 網址載入，CSP 不允許
@@ -474,7 +493,7 @@ ProofMode（Guardian Project 給人權紀錄者的 Android App）拍照時不改
 - 有顯示卡時預設選 Qwen3 1.7B（社群轉檔的版本，見上方）。2026-10-18 在 Apple M5 Pro 實測，每秒的詞元數 Chromium 約 93、Safari 約 67，Qwen3 4B 是 50 與 37，下載量也是 1.7B 小一半。社群轉檔上線之前曾暫時預設選 4B（#93）。實測數字見社群工作區的 `research/gears-llm/02-browser-gpu.md`
 - 提示（`prompt.ts`）只給 Worker 用，範例文字（`samples.ts`）只給頁面用，兩邊不共用模組。提示與研究的 `eval/run.mjs` 相同，數字可以跟研究報告對照
 - 「數字與引述的變化」一欄列出改寫後少掉（`missingFacts`）與多出（`addedNumbers`）的數字與引述
-- 量測中不出現換版本的提示（`useWorking`）。「複製結果」把裝置資訊與每一段的時間、改寫結果寫成 JSON
+- 「複製結果」放進每一段的時間與改寫結果，讀者自己輸入的文字只放時間（見上方）
 
 ## 逐字稿
 
@@ -573,7 +592,7 @@ ProofMode（Guardian Project 給人權紀錄者的 Android App）拍照時不改
 - 安裝時先存頁面、程式、圖示與 165 清單，約 7 MB，其中 PDF 遮蔽的 pdf.js 約 1.7 MB（壓縮後約 500 KB），條碼的 zxing-wasm 約 950 KB（壓縮後約 420 KB，暫存區的圖片都會用到，所以預先存）。人臉與文字辨識的模型與 WebAssembly、pdf.js 的 CMap 與字型、驗證內容憑證的 c2pa（`vendor/`、`models/`、`assets/ort-wasm-*`、`assets/c2pa_bg-*`）用到時才存
 - 用到時才存的這些檔案放在不隨版本清掉的快取（`gears-keep`，#142）。工作台一天常部署好幾次，原本放在隨版本清掉的快取，每次換版本之後第一次找人臉或個資都要重新下載約 23 MB。網址不變，建置時 `vite.config.ts` 的 `serviceWorker()` 替每個檔案算內容的雜湊，寫進 `sw.js` 的 `LAZY`，service worker 存的時候在回應加上 `x-gears-hash`。讀的時候雜湊對不上就重新下載，新版本接手時刪掉內容變了或不在清單上的。存進去的內容已經解壓縮，原本的 `content-encoding` 與 `content-length` 拿掉。這份清單也算進 service worker 的版本，只換了用到時才存的檔案時一樣會換一版
 - 逐字稿的 Whisper 模型存在另一個不隨版本清掉的快取（`gears-models`），換新版本時不必重新下載 80 到 250 MB。網址帶著模型的版本，清單以外的在新版本接手時刪掉。畫面上標出已下載的模型，可以刪除
-- 模型檔的下載、比對 SHA-256、切段與這個快取共用 `src/core/models.ts`（#142）：`downloadVerified` 下載並比對，`cachedModel` 先找快取、同一個檔案同時有好幾個請求時共用一次下載、存不進去時這次照樣使用，`isCached`、`removeCached` 給畫面判斷「已下載」與刪除。逐字稿、sherpa-onnx 與語言模型速度量測的 Worker 都用它，量測頁只用下載與比對，快取留給 Transformers.js。分辨說話者的 `speaker-embed.ts` 只能匯入 Transformers.js 與 onnxruntime（見上方「逐字稿」），不用這裡，靠 service worker 快取
+- 模型檔的下載、比對 SHA-256、切段與這個快取共用 `src/core/models.ts`（#142）：`downloadVerified` 下載並比對，`cachedModel` 先找快取、同一個檔案同時有好幾個請求時共用一次下載、存不進去時這次照樣使用，`isCached`、`removeCached` 給畫面判斷「已下載」與刪除。逐字稿、sherpa-onnx 與裝置量測的語言模型的 Worker 都用它，量測頁只用下載與比對，快取留給 Transformers.js。分辨說話者的 `speaker-embed.ts` 只能匯入 Transformers.js 與 onnxruntime（見上方「逐字稿」），不用這裡，靠 service worker 快取
 - 已下載的模型（`/gears/storage/`，畫面在 `src/ui/StoragePage.tsx`，分類在 `src/core/storage.ts`，#142）：讀 `gears-models`、`gears-keep` 與量測頁的 `transformers-cache`，逐字稿的模型一個一列，其他依用途分列（分辨說話者、找人臉、辨識文字、執行模型的程式、pdf.js 的資料、驗證內容憑證），列出大小，可以逐列刪除或全部刪除，刪除之後下次用到時再下載。工作台本身的頁面與程式（`gears-<版本>`）是離線使用要用的，不列進來。大小用快取裡每個回應的 `blob().size` 加總，快取的內容在磁碟上，不會整個讀進記憶體。不能用 Cache API 時（私密瀏覽、Tor Browser）說明每次都要重新下載。入口在桌面的使用者區，逐字稿畫面原本的「刪除模型」保留
 - 只存工作台自己的檔案。讀者放進暫存區的檔案只在記憶體裡，不寫進快取，只有換版本的那一刻經過 service worker（見下一項）
 - 換版本要重新載入頁面，暫存區只在記憶體裡，重新載入就沒了（`src/ui/offline.ts`）。暫存區是空的、畫面上也沒有填到一半的東西時（桌面、授權頁、還沒選檔案的工具說明，從空白開始的工具不算），不出現提示：讀者還沒在這個頁面按過或打過字，新版本裝好就直接換。已經在操作的，出現一行較輕的提示（`app.updateIdle`，不提暫存區），讀者按重新載入或分頁切到背景（`visibilitychange`）時換。換上之後一律顯示「已換上新版本」。新版本要先下載約 7 MB 才裝得好，這段時間讀者多半已經點過畫面，原本這時不出現提示、只等切到背景，桌面上永遠看不到提示，要切到從空白開始的工具或放進檔案才看得到（2026-10-22 的使用回饋）。2026-10-22 以前一律等切到背景、換上之後也不說，讀者重新整理之後看到的仍然是舊版（瀏覽器這時才下載新版本），切出去再回來才換好，不知道中間發生了什麼。暫存區有檔案時，畫面上方提示，讀者按「重新載入」才換上，避免同一個分頁混用新舊程式
@@ -667,7 +686,7 @@ node scripts/fetch-165.mjs   # 下載並整理成 public/data/165.txt
 
 - 能不用 canvas 輸出圖檔就不用。Brave 預設會擾動 canvas 讀出來的像素，QR code 的 PNG 由 `src/core/png-encode.ts` 直接寫位元組。遮蔽與 QR code 讀取必須解碼影像，只能用 canvas：遮蔽輸出後抽查每個框是否夠黑，門檻容許這點雜訊。QR code 讀取對雜訊不敏感
 - 用到 WebAssembly 的功能（逐字稿、遮蔽的自動尋找、HEIC 的解碼器、QR code 以外的條碼）先用 `src/ui/wasm.ts` 的 `wasmAvailable()` 檢查。iPhone、iPad 與 Mac 的鎖定模式會關掉 Safari 的 WebAssembly，不檢查的話讀者要等模型下載完才失敗，收到的還是「記憶體不夠」這類錯誤的原因。檢查時實際編譯一個 8 個位元組的空模組，只看 `typeof WebAssembly` 不夠。逐字稿一打開就說明、開始的按鈕不能按，自動尋找請讀者手動框選，HEIC 說明載入不了解碼器。瀏覽器測試（`tests/e2e/wasm-unavailable.spec.ts`）把頁面的 `WebAssembly` 拿掉來模擬
-- 工具以外的頁面（`src/pages.ts` 的 `pageIds`：授權與來源、語言模型速度量測、建議與回饋、範例、遠端傳送的伺服器說明、已下載的模型）不顯示暫存區，版面改成單欄（`.workbench.solo`），寬度上限跟首頁暫存區旁邊那一欄相同（52rem），靠左對齊頁首的 logo。原本撐滿整個版面，從桌面點進範例時內容突然變寬（2026-10-20 遇到）。頁面一律顯示捲軸（`html { overflow-y: scroll }`）：首頁不長，高一點的螢幕不需要捲動，範例頁需要，捲軸出現時置中的頁首會往左移半個捲軸寬，兩頁來回切換時 logo 左右跳。`scrollbar-gutter: stable` 也能固定位置，但不捲動的頁面會在頁首右邊留一條白色的空位。暫存區的檔案仍在記憶體裡，回到桌面就看得到
+- 工具以外的頁面（`src/pages.ts` 的 `pageIds`：授權與來源、裝置量測、建議與回饋、範例、遠端傳送的伺服器說明、已下載的模型）不顯示暫存區，版面改成單欄（`.workbench.solo`），寬度上限跟首頁暫存區旁邊那一欄相同（52rem），靠左對齊頁首的 logo。原本撐滿整個版面，從桌面點進範例時內容突然變寬（2026-10-20 遇到）。頁面一律顯示捲軸（`html { overflow-y: scroll }`）：首頁不長，高一點的螢幕不需要捲動，範例頁需要，捲軸出現時置中的頁首會往左移半個捲軸寬，兩頁來回切換時 logo 左右跳。`scrollbar-gutter: stable` 也能固定位置，但不捲動的頁面會在頁首右邊留一條白色的空位。暫存區的檔案仍在記憶體裡，回到桌面就看得到
 - 站內導覽不用一般的 `<a href>`。一般的連結會重新載入頁面，暫存區只在記憶體裡，會整個清空。改用 `src/router.ts` 的 `navigate()`，外觀要像連結時用 `button.link`。`navigate()` 換頁之後捲回頂端，不然瀏覽器會沿用原本的捲動位置，手機上從桌面下方點進比較長的頁面時，畫面停在新頁面的最底部（2026-10-18 建議與回饋遇到）
 - 檔案畫面的版面（`.file` 的 grid，2026-10-22 起）：檔名與下載同一列（下載與分享在檔名的右邊，說明是按鈕下的一行小字，窄螢幕上不換行、說明只留給讀螢幕軟體），接著是檔案本身（預覽與處理紀錄包在同一張淡藍灰的卡片，處理紀錄是預覽的說明），最後是找到的資訊與工具。寬螢幕上檔案本身在左欄、找到的資訊與工具在右欄，處理前後右欄都從預覽的高度開始。手機排成一欄，順序一樣，預覽約三成畫面高。沒有預覽的文件排成一欄（寬度上限 40rem）。加密之後給對方的說明放在右欄最上面。打開編輯畫面時，要在圖上操作的（遮蔽、列印追蹤點、PDF 頁面選取、影片的關鍵影格，`WIDE_EDITORS`）用整個寬度，其他的放在右欄，左邊的預覽與處理紀錄留著。中間幾版的問題都是使用回饋：處理紀錄橫跨兩欄放在最上面，份量太重、預覽下方空一大塊。下載原本是一個有「交出去」標題的區塊，處理之後才出現，把右欄或檔名那一列撐高一百多 px。手機上還沒處理時先排找到的資訊、預覽排到工具列之後，處理之後又跳回檔名下面。編輯畫面套用之後捲回檔案的開頭
 - 沒有找到中繼資料不用綠色：暫存區的狀態寫「沒有中繼資料」、用灰色，檔案畫面另外說明只檢查了中繼資料，截圖裡的電話要用遮蔽、文件打開時會不會連線要用開啟前檢查（`findings.scope`）。綠色讀起來像「這個檔案安全」，只留給加密完成

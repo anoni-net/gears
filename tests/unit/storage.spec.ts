@@ -11,6 +11,7 @@ test("依快取與網址分成一列一列", () => {
   expect(classify(MODEL_CACHE, at("models/speaker/campplus-x/model.onnx"), "/gears/")).toEqual({ group: "speaker" });
   expect(classify(KEEP_CACHE, at("models/yunet-2023mar-dynamic.onnx"), "/gears/")).toEqual({ group: "faces" });
   expect(classify(KEEP_CACHE, at("models/ppocr/PP-OCRv5_mobile_rec.onnx"), "/gears/")).toEqual({ group: "ocr" });
+  expect(classify(KEEP_CACHE, at("models/bench/ocr-phone.png"), "/gears/")).toEqual({ group: "ocr" });
   expect(classify(KEEP_CACHE, at("vendor/pdfjs/cmaps/UniCNS-UCS2-H.bcmap"), "/gears/")).toEqual({ group: "pdf" });
   expect(classify(KEEP_CACHE, at("assets/ort-wasm-simd-threaded-AbC.wasm"), "/gears/")).toEqual({ group: "runtime" });
   expect(classify(KEEP_CACHE, at("vendor/sherpa/sherpa-onnx-wasm-web.wasm"), "/gears/")).toEqual({ group: "runtime" });

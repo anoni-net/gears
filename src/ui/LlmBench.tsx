@@ -4,25 +4,18 @@ import models from "../tools/llm-bench/models.json" with { type: "json" };
 import { SAMPLES } from "../tools/llm-bench/samples.ts";
 import { addedNumbers, missingFacts } from "../tools/writing-style/facts.ts";
 import { FIXABLE, findHabits, fixHabits } from "../tools/writing-style/index.ts";
-import { CopyButton } from "./CopyButton.tsx";
+import type { BenchEnv } from "./bench-env.ts";
 import type { BenchReply, BenchRequest } from "./llm-bench.worker.ts";
 import workerUrl from "./llm-bench.worker.ts?worker&url";
-import { useWorking } from "./working.ts";
 
-// 語言模型速度量測（實驗頁，/gears/llm-bench/）：在這台裝置的瀏覽器裡執行小型語言模型，改寫範例文字，
+// 裝置量測（src/ui/BenchPage.tsx）的語言模型：在這台裝置的瀏覽器裡執行小型語言模型，改寫範例文字，
 // 量測載入時間、第一個字出現的時間與每秒的詞元數，也用寫作習慣檢查的規則看改寫的品質。
-// 給社群評估寫作風格改寫（研究在社群工作區的 research/gears-llm/）用，桌面不放入口，不進 sitemap。
+// 給社群評估寫作風格改寫（研究在社群工作區的 research/gears-llm/）用。
 
 type ModelId = keyof typeof models;
 const MODEL_IDS = Object.keys(models) as ModelId[];
 const THREADS = [1, 2, 4, 8, 12, 16];
 const CACHE = "transformers-cache";
-
-interface Env {
-  cores: number;
-  isolated: boolean;
-  gpu: { vendor?: string; architecture?: string; f16: boolean; fallback: boolean } | null;
-}
 
 interface TextResult {
   index: number;
@@ -37,7 +30,7 @@ interface TextResult {
   habitsLeft: number;
 }
 
-interface Run {
+export interface LlmRun {
   id: number;
   model: string;
   device: string;
@@ -46,21 +39,7 @@ interface Run {
   load: number | null;
   texts: TextResult[];
   error?: string;
-}
-
-async function probe(): Promise<Env> {
-  const env: Env = { cores: navigator.hardwareConcurrency || 0, isolated: self.crossOriginIsolated, gpu: null };
-  type Adapter = { features: Set<string>; info?: { vendor?: string; architecture?: string; isFallbackAdapter?: boolean }; isFallbackAdapter?: boolean };
-  const gpu = (navigator as unknown as { gpu?: { requestAdapter(): Promise<Adapter | null> } }).gpu;
-  const adapter = await gpu?.requestAdapter().catch(() => null);
-  if (adapter)
-    env.gpu = {
-      vendor: adapter.info?.vendor,
-      architecture: adapter.info?.architecture,
-      f16: adapter.features.has("shader-f16"),
-      fallback: !!(adapter.info?.isFallbackAdapter ?? adapter.isFallbackAdapter),
-    };
-  return env;
+  custom: boolean; // 讀者自己的文字：送出的結果不放這一次的改寫
 }
 
 const gb = (bytes: number) => (bytes / 1e9).toFixed(1);
@@ -70,8 +49,15 @@ const manualHabits = (text: string) => findHabits(text).filter((h) => !FIXABLE.i
 let workers = 0;
 let runIds = 0;
 
-export function LlmBench() {
-  const [env, setEnv] = useState<Env | null>(null);
+interface Props {
+  env: BenchEnv | null;
+  runs: LlmRun[];
+  setRuns: (update: (runs: LlmRun[]) => LlmRun[]) => void;
+  busy: boolean;
+  setBusy: (busy: boolean) => void;
+}
+
+export function LlmBench({ env, runs, setRuns, busy, setBusy }: Props) {
   // 有顯示卡時預設選 Qwen3 1.7B（社群轉檔的版本，見 AGENTS.md）：比 4B 快、下載量小
   const [model, setModel] = useState<ModelId>("qwen3-1.7b");
   const [device, setDevice] = useState<"webgpu" | "wasm">("webgpu");
@@ -80,21 +66,17 @@ export function LlmBench() {
   const [prefix, setPrefix] = useState(true);
   const [status, setStatus] = useState("");
   const [running, setRunning] = useState(false);
-  const [runs, setRuns] = useState<Run[]>([]);
   const worker = useRef<Worker | null>(null);
-  useWorking(running);
 
   useEffect(() => {
-    void probe().then((e) => {
-      setEnv(e);
-      if (!e.gpu || e.gpu.fallback) {
-        setDevice("wasm");
-        setModel("qwen3-0.6b");
-      }
-      setThreads(Math.max(...THREADS.filter((n) => n <= Math.max(1, Math.min(8, e.cores)))));
-    });
-    return () => worker.current?.terminate();
-  }, []);
+    if (!env) return;
+    if (!env.gpu || env.gpu.fallback) {
+      setDevice("wasm");
+      setModel("qwen3-0.6b");
+    }
+    setThreads(Math.max(...THREADS.filter((n) => n <= Math.max(1, Math.min(8, env.cores)))));
+  }, [env]);
+  useEffect(() => () => worker.current?.terminate(), []);
 
   const info = models[model];
   const gpuOnly = info.cpu === null;
@@ -106,9 +88,10 @@ export function LlmBench() {
     const originals = custom.trim() ? [custom.trim()] : SAMPLES;
     const texts = originals.map((text) => (prefix ? fixHabits(text) : text));
     const id = ++runIds;
-    setRuns((all) => [...all, { id, model: info.name, device, dtype, threads, load: null, texts: [] }]);
-    const update = (change: (run: Run) => Partial<Run>) => setRuns((all) => all.map((r) => (r.id === id ? { ...r, ...change(r) } : r)));
+    setRuns((all) => [...all, { id, model: info.name, device, dtype, threads, load: null, texts: [], custom: !!custom.trim() }]);
+    const update = (change: (run: LlmRun) => Partial<LlmRun>) => setRuns((all) => all.map((r) => (r.id === id ? { ...r, ...change(r) } : r)));
     setRunning(true);
+    setBusy(true);
     setStatus(t("bench.loading"));
     const w = new Worker(`${workerUrl}?n=${++workers}`, { type: "module" });
     worker.current = w;
@@ -116,6 +99,7 @@ export function LlmBench() {
       w.terminate();
       worker.current = null;
       setRunning(false);
+      setBusy(false);
     };
     w.onmessage = ({ data }: MessageEvent<BenchReply>) => {
       if (data.type === "download") setStatus(t("bench.downloading", { loaded: gb(data.loaded), total: gb(data.total) }));
@@ -156,6 +140,7 @@ export function LlmBench() {
     worker.current?.terminate();
     worker.current = null;
     setRunning(false);
+    setBusy(false);
     setStatus(t("bench.stopped"));
   };
 
@@ -164,28 +149,15 @@ export function LlmBench() {
     setStatus(t("bench.cleared"));
   };
 
-  const report = JSON.stringify({ env, userAgent: navigator.userAgent, runs }, null, 2);
-
   return (
-    <section class="llm-bench" aria-labelledby="bench-title">
-      <h2 id="bench-title" class="tool-title">
-        {t("bench.title")}
-      </h2>
+    <section class="bench-section" aria-labelledby="bench-llm-title">
+      <h3 id="bench-llm-title">{t("bench.llm.title")}</h3>
       <p class="hint">{t("bench.intro")}</p>
       <p class="notice" data-testid="bench-remote">
         {t("bench.remote")}
       </p>
-      <p class="hint" data-testid="bench-env">
-        {env
-          ? t("bench.env", {
-              cores: env.cores,
-              threads: env.isolated ? t("bench.isolated") : t("bench.notIsolated"),
-              gpu: env.gpu ? `${env.gpu.vendor ?? ""} ${env.gpu.architecture ?? ""}`.trim() + (env.gpu.f16 ? " · f16" : "") + (env.gpu.fallback ? ` · ${t("bench.fallback")}` : "") : t("bench.noGpuShort"),
-            })
-          : t("bench.probing")}
-      </p>
 
-      <fieldset class="choices" disabled={running}>
+      <fieldset class="choices" disabled={busy}>
         <legend>{t("bench.model")}</legend>
         {MODEL_IDS.map((id) => (
           <label class="check" key={id}>
@@ -207,7 +179,7 @@ export function LlmBench() {
         ))}
       </fieldset>
 
-      <fieldset class="segmented" disabled={running}>
+      <fieldset class="segmented" disabled={busy}>
         <legend>{t("bench.device")}</legend>
         <label>
           <input type="radio" name="bench-device" checked={device === "webgpu"} disabled={!env?.gpu} onChange={() => setDevice("webgpu")} />
@@ -219,7 +191,7 @@ export function LlmBench() {
         </label>
       </fieldset>
       {device === "wasm" ? (
-        <fieldset class="segmented" disabled={running || !env?.isolated}>
+        <fieldset class="segmented" disabled={busy || !env?.isolated}>
           <legend>{t("bench.threads")}</legend>
           {THREADS.map((n) => (
             <label key={n}>
@@ -233,11 +205,11 @@ export function LlmBench() {
 
       <label class="field">
         {t("bench.custom")}
-        <textarea rows={3} value={custom} disabled={running} onInput={(e) => setCustom(e.currentTarget.value)} />
+        <textarea rows={3} value={custom} disabled={busy} onInput={(e) => setCustom(e.currentTarget.value)} />
       </label>
       <p class="hint">{t("bench.customHint")}</p>
       <label class="check">
-        <input type="checkbox" checked={prefix} disabled={running} onChange={(e) => setPrefix(e.currentTarget.checked)} />
+        <input type="checkbox" checked={prefix} disabled={busy} onChange={(e) => setPrefix(e.currentTarget.checked)} />
         <span>{t("bench.prefix")}</span>
       </label>
 
@@ -247,12 +219,11 @@ export function LlmBench() {
             {t("bench.stop")}
           </button>
         ) : (
-          <button type="button" class="primary" disabled={!env || !usable} onClick={start}>
+          <button type="button" class="primary" disabled={!env || !usable || busy} onClick={start}>
             {t("bench.start")}
           </button>
         )}
-        {runs.length ? <CopyButton text={report} label={t("bench.copy")} primary={false} /> : null}
-        <button type="button" disabled={running} onClick={() => void clearCache()}>
+        <button type="button" disabled={busy} onClick={() => void clearCache()}>
           {t("bench.clear")}
         </button>
       </div>
@@ -315,4 +286,13 @@ export function LlmBench() {
       ) : null}
     </section>
   );
+}
+
+// 複製的結果：讀者自己的文字與它的改寫不放進來，只留時間與數字
+export function llmReport(runs: LlmRun[]) {
+  return runs.map(({ id: _, texts, ...run }) => ({
+    ...run,
+    // missing、added 是從讀者的文字裡取出的數字與引述，一樣不放
+    texts: texts.map((x) => (run.custom ? { index: x.index, firstToken: x.firstToken, tokensPerSecond: x.tokensPerSecond, total: x.total, tokens: x.tokens } : x)),
+  }));
 }

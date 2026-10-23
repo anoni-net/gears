@@ -35,7 +35,7 @@ test("已下載的模型：依用途列出大小，可以逐列刪除與全部�
   await expect(rows.nth(1)).toContainText("找人臉的模型");
   await expect(rows.nth(1)).toContainText("230 KB");
   await expect(rows.nth(2)).toContainText("辨識文字的模型");
-  await expect(rows.nth(3)).toContainText("語言模型速度量測的模型");
+  await expect(rows.nth(3)).toContainText("裝置量測的語言模型");
   await expect(page.getByText("合計 7 MB")).toBeVisible();
 
   await page.getByRole("button", { name: "刪除找人臉的模型" }).click();

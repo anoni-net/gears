@@ -32,11 +32,11 @@ const isCreateTool = (id: string) => createTools.some((tool) => tool.id === id);
 const usesTray = (id: string) => createTools.some((tool) => tool.id === id && tool.tray);
 const isPage = (id: string) => pageIds.includes(id) || id === NOT_FOUND;
 
-// 語言模型速度量測（實驗頁）用到時才載入，桌面維持輕量
-function LlmBenchView() {
+// 裝置量測（實驗頁）用到時才載入，桌面維持輕量
+function BenchView() {
   const [View, setView] = useState<ComponentType | null>(null);
   useEffect(() => {
-    void import("./ui/LlmBench.tsx").then((m) => setView(() => m.LlmBench));
+    void import("./ui/BenchPage.tsx").then((m) => setView(() => m.BenchPage));
   }, []);
   return View ? <View /> : null;
 }
@@ -291,8 +291,8 @@ export function App() {
     );
   } else if (route === "licenses") {
     view = <Licenses />;
-  } else if (route === "llm-bench") {
-    view = <LlmBenchView />;
+  } else if (route === "bench") {
+    view = <BenchView />;
   } else if (route === NOT_FOUND) {
     view = <NotFoundPage />;
   } else if (route === "feedback") {
@@ -409,8 +409,8 @@ export function App() {
             </button>
             {" · "}
             {/* 實驗頁：桌面不放入口，只從頁尾連過去 */}
-            <button type="button" class="link" onClick={() => navigate("llm-bench")}>
-              {t("app.footer.llmBench")}
+            <button type="button" class="link" onClick={() => navigate("bench")}>
+              {t("app.footer.bench")}
             </button>
           </p>
           <nav class="languages" aria-label={t("app.language")}>

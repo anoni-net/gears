@@ -1,6 +1,6 @@
 import { useEffect, useState } from "preact/hooks";
 import { type Locale, getLocale, localeFromPath, localeInfo, setLocale } from "./i18n/index.ts";
-import { NOT_FOUND, pageIds } from "./pages.ts";
+import { NOT_FOUND, pageAliases, pageIds } from "./pages.ts";
 import { toolIds } from "./tools/index.ts";
 
 // 每個工具有自己的網址（/gears/qrcode/），可以被搜尋到，也可以直接分享。
@@ -16,7 +16,17 @@ export function parseRoute(pathname: string): string {
   const rest = pathname.startsWith(BASE + prefix) ? pathname.slice(BASE.length + prefix.length) : "";
   const id = rest.replace(/\/+$/, "").split("/")[0] ?? "";
   if (id === "" || id === "index.html") return "";
+  if (id in pageAliases) return pageAliases[id]!;
   return toolIds.includes(id) || pageIds.includes(id) ? id : NOT_FOUND;
+}
+
+// 舊網址（pageAliases）換成新的，不重新載入，查詢字串與 # 留著
+function replaceAlias() {
+  const locale = localeFromPath(location.pathname);
+  const prefix = BASE + localeInfo(locale).prefix;
+  const raw = location.pathname.startsWith(prefix) ? (location.pathname.slice(prefix.length).split("/")[0] ?? "") : "";
+  const id = pageAliases[raw];
+  if (id) history.replaceState(history.state, "", routeUrl(id, locale) + location.search + location.hash);
 }
 
 export function routeUrl(id: string, locale: Locale = getLocale()): string {
@@ -45,11 +55,15 @@ export function switchLocale(locale: Locale) {
 }
 
 export function useRoute(): string {
-  const [route, setRoute] = useState(() => parseRoute(location.pathname));
+  const [route, setRoute] = useState(() => {
+    replaceAlias();
+    return parseRoute(location.pathname);
+  });
   // 語系也算在狀態裡，上一頁回到另一個語系時整個畫面跟著換
   const [, setLocaleState] = useState(getLocale());
   useEffect(() => {
     const update = () => {
+      replaceAlias();
       setLocale(localeFromPath(location.pathname));
       setLocaleState(getLocale());
       setRoute(parseRoute(location.pathname));

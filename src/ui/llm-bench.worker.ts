@@ -1,4 +1,4 @@
-// 語言模型速度量測（實驗頁，src/ui/LlmBench.tsx）的 Worker：從 Hugging Face 下載模型、
+// 裝置量測的語言模型（src/ui/LlmBench.tsx）的 Worker：從 Hugging Face 下載模型、
 // 改寫範例文字，回報載入時間、第一個字出現的時間與每秒的詞元數。
 //
 // 模型鎖定 commit（src/tools/llm-bench/models.json），伺服器送的 CSP 只開這幾個下載路徑。

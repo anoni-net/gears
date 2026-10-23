@@ -1,7 +1,7 @@
 import { IS_ONION } from "../site.ts";
 
 // 模型檔的下載、比對 SHA-256、切段與快取，逐字稿（transcribe.worker.ts、sherpa.worker.ts）、
-// 逐字稿的畫面與語言模型速度量測（llm-bench.worker.ts）共用（#142）。
+// 逐字稿的畫面與裝置量測的語言模型（llm-bench.worker.ts）共用（#142）。
 //
 // 模型從哪裡下載寫在各自 models.json 的 host：
 // - self：工作台自己的網域，由 service worker 快取
