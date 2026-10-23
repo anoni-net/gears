@@ -132,7 +132,7 @@ function fileWarnings(f: CaseFile): Warning[] {
 
   const editor = ev.software.find((s) => EDITORS.test(s));
   if (editor) out.push({ code: "editing-software", files: [f.index], value: editor });
-  if (ev.signatures.length && !ev.signatures.some((s) => s.coversWhole)) out.push({ code: "signed-then-modified", files: [f.index] });
+  if (ev.signatures.length && !ev.signatures.some((s) => s.coversWhole || s.later?.validationOnly)) out.push({ code: "signed-then-modified", files: [f.index] });
   // 簽章跟簽署的內容對不上：簽完之後涵蓋的範圍被改過，或簽章本身被改過
   if (ev.signatures.some((s) => s.check?.signature === "invalid")) out.push({ code: "pdf-signature-invalid", files: [f.index] });
   // 附在簽章上的時間戳記驗不過。整份文件的時間戳記對不上時，簽章本身就算驗不過，列在上一項

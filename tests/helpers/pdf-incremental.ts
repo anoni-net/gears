@@ -53,3 +53,27 @@ export async function incrementalPdf(): Promise<{ bytes: Uint8Array; firstEnd: n
   // 第一版的結尾算到 %%EOF 後面的換行
   return { bytes, firstEnd: base.length + 1 };
 }
+
+// 在 base 後面接一次增量更新：objects 是 [物件編號, 物件內容]，交互參照表與 trailer 依 base 補上
+export async function appendUpdate(base: Uint8Array, objects: [number, string][]): Promise<Uint8Array> {
+  const doc = await PDFDocument.load(base, { updateMetadata: false });
+  const ctx = doc.context;
+  const prev = [...latin1(base).matchAll(/startxref\s+(\d+)/g)].at(-1)![1]!;
+  let body = "\n";
+  const offsets: [number, number][] = [];
+  for (const [num, value] of objects) {
+    offsets.push([num, base.length + enc.encode(body).length]);
+    body += `${num} 0 obj\n${value}\nendobj\n`;
+  }
+  const xrefAt = base.length + enc.encode(body).length;
+  let xref = "xref\n0 1\n0000000000 65535 f \n";
+  for (const [num, at] of offsets.sort((a, b) => a[0] - b[0])) xref += `${num} 1\n${String(at).padStart(10, "0")} 00000 n \n`;
+  const size = Math.max(ctx.largestObjectNumber, ...objects.map(([n]) => n)) + 1;
+  const info = ctx.trailerInfo.Info ? ` /Info ${ctx.trailerInfo.Info.toString()}` : "";
+  const tail = `${xref}trailer\n<< /Size ${size} /Root ${ctx.trailerInfo.Root!.toString()}${info} /Prev ${prev} >>\nstartxref\n${xrefAt}\n%%EOF\n`;
+  const update = enc.encode(body + tail);
+  const bytes = new Uint8Array(base.length + update.length);
+  bytes.set(base);
+  bytes.set(update, base.length);
+  return bytes;
+}

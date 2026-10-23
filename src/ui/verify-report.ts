@@ -127,12 +127,10 @@ export function traceLines(ev: Evidence): string[] {
   for (const s of ev.signatures) {
     const who = s.name ?? t("verify.unknownSigner");
     const vars = { name: who, time: s.time ? timeText(s.time) : "-" };
-    if (!s.check) {
-      out.push(t(s.coversWhole ? "verify.signature.whole" : "verify.signature.partial", vars));
-      continue;
-    }
-    out.push(t(s.coversWhole ? "verify.signature.wholeChecked" : "verify.signature.partialChecked", vars));
-    out.push(...signatureLines(s.check));
+    const cover = s.coversWhole ? "whole" : s.later?.validationOnly ? "validation" : "partial";
+    out.push(tDynamic(`verify.signature.${cover}${s.check ? "Checked" : ""}`, vars));
+    if (s.later?.validationOnly && s.later.metadata) out.push(t("verify.signature.metadata"));
+    if (s.check) out.push(...signatureLines(s.check));
   }
   return out;
 }

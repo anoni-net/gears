@@ -39,9 +39,23 @@ function makeVideo() {
   }
 }
 
+// PAdES 長期驗證的 PDF（#128）：用 pyHanko 簽署、加上時間戳記與 /DSS，看查證怎麼讀它實際寫出的結構。
+// 需要 uv，沒有時用到的測試會略過
+export const PADES = { lt: `${GENERATED}/pades-lt.pdf`, lta: `${GENERATED}/pades-lta.pdf`, root: `${GENERATED}/pades-root.der` };
+
+function makePades() {
+  if (existsSync(PADES.lt) && existsSync(PADES.lta)) return;
+  try {
+    execFileSync("uv", ["run", "--quiet", "--with", "pyhanko==0.29.0", "python", "scripts/make-test-pades.py", GENERATED], { stdio: "pipe", timeout: 120_000 });
+  } catch {
+    console.warn("沒有辦法產生 PAdES 的測試檔（需要 uv 與 pyHanko），用到的測試會略過");
+  }
+}
+
 export default async function globalSetup() {
   mkdirSync(GENERATED, { recursive: true });
   makeVideo();
+  makePades();
   await fetchC2paFixtures();
   const qr = `${GENERATED}/qr.png`;
   writeFileSync(qr, qrPng(encodeQr(QR_TEXT, "M"), 8));
