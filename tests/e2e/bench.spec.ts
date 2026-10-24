@@ -104,3 +104,37 @@ test("裝置量測：語言模型從鎖定的 commit 下載，下載失敗時畫
   // 測試故意回 404，WebKit 會把它記成主控台錯誤
   guard.errors = guard.errors.filter((e) => !e.includes("status of 404"));
 });
+
+test("裝置量測：語言模型量到一半頁面重新載入時，記成一筆失敗的結果，可以照樣送出", async ({ page }) => {
+  await page.goto("./bench/");
+  await expect(page.getByTestId("bench-env")).toContainText("核心");
+  // 模擬開始量測之後、還沒結束就被系統重新載入分頁（iOS 的 Safari 記憶體不夠時會這樣）
+  await page.evaluate(() =>
+    history.replaceState({ ...(history.state ?? {}), "gears-bench-running": { model: "Gemma 4 E2B", device: "webgpu", dtype: "q4f16", threads: 4 } }, ""),
+  );
+  await page.reload();
+  await expect(page.getByTestId("bench-status")).toContainText("上次量測 Gemma 4 E2B 時，頁面在途中重新載入");
+  await expect(page.getByTestId("bench-table")).toContainText("頁面在途中重新載入，可能是記憶體不夠");
+  await page.getByText("看複製的內容", { exact: true }).click();
+  const report = JSON.parse((await page.getByTestId("bench-report").textContent())!);
+  expect(report.llm).toEqual([{ model: "Gemma 4 E2B", device: "webgpu", dtype: "q4f16", threads: 4, load: null, texts: [], custom: false, error: "reloaded" }]);
+  // 只記一次：再重新載入就沒有了
+  await page.reload();
+  await expect(page.getByTestId("bench-env")).toContainText("核心");
+  await expect(page.getByTestId("bench-status")).toHaveText("");
+});
+
+test("裝置量測：手機上選了 1 GB 以上的模型，先提醒可能因為記憶體不夠重新載入", async ({ page, isMobile }) => {
+  // 測試的瀏覽器沒有實體顯示卡，給一個假的 adapter，顯示卡的選項才能選
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "gpu", {
+      value: { requestAdapter: async () => ({ features: new Set(["shader-f16"]), info: { vendor: "test", architecture: "test", isFallbackAdapter: false } }) },
+    });
+  });
+  await page.goto("./bench/");
+  await expect(page.getByTestId("bench-env")).toContainText("test");
+  await page.getByLabel(/^Gemma 4 E2B/).check();
+  await page.getByLabel("顯示卡", { exact: true }).last().check();
+  if (isMobile) await expect(page.getByTestId("bench-mobile")).toContainText("要下載約 3.1 GB");
+  else await expect(page.getByTestId("bench-mobile")).toHaveCount(0);
+});
