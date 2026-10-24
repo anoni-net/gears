@@ -43,6 +43,8 @@ anoni.net Gears 檔案工作台，在瀏覽器裡處理要交出去的檔案：�
 - 使用統計只記工具的使用次數，送到社群自架的 Umami，不含檔案、檔名與你輸入的內容，可以在頁尾關掉。瀏覽器的 Do Not Track 與 Global Privacy Control 一律遵守
 - 先支援 Brave、Safari 與 Firefox
 
+會連到哪裡、經過的服務與社群的伺服器記下什麼（包括存取紀錄裡的 IP），完整寫在[隱私說明](https://anoni.net/gears/privacy/)。
+
 ## 開發
 
 ```bash
@@ -103,6 +105,8 @@ The tools already online live in the [utilities section of the docs site](https:
 - Features that need the network are labelled, along with what they send
 - Usage statistics only count how tools are used and go to the community's self-hosted Umami, with no files, file names or anything you type. You can turn them off in the footer, and Do Not Track and Global Privacy Control are always honoured
 - Brave, Safari and Firefox are supported first
+
+Where Gears connects, and what the services along the way and the community's servers record (including IP addresses in access logs), is described in full on the [privacy page](https://anoni.net/gears/en/privacy/).
 
 ## Development
 

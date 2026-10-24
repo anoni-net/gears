@@ -567,6 +567,15 @@ ProofMode（Guardian Project 給人權紀錄者的 Android App）拍照時不改
 - `tests/e2e/analytics.spec.ts` 在 Chromium 把 `anoni.net` 指到預覽伺服器（`vite.config.ts` 的 `preview.allowedHosts`），攔下送到 Umami 的請求，確認內容與頁尾的開關。其他測試都在 localhost，`tests/e2e/guard.ts` 擋下任何對外連線
 - 看數字用工作區的 `python3 umami/report.py --website gears events --funnel task file-add tool-done save`
 
+## 隱私說明
+
+`/gears/privacy/`（`src/ui/PrivacyPage.tsx`，頁尾的「隱私說明」）一頁列出 Gears 會連到哪裡、經過的服務與社群的伺服器可得知與保存什麼，以及留在讀者裝置上的資料。工具畫面只寫各自的例外（見下方「介面文字」），讀者要判斷整個工作台能不能用時看這一頁。
+
+- 照實寫，包括還沒做到的部分。2026-10-24 確認 m6 的 nginx 在 anoni.net（Gears 的頁面與從自己網域下載的模型）、form.anoni.net、aa.anoni.net、assets.anoni.net 都記存取紀錄，含 IP（clearnet 的頁面另外記由 IP 推算的國家與城市），每天輪替、保留 52 份，決定維持現狀、照實寫。轉送服務的兩個 location 不記。onion 版沒有讀者的 IP，但一樣記時間、網址與瀏覽器 <!-- docs-style-lint: disable-line -->
+- 建議與回饋（`feedback.privacy`）與裝置量測的送出（`bench.send.privacy`）原本寫「不記錄你的 IP 位址」。表單伺服器本身確實不存 IP，但前面的 nginx 有記，2026-10-24 改成兩者分開寫
+- 改了下面任何一項，三個語系的 `privacy.*` 跟著改，並更新 `privacy.updated` 的日期：CSP 的 `connect-src`（`vite.config.ts`）、使用統計送出的欄位（`src/ui/analytics.ts`）、表單送出的欄位、模型的下載來源（`host`）、m6 的存取紀錄或保存期限、localStorage 或 Cache API 的用法
+- 每一節的項目數寫在 `PrivacyPage.tsx` 的 `SECTIONS`，瀏覽器測試（`tests/e2e/privacy.spec.ts`）確認畫面上沒有露出字串的鍵
+
 ## 建議與回饋
 
 讀者在「建議與回饋」許願新功能、回報問題，或寫下哪裡不好用（`/gears/feedback/`，畫面在 `src/ui/FeedbackPage.tsx`，送出在 `src/feedback.ts`）。原本叫「許願區」，回報問題放在許願底下不自然，2026-10-18 改名，許願新功能改寫在說明裡。入口有兩個：桌面最下面一行的「使用者區」，以及頁尾的「建議與回饋」。使用者區放跟 Gears 本身有關、不是工具的頁面（`src/ui/tool-meta.ts` 的 `USER_PAGES`），目前是範例、建議與回饋、已下載的模型與裝置量測，之後的設定也放這裡。2026-10-19 起桌面改成清單，使用者區從一組卡片縮成一行連結，畫面上不寫「使用者區」這個標題，只留給讀螢幕軟體（`aria-label`）。
@@ -701,7 +710,7 @@ node scripts/fetch-165.mjs   # 下載並整理成 public/data/165.txt
 
 - 能不用 canvas 輸出圖檔就不用。Brave 預設會擾動 canvas 讀出來的像素，QR code 的 PNG 由 `src/core/png-encode.ts` 直接寫位元組。遮蔽與 QR code 讀取必須解碼影像，只能用 canvas：遮蔽輸出後抽查每個框是否夠黑，門檻容許這點雜訊。QR code 讀取對雜訊不敏感
 - 用到 WebAssembly 的功能（逐字稿、遮蔽的自動尋找、HEIC 的解碼器、QR code 以外的條碼）先用 `src/ui/wasm.ts` 的 `wasmAvailable()` 檢查。iPhone、iPad 與 Mac 的鎖定模式會關掉 Safari 的 WebAssembly，不檢查的話讀者要等模型下載完才失敗，收到的還是「記憶體不夠」這類錯誤的原因。檢查時實際編譯一個 8 個位元組的空模組，只看 `typeof WebAssembly` 不夠。逐字稿一打開就說明、開始的按鈕不能按，自動尋找請讀者手動框選，HEIC 說明載入不了解碼器。瀏覽器測試（`tests/e2e/wasm-unavailable.spec.ts`）把頁面的 `WebAssembly` 拿掉來模擬
-- 工具以外的頁面（`src/pages.ts` 的 `pageIds`：授權與來源、裝置量測、建議與回饋、範例、遠端傳送的伺服器說明、已下載的模型）不顯示暫存區，版面改成單欄（`.workbench.solo`），寬度上限跟首頁暫存區旁邊那一欄相同（52rem），靠左對齊頁首的 logo。原本撐滿整個版面，從桌面點進範例時內容突然變寬（2026-10-20 遇到）。頁面一律顯示捲軸（`html { overflow-y: scroll }`）：首頁不長，高一點的螢幕不需要捲動，範例頁需要，捲軸出現時置中的頁首會往左移半個捲軸寬，兩頁來回切換時 logo 左右跳。`scrollbar-gutter: stable` 也能固定位置，但不捲動的頁面會在頁首右邊留一條白色的空位。暫存區的檔案仍在記憶體裡，回到桌面就看得到
+- 工具以外的頁面（`src/pages.ts` 的 `pageIds`：授權與來源、裝置量測、建議與回饋、範例、遠端傳送的伺服器說明、已下載的模型、隱私說明）不顯示暫存區，版面改成單欄（`.workbench.solo`），寬度上限跟首頁暫存區旁邊那一欄相同（52rem），靠左對齊頁首的 logo。原本撐滿整個版面，從桌面點進範例時內容突然變寬（2026-10-20 遇到）。頁面一律顯示捲軸（`html { overflow-y: scroll }`）：首頁不長，高一點的螢幕不需要捲動，範例頁需要，捲軸出現時置中的頁首會往左移半個捲軸寬，兩頁來回切換時 logo 左右跳。`scrollbar-gutter: stable` 也能固定位置，但不捲動的頁面會在頁首右邊留一條白色的空位。暫存區的檔案仍在記憶體裡，回到桌面就看得到
 - 站內導覽不用一般的 `<a href>`。一般的連結會重新載入頁面，暫存區只在記憶體裡，會整個清空。改用 `src/router.ts` 的 `navigate()`，外觀要像連結時用 `button.link`。`navigate()` 換頁之後捲回頂端，不然瀏覽器會沿用原本的捲動位置，手機上從桌面下方點進比較長的頁面時，畫面停在新頁面的最底部（2026-10-18 建議與回饋遇到）
 - 檔案畫面的版面（`.file` 的 grid，2026-10-22 起）：檔名與下載同一列（下載與分享在檔名的右邊，說明是按鈕下的一行小字，窄螢幕上不換行、說明只留給讀螢幕軟體），接著是檔案本身（預覽與處理紀錄包在同一張淡藍灰的卡片，處理紀錄是預覽的說明），最後是找到的資訊與工具。寬螢幕上檔案本身在左欄、找到的資訊與工具在右欄，處理前後右欄都從預覽的高度開始。手機排成一欄，順序一樣，預覽約三成畫面高。沒有預覽的文件排成一欄（寬度上限 40rem）。加密之後給對方的說明放在右欄最上面。打開編輯畫面時，要在圖上操作的（遮蔽、列印追蹤點、PDF 頁面選取、影片的關鍵影格，`WIDE_EDITORS`）用整個寬度，其他的放在右欄，左邊的預覽與處理紀錄留著。中間幾版的問題都是使用回饋：處理紀錄橫跨兩欄放在最上面，份量太重、預覽下方空一大塊。下載原本是一個有「交出去」標題的區塊，處理之後才出現，把右欄或檔名那一列撐高一百多 px。手機上還沒處理時先排找到的資訊、預覽排到工具列之後，處理之後又跳回檔名下面。編輯畫面套用之後捲回檔案的開頭
 - 沒有找到中繼資料不用綠色：暫存區的狀態寫「沒有中繼資料」、用灰色，檔案畫面另外說明只檢查了中繼資料，截圖裡的電話要用遮蔽、文件打開時會不會連線要用開啟前檢查（`findings.scope`）。綠色讀起來像「這個檔案安全」，只留給加密完成

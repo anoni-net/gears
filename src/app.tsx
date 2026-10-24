@@ -22,6 +22,7 @@ import { browserDeclines, optedOut, setOptedOut, track, trackView } from "./ui/a
 import { COMMIT, COMMIT_URL, VERSION } from "./version.ts";
 import { FeedbackPage } from "./ui/FeedbackPage.tsx";
 import { NotFoundPage } from "./ui/NotFoundPage.tsx";
+import { PrivacyPage } from "./ui/PrivacyPage.tsx";
 import { RemoteServerPage } from "./ui/RemoteServerPage.tsx";
 import { SampleLink, SamplesPage } from "./ui/SamplesPage.tsx";
 import { StoragePage } from "./ui/StoragePage.tsx";
@@ -110,30 +111,44 @@ function ClearButton() {
 
 // 頁尾的使用統計說明與開關。選擇存在這個瀏覽器裡。瀏覽器要求不追蹤時什麼都不送，
 // 只說明不記錄，不必提到 Umami
+// 使用統計的說明，後面接隱私說明的連結（記錄什麼、送到哪裡的完整說明在那一頁）。
+// 隱私說明放在 data-testid="analytics" 外面，那一段的文字與按鈕維持原樣
 function AnalyticsChoice() {
   const [off, setOff] = useState(optedOut);
-  if (IS_ONION) return <p data-testid="analytics">{t("app.analytics.onion")}</p>;
   // 英文的句子之間空一格，中文不空
   const sep = getLocale() === "en" ? " " : "";
-  if (browserDeclines())
+  const privacy = (
+    <button type="button" class="link" onClick={() => navigate("privacy")} data-testid="privacy-link">
+      {t("app.footer.privacy")}
+    </button>
+  );
+  if (IS_ONION || browserDeclines())
     return (
-      <p data-testid="analytics">{t("app.analytics.declined")}</p>
+      <p>
+        <span data-testid="analytics">{t(IS_ONION ? "app.analytics.onion" : "app.analytics.declined")}</span>
+        {sep}
+        {privacy}
+      </p>
     );
   return (
-    <p data-testid="analytics">
-      {t("app.analytics.note")}
-      {sep}
-      {off ? `${t("app.analytics.stopped")}${sep}` : null}
-      <button
-        type="button"
-        class="link"
-        onClick={() => {
-          setOptedOut(!off);
-          setOff(!off);
-        }}
-      >
-        {t(off ? "app.analytics.resume" : "app.analytics.stop")}
-      </button>
+    <p>
+      <span data-testid="analytics">
+        {t("app.analytics.note")}
+        {sep}
+        {off ? `${t("app.analytics.stopped")}${sep}` : null}
+        <button
+          type="button"
+          class="link"
+          onClick={() => {
+            setOptedOut(!off);
+            setOff(!off);
+          }}
+        >
+          {t(off ? "app.analytics.resume" : "app.analytics.stop")}
+        </button>
+      </span>
+      {" · "}
+      {privacy}
     </p>
   );
 }
@@ -299,6 +314,8 @@ export function App() {
     view = <FeedbackPage from={from.current} />;
   } else if (route === "remote-server") {
     view = <RemoteServerPage />;
+  } else if (route === "privacy") {
+    view = <PrivacyPage />;
   } else if (route === "storage") {
     view = <StoragePage />;
   } else if (route === "samples") {
@@ -395,18 +412,22 @@ export function App() {
         </div>
         <div class="footer-links">
           <p>
-            <a href={COMMUNITY_URL}>{t("app.footer.community")}</a>
-            {" · "}
-            <a href="https://github.com/anoni-net/gears">{t("app.footer.source")}</a>
-            {" · "}
-            <button type="button" class="link" onClick={() => navigate("feedback")} data-testid="feedback-link">
-              {t("app.footer.feedback")}
-            </button>
-            {" · "}
-            {/* 站內的頁面不用一般的連結，避免重新載入、清空暫存區 */}
-            <button type="button" class="link" onClick={() => navigate("licenses")}>
-              {t("app.footer.licenses")}
-            </button>
+            {/* 連結只留三個，手機上維持一行：隱私說明接在使用統計的說明後面，原始碼放在版本號那一行 */}
+            <a href={COMMUNITY_URL}>{t("app.footer.community")}</a>{" "}
+            {/* 窄螢幕換行時「· 連結」整組換到下一行，分隔點不會留在行尾 */}
+            <span class="footer-item">
+              {"· "}
+              {/* 站內的頁面不用一般的連結，避免重新載入、清空暫存區 */}
+              <button type="button" class="link" onClick={() => navigate("feedback")} data-testid="feedback-link">
+                {t("app.footer.feedback")}
+              </button>
+            </span>{" "}
+            <span class="footer-item">
+              {"· "}
+              <button type="button" class="link" onClick={() => navigate("licenses")}>
+                {t("app.footer.licenses")}
+              </button>
+            </span>
           </p>
           <nav class="languages" aria-label={t("app.language")}>
             {/* 不懂中文的讀者也認得出這裡是切換語言 */}
@@ -425,11 +446,15 @@ export function App() {
             ))}
           </nav>
           {/* 版本號：讀者回報問題時照這裡抄，commit 連到原始碼的那一次修改 */}
-          <p class="version" data-testid="version">
-            {t("app.version", { version: VERSION })}{" "}
-            <a href={COMMIT_URL}>
-              <code>{COMMIT}</code>
-            </a>
+          <p class="version">
+            <span data-testid="version">
+              {t("app.version", { version: VERSION })}{" "}
+              <a href={COMMIT_URL}>
+                <code>{COMMIT}</code>
+              </a>
+            </span>
+            {" · "}
+            <a href="https://github.com/anoni-net/gears">{t("app.footer.source")}</a>
           </p>
         </div>
       </footer>

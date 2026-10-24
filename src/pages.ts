@@ -2,8 +2,8 @@
 // 產生一份 HTML，打開之後由 src/router.ts 判斷。licenses 是授權與來源（src/ui/Licenses.tsx），
 // feedback 是建議與回饋（src/ui/FeedbackPage.tsx），samples 是範例（src/ui/SamplesPage.tsx），
 // remote-server 是遠端傳送的伺服器說明（src/ui/RemoteServerPage.tsx），storage 是已下載的模型
-// （src/ui/StoragePage.tsx）
-export const pageIds = ["licenses", "bench", "feedback", "samples", "remote-server", "storage"];
+// （src/ui/StoragePage.tsx），privacy 是隱私說明（src/ui/PrivacyPage.tsx）
+export const pageIds = ["licenses", "bench", "feedback", "samples", "remote-server", "storage", "privacy"];
 
 // 網址打錯時的頁面（src/router.ts 的 parseRoute 認不得的網址）。沒有自己的網址，建置時另外產生
 // 404.html，nginx 找不到檔案時送出它（tools/nginx-gears.conf），打開之後畫面說明找不到這一頁
