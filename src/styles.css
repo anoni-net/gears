@@ -1004,7 +1004,8 @@ footer p {
   margin: 0.25rem 0;
 }
 
-/* 寬螢幕分左右兩欄：說明在左，連結與語系在右並靠右對齊，寬度照內容，三個連結維持一行 */
+/* 寬螢幕分左右兩欄：說明在左，連結與語系在右並靠右對齊，寬度照內容，三個連結維持一行。
+   隱私說明接在使用統計的說明後面，原始碼放在版本號那一行（src/app.tsx） */
 @media (min-width: 52rem) {
   footer {
     display: grid;
@@ -1026,6 +1027,11 @@ footer p {
   .footer-links .languages {
     justify-content: flex-end;
   }
+}
+
+/* 頁尾連結的「· 連結」不拆開，換行時分隔點跟著連結到下一行的開頭 */
+footer .footer-item {
+  white-space: nowrap;
 }
 
 /* 版本號：比其他文字小一級，commit 用等寬字 */
