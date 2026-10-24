@@ -609,4 +609,25 @@
     <xhtml:link rel="alternate" hreflang="en" href="http://gears.anoninetru5tflukgfaehun7q6khowgmymcff3gtk5oyesqazhmfxtyd.onion/en/storage/" />
     <xhtml:link rel="alternate" hreflang="x-default" href="http://gears.anoninetru5tflukgfaehun7q6khowgmymcff3gtk5oyesqazhmfxtyd.onion/storage/" />
   </url>
+  <url>
+    <loc>http://gears.anoninetru5tflukgfaehun7q6khowgmymcff3gtk5oyesqazhmfxtyd.onion/privacy/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="http://gears.anoninetru5tflukgfaehun7q6khowgmymcff3gtk5oyesqazhmfxtyd.onion/privacy/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="http://gears.anoninetru5tflukgfaehun7q6khowgmymcff3gtk5oyesqazhmfxtyd.onion/zh-cn/privacy/" />
+    <xhtml:link rel="alternate" hreflang="en" href="http://gears.anoninetru5tflukgfaehun7q6khowgmymcff3gtk5oyesqazhmfxtyd.onion/en/privacy/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="http://gears.anoninetru5tflukgfaehun7q6khowgmymcff3gtk5oyesqazhmfxtyd.onion/privacy/" />
+  </url>
+  <url>
+    <loc>http://gears.anoninetru5tflukgfaehun7q6khowgmymcff3gtk5oyesqazhmfxtyd.onion/zh-cn/privacy/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="http://gears.anoninetru5tflukgfaehun7q6khowgmymcff3gtk5oyesqazhmfxtyd.onion/privacy/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="http://gears.anoninetru5tflukgfaehun7q6khowgmymcff3gtk5oyesqazhmfxtyd.onion/zh-cn/privacy/" />
+    <xhtml:link rel="alternate" hreflang="en" href="http://gears.anoninetru5tflukgfaehun7q6khowgmymcff3gtk5oyesqazhmfxtyd.onion/en/privacy/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="http://gears.anoninetru5tflukgfaehun7q6khowgmymcff3gtk5oyesqazhmfxtyd.onion/privacy/" />
+  </url>
+  <url>
+    <loc>http://gears.anoninetru5tflukgfaehun7q6khowgmymcff3gtk5oyesqazhmfxtyd.onion/en/privacy/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="http://gears.anoninetru5tflukgfaehun7q6khowgmymcff3gtk5oyesqazhmfxtyd.onion/privacy/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="http://gears.anoninetru5tflukgfaehun7q6khowgmymcff3gtk5oyesqazhmfxtyd.onion/zh-cn/privacy/" />
+    <xhtml:link rel="alternate" hreflang="en" href="http://gears.anoninetru5tflukgfaehun7q6khowgmymcff3gtk5oyesqazhmfxtyd.onion/en/privacy/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="http://gears.anoninetru5tflukgfaehun7q6khowgmymcff3gtk5oyesqazhmfxtyd.onion/privacy/" />
+  </url>
 </urlset>

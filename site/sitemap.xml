@@ -609,4 +609,25 @@
     <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/storage/" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/storage/" />
   </url>
+  <url>
+    <loc>https://anoni.net/gears/privacy/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/privacy/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/privacy/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/privacy/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/privacy/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/zh-cn/privacy/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/privacy/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/privacy/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/privacy/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/privacy/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/en/privacy/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/privacy/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/privacy/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/privacy/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/privacy/" />
+  </url>
 </urlset>
