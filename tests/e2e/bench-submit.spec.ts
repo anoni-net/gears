@@ -52,7 +52,7 @@ test("裝置量測：選了裝置才能送出，送出的是畫面上的 JSON �
   await page.goto("./bench/");
   await expect(page.getByRole("button", { name: "送出結果" })).toBeDisabled();
   await measureOcr(page);
-  await expect(page.getByTestId("bench-send-privacy")).toContainText("不記錄你的 IP 位址");
+  await expect(page.getByTestId("bench-send-privacy")).toContainText("保留 52 天");
   await expect(page.getByRole("button", { name: "送出結果" })).toBeDisabled();
 
   await page.getByLabel("筆電").check();

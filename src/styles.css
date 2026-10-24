@@ -3462,26 +3462,31 @@ button.link {
   }
 }
 
-/* 遠端傳送的伺服器說明（src/ui/RemoteServerPage.tsx） */
-.remote-server {
+/* 遠端傳送的伺服器說明（src/ui/RemoteServerPage.tsx）與隱私說明（src/ui/PrivacyPage.tsx） */
+.remote-server,
+.privacy {
   max-width: 44rem;
 }
 
-.remote-server h3 {
+.remote-server h3,
+.privacy h3 {
   margin: 1.5rem 0 0.25rem;
   font-size: 1rem;
 }
 
-.remote-server ul {
+.remote-server ul,
+.privacy ul {
   margin: 0.25rem 0;
   padding-left: 1.25rem;
 }
 
-.remote-server li + li {
+.remote-server li + li,
+.privacy li + li {
   margin-top: 0.35rem;
 }
 
-.remote-server .buttons {
+.remote-server .buttons,
+.privacy .buttons {
   margin-top: 1.5rem;
 }
 

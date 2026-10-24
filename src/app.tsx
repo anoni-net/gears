@@ -22,6 +22,7 @@ import { browserDeclines, optedOut, setOptedOut, track, trackView } from "./ui/a
 import { COMMIT, COMMIT_URL, VERSION } from "./version.ts";
 import { FeedbackPage } from "./ui/FeedbackPage.tsx";
 import { NotFoundPage } from "./ui/NotFoundPage.tsx";
+import { PrivacyPage } from "./ui/PrivacyPage.tsx";
 import { RemoteServerPage } from "./ui/RemoteServerPage.tsx";
 import { SampleLink, SamplesPage } from "./ui/SamplesPage.tsx";
 import { StoragePage } from "./ui/StoragePage.tsx";
@@ -299,6 +300,8 @@ export function App() {
     view = <FeedbackPage from={from.current} />;
   } else if (route === "remote-server") {
     view = <RemoteServerPage />;
+  } else if (route === "privacy") {
+    view = <PrivacyPage />;
   } else if (route === "storage") {
     view = <StoragePage />;
   } else if (route === "samples") {
@@ -404,6 +407,10 @@ export function App() {
             </button>
             {" · "}
             {/* 站內的頁面不用一般的連結，避免重新載入、清空暫存區 */}
+            <button type="button" class="link" onClick={() => navigate("privacy")} data-testid="privacy-link">
+              {t("app.footer.privacy")}
+            </button>
+            {" · "}
             <button type="button" class="link" onClick={() => navigate("licenses")}>
               {t("app.footer.licenses")}
             </button>
