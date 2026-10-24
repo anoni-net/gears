@@ -49,6 +49,23 @@ const manualHabits = (text: string) => findHabits(text).filter((h) => !FIXABLE.i
 let workers = 0;
 let runIds = 0;
 
+// 量測中的模型記在 history.state：記憶體不夠時，iOS 的 Safari 會直接重新載入分頁，
+// 什麼都沒留下（2026-10-24 iPhone 15 Pro 下載 Gemma 4 E2B 時遇到）。重新載入之後讀到這個記號，
+// 就把那一次記成一筆失敗的結果，讀者可以照樣送出。做法跟 src/ui/offline.ts 相同，不寫進 localStorage
+const RUNNING = "gears-bench-running";
+type Running = Pick<LlmRun, "model" | "device" | "dtype" | "threads">;
+const markRunning = (run: Running | null) => {
+  const { [RUNNING]: _, ...rest } = (history.state ?? {}) as Record<string, unknown>;
+  history.replaceState(run ? { ...rest, [RUNNING]: run } : rest, "");
+};
+const runningBefore = () => ((history.state ?? {}) as Record<string, Running | undefined>)[RUNNING] ?? null;
+export const RELOADED = "reloaded";
+
+// 手機與平板：WebKit 的 iPadOS 回報成 Macintosh，用觸控點分辨
+const isMobile = () => /iPhone|iPad|Android/i.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+// 超過這個下載量的模型，手機上先提醒可能因為記憶體不夠重新載入
+const MOBILE_LIMIT = 1e9;
+
 interface Props {
   env: BenchEnv | null;
   runs: LlmRun[];
@@ -77,12 +94,20 @@ export function LlmBench({ env, runs, setRuns, busy, setBusy }: Props) {
     setThreads(Math.max(...THREADS.filter((n) => n <= Math.max(1, Math.min(8, env.cores)))));
   }, [env]);
   useEffect(() => () => worker.current?.terminate(), []);
+  useEffect(() => {
+    const before = runningBefore();
+    if (!before) return;
+    markRunning(null);
+    setRuns((all) => [...all, { ...before, id: ++runIds, load: null, texts: [], custom: false, error: RELOADED }]);
+    setStatus(t("bench.reloaded", { model: before.model }));
+  }, []);
 
   const info = models[model];
   const gpuOnly = info.cpu === null;
   const usable = device === "webgpu" ? !!env?.gpu : !gpuOnly;
   // 顯示卡不支援 shader-f16 時改用 q4（src/tools/llm-bench/models.json 的 gpu.dtype 是 q4f16）
   const dtype = (device === "webgpu" ? (env?.gpu?.f16 ? info.gpu.dtype : "q4") : (info.cpu?.dtype ?? "q4")) as BenchRequest["dtype"];
+  const bytes = device === "webgpu" ? info.gpu.bytes : (info.cpu?.bytes ?? 0);
 
   const start = () => {
     const originals = custom.trim() ? [custom.trim()] : SAMPLES;
@@ -93,9 +118,11 @@ export function LlmBench({ env, runs, setRuns, busy, setBusy }: Props) {
     setRunning(true);
     setBusy(true);
     setStatus(t("bench.loading"));
+    markRunning({ model: info.name, device, dtype, threads });
     const w = new Worker(`${workerUrl}?n=${++workers}`, { type: "module" });
     worker.current = w;
     const finish = () => {
+      markRunning(null);
       w.terminate();
       worker.current = null;
       setRunning(false);
@@ -137,6 +164,7 @@ export function LlmBench({ env, runs, setRuns, busy, setBusy }: Props) {
   };
 
   const stop = () => {
+    markRunning(null);
     worker.current?.terminate();
     worker.current = null;
     setRunning(false);
@@ -202,6 +230,11 @@ export function LlmBench({ env, runs, setRuns, busy, setBusy }: Props) {
         </fieldset>
       ) : null}
       {!usable ? <p class="hint">{gpuOnly && device === "wasm" ? t("bench.gpuOnly") : t("bench.noGpu")}</p> : null}
+      {usable && bytes > MOBILE_LIMIT && isMobile() ? (
+        <p class="notice" data-testid="bench-mobile">
+          {t("bench.mobileHint", { gb: gb(bytes) })}
+        </p>
+      ) : null}
 
       <label class="field">
         {t("bench.custom")}
@@ -246,7 +279,17 @@ export function LlmBench({ env, runs, setRuns, busy, setBusy }: Props) {
             </thead>
             <tbody>
               {runs.flatMap((run) =>
-                run.texts.map((x) => (
+                // 沒有改寫出任何一段就失敗的（含頁面重新載入），也列一行
+                !run.texts.length && run.error
+                  ? [
+                      <tr key={run.id}>
+                        <td>
+                          {run.model} · {run.device === "webgpu" ? t("bench.webgpu") : t("bench.cpu")}
+                        </td>
+                        <td colSpan={5}>{run.error === RELOADED ? t("bench.reloadedShort") : t("bench.failed", { message: run.error })}</td>
+                      </tr>,
+                    ]
+                  : run.texts.map((x) => (
                   <tr key={`${run.id}-${x.index}`}>
                     <td>
                       {run.model} · {run.device === "webgpu" ? t("bench.webgpu") : t("bench.cpu")}
