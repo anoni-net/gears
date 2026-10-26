@@ -28,9 +28,9 @@ const ENTRIES: { id: string; url?: string; text?: string }[] = [
 export function Licenses() {
   return (
     <section class="licenses" aria-labelledby="licenses-title">
-      <h2 id="licenses-title" class="tool-title">
+      <h1 id="licenses-title" class="tool-title">
         {t("licenses.title")}
-      </h2>
+      </h1>
       <p class="hint">{t("licenses.intro")}</p>
       <ul data-testid="licenses">
         {ENTRIES.map(({ id, url, text }) => (

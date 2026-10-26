@@ -72,10 +72,10 @@ export function StoragePage() {
 
   return (
     <section class="storage" aria-labelledby="storage-title">
-      <h2 id="storage-title" class="tool-title">
+      <h1 id="storage-title" class="tool-title">
         <IconCircle name={PAGE_META.storage.icon} cat={PAGE_META.storage.cat} />
         {t("storage.title")}
-      </h2>
+      </h1>
       <p>{t("storage.intro")}</p>
       {rows === undefined ? (
         <p class="hint">{t("storage.loading")}</p>

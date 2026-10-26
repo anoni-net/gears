@@ -63,8 +63,8 @@ async function previewLoaded(page: Page) {
 test("桌面有暫存區與三組工具，工具名稱下面寫著情況，沒有檔案時不顯示清空按鈕", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "檔案工作台" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "暫存區" })).toBeVisible();
-  await expect(page.getByRole("button", { name: /照片的拍攝位置/ })).toBeVisible();
-  await expect(page.getByRole("button", { name: /^QR code 產生器 網址、Wi-Fi 密碼、聯絡資料/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /照片的拍攝位置/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /^QR code 產生器 網址、Wi-Fi 密碼、聯絡資料/ })).toBeVisible();
   await expect(page.getByRole("heading", { name: "交出去之前" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "安全地傳送" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "檢查收到的" })).toBeVisible();
@@ -73,10 +73,10 @@ test("桌面有暫存區與三組工具，工具名稱下面寫著情況，沒�
 });
 
 test("桌面的圖示標籤：卡片上的圖示帶著補充說明，最下方的圖示說明列出用到的標籤", async ({ page }) => {
-  // 圖示的名稱是按鈕名稱的一部分，讀螢幕軟體唸得到
-  await expect(page.getByRole("button", { name: /^逐字稿 本機模型：辨識用本機模型/ })).toBeVisible();
-  await expect(page.getByRole("button", { name: /^遮蔽 本機模型：自動尋找人臉與個資時用到/ })).toBeVisible();
-  await expect(page.getByRole("button", { name: /^QR code 與條碼讀取 相機：用相機掃描 QR code 與條碼/ })).toBeVisible();
+  // 圖示的名稱是連結名稱的一部分，讀螢幕軟體唸得到
+  await expect(page.getByRole("link", { name: /^逐字稿 本機模型：辨識用本機模型/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /^遮蔽 本機模型：自動尋找人臉與個資時用到/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /^QR code 與條碼讀取 相機：用相機掃描 QR code 與條碼/ })).toBeVisible();
   await expect(page.getByRole("img", { name: "相機：用相機掃描對方螢幕上的 QR code" })).toHaveAttribute("title", "相機：用相機掃描對方螢幕上的 QR code");
   await expect(page.getByRole("img", { name: "相機：視訊通話時用相機與麥克風" })).toBeVisible();
   await expect(page.locator(".tool-rows .tool-tag")).toHaveCount(5);
@@ -110,8 +110,8 @@ test("桌面的圖示標籤：卡片上的圖示帶著補充說明，最下方�
   );
   expect(groupColors).toEqual([1, 1, 1]);
   // 範例與建議與回饋在最下面同一區
-  await expect(page.locator(".desk-more").getByRole("button", { name: "範例" })).toBeVisible();
-  await expect(page.locator(".desk-more").getByRole("button", { name: "建議與回饋" })).toBeVisible();
+  await expect(page.locator(".desk-more").getByRole("link", { name: "範例" })).toBeVisible();
+  await expect(page.locator(".desk-more").getByRole("link", { name: "建議與回饋" })).toBeVisible();
 });
 
 test("JPEG：找出位置、清除、下載，旋轉方向保留", async ({ page }) => {
@@ -167,7 +167,7 @@ test("處理紀錄列出每一步，復原之後再清空暫存區", async ({ pa
   await page.getByRole("button", { name: "清空暫存區" }).click();
   await expect(page.locator(".tray .item")).toHaveCount(1);
   await page.getByRole("button", { name: "再按一次清空" }).click();
-  await expect(page.getByRole("button", { name: /照片的拍攝位置/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /照片的拍攝位置/ })).toBeVisible();
   await expect(page.locator(".tray .item")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "選擇檔案" })).toBeVisible();
 });
@@ -453,7 +453,7 @@ test("首頁與範例頁來回切換，頁首的 logo 不會左右移動", async
   await page.goto("./");
   const logo = page.locator(".site-header__logo");
   const home = (await logo.boundingBox())!.x;
-  await page.locator(".desk-more").getByRole("button", { name: "範例" }).click();
+  await page.locator(".desk-more").getByRole("link", { name: "範例" }).click();
   await expect(page.getByRole("heading", { name: "範例", exact: true })).toBeVisible();
   expect((await logo.boundingBox())!.x).toBe(home);
   expect(await page.evaluate(() => getComputedStyle(document.documentElement).overflowY)).toBe("scroll");

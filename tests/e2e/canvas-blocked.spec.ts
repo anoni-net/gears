@@ -61,7 +61,7 @@ test("讀不到 canvas 時說明要在網址列允許，允許之後再讀一次
 
 test("遮蔽：讀不到 canvas 時不產生雜訊圖，框留著，允許之後再套用", async ({ page }) => {
   await page.goto("./");
-  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.getByRole("button", { name: /截圖上的名字與電話/ }).click()]);
+  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.getByRole("link", { name: /截圖上的名字與電話/ }).click()]);
   await chooser.setFiles({ name: "chat.png", mimeType: "image/png", buffer: await image(page) });
   const canvas = page.getByTestId("redact-canvas");
   await expect(canvas).toBeVisible();

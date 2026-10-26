@@ -469,8 +469,11 @@ main {
   padding: 1.25rem 0;
 }
 
-h2 {
+/* 工具與頁面的標題是 <h1>（#164），外觀維持原本 <h2> 的大小與邊距，頁首的網站名稱在這些頁面是 <p> */
+h2,
+h1.tool-title {
   font-size: 1.15rem;
+  margin-block: 0.83em;
 }
 
 h3 {
@@ -1141,7 +1144,8 @@ button.pick-files .icon {
    手機要捲 8 個畫面，改成清單，列與列之間只留細線 */
 
 .desktop h2:first-child,
-.view > section > h2:first-child {
+.view > section > h2:first-child,
+.view > section > h1:first-child {
   margin-top: 0;
 }
 
@@ -1191,7 +1195,7 @@ button.pick-files .icon {
   text-align: left;
 }
 
-.tool-row:hover:not(:disabled) {
+.tool-row:hover {
   background: var(--fill);
 }
 
@@ -1238,7 +1242,7 @@ button.pick-files .icon {
   gap: 0.5rem 1.5rem;
 }
 
-.desk-user button.link {
+.desk-user a {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
@@ -3568,4 +3572,21 @@ button.link {
 .verify-proof ul {
   margin: 0 0 0.4rem;
   padding-left: 1.1rem;
+}
+
+/* 建置時寫進 HTML 的說明（src/static-content.ts），JavaScript 載入之前與不執行 JavaScript 時看得到 */
+.static-page {
+  padding-block: 1.25rem;
+}
+
+.static-page h1 {
+  font-size: 1.5rem;
+}
+
+/* 關掉 JavaScript 時接在說明下面，左右留白跟說明對齊 */
+body > noscript {
+  display: block;
+  max-width: 72rem;
+  margin: 0 auto 1.25rem;
+  padding: 0 1rem;
 }

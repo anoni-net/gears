@@ -36,9 +36,9 @@ export function BenchPage() {
 
   return (
     <section class="bench" aria-labelledby="bench-title">
-      <h2 id="bench-title" class="tool-title">
+      <h1 id="bench-title" class="tool-title">
         {t("bench.title")}
-      </h2>
+      </h1>
       <p class="hint">{t("bench.pageIntro")}</p>
       <p class="hint" data-testid="bench-env">
         {env

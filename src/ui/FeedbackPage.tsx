@@ -40,10 +40,10 @@ export function FeedbackPage({ from }: { from: string }) {
   };
 
   const title = (
-    <h2 id="feedback-title" class="tool-title">
+    <h1 id="feedback-title" class="tool-title">
       <IconCircle name={PAGE_META.feedback.icon} cat={PAGE_META.feedback.cat} />
       {t("feedback.title")}
-    </h2>
+    </h1>
   );
 
   if (status === "sent") {

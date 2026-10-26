@@ -14,7 +14,7 @@ test("從任務選照片與 PDF：雜湊值、時間線、裝置、人名、位�
   const { bytes, firstEnd } = await incrementalPdf();
   const pdf = Buffer.from(bytes);
   await page.goto("./");
-  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.getByRole("button", { name: /收到的照片與文件/ }).click()]);
+  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.getByRole("link", { name: /收到的照片與文件/ }).click()]);
   await chooser.setFiles([
     { name: "photo.jpg", mimeType: "image/jpeg", buffer: photo },
     { name: "report.pdf", mimeType: "application/pdf", buffer: pdf },

@@ -97,7 +97,7 @@ CI（`.github/workflows/ci.yml`）依瀏覽器拆成四台機器同時執行：C
 
 ## 桌面
 
-桌面依讀者的目的分成三組，每個工具一列：圖示、名稱與圖示標籤，名稱下面一行寫讀者會遇到的情況（`desk.when.<工具 id>`，例如清除中繼資料寫「照片的拍攝位置、文件的作者」），工具的完整說明放在 `title`。寬一點的畫面每組排成多欄的清單。最下面一行是範例、建議與回饋、已下載的模型與裝置量測，接著是圖示說明（`src/ui/Desktop.tsx`）。
+桌面依讀者的目的分成三組，每個工具一列：圖示、名稱與圖示標籤，名稱下面一行寫讀者會遇到的情況（`desk.when.<工具 id>`，例如清除中繼資料寫「照片的拍攝位置、文件的作者」），工具的完整說明放在 `title`。每一列是連到工具網址的連結（見「介面上的限制」的站內導覽）。寬一點的畫面每組排成多欄的清單。最下面一行是範例、建議與回饋、已下載的模型與裝置量測，接著是圖示說明（`src/ui/Desktop.tsx`）。
 
 2026-10-19 以前，三組工具上面另有 12 張「常見的情況」卡片，其中 11 張跟下面的工具卡打開同一個工具，說明也幾乎一樣，首頁有 36 張卡片，桌面要捲 3.2 個畫面、手機 8.3 個畫面。改成清單之後是 1.3 與 3.6 個畫面（Chromium，1440 寬與 iPhone 15），手機的第一個畫面就看得到第一組。情況的說法改寫進每個工具的那一列，點下去照 `src/ui/tasks.ts` 那一筆打開：處理檔案的工具直接請讀者選檔案，使用統計記成 `task`，跟原本的情況卡相同。同一個工具的第二個情況（文件的作者）與帶預設值的 Wi-Fi 拿掉，`task` 事件跨 2026-10-19 不能逐項比較。
 
@@ -660,7 +660,7 @@ Tor Browser 15.0（Firefox 140 ESR）一般安全等級的實測結果：
 - 沒有 service worker，不能離線使用，畫面上也不會出現可以離線使用的提示
 - 沒有 cross-origin isolation，逐字稿只能用 1 個核心（實測 15 秒的華語錄音，base 模型 7.5 秒轉完）。沒有 WebGPU 與 `AudioDecoder`，MP4、M4A 整檔解碼（上限 256 MB）
 - 不能用相機，QR code 讀取改選照片
-- 「較安全」等級關掉 JIT，WebAssembly 照樣可以用，只是比較慢。「最安全」等級關掉 JavaScript，只看得到 `noscript` 的說明
+- 「較安全」等級關掉 JIT，WebAssembly 照樣可以用，只是比較慢。「最安全」等級關掉 JavaScript，看得到建置時寫進 HTML 的說明（見「搜尋引擎與分享預覽」）與 `noscript` 的一行
 
 在本機用無頭的 Tor Browser 測試：用 `TOR_PROVIDER=none` 啟動、不連 Tor，profile 的 `user.js` 讓本機網址不走代理（`network.proxy.allow_hijacking_localhost` 與 `no_proxies_on`），加上 `--marionette -remote-allow-system-access` 就能用 Marionette 操作頁面與瀏覽器本身。Tor Browser 一直是私密瀏覽、又有 first-party 隔離，允許 canvas 的權限要用分頁的 `contentPrincipal` 加（`Services.perms.addFromPrincipal(p, "canvas", ALLOW_ACTION)`），不能預先寫進 profile。Marionette 與 WebDriver BiDi 不能同時開 session，安全等級改過之後會留在 profile（NoScript 自己也存了一份），換回來要重建 profile。
 
@@ -684,7 +684,7 @@ node scripts/fetch-165.mjs   # 下載並整理成 public/data/165.txt
 
 ## 網址
 
-每個工具有自己的網址，例如 `/gears/qrcode/`，簡體中文與英文在前面加上 `zh-cn/`、`en/`（`/gears/en/qrcode/`）。建置時 `vite.config.ts` 替每個語系、每個工具產生一份 HTML，`lang`、標題、描述與 `noscript` 取自該語系的字串，並列出其他語系的 `hreflang`。內容跟首頁相同，打開之後由 `src/router.ts` 判斷語系與要顯示哪個工具。主機不需要轉址設定。
+每個工具有自己的網址，例如 `/gears/qrcode/`，簡體中文與英文在前面加上 `zh-cn/`、`en/`（`/gears/en/qrcode/`）。建置時 `vite.config.ts` 替每個語系、每個工具產生一份 HTML，`lang`、標題、描述與 `noscript` 取自該語系的字串，並列出其他語系的 `hreflang`。程式跟首頁相同，打開之後由 `src/router.ts` 判斷語系與要顯示哪個工具，HTML 裡另外寫著這一頁的說明（見下方「搜尋引擎與分享預覽」）。主機不需要轉址設定。
 
 認不得的網址（`src/pages.ts` 的 `NOT_FOUND`）顯示「找不到這一頁」與回到桌面的按鈕（`src/ui/NotFoundPage.tsx`），不當成桌面，讀者才知道網址打錯了。建置時另外產生 `404.html`（不寫 canonical 與分享卡片，帶 `noindex`），nginx 找不到檔案時送出它，狀態碼仍是 404（`tools/nginx-gears.conf` 的 `error_page`）。原本落到 nginx 預設的英文 404 頁。
 
@@ -696,7 +696,19 @@ node scripts/fetch-165.mjs   # 下載並整理成 public/data/165.txt
 - Open Graph 與 Twitter 的卡片：標題與描述跟 `meta.<id>.title`、`meta.<id>.description` 相同，圖片每個語系一張
 - 首頁另外有 WebApplication 的結構化資料（`application/ld+json`，瀏覽器不執行，CSP 不必放寬）
 
-建置時也產生 `sitemap.xml`，列出每個語系的每一頁與彼此的 `hreflang`。社群首頁的 `robots.txt`（`anoni-net/www` 的 `templates/robots.txt.j2`）指到這裡。
+建置時也產生 `sitemap.xml`，列出每個語系的每一頁與彼此的 `hreflang`。社群首頁的 `robots.txt`（`anoni-net/www` 的 `templates/robots.txt.j2`）指到這裡。sitemap 不寫 `lastmod`：每一頁的程式都一樣，日期只能用建置的 commit，一天部署好幾次，每一頁的日期一直跟著變，搜尋引擎會判斷它不可信。
+
+工作台的畫面全靠 JavaScript 畫出來。2026-10-26 以前每一頁的 HTML 只有 `noscript` 的一行，Google 執行 JavaScript 之後看得到內容，Bing 與 DuckDuckGo 的處理不完整，AI 的爬蟲完全不執行 JavaScript，它們看到的 90 頁內文都一樣（#164）。現在 `localized` 另外把 `src/static-content.ts` 的 `staticContent` 寫進 `<div id="app">`：
+
+- 桌面：網站名稱、首頁描述、三組工具（每個工具連到自己的網址，下面一行是 `desk.when.*`），以及工具以外的頁面，實驗頁除外
+- 工具頁：工具名稱（`<h1>`）、說明、處理檔案的工具另有三步的使用方式、同一組的其他工具、回到桌面
+- 工具以外的頁面：標題、`meta.<id>.description`、回到桌面。找不到的頁面（`404.html`）不寫
+
+打開之後 `src/main.tsx` 清空 `#app`、換成工作台，JavaScript 載入之前與 Tor Browser 最安全的等級看得到這一份。只用字串組成，網址跟著語系與建置目標（onion 版在根目錄），單元測試在 `tests/unit/static-content.spec.ts`，瀏覽器測試在 `tests/e2e/seo.spec.ts`。
+
+每一頁只有一個 `<h1>`：工具與工具以外的頁面是自己的標題（`.tool-title`，外觀維持原本 `<h2>` 的大小），頁首的網站名稱改用 `<p>`。桌面與檔案畫面沒有自己的標題，`<h1>` 是頁首的網站名稱（`src/app.tsx` 的 `titled`）。找不到的頁面不收錄，也用網站名稱，讀者看得出還在 Gears 裡。
+
+英文的 `meta.<id>.description` 不超過 160 個字元，搜尋結果的摘要超過就截斷，`tests/unit/static-content.spec.ts` 會檢查。
 
 分享卡片（`og:image`）由 `node scripts/make-og.mjs <輸出目錄>` 產生，不進 repo，上傳到 m6 的 `/srv/images-anoni-net/gears/og/`，網址填進 `src/og-images.json`。檔名帶內容雜湊，改了卡片上的文字或樣式就重新產生一次。
 
@@ -711,7 +723,7 @@ node scripts/fetch-165.mjs   # 下載並整理成 public/data/165.txt
 - 能不用 canvas 輸出圖檔就不用。Brave 預設會擾動 canvas 讀出來的像素，QR code 的 PNG 由 `src/core/png-encode.ts` 直接寫位元組。遮蔽與 QR code 讀取必須解碼影像，只能用 canvas：遮蔽輸出後抽查每個框是否夠黑，門檻容許這點雜訊。QR code 讀取對雜訊不敏感
 - 用到 WebAssembly 的功能（逐字稿、遮蔽的自動尋找、HEIC 的解碼器、QR code 以外的條碼）先用 `src/ui/wasm.ts` 的 `wasmAvailable()` 檢查。iPhone、iPad 與 Mac 的鎖定模式會關掉 Safari 的 WebAssembly，不檢查的話讀者要等模型下載完才失敗，收到的還是「記憶體不夠」這類錯誤的原因。檢查時實際編譯一個 8 個位元組的空模組，只看 `typeof WebAssembly` 不夠。逐字稿一打開就說明、開始的按鈕不能按，自動尋找請讀者手動框選，HEIC 說明載入不了解碼器。瀏覽器測試（`tests/e2e/wasm-unavailable.spec.ts`）把頁面的 `WebAssembly` 拿掉來模擬
 - 工具以外的頁面（`src/pages.ts` 的 `pageIds`：授權與來源、裝置量測、建議與回饋、範例、遠端傳送的伺服器說明、已下載的模型、隱私說明）不顯示暫存區，版面改成單欄（`.workbench.solo`），寬度上限跟首頁暫存區旁邊那一欄相同（52rem），靠左對齊頁首的 logo。原本撐滿整個版面，從桌面點進範例時內容突然變寬（2026-10-20 遇到）。頁面一律顯示捲軸（`html { overflow-y: scroll }`）：首頁不長，高一點的螢幕不需要捲動，範例頁需要，捲軸出現時置中的頁首會往左移半個捲軸寬，兩頁來回切換時 logo 左右跳。`scrollbar-gutter: stable` 也能固定位置，但不捲動的頁面會在頁首右邊留一條白色的空位。暫存區的檔案仍在記憶體裡，回到桌面就看得到
-- 站內導覽不用一般的 `<a href>`。一般的連結會重新載入頁面，暫存區只在記憶體裡，會整個清空。改用 `src/router.ts` 的 `navigate()`，外觀要像連結時用 `button.link`。`navigate()` 換頁之後捲回頂端，不然瀏覽器會沿用原本的捲動位置，手機上從桌面下方點進比較長的頁面時，畫面停在新頁面的最底部（2026-10-18 建議與回饋遇到）
+- 站內導覽不能讓瀏覽器照一般的連結換頁。一般的連結會重新載入頁面，暫存區只在記憶體裡，會整個清空。換頁用 `src/router.ts` 的 `navigate()`。連到另一頁的入口（桌面的工具與使用者區、頁尾的隱私說明、建議與回饋與授權）寫成 `<a href={routeUrl(id)}>`，點擊交給 `onRouteClick`：一般的點擊不重新載入、改用 `navigate()`，按著 Ctrl、⌘、Shift 或用中鍵時照瀏覽器原本的做法另開分頁。2026-10-26 以前這些入口都是按鈕，搜尋引擎從桌面找不到任何工具頁，讀者也不能另開分頁（#164）。不換頁的動作仍然用按鈕，外觀要像連結時用 `button.link`。`navigate()` 換頁之後捲回頂端，不然瀏覽器會沿用原本的捲動位置，手機上從桌面下方點進比較長的頁面時，畫面停在新頁面的最底部（2026-10-18 建議與回饋遇到）
 - 檔案畫面的版面（`.file` 的 grid，2026-10-22 起）：檔名與下載同一列（下載與分享在檔名的右邊，說明是按鈕下的一行小字，窄螢幕上不換行、說明只留給讀螢幕軟體），接著是檔案本身（預覽與處理紀錄包在同一張淡藍灰的卡片，處理紀錄是預覽的說明），最後是找到的資訊與工具。寬螢幕上檔案本身在左欄、找到的資訊與工具在右欄，處理前後右欄都從預覽的高度開始。手機排成一欄，順序一樣，預覽約三成畫面高。沒有預覽的文件排成一欄（寬度上限 40rem）。加密之後給對方的說明放在右欄最上面。打開編輯畫面時，要在圖上操作的（遮蔽、列印追蹤點、PDF 頁面選取、影片的關鍵影格，`WIDE_EDITORS`）用整個寬度，其他的放在右欄，左邊的預覽與處理紀錄留著。中間幾版的問題都是使用回饋：處理紀錄橫跨兩欄放在最上面，份量太重、預覽下方空一大塊。下載原本是一個有「交出去」標題的區塊，處理之後才出現，把右欄或檔名那一列撐高一百多 px。手機上還沒處理時先排找到的資訊、預覽排到工具列之後，處理之後又跳回檔名下面。編輯畫面套用之後捲回檔案的開頭
 - 沒有找到中繼資料不用綠色：暫存區的狀態寫「沒有中繼資料」、用灰色，檔案畫面另外說明只檢查了中繼資料，截圖裡的電話要用遮蔽、文件打開時會不會連線要用開啟前檢查（`findings.scope`）。綠色讀起來像「這個檔案安全」，只留給加密完成
 - 解碼圖片一律用 `src/ui/image-decode.ts` 的 `decodeImage()`，不要直接呼叫 `createImageBitmap()`，HEIC 才會在不支援的瀏覽器上改用 libheif

@@ -5,7 +5,7 @@ import { downloadFrom, expect, test } from "./guard.ts";
 
 test("從任務選有巨集的 Word：列出打開時會連到的位址、網路芳鄰、巨集與連結", async ({ page }) => {
   await page.goto("./");
-  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.getByRole("button", { name: /來路不明的文件/ }).click()]);
+  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.getByRole("link", { name: /來路不明的文件/ }).click()]);
   await chooser.setFiles({ name: "invite.docm", mimeType: "application/octet-stream", buffer: Buffer.from(await trackedDocx()) });
 
   const verdict = page.getByTestId("doc-check-verdict");

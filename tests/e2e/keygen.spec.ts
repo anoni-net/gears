@@ -4,7 +4,7 @@ import { downloadFrom, expect, test } from "./guard.ts";
 
 test("產生金鑰組：私鑰預設遮住，下載的金鑰檔解得開用公鑰加密的檔案", async ({ page }) => {
   await page.goto("./");
-  await page.getByRole("button", { name: /age 金鑰產生器/ }).click();
+  await page.getByRole("link", { name: /age 金鑰產生器/ }).click();
   await expect(page).toHaveURL(/\/gears\/age-keygen\/$/);
   await page.getByRole("button", { name: "產生一組金鑰" }).click();
 
@@ -50,7 +50,7 @@ test("到其他工具再回來，金鑰還在", async ({ page }) => {
   await page.getByRole("button", { name: "產生一組金鑰" }).click();
   const recipient = (await page.getByTestId("recipient").textContent())!;
   await page.getByRole("button", { name: "回到桌面" }).click();
-  await page.getByRole("button", { name: /QR code 產生器/ }).click();
+  await page.getByRole("link", { name: /QR code 產生器/ }).click();
   await page.goBack();
   await page.goBack();
   await expect(page).toHaveURL(/\/gears\/age-keygen\/$/);

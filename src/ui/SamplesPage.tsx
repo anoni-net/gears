@@ -86,10 +86,10 @@ export function SamplesPage({ focus, onOpenFile, onOpenQr }: Props) {
 
   return (
     <section class="samples" aria-labelledby="samples-title">
-      <h2 id="samples-title" class="tool-title">
+      <h1 id="samples-title" class="tool-title">
         <IconCircle name={PAGE_META.samples.icon} cat={PAGE_META.samples.cat} />
         {t("samples.title")}
-      </h2>
+      </h1>
       <p>{t("samples.intro")}</p>
       {failed ? (
         <p class="error" role="alert">

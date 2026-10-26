@@ -9,7 +9,7 @@ test.beforeEach(async ({ page }) => {
 
 test("出現在 165 清單的網址標成危險", async ({ page }) => {
   await page.goto("./");
-  await page.getByRole("button", { name: /網址檢查/ }).click();
+  await page.getByRole("link", { name: /網址檢查/ }).click();
   await expect(page).toHaveURL(/\/gears\/url-check\/$/);
   await page.getByLabel("要檢查的網址").fill("https://www.scam-shop.cc/pay?utm_source=sms");
   await expect(page.getByRole("alert")).toContainText("出現在 165 公布的停止解析涉詐網站清單（scam-shop.cc，資料到 2026-09）");

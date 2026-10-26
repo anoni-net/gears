@@ -34,6 +34,14 @@ export function navigate(id: string) {
   window.scrollTo(0, 0);
 }
 
+// 站內連結的點擊（#164）：連結寫真的網址（routeUrl），搜尋引擎找得到每個工具，讀者也能用中鍵或
+// Ctrl、⌘ 另開分頁。一般的點擊不重新載入頁面，改由 go 換頁（navigate 或另外的動作），暫存區才不會清空
+export function onRouteClick(e: MouseEvent, go: () => void) {
+  if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+  e.preventDefault();
+  go();
+}
+
 // 換語系：留在同一個工具，網址換成那個語系的，不重新載入，暫存區的檔案留著
 export function switchLocale(locale: Locale) {
   if (locale === getLocale()) return;

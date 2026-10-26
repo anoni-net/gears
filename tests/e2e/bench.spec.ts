@@ -3,7 +3,7 @@ import { expect, test } from "./guard.ts";
 
 test("裝置量測：實驗頁說明下載來源，不進 sitemap，搜尋引擎不收錄", async ({ page, request }) => {
   await page.goto("./bench/");
-  await expect(page.getByRole("heading", { name: "裝置量測", level: 2 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "裝置量測", level: 1 })).toBeVisible();
   await expect(page.getByRole("heading", { name: "文字辨識" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "語言模型" })).toBeVisible();
   await expect(page.getByTestId("bench-remote")).toContainText("Hugging Face 看得到你的 IP 位址");
@@ -15,10 +15,10 @@ test("裝置量測：實驗頁說明下載來源，不進 sitemap，搜尋引擎
   await expect(page.getByRole("button", { name: "複製結果" })).toBeDisabled();
   // 入口在桌面最下面的使用者區，頁尾沒有
   await page.goto("./");
-  await expect(page.locator("footer").getByRole("button", { name: "裝置量測（實驗）" })).toHaveCount(0);
-  await page.getByRole("list", { name: "使用者區" }).getByRole("button", { name: "裝置量測（實驗）" }).click();
+  await expect(page.locator("footer").getByRole("link", { name: "裝置量測（實驗）" })).toHaveCount(0);
+  await page.getByRole("list", { name: "使用者區" }).getByRole("link", { name: "裝置量測（實驗）" }).click();
   await expect(page).toHaveURL(/\/gears\/bench\/$/);
-  await expect(page.getByRole("heading", { name: "裝置量測", level: 2 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "裝置量測", level: 1 })).toBeVisible();
 
   const html = await (await request.get("./bench/")).text();
   expect(html).toContain('<meta name="robots" content="noindex" />');
