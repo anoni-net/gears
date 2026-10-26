@@ -1,5 +1,5 @@
 import { t, tDynamic } from "../i18n/index.ts";
-import { navigate } from "../router.ts";
+import { navigate, onRouteClick, routeUrl } from "../router.ts";
 import { Icon, IconCircle } from "./Icon.tsx";
 import { PAGE_META, TOOL_GROUPS, TOOL_META, USER_PAGES } from "./tool-meta.ts";
 import { TAGS, TAG_ORDER, type TagId } from "./tool-tags.ts";
@@ -34,11 +34,17 @@ function ToolTags({ id }: { id: string }) {
 // 沒有的就打開工具頁
 const taskOf = (id: string) => TASKS.find((task) => task.tool === id);
 
+// 每一列是連到工具網址的連結（#164），原本是按鈕，搜尋引擎從桌面找不到任何工具頁
 function ToolRow({ id, onTask }: { id: string; onTask(task: Task): void }) {
   const task = taskOf(id);
   return (
     <li>
-      <button type="button" class="tool-row" title={tDynamic(`tool.${id}.desc`)} onClick={() => (task ? onTask(task) : navigate(id))}>
+      <a
+        class="button tool-row"
+        href={routeUrl(id)}
+        title={tDynamic(`tool.${id}.desc`)}
+        onClick={(e) => onRouteClick(e, () => (task ? onTask(task) : navigate(id)))}
+      >
         <IconCircle name={TOOL_META[id]!.icon} cat={TOOL_META[id]!.cat} />
         <span class="tool-row-text">
           <strong>
@@ -47,7 +53,7 @@ function ToolRow({ id, onTask }: { id: string; onTask(task: Task): void }) {
           </strong>
           <span class="tool-row-when">{tDynamic(`desk.when.${id}`)}</span>
         </span>
-      </button>
+      </a>
     </li>
   );
 }
@@ -77,10 +83,10 @@ export function Desktop({ onTask }: Props) {
         <ul class="desk-user" aria-label={t("desk.group.user")}>
           {USER_PAGES.map((id) => (
             <li key={id}>
-              <button type="button" class="link" onClick={() => navigate(id)}>
+              <a href={routeUrl(id)} onClick={(e) => onRouteClick(e, () => navigate(id))}>
                 <Icon name={PAGE_META[id].icon} />
                 {tDynamic(PAGE_META[id].label ?? `${id}.title`)}
-              </button>
+              </a>
             </li>
           ))}
         </ul>

@@ -4,7 +4,7 @@ import { downloadFrom, expect, test } from "./guard.ts";
 
 test("從桌面打開 QR code 產生器，中文內容下載成 PNG 與 SVG", async ({ page }) => {
   await page.goto("./");
-  await page.getByRole("button", { name: /QR code 產生器/ }).click();
+  await page.getByRole("link", { name: /QR code 產生器/ }).click();
   await expect(page).toHaveURL(/\/gears\/qrcode\/$/);
   await expect(page).toHaveTitle("QR code 產生器 | Gears 檔案工作台");
   await expect(page.getByText("輸入內容之後，QR code 會出現在這裡。")).toBeVisible();
@@ -24,7 +24,7 @@ test("從桌面打開 QR code 產生器，中文內容下載成 PNG 與 SVG", as
 
 test("Wi-Fi 的 QR code：產生的檔案放進暫存區，接著可以下載", async ({ page }) => {
   await page.goto("./");
-  await page.getByRole("button", { name: /^QR code 產生器/ }).click();
+  await page.getByRole("link", { name: /^QR code 產生器/ }).click();
   await expect(page).toHaveURL(/\/gears\/qrcode\/$/);
   await page.getByLabel("Wi-Fi").check();
 
@@ -117,7 +117,7 @@ test("每個工具都有自己的網址，可以直接打開，也可以用上�
   await expect(page).toHaveURL(/\/gears\/$/);
   await expect(page).toHaveTitle("anoni.net Gears 檔案工作台");
 
-  await page.getByRole("button", { name: /QR code 產生器/ }).click();
+  await page.getByRole("link", { name: /QR code 產生器/ }).click();
   await expect(page).toHaveURL(/\/gears\/qrcode\/$/);
   await page.goBack();
   await expect(page).toHaveURL(/\/gears\/$/);

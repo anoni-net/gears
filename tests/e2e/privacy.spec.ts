@@ -5,7 +5,7 @@ test("隱私說明：從頁尾打開，每一節都有內容，進 sitemap", asy
   await page.getByTestId("privacy-link").click();
   await expect(page).toHaveURL(/\/gears\/privacy\/$/);
   const privacy = page.getByTestId("privacy");
-  await expect(privacy.getByRole("heading", { name: "隱私說明", level: 2 })).toBeVisible();
+  await expect(privacy.getByRole("heading", { name: "隱私說明", level: 1 })).toBeVisible();
   for (const name of ["在瀏覽器裡處理的部分", "打開 Gears 時", "onion 版", "使用統計", "建議與回饋、裝置量測的結果", "下載模型", "遠端傳送", "留在你裝置上的資料", "問題回報"])
     await expect(privacy.getByRole("heading", { name, level: 3 })).toBeVisible();
   // 存取紀錄照實寫出來

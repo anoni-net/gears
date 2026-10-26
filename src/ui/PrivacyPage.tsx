@@ -23,9 +23,9 @@ const SECTIONS = [
 export function PrivacyPage() {
   return (
     <section class="privacy" aria-labelledby="privacy-title" data-testid="privacy">
-      <h2 id="privacy-title" class="tool-title">
+      <h1 id="privacy-title" class="tool-title">
         {t("privacy.title")}
-      </h2>
+      </h1>
       <p>{t("privacy.intro")}</p>
       {SECTIONS.map(([id, count]) => (
         <section key={id} aria-labelledby={`privacy-${id}`}>

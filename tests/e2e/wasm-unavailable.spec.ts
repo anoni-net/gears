@@ -37,7 +37,7 @@ test("遮蔽：自動尋找說明原因，請讀者手動框選", async ({ page 
     const b = await new Promise<Blob>((r) => c.toBlob((x) => r(x!), "image/png"));
     return Array.from(new Uint8Array(await b.arrayBuffer()));
   });
-  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.getByRole("button", { name: /截圖上的名字與電話/ }).click()]);
+  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.getByRole("link", { name: /截圖上的名字與電話/ }).click()]);
   await chooser.setFiles({ name: "chat.png", mimeType: "image/png", buffer: Buffer.from(png) });
   await expect(page.getByTestId("redact-canvas")).toBeVisible();
   await page.getByRole("button", { name: "找人臉" }).click();

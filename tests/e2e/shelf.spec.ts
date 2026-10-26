@@ -33,7 +33,7 @@ test("從桌面加入照片：交出去之前在前面，建議附上理由，�
 
 test("從「收到的照片與文件」加入：檢查收到的在前面，建議查證，不建議清除", async ({ page }) => {
   await page.goto("./");
-  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.getByRole("button", { name: /收到的照片與文件/ }).click()]);
+  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.getByRole("link", { name: /收到的照片與文件/ }).click()]);
   await chooser.setFiles({ name: "IMG_0001.jpg", mimeType: "image/jpeg", buffer: await photo(page) });
   await page.locator(".tray .item", { hasText: "IMG_0001.jpg" }).click();
   await expect(groupTitles(page).first()).toHaveText("檢查收到的");

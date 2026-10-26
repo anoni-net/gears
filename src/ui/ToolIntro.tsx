@@ -11,10 +11,10 @@ export const HOWTO_STEPS = [1, 2, 3] as const;
 export function ToolIntro({ id, onPick, onSamples }: { id: string; onPick(): void; onSamples(tool: string): void }) {
   return (
     <section class="intro" aria-labelledby="intro-title">
-      <h2 id="intro-title" class="tool-title">
+      <h1 id="intro-title" class="tool-title">
         <IconCircle name={TOOL_META[id]!.icon} cat={TOOL_META[id]!.cat} />
         {tDynamic(`tool.${id}`)}
-      </h2>
+      </h1>
       <p>{tDynamic(`tool.${id}.desc`)}</p>
       <h3 class="intro-howto">{t("intro.howto")}</h3>
       <ol class="intro-steps">

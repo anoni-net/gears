@@ -15,6 +15,7 @@ import ogImages from "./src/og-images.json" with { type: "json" };
 import { ONION_HOST } from "./src/site.ts";
 import { FEEDBACK_ENDPOINT_CLEARNET, FEEDBACK_ENDPOINT_ONION } from "./src/feedback.ts";
 import { calver } from "./src/core/version.ts";
+import { staticContent } from "./src/static-content.ts";
 
 // onion 版（GEARS_TARGET=onion）：給 gears.<onion> 的建置，網站放在子網域的根目錄，輸出到 dist-onion/。
 // 頁面只連自己的網域：不送使用統計，社群轉檔的模型也由同一個 onion 網站提供（src/site.ts）。
@@ -81,9 +82,9 @@ function csp(): Plugin {
   };
 }
 
-// 每個語系、每個工具一份 HTML（/gears/qrcode/、/gears/en/qrcode/），標題、描述與 lang 各自
-// 不同，可以被搜尋到，也不需要伺服器的轉址設定。內容跟首頁相同，打開之後由 src/router.ts
-// 判斷語系與要顯示哪個工具。
+// 每個語系、每個工具一份 HTML（/gears/qrcode/、/gears/en/qrcode/），標題、描述、lang 與寫在
+// #app 裡的說明（src/static-content.ts）各自不同，可以被搜尋到，也不需要伺服器的轉址設定。程式跟
+// 首頁相同，打開之後由 src/router.ts 判斷語系與要顯示哪個工具。
 const SITE = ONION ? `http://gears.${ONION_HOST}/` : "https://anoni.net/gears/";
 const COMMUNITY = ONION ? `http://${ONION_HOST}/` : "https://anoni.net/";
 const escape = (s: string) => s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
@@ -169,7 +170,9 @@ function localized(html: string, locale: Locale, id: string) {
       `<title>${escape(title)}</title>\n    ${id === NOT_FOUND ? `<meta name="robots" content="noindex" />` : seoTags(locale, id, title, description, meta)}`,
     )
     .replace(/<meta name="description" content="[^"]*"/, `<meta name="description" content="${escape(description)}"`)
-    .replace(/<noscript>[^<]*<\/noscript>/, `<noscript>${escape(meta["app.noscript"]!)}</noscript>`);
+    .replace(/<noscript>[^<]*<\/noscript>/, `<noscript>${escape(meta["app.noscript"]!)}</noscript>`)
+    // 這一頁的標題、說明與連到其他工具的連結（src/static-content.ts），打開之後換成工作台
+    .replace(/<div id="app"><\/div>/, `<div id="app">${staticContent(id, { messages: meta, home: `${BASE}${locale.prefix}` })}</div>`);
 }
 
 function toolPages(): Plugin {

@@ -4,7 +4,7 @@ const SAMPLE = "老實說我真的受不了了啦😤 主管叫大家把加班�
 
 test("從任務打開寫作習慣檢查，標出寫作習慣，修正標點與符號之後可以復原", async ({ page }) => {
   await page.goto("./");
-  await page.getByRole("button", { name: /要匿名發表的文字/ }).click();
+  await page.getByRole("link", { name: /要匿名發表的文字/ }).click();
   await expect(page).toHaveURL(/\/writing-style\/$/);
   const input = page.getByLabel("要交出去的文字");
   await input.fill(SAMPLE);

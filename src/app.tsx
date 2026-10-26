@@ -2,7 +2,7 @@ import type { ComponentType } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { COMMUNITY_URL, IS_ONION } from "./site.ts";
 import { LOCALES, getLocale, t, tDynamic } from "./i18n/index.ts";
-import { navigate, routeUrl, switchLocale, useRoute } from "./router.ts";
+import { navigate, onRouteClick, routeUrl, switchLocale, useRoute } from "./router.ts";
 import { tray } from "./state.ts";
 import { createTools, editorTools, fileTools } from "./tools/index.ts";
 import { Desktop, type Task } from "./ui/Desktop.tsx";
@@ -118,9 +118,9 @@ function AnalyticsChoice() {
   // 英文的句子之間空一格，中文不空
   const sep = getLocale() === "en" ? " " : "";
   const privacy = (
-    <button type="button" class="link" onClick={() => navigate("privacy")} data-testid="privacy-link">
+    <a href={routeUrl("privacy")} onClick={(e) => onRouteClick(e, () => navigate("privacy"))} data-testid="privacy-link">
       {t("app.footer.privacy")}
-    </button>
+    </a>
   );
   if (IS_ONION || browserDeclines())
     return (
@@ -285,14 +285,17 @@ export function App() {
   // 轉逐字稿這類工作進行中不出現換版本的提示，重新載入會中斷它，做完才出現
   const working = useAnyWorking() || state.busy;
 
+  // 頁面的 <h1>（#164）：工具與工具以外的頁面用自己的標題（.tool-title），桌面與檔案畫面沒有自己的標題，
+  // 用頁首的網站名稱，找不到的頁面也是。原本每一頁的 <h1> 都是網站名稱，搜尋引擎分不出各頁在講什麼
   let view;
+  let titled = true;
   if (isCreateTool(route)) {
     view = (
       <section class="create" aria-labelledby="create-title">
-        <h2 id="create-title" class="tool-title">
+        <h1 id="create-title" class="tool-title">
           <IconCircle name={TOOL_META[route]!.icon} cat={TOOL_META[route]!.cat} />
           {tDynamic(`tool.${route}`)}
-        </h2>
+        </h1>
         <p class="hint">{tDynamic(`tool.${route}.desc`)}</p>
         <SampleLink tool={route} onOpen={showSamples} />
         <CreateToolView
@@ -309,6 +312,8 @@ export function App() {
   } else if (route === "bench") {
     view = <BenchView />;
   } else if (route === NOT_FOUND) {
+    // 找不到的頁面不收錄，標題留給網站名稱，讀者知道還在 Gears 裡
+    titled = false;
     view = <NotFoundPage />;
   } else if (route === "feedback") {
     view = <FeedbackPage from={from.current} />;
@@ -321,12 +326,15 @@ export function App() {
   } else if (route === "samples") {
     view = <SamplesPage focus={preset} onOpenFile={openSample} onOpenQr={(id) => openTool("qr-read", `sample:${id}`)} />;
   } else if (selected) {
+    titled = false;
     view = <FileView key={selected.id} file={selected} others={state.files} index={selectedIndex} busy={state.busy} preferred={route} onOpenTool={openTool} />;
   } else if (isFileTool(route)) {
     view = <ToolIntro id={route} onPick={pick} onSamples={showSamples} />;
   } else {
+    titled = false;
     view = <Desktop onTask={onTask} />;
   }
+  const SiteTitle = titled ? "p" : "h1";
 
   return (
     <div class={dragging ? "app dragging" : "app"}>
@@ -336,7 +344,7 @@ export function App() {
           名稱寫「檔案工作台」（英文版 File Workbench），右上角的標記寫產品名稱 Gears（app.badge） */}
       <header class="site-header">
         <div class="frame site-header__inner">
-          <h1 class="site-header__title">
+          <SiteTitle class="site-header__title">
             <a class="site-header__home" href={routeUrl("")} onClick={home}>
               <picture>
                 <source srcset={`${import.meta.env.BASE_URL}logo-wordmark-white.svg`} media="(prefers-color-scheme: dark)" />
@@ -349,7 +357,7 @@ export function App() {
                 </span>
               </span>
             </a>
-          </h1>
+          </SiteTitle>
           <div class="site-header__actions">
             {!atHome ? (
               <button type="button" class="site-header__home-button" onClick={home}>
@@ -417,16 +425,16 @@ export function App() {
             {/* 窄螢幕換行時「· 連結」整組換到下一行，分隔點不會留在行尾 */}
             <span class="footer-item">
               {"· "}
-              {/* 站內的頁面不用一般的連結，避免重新載入、清空暫存區 */}
-              <button type="button" class="link" onClick={() => navigate("feedback")} data-testid="feedback-link">
+              {/* 站內的頁面一般的點擊不重新載入，避免清空暫存區（onRouteClick） */}
+              <a href={routeUrl("feedback")} onClick={(e) => onRouteClick(e, () => navigate("feedback"))} data-testid="feedback-link">
                 {t("app.footer.feedback")}
-              </button>
+              </a>
             </span>{" "}
             <span class="footer-item">
               {"· "}
-              <button type="button" class="link" onClick={() => navigate("licenses")}>
+              <a href={routeUrl("licenses")} onClick={(e) => onRouteClick(e, () => navigate("licenses"))}>
                 {t("app.footer.licenses")}
-              </button>
+              </a>
             </span>
           </p>
           <nav class="languages" aria-label={t("app.language")}>

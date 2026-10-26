@@ -12,7 +12,7 @@ test.beforeEach(async ({ page }) => {
 
 test("從照片讀出網址，再交給網址檢查", async ({ page }) => {
   await page.goto("./");
-  await page.getByRole("button", { name: /QR code 與條碼讀取/ }).click();
+  await page.getByRole("link", { name: /QR code 與條碼讀取/ }).click();
   await expect(page).toHaveURL(/\/gears\/qr-read\/$/);
   await page.getByTestId("qr-input").setInputFiles({ name: "photo.png", mimeType: "image/png", buffer: png("https://scam-shop.cc/login?utm_source=sms") });
   await expect(page.getByTestId("qr-text")).toHaveText("https://scam-shop.cc/login?utm_source=sms");

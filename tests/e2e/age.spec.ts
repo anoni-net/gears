@@ -9,7 +9,7 @@ const pdf = Buffer.from("%PDF-1.4\n內部簡報：第三季的數字\n%%EOF\n");
 
 test("加密任何檔案：產生密語、加密、下載，再在工作台裡解開", async ({ page }) => {
   await page.goto("./");
-  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.getByRole("button", { name: /只給對方看的檔案/ }).click()]);
+  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.getByRole("link", { name: /只給對方看的檔案/ }).click()]);
   await chooser.setFiles({ name: "report.pdf", mimeType: "application/pdf", buffer: pdf });
 
   await expect(page.getByRole("heading", { name: "加密", exact: true })).toBeVisible();
