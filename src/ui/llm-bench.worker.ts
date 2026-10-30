@@ -55,13 +55,6 @@ function counted(response: Response, key: string): Response {
   return new Response(body, { status: response.status, statusText: response.statusText, headers: response.headers });
 }
 
-// Transformers.js 4.3.1 下載外部權重檔（.onnx_data）失敗時不會把錯誤往上傳，載入會一直停住。
-// 下載出錯時直接回報，頁面收到就結束這個 Worker
-const fail = (error: Error): never => {
-  post({ type: "error", message: error.message });
-  throw error;
-};
-
 // 社群轉檔的模型：只下載清單上的檔案，比對 SHA-256，切成好幾段的檔案逐段比對、接回來
 // （src/core/models.ts）。存進 Transformers.js 自己的快取，不經過 gears-models
 async function fromAssets(assets: NonNullable<BenchRequest["assets"]>, file: string): Promise<Response> {
@@ -93,12 +86,14 @@ self.onmessage = async ({ data }: MessageEvent<BenchRequest>) => {
     env.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
       const url = input instanceof Request ? input.url : String(input);
       const absolute = new URL(url, self.location.href).href;
-      if (assets && absolute.startsWith(assetsDir)) return fromAssets(assets, absolute.slice(assetsDir.length).split("?")[0]!).catch(fail);
+      if (assets && absolute.startsWith(assetsDir)) return fromAssets(assets, absolute.slice(assetsDir.length).split("?")[0]!);
       // 不帶 cookie 與 Referer
       // 失敗時帶上網址，畫面上看得出是哪個檔案下載不了
       return fetch(input, { ...init, credentials: "omit", referrerPolicy: "no-referrer" }).then(
         (r) => counted(r, url),
-        (error: Error) => fail(new Error(`${error.message}（${url}）`)),
+        (error: Error) => {
+          throw new Error(`${error.message}（${url}）`);
+        },
       );
     };
     const wasm = env.backends.onnx.wasm!;
