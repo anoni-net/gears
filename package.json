@@ -22,7 +22,7 @@
   },
   "dependencies": {
     "@contentauth/c2pa-web": "0.15.4",
-    "@huggingface/transformers": "4.3.1",
+    "@huggingface/transformers": "4.3.2",
     "@noble/ciphers": "2.4.0",
     "@noble/curves": "2.4.0",
     "@noble/hashes": "2.4.0",
