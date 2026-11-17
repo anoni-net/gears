@@ -73,8 +73,16 @@ jobs:
             echo "::warning::165 清單下載失敗，這一版沒有清單"
           fi
 
-      - run: npm run build
-      - run: GEARS_TARGET=onion npm run build
+      # sitemap 的 lastmod 跟上一版比對每一頁內容的雜湊（vite.config.ts 的 sitemap()），
+      # 上一版從 build 分支取出，build 分支在上一步已經抓下來。取不到時建置不寫 lastmod
+      - name: 上一版的 sitemap 狀態
+        run: |
+          for dir in site onion; do
+            git show "build:$dir/sitemap-state.json" >"$RUNNER_TEMP/sitemap-$dir.json" 2>/dev/null \
+              || rm -f "$RUNNER_TEMP/sitemap-$dir.json"
+          done
+      - run: GEARS_SITEMAP_STATE="$RUNNER_TEMP/sitemap-site.json" npm run build
+      - run: GEARS_TARGET=onion GEARS_SITEMAP_STATE="$RUNNER_TEMP/sitemap-onion.json" npm run build
       - run: npm run build:server && node scripts/check-relay.mjs
       - run: node scripts/fetch-whisper.mjs --manifest deploy/models.txt
 

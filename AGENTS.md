@@ -696,7 +696,9 @@ node scripts/fetch-165.mjs   # 下載並整理成 public/data/165.txt
 - Open Graph 與 Twitter 的卡片：標題與描述跟 `meta.<id>.title`、`meta.<id>.description` 相同，圖片每個語系一張
 - 首頁另外有 WebApplication 的結構化資料（`application/ld+json`，瀏覽器不執行，CSP 不必放寬）
 
-建置時也產生 `sitemap.xml`，列出每個語系的每一頁與彼此的 `hreflang`。社群首頁的 `robots.txt`（`anoni-net/www` 的 `templates/robots.txt.j2`）指到這裡。sitemap 不寫 `lastmod`：每一頁的程式都一樣，日期只能用建置的 commit，一天部署好幾次，每一頁的日期一直跟著變，搜尋引擎會判斷它不可信。
+建置時也產生 `sitemap.xml`，列出每個語系的每一頁與彼此的 `hreflang`。社群首頁的 `robots.txt`（`anoni-net/www` 的 `templates/robots.txt.j2`）指到這裡。
+
+每一頁的程式都一樣，`lastmod` 不能用建置的 commit 日期，一天部署好幾次，每一頁的日期一直跟著變，搜尋引擎會判斷它不可信。git 的檔案日期也分不出來，一個語系的文字都在同一個 `src/i18n/<語系>.ts`。2026-11-17 起改成比對內容：`sitemap()` 把每一頁搜尋引擎讀得到的文字（標題、描述與 `staticContent` 的輸出）算成雜湊，跟上一版的 `sitemap-state.json` 比，沒變就沿用上一版的日期，變了或新出現的頁面寫建置當天。上一版由 `deploy.yml` 從 build 分支取出，路徑放在 `GEARS_SITEMAP_STATE`。沒有上一版時（本機建置、build 分支取不到）不寫 `lastmod`，只記下雜湊給下一版比對，所以改版前就存在、之後內容沒動過的頁面一直不會有 `lastmod`。`sitemap-state.json` 不進離線預存的清單。
 
 工作台的畫面全靠 JavaScript 畫出來。2026-10-26 以前每一頁的 HTML 只有 `noscript` 的一行，Google 執行 JavaScript 之後看得到內容，Bing 與 DuckDuckGo 的處理不完整，AI 的爬蟲完全不執行 JavaScript，它們看到的 90 頁內文都一樣（#164）。現在 `localized` 另外把 `src/static-content.ts` 的 `staticContent` 寫進 `<div id="app">`：
 
