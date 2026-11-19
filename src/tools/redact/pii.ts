@@ -5,8 +5,8 @@ import type { Box } from "./index.ts";
 // 切成好幾個字，所以把同一行的字接起來比對，再把對到的那幾個字的範圍合成一個框。
 // 換行把一段個資拆成兩行時，上下兩行再接起來比對一次（findPiiInLineTexts）。
 
-export type PiiKind = "phone" | "email" | "id" | "card" | "number" | "url" | "handle";
-export const PII_KINDS: readonly PiiKind[] = ["phone", "email", "id", "card", "number", "url", "handle"];
+export type PiiKind = "phone" | "email" | "id" | "card" | "ip" | "plate" | "number" | "url" | "handle";
+export const PII_KINDS: readonly PiiKind[] = ["phone", "email", "id", "card", "ip", "plate", "number", "url", "handle"];
 
 export interface Word {
   text: string;
@@ -33,6 +33,12 @@ const PATTERNS: [PiiKind, RegExp][] = [
   // 台灣的身分證與居留證：英文字母加 9 碼數字。香港身分證：一到兩個英文字母、6 碼數字，括號裡一碼檢查碼
   ["id", /\b[A-Z][12ABCD89]\d{8}\b|\b[A-Z]{1,2}\d{6}\([0-9A]\)/g],
   ["card", /\b\d{4}[ -]?\d{4}[ -]?\d{4}[ -]?\d{4}\b/g],
+  // IPv4 位址。前後不能接著英數或點，版本號（v1.2.3.4）與更長的點分數字不算
+  ["ip", /(?<![\w.])(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(?!\.?\d|\w)/g],
+  // 車牌：台灣的 ABC-1234、AB-1234、1234-AB、機車的 ABC-123，一定要有連字號。
+  // 中國的「粵B·D12345」以省份的簡稱開頭。ISO-8601、RFC-1234 這類標準編號由 notPlate 排除
+  ["plate", /(?<![\w-])(?:[A-Z]{2,3}-\d{3,4}|\d{3,4}-[A-Z]{2,3})(?![\w-])/g],
+  ["plate", /[京津沪滬渝冀豫云雲辽遼黑湘皖鲁魯新苏蘇浙赣贛鄂桂甘晋晉蒙陕陝吉闽閩贵貴粤粵青藏川宁寧琼瓊][A-Z][·・•\- ]?[A-Z0-9]{5,6}(?![A-Za-z0-9])/g],
   // 手機（09 開頭）、市話（0 開頭加區碼）、國際碼，以及香港、澳門的 8 碼
   ["phone", /(\+\d{1,3}[ -]?)?\(?0?\d{1,4}\)?[ -]?\d{3,4}[ -]?\d{3,4}/g],
   // 部分遮住的手機號碼，例如訂單上的「0966***218」，剩下的幾碼加上前後文仍然認得出人
@@ -40,6 +46,10 @@ const PATTERNS: [PiiKind, RegExp][] = [
   ["handle", /(^|[^\w])@[A-Za-z0-9_.]{3,}/g],
   ["number", /\d{8,}/g],
 ];
+
+// 標準與規格的編號，格式跟車牌一樣
+const STANDARDS = new Set(["ISO", "IEC", "RFC", "CVE", "CNS", "UTF", "SHA", "JIS", "DIN", "PCI", "EN", "GB", "BS"]);
+const notPlate = (text: string) => STANDARDS.has(text.split("-")[0]!);
 
 // 電話的規則比較寬，要有 8 到 12 個數字，避免把日期、金額框起來，更長的交給「長串數字」。
 // 帶國碼（+ 開頭）時放寬到 15 碼，例如 +86 135 1234 5678。部分遮住的號碼不算數字的數量
@@ -72,6 +82,7 @@ export function findPiiInText(text: string): { kind: PiiKind; start: number; end
         match = match.slice(at);
       }
       if (kind === "phone" && !phoneLike(match)) continue;
+      if (kind === "plate" && notPlate(match)) continue;
       const trimmed = match.trimEnd();
       const end = start + trimmed.length;
       if (taken(start, end)) continue;

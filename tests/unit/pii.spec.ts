@@ -79,3 +79,26 @@ test("重疊一半以上才算同一個框", () => {
   expect(overlaps({ x: 0, y: 0, w: 10, h: 10 }, { x: 2, y: 2, w: 10, h: 10 })).toBe(true);
   expect(overlaps({ x: 0, y: 0, w: 10, h: 10 }, { x: 8, y: 8, w: 10, h: 10 })).toBe(false);
 });
+
+test("IP 位址與車牌", async () => {
+  const { findPiiInText } = await import("../../src/tools/redact/pii.ts");
+  const kinds = (text: string) => findPiiInText(text).map((m) => [m.kind, m.text]);
+  expect(kinds("我家的 IP 是 114.35.208.17，路由器在 192.168.1.1。")).toEqual([
+    ["ip", "114.35.208.17"],
+    ["ip", "192.168.1.1"],
+  ]);
+  // 版本號、更長的點分數字、超過 255 的不算
+  expect(kinds("升級到 v1.2.3.4，檔案 1.2.3.4.5，數值 300.1.1.1")).toEqual([]);
+  expect(kinds("他開 RAA-5821，機車是 KAA-091，舊車 AB-1234 與 5678-CD")).toEqual([
+    ["plate", "RAA-5821"],
+    ["plate", "KAA-091"],
+    ["plate", "AB-1234"],
+    ["plate", "5678-CD"],
+  ]);
+  expect(kinds("车牌粤B·D12345，另一台京A12345")).toEqual([
+    ["plate", "粤B·D12345"],
+    ["plate", "京A12345"],
+  ]);
+  // 標準編號、型號裡的一段不算
+  expect(kinds("照 ISO-8601 與 RFC-3339 寫，型號 XR-1234-B")).toEqual([]);
+});
