@@ -472,6 +472,7 @@ export const zhTW = {
   "nearby.error.tooLarge": "檔案合計超過 1 GB，接收端的瀏覽器記憶體可能不夠。請分批傳送。",
   "nearby.error.noNetwork": "找不到這台裝置的區網位址，請確認已經連上 Wi-Fi 或手機熱點，再重新開始。",
   "nearby.error.failed": "傳送時發生錯誤，請重新開始。",
+  "nearby.error.version": "兩邊的 Gears 版本不同，請兩邊都重新整理頁面再試一次。",
   "tool.remote": "遠端傳送",
   "tool.remote.desc": "對方不在身邊時，產生一個連結交給對方，經過社群的中繼伺服器傳暫存區的檔案，連上之後也能互傳文字訊息、視訊通話。兩端之間加密，伺服器無法讀取內容，也不保存檔案。",
   "meta.remote.title": "遠端傳送檔案 | Gears 檔案工作台",

@@ -80,12 +80,15 @@ export const totalSize = (files: FileMeta[]) => files.reduce((sum, f) => sum + f
 
 // 確認碼：兩邊的 DTLS 指紋排序之後接起來取 SHA-256，換成 6 位數字。兩台裝置算出來的一樣，
 // 描述在交換途中被換掉的話，指紋不同、確認碼就對不上。用 QR code 面對面交換時，鏡頭對螢幕
-// 這條管道換不掉指紋；複製貼上可能經過別人的伺服器，要靠這組數字核對
-export function confirmCode(a: Uint8Array, b: Uint8Array): string {
+// 這條管道換不掉指紋；複製貼上可能經過別人的伺服器，要靠這組數字核對。
+// extra 是另外算進去的內容：面對面傳送放兩端先承諾再揭露的隨機數（confirm.ts），
+// 遠端傳送的公鑰本身就先承諾再揭露（remote/secure.ts），不必再加
+export function confirmCode(a: Uint8Array, b: Uint8Array, extra: Uint8Array = new Uint8Array(0)): string {
   const [x, y] = compare(a, b) <= 0 ? [a, b] : [b, a];
-  const joined = new Uint8Array(x.length + y.length);
+  const joined = new Uint8Array(x.length + y.length + extra.length);
   joined.set(x);
   joined.set(y, x.length);
+  joined.set(extra, x.length + y.length);
   const h = sha256(joined);
   const n = ((h[0]! << 24) | (h[1]! << 16) | (h[2]! << 8) | h[3]!) >>> 0;
   const digits = String(n % 1_000_000).padStart(6, "0");
