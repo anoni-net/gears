@@ -32,7 +32,14 @@ concurrency:
 
 jobs:
   deploy:
-    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    # workflow_run 的 branches 比對的是來源分支的名稱，fork 從自己的 main 開 PR 也符合，
+    # 所以另外限定：這個 repo 自己的 push 觸發的 CI 才部署，PR 的 CI 一律不部署
+    if: >-
+      github.event_name != 'workflow_run' || (
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.event == 'push' &&
+        github.event.workflow_run.head_repository.full_name == github.repository
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
