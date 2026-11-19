@@ -89,3 +89,43 @@ test("pdf：刪除標記類的註解，表單欄位留著", async () => {
   expect(doc.getPage(0).node.Annots()?.size()).toBe(1);
   expect(Buffer.from(data).toString("latin1")).toContain("FIELD-NAME");
 });
+
+test("內文的個資：拆成好幾個 run 的電話接得起來，刪除的修訂也算，中繼資料與屬性裡的 Email 不算", async () => {
+  const { ooxmlText, odfText } = await import("../../src/tools/strip-metadata/body-pii.ts");
+  const W = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"';
+  expect(ooxmlText(`<w:document ${W}><w:body><w:p><w:r><w:t>有事打 0912-</w:t></w:r><w:r><w:t>345-678</w:t></w:r></w:p><w:p><w:r><w:t>2024</w:t></w:r></w:p></w:body></w:document>`)).toBe(
+    "\n有事打 0912-345-678\n2024",
+  );
+  const TEXT = 'xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0"';
+  expect(odfText(`<office:text ${TEXT} xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0"><text:p>寫信到 <text:span>tips@example.org</text:span></text:p></office:text>`)).toBe(
+    "\n寫信到tips@example.org",
+  );
+  const body = '<w:r><w:t>窗口 0912-</w:t></w:r><w:r><w:t>345-678</w:t></w:r><w:del w:id="9" w:author="x"><w:r><w:delText>舊信箱 old@example.org</w:delText></w:r></w:del>';
+  const values = (await stripMetadata.inspect(await syntheticDocx(undefined, body), "docx")).filter((f) => f.code === "body-pii").map((f) => f.value);
+  expect(values).toEqual(["0912-345-678\nold@example.org"]);
+  // 測試檔的 people.xml 屬性裡有 reviewer@example.org，那是中繼資料，不算內文
+  expect((await stripMetadata.inspect(await syntheticDocx(), "docx")).map((f) => f.code)).not.toContain("body-pii");
+  // 清除中繼資料不改動內文，清除之後照樣列出
+  const { data } = await stripMetadata.run(await syntheticDocx(undefined, body), "docx");
+  expect(await codes(data, "docx")).toContain("body-pii");
+});
+
+test("內文的個資：Excel、PowerPoint 與 ODF", async () => {
+  const xlsx = await syntheticXlsx();
+  const pptx = await syntheticPptx();
+  const odt = await syntheticOdt();
+  // 測試檔本身沒有個資，不應該多出提醒
+  for (const [data, format] of [[xlsx, "xlsx"], [pptx, "pptx"], [odt, "odt"]] as const) {
+    expect(await codes(data, format), format).not.toContain("body-pii");
+  }
+  // 把試算表儲存格裡的文字換成一支電話
+  const files = readZip(xlsx).entries;
+  const out = [];
+  for (const entry of files) {
+    let bytes = await entryData(xlsx, entry);
+    if (entry.name === "xl/worksheets/sheet1.xml") bytes = new TextEncoder().encode(dec.decode(bytes).replace(VISIBLE, "聯絡 02-2963-0188"));
+    out.push({ name: entry.name, data: bytes, compress: entry.method === 8 });
+  }
+  const phone = await writeZip(out);
+  expect((await stripMetadata.inspect(phone, "xlsx")).find((f) => f.code === "body-pii")?.value).toBe("02-2963-0188");
+});
