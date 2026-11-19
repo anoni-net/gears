@@ -124,7 +124,7 @@ test("內文的個資：Excel、PowerPoint 與 ODF", async () => {
   for (const entry of files) {
     let bytes = await entryData(xlsx, entry);
     if (entry.name === "xl/worksheets/sheet1.xml") bytes = new TextEncoder().encode(dec.decode(bytes).replace(VISIBLE, "聯絡 02-2963-0188"));
-    out.push({ name: entry.name, data: bytes });
+    out.push({ name: entry.name, data: bytes, compress: entry.method === 8 });
   }
   const phone = await writeZip(out);
   expect((await stripMetadata.inspect(phone, "xlsx")).find((f) => f.code === "body-pii")?.value).toBe("02-2963-0188");
