@@ -791,6 +791,7 @@ Office 與 LibreOffice 的文件都是 zip 包著一組 XML，`src/core/zip.ts` 
 
 - 註解與追蹤修訂是讀者寫進去的內容，預設保留下來，作者改成 `Author`，時間拿掉或改成固定的值。檢查時列在「文件內容裡要留意的」，提醒讀者刪除的文字仍在檔案裡（`CONTENT_FINDINGS`，清除中繼資料的 `resolves` 不包含它們）
 - 讀者可以在同一區勾選「刪除所有註解」、「接受所有追蹤修訂」，選擇透過 `RunOptions` 傳給清除工具，內嵌的文件照同樣的選擇處理。Word 接受修訂時，刪除的內容與格式修訂前的舊值整個拿掉，插入的內容拿掉標籤留下文字，刪除的表格列整列拿掉。Excel、PowerPoint 的註解連同 VML 方塊、討論串與作者清單一起拿掉。ODF 拿掉 `office:annotation` 與 `tracked-changes`。PDF 拿掉標記類的註解與彈出視窗，表單欄位不動
+- 內文的個資（`body-pii`，#143，2026-11-19 起）：檢查 Office 與 ODF 文件時讀出內文的文字（`src/tools/strip-metadata/body-pii.ts`），用遮蔽與寫作習慣檢查同一套規則（`findPiiInText`）找電話、Email、身分證這類有固定格式的個資，列在「文件內容裡要留意的」，提醒讀者回到原本的軟體刪掉或換成代稱。工作台不改寫內文。OOXML 讀 `word/`、`ppt/`、`xl/` 底下 XML 的 `t` 與刪除的追蹤修訂（`delText`，仍然留在檔案裡），同一段拆成好幾個 run 時直接接起來（「0912-」、「345-678」），段落、儲存格之間斷開。ODF 讀 `content.xml` 與 `styles.xml`（頁首頁尾）裡 `text:p`、`text:h` 的文字。文件摘要、屬性值與 `customXml` 是中繼資料，另外列，不算內文。PDF 沒有做：pdf-lib 讀不出中日韓字型的文字，PDF 內文的個資用遮蔽的自動尋找（讀文字層）。人名、地址與單位名稱要等個資辨識模型（#139）
 - 內嵌的圖片交給對應格式的處理程式，內嵌的 Office 文件也是，最多三層
 - 加密的文件、有巨集的 Office 文件（docm 等）不處理
 
