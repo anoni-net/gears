@@ -15,7 +15,9 @@ jobs:
   test:
     name: test (${{ matrix.name }})
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # 測試本身約 6 分鐘，但 GitHub 機器的 apt 有時很慢，安裝 ffmpeg 與瀏覽器的相依套件
+    # 就花掉 10 分鐘以上（2026-11-19 連續好幾次），15 分鐘的上限會讓還沒執行完的測試被中止
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
