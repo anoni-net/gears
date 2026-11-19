@@ -477,7 +477,7 @@ ProofMode（Guardian Project 給人權紀錄者的 Android App）拍照時不改
 
 ## 裝置量測（實驗頁）
 
-`/gears/bench/`（`src/ui/BenchPage.tsx`，#157）在讀者的瀏覽器裡量 Gears 用到的模型要多久，給社群收集手機、平板與舊電腦的數字（#144），模型能不能上線、預設值怎麼訂都看這些數字。目前有文字辨識與語言模型兩個區塊，各自執行，結果合成一份 JSON，讀者確認過內容之後送給社群，或按「複製結果」保留。只用內建的範例，不讀暫存區的檔案。
+`/gears/bench/`（`src/ui/BenchPage.tsx`，#157）在讀者的瀏覽器裡量 Gears 用到的模型要多久，給社群收集手機、平板與舊電腦的數字（#144），模型能不能上線、預設值怎麼訂都看這些數字。目前有文字辨識、個資辨識與語言模型三個區塊，各自執行，結果合成一份 JSON，讀者確認過內容之後送給社群，或按「複製結果」保留。只用內建的範例，不讀暫存區的檔案。
 
 - 實驗頁的清單是 `src/pages.ts` 的 `labIds`：不進 sitemap，頁面帶 `<meta name="robots" content="noindex">`。入口在桌面最下面的使用者區（`USER_PAGES`），名稱寫「裝置量測（實驗）」（`PAGE_META` 的 `label`），2026-10-23 以前只從頁尾連過去
 - 原本只量語言模型，網址是 `/gears/llm-bench/`。實驗頁沒有對外連結過，舊網址不轉址，打開是找不到這一頁
@@ -496,6 +496,17 @@ ProofMode（Guardian Project 給人權紀錄者的 Android App）拍照時不改
 - 每張辨識 3 次取中位數（WebGPU 的第一次包含編譯 shader 的時間，是之後的四五倍），`recognize` 的 `timing` 分開記下偵測與辨識的時間。字錯率用第一次的結果，算法跟 #140 的評測相同（`cer`，不算空白），各種設定應該一樣，差很多時代表那個設定的結果有問題
 - 讀不到 canvas 時（Brave 的防指紋、Safari 無痕、Tor Browser）不能量，畫面上說明，結果的 `env.canvas` 記成 `false`
 - 2026-10-23 在 Apple M5 Pro 上的中位數（手機截圖）：Chromium 1 執行緒 1.30 秒、4 執行緒 0.49 秒、8 執行緒 0.35 秒、WebGPU 0.24 秒。Playwright 的 WebKit 是 1.27、0.50、0.33、0.28 秒，多執行緒沒有變慢，跟 #140 在 Safari 上量到的不同，要在真的 Safari 與 iPhone 上確認
+
+### 個資辨識
+
+找人名、地址、機構用的個資辨識模型（#139）在這台裝置上要多久、記憶體夠不夠（`src/ui/PiiBench.tsx`，Worker 是 `src/ui/pii-bench.worker.ts`，2026-11-19 起）。社群工作區的評測（`research/gears-pii/01-models.md`）選出 nym-pii 的 q4 版，跟規則合併之後找到約八成五的個資，但模型約 211 MB，上線之前要先知道手機能不能用。
+
+- 模型是 `onnx-community/nym-pii-multilingual-ONNX`（MIT），從 Hugging Face 下載，鎖定 commit（`src/tools/bench/pii.ts` 的 `PII_MODEL`），伺服器送的 CSP 多開這一個下載路徑（`vite.config.ts`）。Transformers.js 的設定照語言模型：`env.remotePathTemplate` 鎖在這個 commit，不帶 cookie 與 Referer，WebAssembly 用 `?url` 從自己的網域載入，檔案存在 `transformers-cache`，「已下載的模型」算在語言模型那一列。畫面上說明 Hugging Face 看得到 IP 位址、瀏覽器與下載了哪個模型
+- 設定：CPU 1 個執行緒、4 個執行緒（要 cross-origin isolation）與顯示卡。每種設定換一個 Worker，三段虛構的範例文字（聊天訊息、通知單、中英夾雜，`PII_SAMPLES`）各辨識 3 次取中位數，另外記下載入時間與這次實際下載的位元組
+- Transformers.js 4.3 的 `token-classification` 不回傳字元位置，詞元對回原文的做法照研究的 `eval/pii-model.mjs` 移植成 `align`、`groupSpans`（有單元測試）。「找到」是範例文字裡應該找到的人名、地址、單位、電話與 Email 找到幾個（`foundCount`，一半以上的字被蓋住才算），用來確認每種設定的結果一樣，評測在社群工作區
+- 手機記憶體不夠時，系統會把分頁重新載入，量測的結果跟著不見（2026-10-24 Gemma 4 E2B 在 iPhone 15 Pro 上就是這樣）。開始每一種設定之前在 `history.state` 記下設定（`gearsPiiBench`），做完或停止時清掉。打開頁面時記號還在，代表上一次量到一半被重新載入，結果多一筆 `crashed: true`，讀者照樣可以送出。`history.state` 只在這個分頁裡，不寫進 localStorage
+- 結果的 JSON 多一個 `pii`（`schema` 從 1 變 2），只有設定、時間、詞元數與找到幾個，範例文字與找到的範圍不放進去
+- 2026-11-19 在 Apple M5 Pro 的 Chromium（正式建置）實測：下載 210.7 MB，載入 14.8 秒，單執行緒每段 0.24 到 0.39 秒，13 處找到 12 處
 
 ### 語言模型
 

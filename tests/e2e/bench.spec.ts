@@ -1,4 +1,5 @@
 import models from "../../src/tools/llm-bench/models.json" with { type: "json" };
+import { PII_MODEL } from "../../src/tools/bench/pii.ts";
 import { expect, test } from "./guard.ts";
 
 test("裝置量測：實驗頁說明下載來源，不進 sitemap，搜尋引擎不收錄", async ({ page, request }) => {
@@ -6,6 +7,8 @@ test("裝置量測：實驗頁說明下載來源，不進 sitemap，搜尋引擎
   await expect(page.getByRole("heading", { name: "裝置量測", level: 1 })).toBeVisible();
   await expect(page.getByRole("heading", { name: "文字辨識" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "語言模型" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "個資辨識" })).toBeVisible();
+  await expect(page.getByTestId("bench-pii-remote")).toContainText("Hugging Face 看得到你的 IP 位址");
   await expect(page.getByTestId("bench-remote")).toContainText("Hugging Face 看得到你的 IP 位址");
   await expect(page.getByTestId("bench-env")).toContainText("核心");
   // localhost 算安全的連線，不出現要用 HTTPS 的說明
@@ -38,8 +41,10 @@ test("裝置量測：文字辨識用範例截圖量出時間與字錯率，結�
   await page.goto("./bench/");
   await expect(page.getByTestId("bench-env")).toContainText("核心");
   // 只量 1 個執行緒，CI 的機器只有 4 核心
+  // 個資辨識也有同樣的選項，只在文字辨識那一區裡找
+  const ocr = page.locator('section[aria-labelledby="bench-ocr-title"]');
   for (const label of ["CPU，4 個執行緒", "CPU，8 個執行緒"]) {
-    const box = page.getByLabel(label);
+    const box = ocr.getByLabel(label);
     if (await box.isChecked()) await box.uncheck();
   }
   const gpu = page.getByLabel("顯示卡", { exact: true }).first();
@@ -58,7 +63,7 @@ test("裝置量測：文字辨識用範例截圖量出時間與字錯率，結�
 
   await page.getByText("看複製的內容", { exact: true }).click();
   const report = JSON.parse((await page.getByTestId("bench-report").textContent())!);
-  expect(report.schema).toBe(1);
+  expect(report.schema).toBe(2);
   expect(report.env.canvas).toBe(true);
   expect(report.ocr).toHaveLength(1);
   expect(report.ocr[0]).toMatchObject({ threads: 1, webgpu: false });
@@ -103,4 +108,42 @@ test("裝置量測：語言模型從鎖定的 commit 下載，下載失敗時畫
   guard.requests = guard.requests.filter((url) => !url.startsWith("https://huggingface.co/"));
   // 測試故意回 404，WebKit 會把它記成主控台錯誤
   guard.errors = guard.errors.filter((e) => !e.includes("status of 404"));
+});
+
+test("裝置量測：個資辨識從鎖定的 commit 下載，下載失敗時說明，結果記下失敗的設定", async ({ page, guard }) => {
+  const asked: string[] = [];
+  await page.context().route("https://huggingface.co/**", (route) => {
+    asked.push(route.request().url());
+    return route.fulfill({ status: 404, body: "" });
+  });
+  await page.goto("./bench/");
+  await expect(page.getByTestId("bench-env")).toContainText("核心");
+  const section = page.locator('section[aria-labelledby="bench-pii-title"]');
+  await section.getByRole("button", { name: /^量測個資辨識/ }).click();
+  await expect(page.getByTestId("bench-pii-status")).toContainText("量測失敗", { timeout: 30_000 });
+  const pinned = `https://huggingface.co/${PII_MODEL.repo}/resolve/${PII_MODEL.revision}/`;
+  expect(asked.length).toBeGreaterThan(0);
+  expect(asked.every((url) => url.startsWith(pinned))).toBe(true);
+  await expect(page.getByTestId("bench-pii-table")).toContainText("量測失敗");
+  // 結果的 JSON 帶著這一筆，格式是第 2 版
+  await page.getByText("看複製的內容", { exact: true }).click();
+  const report = JSON.parse((await page.getByTestId("bench-report").textContent())!);
+  expect(report.schema).toBe(2);
+  expect(report.pii[0].error).toBeTruthy();
+  expect(report.pii[0].model).toContain(PII_MODEL.repo);
+  guard.requests = guard.requests.filter((url) => !url.startsWith("https://huggingface.co/"));
+  guard.errors = guard.errors.filter((e) => !e.includes("status of 404"));
+});
+
+test("裝置量測：個資辨識量到一半頁面重新載入時，結果記成 crashed", async ({ page }) => {
+  await page.goto("./bench/");
+  await expect(page.getByTestId("bench-env")).toContainText("核心");
+  // 模擬量測中被系統重新載入：history.state 留著量測中的記號
+  await page.evaluate(() => history.replaceState({ ...(history.state ?? {}), gearsPiiBench: { threads: 1, webgpu: false } }, ""));
+  await page.reload();
+  await expect(page.getByTestId("bench-pii-status")).toContainText("頁面重新載入了");
+  await expect(page.getByTestId("bench-pii-table")).toContainText("可能是記憶體不夠");
+  await page.getByText("看複製的內容", { exact: true }).click();
+  const report = JSON.parse((await page.getByTestId("bench-report").textContent())!);
+  expect(report.pii).toEqual([expect.objectContaining({ threads: 1, webgpu: false, crashed: true })]);
 });
