@@ -357,14 +357,22 @@ const FINDERS: [HabitCode, (text: string, out: Habit[]) => void][] = [
   ["english", english],
 ];
 
-export function findHabits(text: string): Habit[] {
+// keep 是讀者已經換上的代稱（〔Email〕、[phone]），出現的地方先佔位、不回報，
+// 代稱裡的英文才不會被標成中英夾雜
+export function findHabits(text: string, keep: readonly string[] = []): Habit[] {
   const result: Habit[] = [];
+  const kept: { start: number; end: number }[] = [];
+  for (const word of keep) {
+    if (!word) continue;
+    for (let i = text.indexOf(word); i !== -1; i = text.indexOf(word, i + word.length)) kept.push({ start: i, end: i + word.length });
+  }
   for (const [, find] of FINDERS) {
     const found: Habit[] = [];
     find(text, found);
     for (const habit of found.sort((a, b) => a.start - b.start)) {
       if (habit.end <= habit.start && habit.code !== "layout") continue;
       if (result.some((r) => r.start < habit.end && r.end > habit.start)) continue;
+      if (kept.some((r) => r.start < habit.end && r.end > habit.start)) continue;
       result.push(habit);
     }
   }
@@ -404,6 +412,19 @@ export function replacementOf(habit: Habit): string | undefined {
   return habit.suggest;
 }
 
+// 工具找不到、要讀者自己判斷的線索有幾項（style.clues.<n>）。參考 TAB（Text Anonymization Benchmark）
+// 對間接識別符的說明與英國 ICO 的「動機明確的入侵者」整理，見社群工作區的 research/gears-pii/02-text-deid-standards.md
+export const CLUES = 6;
+
+// 個資換成標示類別的代稱，例如把電話換成〔電話〕。代稱跟著介面的語系，由畫面傳進來。
+// 同一類的個資換成同一個代稱，讀者逐項按下才套用，跟其他建議一樣可以復原
+export function tagPii(habits: Habit[], tags: Record<PiiKind, string>): Habit[] {
+  return habits.map((h) => (h.code === "pii" && h.pii ? { ...h, suggest: tags[h.pii] } : h));
+}
+
+// 代稱的括號〔〕跟中文一樣，前後不留空白
+const isHanLike = (c: string | undefined) => isHan(c) || c === "〔" || c === "〕";
+
 // 套用讀者選的幾處建議，例如把「視頻」改成「影片」、刪掉「啦」。其他地方一個字都不動。
 // 換上中文時，夾在中文之間的空白一起拿掉（「的 App 會」改成「的應用程式會」）
 export function applyHabits(text: string, chosen: Habit[]): string {
@@ -413,8 +434,8 @@ export function applyHabits(text: string, chosen: Habit[]): string {
     if (to === undefined || next.slice(h.start, h.end) !== h.text) continue;
     let start = h.start;
     let end = h.end;
-    if (!to || isHan(to[0])) while (start > 0 && next[start - 1] === " " && isHan(next[start - 2])) start--;
-    if (!to || isHan(to.at(-1))) while (end < next.length && next[end] === " " && isHan(next[end + 1])) end++;
+    if (!to || isHanLike(to[0])) while (start > 0 && next[start - 1] === " " && isHanLike(next[start - 2])) start--;
+    if (!to || isHanLike(to.at(-1))) while (end < next.length && next[end] === " " && isHanLike(next[end + 1])) end++;
     next = next.slice(0, start) + to + next.slice(end);
   }
   return tidy(next);

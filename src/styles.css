@@ -2816,6 +2816,16 @@ button.link {
   margin-top: 1.25rem;
 }
 
+/* 線索清單的項目常換行，勾選框對齊第一行 */
+.style-clues .check {
+  align-items: flex-start;
+  margin-bottom: 0.5rem;
+}
+
+.style-clues .check input {
+  margin-top: 0.3rem;
+}
+
 /* 清單裡逐項套用的按鈕，比一般按鈕小 */
 .writing-style button.small {
   font-size: 0.85rem;

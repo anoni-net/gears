@@ -6,6 +6,7 @@ import type { Box } from "./index.ts";
 // 換行把一段個資拆成兩行時，上下兩行再接起來比對一次（findPiiInLineTexts）。
 
 export type PiiKind = "phone" | "email" | "id" | "card" | "number" | "url" | "handle";
+export const PII_KINDS: readonly PiiKind[] = ["phone", "email", "id", "card", "number", "url", "handle"];
 
 export interface Word {
   text: string;
