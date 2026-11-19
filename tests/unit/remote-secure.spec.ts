@@ -39,10 +39,9 @@ test("途中看得到的只有公鑰與密文", async () => {
   const sending = sendFiles(a.channel, [{ name: "名單.csv", blob: new Blob([secret.repeat(50)]) }], () => {});
   await (await receiveFiles(b.channel)).accept(() => {});
   await sending;
-  // 明文的只有交換公鑰的 hello
-  const plain = seen.filter((d) => typeof d === "string");
-  expect(plain).toHaveLength(2);
-  for (const m of plain) expect(Object.keys(JSON.parse(m as string)).sort()).toEqual(["e", "key", "t", "v"]);
+  // 明文的只有交換公鑰的三則：開房的一端先送雜湊，加入的一端送公鑰，開房的一端再揭露公鑰
+  const plain = seen.filter((d) => typeof d === "string").map((m) => JSON.parse(m as string));
+  expect(plain.map((m) => [m.t, ...Object.keys(m).sort()].join(" "))).toEqual(["hello commit e t v", "hello e key t v", "reveal e key t"]);
   const all = seen.map(text).join("\n");
   for (const leak of ["A123456789", "0912-345-678", "名單.csv", '"t":"files"', "sha256"]) expect(all).not.toContain(leak);
 });
@@ -108,10 +107,12 @@ test("不知道連結金鑰的中間人換掉公鑰，握手失敗", async () =>
 test("對方送來的不是合格的 hello", async () => {
   for (const [hello, code] of [
     ["not json", "bad-hello"],
-    ['{"t":"hello","v":2,"key":"x"}', "version"],
-    ['{"t":"hello","v":1,"e":0,"key":"short"}', "bad-hello"],
-    [JSON.stringify({ t: "hello", v: 1, e: 0, key: encodeKey(new Uint8Array(32)) }), "bad-hello"],
-    [JSON.stringify({ t: "hello", v: 1, e: 3, key: encodeKey(newLinkKey()) }), "bad-hello"],
+    ['{"t":"hello","v":1,"e":0,"key":"x"}', "version"],
+    ['{"t":"hello","v":2,"e":0,"key":"short"}', "bad-hello"],
+    ['{"t":"hello","v":2,"e":0}', "bad-hello"],
+    ['{"t":"reveal","e":0,"key":"x"}', "bad-hello"],
+    [JSON.stringify({ t: "hello", v: 2, e: 0, key: encodeKey(new Uint8Array(32)) }), "bad-hello"],
+    [JSON.stringify({ t: "hello", v: 2, e: 3, key: encodeKey(newLinkKey()) }), "bad-hello"],
   ] as const) {
     const [a, b] = wire();
     b.send(hello);
@@ -120,6 +121,61 @@ test("對方送來的不是合格的 hello", async () => {
   const [a, b] = wire();
   b.send(new ArrayBuffer(3));
   await expect(secure(a, newLinkKey(), "opener")).rejects.toBeInstanceOf(SecureError);
+});
+
+test("開房的一端揭露的公鑰跟先前送的雜湊不同，加入的一端停下來", async () => {
+  // 中間的人看到加入那一端的公鑰之後，才想換掉開房那一端的公鑰
+  const [a, b] = wire((from, d) => {
+    if (from !== 0 || typeof d !== "string") return d;
+    const m = JSON.parse(d);
+    return m.t === "reveal" ? JSON.stringify({ ...m, key: encodeKey(newLinkKey()) }) : d;
+  });
+  const key = newLinkKey();
+  const settled = await Promise.allSettled([secure(a, key, "opener"), secure(b, key, "joiner")]);
+  expect((settled[1] as PromiseRejectedResult).reason).toMatchObject({ code: "bad-hello" });
+  expect(settled[0]!.status).toBe("rejected");
+});
+
+test("加入的一端在看到對方的雜湊之前不送出公鑰", async () => {
+  const [a, b] = wire();
+  const joining = secure(b, newLinkKey(), "joiner");
+  joining.catch(() => {});
+  const first = await Promise.race([a.next(), new Promise((r) => setTimeout(() => r("nothing"), 50))]);
+  expect(first).toBe("nothing");
+  b.close();
+});
+
+test("對方是舊版的握手時，兩端都得到版本不同", async () => {
+  // 舊版（版本 1）一連上就送出公鑰
+  const old = JSON.stringify({ t: "hello", v: 1, e: 0, key: encodeKey(newLinkKey()) });
+  for (const role of ["opener", "joiner"] as const) {
+    const [a, b] = wire();
+    b.send(old);
+    await expect(secure(a, newLinkKey(), role), role).rejects.toMatchObject({ code: "version" });
+    // 舊版的頁面看到 hello 的版本不是 1 就會顯示版本不同
+    expect(JSON.parse((await b.next()) as string), role).toMatchObject({ t: "hello", v: 2 });
+  }
+});
+
+test("重新握手帶著第一次握手的秘密：兩端照樣接得上，沒有參與第一次握手的人接不進來", async () => {
+  const key = newLinkKey();
+  const [a1, b1] = await both(...wire(), key);
+  expect(a1.chain).toEqual(b1.chain);
+  expect(a1.chain).toHaveLength(32);
+
+  // 斷線接回來：兩端都帶著第一次的秘密
+  const [x, y] = wire();
+  const [a2, b2] = await Promise.all([secure(x, key, "opener", 0, a1.chain), secure(y, key, "joiner", 0, b1.chain)]);
+  a2.channel.send("還在");
+  expect(await b2.channel.next()).toBe("還在");
+
+  // 知道連結金鑰的人等兩人核對完確認碼，讓連線斷一次，在重新握手時冒充其中一端
+  for (const role of ["opener", "joiner"] as const) {
+    const [victim, attacker] = wire();
+    const other = role === "opener" ? "joiner" : "opener";
+    const settled = await Promise.allSettled([secure(victim, key, role, 0, a1.chain), secure(attacker, key, other)]);
+    for (const r of settled) expect((r as PromiseRejectedResult).reason, role).toMatchObject({ code: "wrong-key" });
+  }
 });
 
 test("經過轉送服務加密傳完一份檔案，轉送服務轉的都是密文", async () => {

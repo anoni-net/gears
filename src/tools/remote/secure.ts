@@ -3,7 +3,10 @@
 //
 // 連結金鑰 K（32 位元組）由開房的一端產生，放在分享連結的 # 後面，不會送到伺服器。配對之後：
 //
-// 1. 兩端各產生一組暫時的 X25519 金鑰，用明文交換公鑰：{"t":"hello","v":1,"e":epoch,"key":…}
+// 1. 兩端各產生一組暫時的 X25519 金鑰，用明文交換公鑰。開房的一端先送公鑰的雜湊
+//    {"t":"hello","v":2,"e":epoch,"commit":…}，加入的一端回 {"t":"hello","v":2,"e":epoch,"key":…}，
+//    開房的一端再揭露 {"t":"reveal","e":epoch,"key":…}。確認碼只有 6 位數，不先承諾的話，中間的人
+//    看到雙方的公鑰之後試一百萬把金鑰就能讓兩邊的確認碼相同（版本 1 是兩端同時送出公鑰）
 // 2. 共同推出的值當輸入、K 當 salt，用 HKDF-SHA256 導出兩把金鑰，每個方向一把。info 帶協定版本與
 //    兩端的公鑰（開房的一端在前），公鑰在途中被換掉的話，兩邊導出的金鑰就不同
 // 3. 之後每則訊息先包成框（relay.ts 的 frame，分文字與二進位），用 AES-256-GCM 加密。nonce 是遞增的
@@ -13,7 +16,8 @@
 //    任何一端。連結外洩、別人用它搶先加入時，真正的接收端進不了房間，或兩人核對確認碼時對不上
 //
 // 斷線重連時，轉送服務丟掉的訊息讓序號對不上，所以每次接回來都重新握手（同一個 K、新的暫時金鑰），
-// 序號從頭算，再由上層的續傳接著傳。
+// 序號從頭算，再由上層的續傳接著傳。重新握手時把第一次握手導出的秘密（chain）算進 salt，讀者核對過的
+// 確認碼才涵蓋得到之後的每一段連線。
 
 import { gcm } from "@noble/ciphers/aes.js";
 import { x25519 } from "@noble/curves/ed25519.js";
@@ -23,7 +27,7 @@ import type { Channel, Data } from "../nearby/channel.ts";
 import { confirmCode } from "../nearby/protocol.ts";
 import { frame, unframe } from "./relay.ts";
 
-export const SECURE_VERSION = 1;
+export const SECURE_VERSION = 2;
 export const LINK_KEY_BYTES = 32;
 
 export type Role = "opener" | "joiner";
@@ -81,8 +85,8 @@ function nonce(counter: number): Uint8Array {
 const asBuffer = (u8: Uint8Array): ArrayBuffer =>
   u8.byteOffset === 0 && u8.byteLength === u8.buffer.byteLength ? (u8.buffer as ArrayBuffer) : (u8.slice().buffer as ArrayBuffer);
 
-// 對方的 hello。斷線重連之後，上一段連線還在路上的訊息可能先到：二進位的與 epoch 比較舊的 hello 略過
-async function readHello(inner: Channel, epoch: number): Promise<Uint8Array> {
+// 握手的一則明文訊息。斷線重連之後，上一段連線還在路上的訊息可能先到：二進位的與 epoch 比較舊的略過
+async function readStep(inner: Channel, epoch: number, type: "hello" | "reveal"): Promise<Record<string, unknown>> {
   for (;;) {
     const item = await inner.next();
     if (typeof item !== "string") {
@@ -95,29 +99,72 @@ async function readHello(inner: Channel, epoch: number): Promise<Uint8Array> {
     } catch {
       throw new SecureError("bad-hello");
     }
-    if (!m || m.t !== "hello") throw new SecureError("bad-hello");
-    if (m.v !== SECURE_VERSION) throw new SecureError("version");
+    if (!m || typeof m !== "object") throw new SecureError("bad-hello");
+    if (m.t === "hello" && m.v !== SECURE_VERSION) throw new SecureError("version");
     if (typeof m.e === "number" && m.e < epoch) continue;
-    if (m.e !== epoch) throw new SecureError("bad-hello");
-    const key = typeof m.key === "string" ? fromB64url(m.key, 32) : null;
-    if (!key) throw new SecureError("bad-hello");
-    return key;
+    if (m.t !== type || m.e !== epoch) throw new SecureError("bad-hello");
+    return m;
   }
+}
+
+const field = (m: Record<string, unknown>, name: string): Uint8Array => {
+  const value = typeof m[name] === "string" ? fromB64url(m[name] as string, 32) : null;
+  if (!value) throw new SecureError("bad-hello");
+  return value;
+};
+
+const equal = (a: Uint8Array, b: Uint8Array) => a.length === b.length && a.every((v, i) => v === b[i]);
+
+// 交換公鑰。開房的一端先送公鑰的雜湊，收到對方的公鑰才揭露自己的，加入的一端確認揭露的公鑰跟雜湊
+// 相符。兩端都要在看到對方的公鑰之前決定自己的，中間的人沒有辦法一直換金鑰、試到兩邊的確認碼相同
+async function exchange(inner: Channel, role: Role, epoch: number, mine: Uint8Array): Promise<Uint8Array> {
+  const say = (m: Record<string, unknown>) => inner.send(JSON.stringify(m));
+  if (role === "opener") {
+    say({ t: "hello", v: SECURE_VERSION, e: epoch, commit: b64url(sha256(mine)) });
+    const theirs = field(await readStep(inner, epoch, "hello"), "key");
+    say({ t: "reveal", e: epoch, key: b64url(mine) });
+    return theirs;
+  }
+  let hello: Record<string, unknown>;
+  try {
+    hello = await readStep(inner, epoch, "hello");
+  } catch (error) {
+    // 對方是別的版本：加入的一端還沒送過任何東西，補一則 hello，對方才知道是版本對不上
+    if (error instanceof SecureError && error.code === "version") say({ t: "hello", v: SECURE_VERSION, e: epoch });
+    throw error;
+  }
+  const commit = field(hello, "commit");
+  say({ t: "hello", v: SECURE_VERSION, e: epoch, key: b64url(mine) });
+  const theirs = field(await readStep(inner, epoch, "reveal"), "key");
+  if (!equal(sha256(theirs), commit)) throw new SecureError("bad-hello");
+  return theirs;
 }
 
 export interface Secured {
   channel: Channel;
   // 兩端的公鑰算出的 6 位數，兩邊相同才是同一條連線
   confirm: string;
+  // 這次握手導出的秘密。第一次握手的那一份交給之後每一次握手（prior），見 secure()
+  chain: Uint8Array;
 }
 
 // 在 inner 上握手，回傳加密過的通道。K 不對時丟出 wrong-key，對方送來的不是合格的公鑰時丟出 bad-hello。
-// epoch 是轉送服務給的連線編號（RelayLink.epoch），沒有斷過線時是 0
-export async function secure(inner: Channel, linkKey: Uint8Array, role: Role, epoch = 0): Promise<Secured> {
+// epoch 是轉送服務給的連線編號（RelayLink.epoch），沒有斷過線時是 0。
+//
+// prior 是第一次握手的 chain，斷線接回來重新握手時帶上。讀者只核對第一次握手的確認碼，不帶 prior 的話，
+// 知道連結金鑰的中間人可以等兩人核對完、讓連線斷一次，在重新握手時才換掉公鑰。帶了之後，沒有參與
+// 第一次握手的人導不出金鑰，在 ready 就停下來
+export async function secure(inner: Channel, linkKey: Uint8Array, role: Role, epoch = 0, prior?: Uint8Array): Promise<Secured> {
   const secret = x25519.utils.randomSecretKey();
   const mine = x25519.getPublicKey(secret);
-  inner.send(JSON.stringify({ t: "hello", v: SECURE_VERSION, e: epoch, key: b64url(mine) }));
-  const theirs = await readHello(inner, epoch);
+  let theirs: Uint8Array;
+  try {
+    theirs = await exchange(inner, role, epoch, mine);
+  } catch (error) {
+    // 對方送來的不合格時關掉通道，另一端才不會一直等。版本不同時留著，剛送出的 hello 要讓對方收到
+    if (error instanceof SecureError && error.code !== "version") inner.close();
+    throw error;
+  }
 
   let shared: Uint8Array;
   try {
@@ -126,9 +173,11 @@ export async function secure(inner: Channel, linkKey: Uint8Array, role: Role, ep
     throw new SecureError("bad-hello");
   }
   const [first, second] = role === "opener" ? [mine, theirs] : [theirs, mine];
-  const keys = hkdf(sha256, shared, linkKey, concat(INFO, first, second), 64);
+  const salt = prior ? sha256(concat(linkKey, prior)) : linkKey;
+  const keys = hkdf(sha256, shared, salt, concat(INFO, first, second), 96);
   const openerKey = keys.subarray(0, 32);
-  const joinerKey = keys.subarray(32);
+  const joinerKey = keys.subarray(32, 64);
+  const chain = keys.slice(64);
   const sendKey = role === "opener" ? openerKey : joinerKey;
   const recvKey = role === "opener" ? joinerKey : openerKey;
   let sent = 0;
@@ -169,5 +218,5 @@ export async function secure(inner: Channel, linkKey: Uint8Array, role: Role, ep
     if (error instanceof SecureError) inner.close();
     throw error;
   }
-  return { channel, confirm: confirmCode(mine, theirs) };
+  return { channel, confirm: confirmCode(mine, theirs), chain };
 }
