@@ -68,3 +68,32 @@ test("逐項套用建議、整組套用，一步一步復原", async ({ page }) 
   await manual.getByRole("button", { name: "這一類全部套用（2 處）" }).click();
   await expect(input).toHaveValue("這個影片的使用者很多");
 });
+
+test("個資換成代稱，可以復原。有文字時列出工具找不到的線索", async ({ page }) => {
+  await page.goto("./writing-style/");
+  // 還沒貼上文字時只有一句提醒
+  await expect(page.getByTestId("style-clues")).toHaveCount(0);
+  await expect(page.getByText("改變寫作風格不會拿掉內容本身透露的線索")).toBeVisible();
+
+  const input = page.getByLabel("要交出去的文字");
+  const text = "林組長說有事打 0912-345-678，或寫信到 tipster@example.com";
+  await input.fill(text);
+  const manual = page.getByTestId("style-manual");
+  await expect(manual.getByText("電話號碼")).toBeVisible();
+  await manual.getByRole("button", { name: "把「0912-345-678」改成「〔電話〕」" }).click();
+  await expect(input).toHaveValue("林組長說有事打〔電話〕，或寫信到 tipster@example.com");
+  await page.getByRole("button", { name: "復原" }).click();
+  await expect(input).toHaveValue(text);
+  await manual.getByRole("button", { name: "這一類全部套用（2 處）" }).click();
+  await expect(input).toHaveValue("林組長說有事打〔電話〕，或寫信到〔Email〕");
+  // 換上的代稱不再被標成寫作習慣（〔Email〕裡的英文不算中英夾雜）
+  await expect(page.getByTestId("style-summary")).toHaveText("已套用 2 處。沒有找到常見的寫作習慣。");
+
+  // 人名找不到，清單提醒讀者自己看
+  const clues = page.getByTestId("style-clues");
+  await expect(clues.getByRole("heading", { name: "內容透露的線索" })).toBeVisible();
+  await expect(clues.getByRole("checkbox")).toHaveCount(6);
+  await clues.getByRole("checkbox", { name: /^人名、暱稱與稱呼/ }).check();
+  await expect(clues.getByRole("checkbox", { name: /^人名、暱稱與稱呼/ })).toBeChecked();
+  await expect(page.getByText("改變寫作風格不會拿掉內容本身透露的線索")).toHaveCount(0);
+});
