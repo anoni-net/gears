@@ -479,3 +479,15 @@ export function replaceTerm(text: string, term: string, alias: string, keep: rea
   }
   return { text: chosen.length ? applyHabits(text, chosen) : text, count: chosen.length };
 }
+
+// 逐字稿這類分成好幾段的文字：每一段各自換，其他欄位（時間、說話者）不動。
+// 一個名字被切在兩段之間時換不到，數量只算換到的。放在這裡，逐字稿的 Worker 不必載入寫作習慣檢查的規則
+export function replaceInParts<T extends { text: string }>(parts: T[], term: string, alias: string, keep: readonly string[] = []): { parts: T[]; count: number } {
+  let count = 0;
+  const next = parts.map((part) => {
+    const result = replaceTerm(part.text, term, alias, keep);
+    count += result.count;
+    return result.count ? { ...part, text: result.text } : part;
+  });
+  return { parts: count ? next : parts, count };
+}

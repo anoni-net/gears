@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { addedNumbers, missingFacts } from "../../src/tools/writing-style/facts.ts";
 import { PII_KINDS } from "../../src/tools/redact/pii.ts";
-import { FIXABLE, HABIT_CODES, applyHabits, countHabits, findHabits, fixHabits, nextAlias, replaceTerm, tagPii } from "../../src/tools/writing-style/index.ts";
+import { FIXABLE, HABIT_CODES, applyHabits, countHabits, findHabits, fixHabits, nextAlias, replaceInParts, replaceTerm, tagPii } from "../../src/tools/writing-style/index.ts";
 
 const codes = (text: string) => findHabits(text).map((h) => [h.code, h.text.trim()]);
 
@@ -192,4 +192,20 @@ test("自己指定要換掉的字：全部換成同一個代稱，下一個代�
   const keep = ["〔人名 A〕", "[Person A]"];
   expect(findHabits("問〔人名 A〕就知道", keep)).toEqual([]);
   expect(findHabits("問 [Person A] 就知道", keep)).toEqual([]);
+});
+
+test("逐字稿這類分段的文字：每一段各自換，時間與說話者不動，切在兩段之間的換不到", () => {
+  const parts = [
+    { start: 0, end: 2, text: "王經理說明天開會", speaker: 0 },
+    { start: 2, end: 4, text: "我跟王經理不熟", speaker: 1 },
+    { start: 4, end: 5, text: "王", speaker: 1 },
+    { start: 5, end: 6, text: "經理也來了", speaker: 1 },
+  ];
+  const result = replaceInParts(parts, "王經理", "〔人名 A〕");
+  expect(result.count).toBe(2);
+  expect(result.parts.map((p) => p.text)).toEqual(["〔人名 A〕說明天開會", "我跟〔人名 A〕不熟", "王", "經理也來了"]);
+  expect(result.parts.map((p) => [p.start, p.speaker])).toEqual(parts.map((p) => [p.start, p.speaker]));
+  // 沒有換到的段落沿用原本的物件，整份沒有換到時回傳原本的陣列
+  expect(result.parts[2]).toBe(parts[2]);
+  expect(replaceInParts(parts, "李", "〔人名 B〕").parts).toBe(parts);
 });

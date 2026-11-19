@@ -321,6 +321,7 @@ export const en: Record<MessageKey, string> = {
   "transcribe.downloadSrt": "Download SRT subtitles",
   "transcribe.copy": "Copy text",
   "transcribe.copied": "Copied.",
+  "transcribe.alias.hint": "Names of interviewees, coworkers and other people often appear dozens of times in a transcript. Enter a word to replace every occurrence with the same label, in both the downloads and the files added to the tray. A name split across two segments is not replaced, so read the transcript again before downloading.",
   "transcribe.toTray": "Add to tray",
   "transcribe.removeModel": "Delete the downloaded {model} model ({size})",
   "transcribe.models.title": "Models and licenses",
