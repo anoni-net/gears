@@ -2816,6 +2816,17 @@ button.link {
   margin-top: 1.25rem;
 }
 
+/* 自己指定要換掉的字：跟上下的區塊用分隔線隔開 */
+.style-alias {
+  border-top: 1px solid var(--line);
+  padding-top: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.style-alias .field input {
+  max-width: 20rem;
+}
+
 /* 線索清單的項目常換行，勾選框對齊第一行 */
 .style-clues .check {
   align-items: flex-start;
