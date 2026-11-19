@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { addedNumbers, missingFacts } from "../../src/tools/writing-style/facts.ts";
+import { PII_KINDS } from "../../src/tools/redact/pii.ts";
 import { FIXABLE, HABIT_CODES, applyHabits, countHabits, findHabits, fixHabits, nextAlias, replaceTerm, tagPii } from "../../src/tools/writing-style/index.ts";
 
 const codes = (text: string) => findHabits(text).map((h) => [h.code, h.text.trim()]);
@@ -134,7 +135,7 @@ test("逐項套用建議：只改選的那幾處，刪掉語助詞與口頭禪�
 });
 
 test("個資換成代稱：只換讀者選的，代稱的括號跟中文一樣前後不留空白", () => {
-  const tags = { phone: "〔電話〕", email: "〔Email〕", id: "〔身分證號碼〕", card: "〔卡號〕", number: "〔號碼〕", url: "〔網址〕", handle: "〔帳號〕" };
+  const tags = { phone: "〔電話〕", email: "〔Email〕", id: "〔身分證號碼〕", card: "〔卡號〕", ip: "〔IP 位址〕", plate: "〔車牌〕", number: "〔號碼〕", url: "〔網址〕", handle: "〔帳號〕" };
   const text = "有事打 0912-345-678 或寫信到 tipster@example.com，帳號 @anon_tw";
   // 沒有代稱時個資沒有建議寫法，套用也不會動
   expect(applyHabits(text, findHabits(text))).toBe(text);
@@ -160,7 +161,7 @@ test("換上的代稱不再被標成寫作習慣，三個語系的代稱都一�
   const { en } = await import("../../src/i18n/en.ts");
   for (const messages of [zhTW, zhCN, en] as Record<string, string>[]) {
     const tags = Object.entries(messages).filter(([k]) => k.startsWith("style.piiTag.")).map(([, v]) => v);
-    expect(tags).toHaveLength(7);
+    expect(tags).toHaveLength(PII_KINDS.length);
     // 中文句子與英文句子裡各放一次
     const text = `有事打${tags.join("，或是")}給我。Call me at ${tags.join(" or ")} now`;
     const spans = tags.flatMap((tag) => [...text.matchAll(new RegExp(tag.replace(/[[\]]/g, "\\$&"), "g"))].map((m) => [m.index, m.index + tag.length]));
