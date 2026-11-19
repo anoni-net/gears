@@ -97,3 +97,34 @@ test("個資換成代稱，可以復原。有文字時列出工具找不到的�
   await expect(clues.getByRole("checkbox", { name: /^人名、暱稱與稱呼/ })).toBeChecked();
   await expect(page.getByText("改變寫作風格不會拿掉內容本身透露的線索")).toHaveCount(0);
 });
+
+test("自己指定要換掉的字，一次換成同一個代稱，可以復原", async ({ page }) => {
+  await page.goto("./writing-style/");
+  const input = page.getByLabel("要交出去的文字");
+  const text = "林組長說小美跟林組長都在信義分店";
+  await input.fill(text);
+  const form = page.getByTestId("style-alias");
+  await form.getByLabel("要換掉的字").fill("林組長");
+  await form.getByRole("button", { name: "全部換成〔人名 A〕" }).click();
+  await expect(input).toHaveValue("〔人名 A〕說小美跟〔人名 A〕都在信義分店");
+  await expect(page.getByTestId("style-summary")).toContainText("已把 2 處「林組長」換成〔人名 A〕。");
+  // 下一個人名換成 B，單位另外從 A 開始
+  await form.getByLabel("要換掉的字").fill("小美");
+  await form.getByRole("button", { name: "全部換成〔人名 B〕" }).click();
+  await form.getByRole("radio", { name: "地點" }).check();
+  await form.getByLabel("要換掉的字").fill("信義分店");
+  await form.getByRole("button", { name: "全部換成〔地點 A〕" }).click();
+  await expect(input).toHaveValue("〔人名 A〕說〔人名 B〕跟〔人名 A〕都在〔地點 A〕");
+  // 代稱不再被標成寫作習慣
+  await expect(page.getByTestId("style-summary")).toContainText("沒有找到常見的寫作習慣。");
+  // 只有一個字時提醒其他詞裡的同一個字也會被換掉
+  await form.getByLabel("要換掉的字").fill("跟");
+  await form.getByRole("button", { name: "全部換成〔地點 B〕" }).click();
+  await expect(page.getByTestId("style-summary")).toContainText("其他詞裡的同一個字也會被換掉");
+  await page.getByRole("button", { name: "復原" }).click();
+  await expect(input).toHaveValue("〔人名 A〕說〔人名 B〕跟〔人名 A〕都在〔地點 A〕");
+  // 找不到時說明，文字不動
+  await form.getByLabel("要換掉的字").fill("王經理");
+  await form.getByRole("button", { name: /^全部換成/ }).click();
+  await expect(page.getByTestId("style-summary")).toContainText("文字裡沒有「王經理」。");
+});

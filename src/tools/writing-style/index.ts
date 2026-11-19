@@ -447,3 +447,35 @@ export function countHabits(habits: Habit[]): Partial<Record<HabitCode, number>>
   for (const h of habits) counts[h.code] = (counts[h.code] ?? 0) + 1;
   return counts;
 }
+
+// 讀者自己指定要換掉的字（人名、單位、地點），全文出現的地方換成同一個代稱，例如「林組長」換成〔人名 A〕。
+// 人名、單位與地點沒有固定格式，規則找不到，模型（#139）上線之前只能靠讀者自己指定
+export const ALIAS_KINDS = ["person", "org", "place", "other"] as const;
+export type AliasKind = (typeof ALIAS_KINDS)[number];
+
+// 代稱的字母：A 到 Z，用完接 AA 到 AZ
+export const ALIAS_LETTERS = [..."ABCDEFGHIJKLMNOPQRSTUVWXYZ", ..."ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").map((c) => `A${c}`)];
+
+// 還沒出現在文字裡的下一個代稱。format 把字母套進代稱的格式（跟著介面的語系）
+export function nextAlias(text: string, format: (letter: string) => string): string {
+  return format(ALIAS_LETTERS.find((letter) => !text.includes(format(letter))) ?? ALIAS_LETTERS.at(-1)!);
+}
+
+// 把 term 全部換成 alias，回傳換好的文字與換了幾處。已經換上的代稱（keep）裡面的字不動，
+// 例如指定「人名」時，〔人名 A〕裡的「人名」不會被換掉。換上代稱時照 applyHabits 拿掉夾在中文之間的空白
+export function replaceTerm(text: string, term: string, alias: string, keep: readonly string[] = []): { text: string; count: number } {
+  const word = term.trim();
+  if (!word) return { text, count: 0 };
+  const kept: { start: number; end: number }[] = [];
+  for (const k of [...keep, alias]) {
+    if (!k) continue;
+    for (let i = text.indexOf(k); i !== -1; i = text.indexOf(k, i + k.length)) kept.push({ start: i, end: i + k.length });
+  }
+  const chosen: Habit[] = [];
+  for (let i = text.indexOf(word); i !== -1; i = text.indexOf(word, i + word.length)) {
+    const end = i + word.length;
+    if (kept.some((r) => r.start < end && r.end > i)) continue;
+    chosen.push({ code: "pii", start: i, end, text: word, suggest: alias });
+  }
+  return { text: chosen.length ? applyHabits(text, chosen) : text, count: chosen.length };
+}

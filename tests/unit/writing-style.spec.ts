@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { addedNumbers, missingFacts } from "../../src/tools/writing-style/facts.ts";
-import { FIXABLE, HABIT_CODES, applyHabits, countHabits, findHabits, fixHabits, tagPii } from "../../src/tools/writing-style/index.ts";
+import { FIXABLE, HABIT_CODES, applyHabits, countHabits, findHabits, fixHabits, nextAlias, replaceTerm, tagPii } from "../../src/tools/writing-style/index.ts";
 
 const codes = (text: string) => findHabits(text).map((h) => [h.code, h.text.trim()]);
 
@@ -170,4 +170,25 @@ test("換上的代稱不再被標成寫作習慣，三個語系的代稱都一�
   // 沒有傳入代稱時照舊，〔Email〕裡的英文算中英夾雜
   expect(findHabits("寫信到〔Email〕").map((h) => h.code)).toEqual(["english"]);
   expect(findHabits("寫信到〔Email〕", ["〔Email〕"])).toEqual([]);
+});
+
+test("自己指定要換掉的字：全部換成同一個代稱，下一個代稱換字母，代稱裡的字不動", () => {
+  const format = (letter: string) => `〔人名 ${letter}〕`;
+  const text = "林組長說小美跟 林組長 都知道";
+  expect(nextAlias(text, format)).toBe("〔人名 A〕");
+  const first = replaceTerm(text, " 林組長 ", "〔人名 A〕");
+  expect(first).toEqual({ text: "〔人名 A〕說小美跟〔人名 A〕都知道", count: 2 });
+  expect(nextAlias(first.text, format)).toBe("〔人名 B〕");
+  expect(replaceTerm(first.text, "小美", nextAlias(first.text, format)).text).toBe("〔人名 A〕說〔人名 B〕跟〔人名 A〕都知道");
+  // 指定的字剛好出現在代稱裡時，代稱不動
+  expect(replaceTerm(first.text, "人名", "〔代稱 A〕", [format("A")])).toEqual({ text: first.text, count: 0 });
+  // 沒有出現、空白的字不動
+  expect(replaceTerm(text, "王", "〔人名 A〕").count).toBe(0);
+  expect(replaceTerm(text, "  ", "〔人名 A〕")).toEqual({ text, count: 0 });
+  // 英文的代稱保留空白
+  expect(replaceTerm("Ask Kevin or Kevin's boss", "Kevin", "[Person A]").text).toBe("Ask [Person A] or [Person A]'s boss");
+  // 換上的代稱不再被標成寫作習慣
+  const keep = ["〔人名 A〕", "[Person A]"];
+  expect(findHabits("問〔人名 A〕就知道", keep)).toEqual([]);
+  expect(findHabits("問 [Person A] 就知道", keep)).toEqual([]);
 });
