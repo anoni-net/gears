@@ -8,6 +8,9 @@
 import { type Channel, type Data, Inbox } from "../nearby/channel.ts";
 import { type ClientControl, type Ice, NO_ICE, RELAY_VERSION, type RelayErrorCode, type ServerControl, frame, parseServerControl, unframe } from "./relay.ts";
 
+// 本機的轉送服務（瀏覽器測試與單元測試），只有這裡接受 policy: "all"
+const LOOPBACK = /^(localhost|127\.0\.0\.1|\[::1\])$/;
+
 // epoch：自己接回來或對方接回來，上一段連線的訊息作廢，要重新握手（RelayLink.epoch）
 export type LinkErrorCode = RelayErrorCode | "connect" | "closed" | "gone" | "epoch";
 
@@ -215,7 +218,9 @@ export class RelayLink implements Channel {
         this.emit(m.t);
         break;
       case "ice":
-        this.resolveIce({ policy: m.policy, servers: m.servers });
+        // all 會讓兩端交出自己的位址，只給本機的測試用。正式的網域收到時當成沒有 TURN，改走轉送服務
+        if (m.policy === "all" && !LOOPBACK.test(new URL(this.url).hostname)) this.resolveIce(NO_ICE);
+        else this.resolveIce({ policy: m.policy, servers: m.servers });
         break;
     }
     if (this.waiter?.types.includes(m.t)) this.waiter.resolve(m);
