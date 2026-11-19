@@ -3678,10 +3678,24 @@ var DEFAULTS = {
 	openWindowMs: 6e5,
 	opensPerClient: 20,
 	opensOnion: 300,
+	roomsOnion: 100,
 	ice: async () => NO_ICE
 };
 var HIGH_WATER = 4194304;
 var LOW_WATER = 1048576;
+function clientKey(address) {
+	if (!address.includes(":") || address.includes(".")) return address;
+	const [head = "", tail] = address.toLowerCase().split("::");
+	const left = head ? head.split(":") : [];
+	const right = tail ? tail.split(":") : [];
+	const groups = tail === void 0 ? left : [
+		...left,
+		...Array(Math.max(0, 8 - left.length - right.length)).fill("0"),
+		...right
+	];
+	if (groups.length !== 8 || !groups.every((g) => /^[0-9a-f]{1,4}$/.test(g))) return address;
+	return `${groups.slice(0, 4).map((g) => g.replace(/^0+(?=.)/, "")).join(":")}::/64`;
+}
 async function startRelay(overrides = {}) {
 	const o = {
 		...DEFAULTS,
@@ -3691,6 +3705,7 @@ async function startRelay(overrides = {}) {
 	const seats = /* @__PURE__ */ new Map();
 	const alive = /* @__PURE__ */ new WeakMap();
 	const opens = /* @__PURE__ */ new Map();
+	let onionRooms = 0;
 	const server = createServer((_, res) => {
 		res.writeHead(426, { "content-type": "text/plain" }).end("WebSocket only\n");
 	});
@@ -3714,6 +3729,7 @@ async function startRelay(overrides = {}) {
 		if (room.closed) return;
 		room.closed = true;
 		rooms.delete(room.id);
+		if (room.onion) onionRooms--;
 		clearTimeout(room.timer);
 		for (const side of room.sides) {
 			if (!side) continue;
@@ -3758,7 +3774,9 @@ async function startRelay(overrides = {}) {
 		}
 		if (m.t === "open") {
 			if (!allowOpen(key)) return refuse(ws, "rate-limited");
-			if (rooms.size >= o.maxRooms) return refuse(ws, "busy");
+			const onion = key === "onion";
+			if (rooms.size >= o.maxRooms || onion && onionRooms >= o.roomsOnion) return refuse(ws, "busy");
+			if (onion) onionRooms++;
 			const room = {
 				id: randomId(),
 				sides: [{
@@ -3768,6 +3786,7 @@ async function startRelay(overrides = {}) {
 				}, null],
 				bytes: 0,
 				epoch: 0,
+				onion,
 				timer: setTimeout(() => closeRoom(room, { t: "gone" }), o.waitMs),
 				closed: false
 			};
@@ -3859,7 +3878,7 @@ async function startRelay(overrides = {}) {
 	}
 	wss.on("connection", (ws, req) => {
 		const header = req.headers["x-relay-client"];
-		const key = (Array.isArray(header) ? header[0] : header) || req.socket.remoteAddress || "";
+		const key = clientKey((Array.isArray(header) ? header[0] : header) || req.socket.remoteAddress || "");
 		alive.set(ws, true);
 		ws.on("pong", () => alive.set(ws, true));
 		ws.on("error", () => {});
@@ -3995,7 +4014,8 @@ var options = {
 	maxRooms: number("RELAY_MAX_ROOMS", DEFAULTS.maxRooms),
 	roomBytes: number("RELAY_ROOM_BYTES", DEFAULTS.roomBytes),
 	opensPerClient: number("RELAY_OPENS_PER_CLIENT", DEFAULTS.opensPerClient),
-	opensOnion: number("RELAY_OPENS_ONION", DEFAULTS.opensOnion)
+	opensOnion: number("RELAY_OPENS_ONION", DEFAULTS.opensOnion),
+	roomsOnion: number("RELAY_ROOMS_ONION", DEFAULTS.roomsOnion)
 };
 var ttl = Math.round(DEFAULTS.maxAgeMs / 1e3);
 var turnSecret = env("TURN_SECRET");
