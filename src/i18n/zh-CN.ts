@@ -322,6 +322,7 @@ export const zhCN: Record<MessageKey, string> = {
   "transcribe.downloadSrt": "下载 SRT 字幕",
   "transcribe.copy": "复制文字",
   "transcribe.copied": "已复制。",
+  "transcribe.alias.hint": "受访者、同事与第三方的名字在逐字稿里常出现好几十次。输入要换掉的字，全部换成同一个代称，下载与放进暂存区的文件都会换掉。名字刚好被切在两段之间时换不到，下载之前再读一次。",
   "transcribe.toTray": "放进暂存区",
   "transcribe.removeModel": "删除已下载的 {model} 模型（{size}）",
   "transcribe.models.title": "使用的模型与授权",

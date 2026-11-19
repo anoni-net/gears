@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import { t, tDynamic } from "../i18n/index.ts";
 import { tray } from "../state.ts";
 import { MODELS, MODEL_IDS, type ModelId, SAMPLE_RATE, type Segment, clock, mergeSegments, toSrt, toTxt } from "../tools/transcribe/segments.ts";
+import { replaceInParts } from "../tools/writing-style/index.ts";
+import { AliasForm, aliasMessage, allAliases } from "./AliasForm.tsx";
 import { type Device, type GpuInfo, gpuUsable } from "../tools/transcribe/device.ts";
 import { LANGUAGES, type Language, modelsFor, preferredModel } from "../tools/transcribe/languages.ts";
 import { ASSETS_MODELS, type Part, REMOTE_ERROR, isCached, partName, removeCached } from "../core/models.ts";
@@ -104,6 +106,9 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
   const [threads, setThreads] = useState(DEFAULT_THREADS);
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
   const [segments, setSegments] = useState<Segment[]>([]);
+  // 自己指定要換掉的字：每次換之前的逐字稿，復原時一步一步退回。重新轉一次時清空
+  const [aliasHistory, setAliasHistory] = useState<Segment[][]>([]);
+  const [aliasNote, setAliasNote] = useState("");
   const [downloaded, setDownloaded] = useState<Partial<Record<ModelId, boolean>>>({});
   const [note, setNote] = useState<string>("");
   const worker = useRef<{ instance: Worker; threads: number; device: Device; engine: Engine } | null>(null);
@@ -139,6 +144,8 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
     const id = ++run.current;
     setRunning(null);
     setSegments([]);
+    setAliasHistory([]);
+    setAliasNote("");
     setNote("");
     setPhase({ kind: "decoding" });
     let stream: AudioStream;
@@ -433,6 +440,36 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
               </li>
             ))}
           </ol>
+          {!busy ? (
+            <AliasForm
+              id="transcribe-alias"
+              text={segments.map((seg) => seg.text).join("\n")}
+              hint={t("transcribe.alias.hint")}
+              message={aliasNote}
+              onReplace={(word, alias) => {
+                const result = replaceInParts(segments, word, alias, allAliases());
+                if (result.count) {
+                  setAliasHistory([...aliasHistory, segments]);
+                  setSegments(result.parts);
+                }
+                setAliasNote(aliasMessage(word, alias, result.count));
+              }}
+            />
+          ) : null}
+          {aliasHistory.length && !busy ? (
+            <div class="buttons">
+              <button
+                type="button"
+                onClick={() => {
+                  setSegments(aliasHistory.at(-1)!);
+                  setAliasHistory(aliasHistory.slice(0, -1));
+                  setAliasNote(t("style.undone"));
+                }}
+              >
+                {t("style.undo")}
+              </button>
+            </div>
+          ) : null}
           <div class="buttons">
             <button type="button" class="primary" onClick={() => download(toTxt(segments, speakerName), "transcript.txt")}>
               {t("transcribe.downloadTxt")}

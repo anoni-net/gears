@@ -327,6 +327,7 @@ export const zhTW = {
   "transcribe.downloadSrt": "下載 SRT 字幕",
   "transcribe.copy": "複製文字",
   "transcribe.copied": "已複製。",
+  "transcribe.alias.hint": "受訪者、同事與第三方的名字在逐字稿裡常出現好幾十次。輸入要換掉的字，全部換成同一個代稱，下載與放進暫存區的檔案都會換掉。名字剛好被切在兩段之間時換不到，下載之前再讀一次。",
   "transcribe.toTray": "放進暫存區",
   "transcribe.removeModel": "刪除已下載的 {model} 模型（{size}）",
   "transcribe.models.title": "使用的模型與授權",

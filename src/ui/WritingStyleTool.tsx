@@ -1,7 +1,8 @@
 import { useMemo, useState } from "preact/hooks";
 import { getLocale, t, tDynamic } from "../i18n/index.ts";
 import { PII_KINDS, type PiiKind } from "../tools/redact/pii.ts";
-import { ALIAS_KINDS, ALIAS_LETTERS, type AliasKind, CLUES, FIXABLE, HABIT_CODES, type Habit, type HabitCode, applyHabits, findHabits, fixHabits, replaceTerm, nextAlias, replacementOf, tagPii } from "../tools/writing-style/index.ts";
+import { CLUES, FIXABLE, HABIT_CODES, type Habit, type HabitCode, applyHabits, findHabits, fixHabits, replaceTerm, replacementOf, tagPii } from "../tools/writing-style/index.ts";
+import { AliasForm, aliasMessage, allAliases } from "./AliasForm.tsx";
 import { useDoneOnce } from "./analytics.ts";
 import { CopyButton } from "./CopyButton.tsx";
 import type { CreateToolProps } from "./types.ts";
@@ -119,12 +120,9 @@ export function WritingStyleTool(_: CreateToolProps) {
   const locale = getLocale();
   const tags = useMemo(() => Object.fromEntries(PII_KINDS.map((kind) => [kind, tDynamic(`style.piiTag.${kind}`)])) as Record<PiiKind, string>, [locale]);
   // 讀者自己指定的代稱（〔人名 A〕），所有可能的寫法都列出來，換上之後不再被標成寫作習慣
-  const aliasFormat = (kind: AliasKind) => (letter: string) => tDynamic(`style.alias.format.${kind}`, { letter });
-  const aliases = useMemo(() => ALIAS_KINDS.flatMap((kind) => ALIAS_LETTERS.map(aliasFormat(kind))), [locale]);
+  const aliases = useMemo(allAliases, [locale]);
   const keep = useMemo(() => [...Object.values(tags), ...aliases], [tags, aliases]);
   const habits = useMemo(() => tagPii(findHabits(text, keep), tags), [text, keep, tags]);
-  const [term, setTerm] = useState("");
-  const [aliasKind, setAliasKind] = useState<AliasKind>("person");
   const fixable = habits.filter(isFixable).length;
   const groups = HABIT_CODES.map((code) => [code, habits.filter((h) => h.code === code)] as [HabitCode, Habit[]]).filter(([, list]) => list.length);
   // 需要讀者自己改的放前面，可以直接修正的放後面
@@ -139,20 +137,10 @@ export function WritingStyleTool(_: CreateToolProps) {
   };
   const fix = () => change(fixHabits(text), t("style.fixed", { n: fixable }));
   const apply = (chosen: Habit[]) => change(applyHabits(text, chosen), t("style.applied", { n: chosen.length }));
-  const replace = (e: Event) => {
-    e.preventDefault();
-    const word = term.trim();
-    if (!word) return;
-    const alias = nextAlias(text, aliasFormat(aliasKind));
+  const replace = (word: string, alias: string) => {
     const result = replaceTerm(text, word, alias, keep);
-    if (!result.count) {
-      setNote(t("style.alias.none", { term: word }));
-      return;
-    }
-    // 只有一個漢字時，其他詞裡的同一個字也會被換掉（「林」與「林口」）
-    const single = [...word].length === 1 ? t("style.alias.single") : "";
-    change(result.text, t("style.alias.done", { n: result.count, term: word, alias }) + single);
-    setTerm("");
+    if (result.count) change(result.text, aliasMessage(word, alias, result.count));
+    else setNote(aliasMessage(word, alias, 0));
   };
   const undo = () => {
     if (!history.length) return;
@@ -197,28 +185,7 @@ export function WritingStyleTool(_: CreateToolProps) {
             <CopyButton text={text} label={t("style.copy")} primary={false} />
           </div>
 
-          <form class="style-alias" aria-labelledby="style-alias-title" data-testid="style-alias" onSubmit={replace}>
-            <h3 id="style-alias-title">{t("style.alias.title")}</h3>
-            <p class="hint">{t("style.alias.hint")}</p>
-            <label class="field">
-              {t("style.alias.term")}
-              <input type="text" value={term} autocomplete="off" spellcheck={false} onInput={(e) => setTerm(e.currentTarget.value)} />
-            </label>
-            <fieldset class="segmented">
-              <legend>{t("style.alias.kind")}</legend>
-              {ALIAS_KINDS.map((kind) => (
-                <label key={kind}>
-                  <input type="radio" name="style-alias-kind" checked={aliasKind === kind} onChange={() => setAliasKind(kind)} />
-                  {tDynamic(`style.alias.kind.${kind}`)}
-                </label>
-              ))}
-            </fieldset>
-            <div class="buttons">
-              <button type="submit" disabled={!term.trim()}>
-                {t("style.alias.apply", { alias: nextAlias(text, aliasFormat(aliasKind)) })}
-              </button>
-            </div>
-          </form>
+          <AliasForm id="style-alias" text={text} hint={t("style.alias.hint")} onReplace={replace} />
 
           {habits.length ? (
             <>
