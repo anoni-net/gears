@@ -105,11 +105,29 @@ const hex = (b: ArrayBuffer) => [...new Uint8Array(b)].map((x) => x.toString(16)
 // 簽署的範圍：/ByteRange 是 [起點1, 長度1, 起點2, 長度2]，中間空出來的是 /Contents 本身
 function signedBytes(bytes: Uint8Array, range: number[]): Uint8Array | undefined {
   const [a, b, c, d] = range;
-  if (range.length !== 4 || [a, b, c, d].some((n) => n === undefined || n < 0) || c! + d! > bytes.length || a! + b! > c!) return undefined;
+  // 起點要是檔案的開頭，否則前面可以放沒被簽到的內容
+  if (range.length !== 4 || [a, b, c, d].some((n) => n === undefined || n < 0) || a !== 0 || c! + d! > bytes.length || b! > c!) return undefined;
   const out = new Uint8Array(b! + d!);
   out.set(bytes.subarray(a!, a! + b!), 0);
   out.set(bytes.subarray(c!, c! + d!), b!);
   return out;
+}
+
+// 簽署的範圍中間空出來的那一段只能是 /Contents 本身。不檢查的話，空隙裡可以塞進沒被簽到的內容，
+// 摘要照樣對得上。十六進位字串解開要跟簽章字典的 /Contents 相同，寫成一般字串的只確認括號
+export function gapIsContents(bytes: Uint8Array, range: number[], contents: Uint8Array): boolean {
+  const gap = bytes.subarray(range[1]!, range[2]!);
+  let text = "";
+  for (const b of gap) text += String.fromCharCode(b);
+  text = text.trim();
+  if (text.startsWith("(")) return text.endsWith(")");
+  if (!/^<[0-9a-fA-F\s]*>$/.test(text)) return false;
+  const hexText = text.slice(1, -1).replace(/\s+/g, "");
+  if (hexText.length !== contents.length * 2 && hexText.length + 1 !== contents.length * 2) return false;
+  for (let i = 0; i < contents.length; i++) {
+    if (parseInt(hexText.slice(i * 2, i * 2 + 2).padEnd(2, "0"), 16) !== contents[i]) return false;
+  }
+  return true;
 }
 
 function signingTime(info: Pkijs.SignerInfo): Date | undefined {
@@ -337,6 +355,11 @@ export async function verifyPdfSignature(bytes: Uint8Array, input: PdfSignatureI
   const data = signedBytes(bytes, input.byteRange);
   const signerInfo = signed.signerInfos[0];
   if (!data || !signerInfo) return out;
+  if (!gapIsContents(bytes, input.byteRange, input.contents)) {
+    out.integrity = "changed";
+    out.signature = "invalid";
+    return out;
+  }
 
   // 整份文件的時間戳記：簽署者是時間戳記服務，證明簽署的範圍在那個時間已經存在
   if (signed.encapContentInfo.eContentType === "1.2.840.113549.1.9.16.1.4") {

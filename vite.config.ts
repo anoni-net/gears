@@ -28,7 +28,7 @@ const OUT_DIR = ONION ? "dist-onion" : "dist";
 // 頁面能連線的對象寫死在 CSP 裡。就算某個相依套件被植入程式，檔案也送不出去，
 // 讀者也能從頁面原始碼自行確認。connect-src 只有自己的網域，之後的伺服器處理與
 // 統計都要在這裡明列。只在正式建置加上，開發伺服器需要的內嵌腳本會被它擋掉。
-const policy = (connect: string) => [
+const policy = (connect: string, extra: string[] = []) => [
   "default-src 'none'",
   // WebAssembly（HEIC 的解碼器 libheif）需要 wasm-unsafe-eval，它只允許編譯 WebAssembly，
   // 不會開放 JavaScript 的 eval
@@ -43,6 +43,7 @@ const policy = (connect: string) => [
   "manifest-src 'self'",
   "base-uri 'none'",
   "form-action 'none'",
+  ...extra,
 ].join("; ");
 
 // 頁面的 meta 標籤只允許自己的網域，加上使用統計的送出網址（社群自架的 Umami，見 src/ui/analytics.ts）
@@ -73,6 +74,8 @@ const HEADER_CSP = policy(
     "https://*.hf.co",
     ...(ONION ? [] : [ASSETS_MODELS]),
   ].join(" "),
+  // 不讓別的網站把工作台嵌進頁框。只能用標頭送，寫在 meta 標籤裡沒有作用
+  ["frame-ancestors 'none'"],
 );
 
 function csp(): Plugin {

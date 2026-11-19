@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { examine } from "../../src/tools/verify/examine.ts";
 import { readFileSync } from "node:fs";
 import * as pkijs from "pkijs";
-import { pemToDer, verifyPdfSignature } from "../../src/tools/verify/pdf-signature.ts";
+import { gapIsContents, pemToDer, verifyPdfSignature } from "../../src/tools/verify/pdf-signature.ts";
 import { type TestCert, crl, makeCert, ocspResponse, signedPdf } from "../helpers/signed-pdf.ts";
 import type { PdfSignatureCheck, TrustStore } from "../../src/tools/verify/pdf-signature.ts";
 
@@ -271,4 +271,24 @@ test("撤銷狀態的說明與需要留意的地方", async () => {
   expect(codes({ status: "revoked", source: "crl" })).toContain("pdf-signature-revoked");
   expect(codes({ status: "revoked", source: "crl", afterTimestamp: true })).not.toContain("pdf-signature-revoked");
   expect(codes({ status: "good", source: "crl" })).not.toContain("pdf-signature-revoked");
+});
+
+test("簽署的範圍：起點不是檔案開頭，或空隙裡不只有 /Contents，都不算驗證通過", async () => {
+  const { root, leaf } = await setup();
+  const pdf = await signedPdf(leaf);
+  const ev = await examine(pdf, "pdf");
+  const sig = ev.signatures[0]!;
+  const [a, b, c, d] = sig.byteRange as [number, number, number, number];
+  expect(gapIsContents(pdf, sig.byteRange!, sig.contents!)).toBe(true);
+  const trust = { roots: [root.der], intermediates: [] };
+
+  // 起點往後移：前面的位元組沒被簽到
+  expect(await verifyPdfSignature(pdf, { byteRange: [8, b - 8, c, d], contents: sig.contents! }, trust)).toMatchObject({ signature: "unsupported", integrity: "unknown" });
+
+  // 空隙裡 /Contents 後面多了別的東西：把補零的尾巴換成另一個物件，簽署的範圍一個位元組都沒動
+  const tampered = pdf.slice();
+  const extra = new TextEncoder().encode("> /X <");
+  tampered.set(extra, c - 1 - extra.length - 8);
+  expect(gapIsContents(tampered, sig.byteRange!, sig.contents!)).toBe(false);
+  expect(await verifyPdfSignature(tampered, { byteRange: [a, b, c, d], contents: sig.contents! }, trust)).toMatchObject({ signature: "invalid", integrity: "changed" });
 });

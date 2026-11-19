@@ -25,6 +25,9 @@ export interface RelayOptions {
   openWindowMs: number;
   opensPerClient: number; // 同一個鍵在 openWindowMs 內最多開幾個房間
   opensOnion: number; // onion 的讀者共用一個鍵，上限另外設
+  // 從 onion 開的房間同時最多幾個。onion 共用一個鍵，不另外限制的話，一個人就能把 maxRooms 佔滿，
+  // clearnet 的讀者也開不了房
+  roomsOnion: number;
   // 配對之後發給兩端的 TURN 伺服器與帳密（server/turn.ts）。沒有設定時是 off，兩端只用這裡轉送
   ice: () => Promise<Ice>;
 }
@@ -43,6 +46,7 @@ export const DEFAULTS: RelayOptions = {
   openWindowMs: 10 * 60_000,
   opensPerClient: 20,
   opensOnion: 300,
+  roomsOnion: 100,
   ice: async () => NO_ICE,
 };
 
@@ -64,6 +68,7 @@ interface Room {
   bytes: number;
   epoch: number;
   ice?: Ice;
+  onion: boolean; // 從 onion 開的房間，算進 roomsOnion
   timer: NodeJS.Timeout;
   closed: boolean;
 }
@@ -80,12 +85,25 @@ export interface Relay {
   close(): Promise<void>;
 }
 
+// 計算開房次數用的鍵。IPv6 的讀者通常拿到一整段 /64，換位址不必換網路，所以只取前 64 位元。
+// IPv4 與對應到 IPv4 的位址（::ffff:a.b.c.d）維持原樣
+export function clientKey(address: string): string {
+  if (!address.includes(":") || address.includes(".")) return address;
+  const [head = "", tail] = address.toLowerCase().split("::");
+  const left = head ? head.split(":") : [];
+  const right = tail ? tail.split(":") : [];
+  const groups = tail === undefined ? left : [...left, ...Array(Math.max(0, 8 - left.length - right.length)).fill("0"), ...right];
+  if (groups.length !== 8 || !groups.every((g) => /^[0-9a-f]{1,4}$/.test(g))) return address;
+  return `${groups.slice(0, 4).map((g) => g.replace(/^0+(?=.)/, "")).join(":")}::/64`;
+}
+
 export async function startRelay(overrides: Partial<RelayOptions> = {}): Promise<Relay> {
   const o = { ...DEFAULTS, ...overrides };
   const rooms = new Map<string, Room>();
   const seats = new Map<WebSocket, Seat>();
   const alive = new WeakMap<WebSocket, boolean>();
   const opens = new Map<string, { count: number; reset: number }>();
+  let onionRooms = 0;
 
   const server = createServer((_, res) => {
     res.writeHead(426, { "content-type": "text/plain" }).end("WebSocket only\n");
@@ -106,6 +124,7 @@ export async function startRelay(overrides: Partial<RelayOptions> = {}): Promise
     if (room.closed) return;
     room.closed = true;
     rooms.delete(room.id);
+    if (room.onion) onionRooms--;
     clearTimeout(room.timer);
     for (const side of room.sides) {
       if (!side) continue;
@@ -147,12 +166,15 @@ export async function startRelay(overrides: Partial<RelayOptions> = {}): Promise
     }
     if (m.t === "open") {
       if (!allowOpen(key)) return refuse(ws, "rate-limited");
-      if (rooms.size >= o.maxRooms) return refuse(ws, "busy");
+      const onion = key === "onion";
+      if (rooms.size >= o.maxRooms || (onion && onionRooms >= o.roomsOnion)) return refuse(ws, "busy");
+      if (onion) onionRooms++;
       const room: Room = {
         id: randomId(),
         sides: [{ ws: null, token: randomId(), ice: m.ice }, null],
         bytes: 0,
         epoch: 0,
+        onion,
         timer: setTimeout(() => closeRoom(room, { t: "gone" }), o.waitMs),
         closed: false,
       };
@@ -224,7 +246,7 @@ export async function startRelay(overrides: Partial<RelayOptions> = {}): Promise
 
   wss.on("connection", (ws: WebSocket, req: IncomingMessage) => {
     const header = req.headers["x-relay-client"];
-    const key = (Array.isArray(header) ? header[0] : header) || req.socket.remoteAddress || "";
+    const key = clientKey((Array.isArray(header) ? header[0] : header) || req.socket.remoteAddress || "");
     alive.set(ws, true);
     ws.on("pong", () => alive.set(ws, true));
     ws.on("error", () => {});
