@@ -3,7 +3,10 @@ import { Icon } from "./Icon.tsx";
 import { pdfFailReason, trackFail } from "./analytics.ts";
 import type { Format } from "../core/bytes.ts";
 import type { Report } from "../core/tool.ts";
-import { t } from "../i18n/index.ts";
+import { list, t } from "../i18n/index.ts";
+import { KEEP_CACHE, OCR_MB, RUNTIME_MB, redactDownload } from "../core/storage.ts";
+// 只取網址，不載入。跟 onnxruntime-web/wasm 自己載入的是同一個檔案（內容相同，建置出來的檔名也相同）
+import ortWasmUrl from "../../node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.wasm?url";
 import { type Box, boxFromPoints, isDark, isUsable, samplePoints } from "../tools/redact/index.ts";
 import { assertCanvasReadable, isCanvasBlocked } from "./canvas-access.ts";
 import { decodeImage } from "./image-decode.ts";
@@ -102,6 +105,15 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
   latest.current = boxes;
   const [draft, setDraft] = useState<Box | null>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "working" | "failed" | "decodeFailed">("loading");
+  // 自動尋找第一次使用要下載多少，打開時算一次。下載完之後不重算，說明消失時圖片會往上跳
+  const [download, setDownload] = useState<{ faces: number; text: number; stored: boolean } | null>(null);
+  useEffect(() => {
+    let live = true;
+    downloadNeeded().then((d) => live && setDownload(d));
+    return () => {
+      live = false;
+    };
+  }, []);
   // 瀏覽器不讓讀取 canvas（Tor Browser）。框留著，讀者允許之後可以再按一次
   const [canvasBlocked, setCanvasBlocked] = useState(false);
   const start = useRef<[number, number] | null>(null);
@@ -393,6 +405,16 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
   const running = auto?.state === "running";
   const turnPage = (step: number) => setPageIndex((i) => Math.min(pdf!.count - 1, Math.max(0, i + step)));
 
+  const downloadNote = (() => {
+    if (!download) return "";
+    const parts = [
+      download.faces ? t("redact.download.faces", { mb: download.faces }) : "",
+      download.text ? t("redact.download.text", { mb: download.text }) : "",
+    ].filter(Boolean);
+    if (!parts.length) return "";
+    return t(download.stored ? "redact.download.first" : "redact.download.always", { list: list(parts) });
+  })();
+
   const autoMessage = (a: typeof auto): string => {
     // 圖片還在解碼時也顯示在這裡，不另佔一行，解碼完圖片不會往上跳
     if (status === "loading") return t(isPdf ? "redact.loadingPage" : "redact.loading");
@@ -446,6 +468,11 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
   return (
     <div class="redact">
       <p class="hint">{t("redact.help")}</p>
+      {downloadNote ? (
+        <p class="hint" data-testid="redact-download">
+          {downloadNote}
+        </p>
+      ) : null}
       {status === "decodeFailed" ? (
         <p class="error" role="alert">
           {t(isPdf ? "redact.pdfFailed" : "redact.decodeFailed")}
@@ -612,4 +639,18 @@ function AutoProgress({ label, value }: { label: string; value: number | null })
       <span aria-hidden="true">{percent === null ? "" : `${percent}%`}</span>
     </div>
   );
+}
+
+// 讀 gears-keep 看自動尋找還要下載多少。不能用 Cache API 時（私密瀏覽、Tor Browser）存不下來，
+// 每次都照第一次的大小寫
+async function downloadNeeded(): Promise<{ faces: number; text: number; stored: boolean }> {
+  const always = { faces: RUNTIME_MB, text: RUNTIME_MB + OCR_MB, stored: false };
+  try {
+    if (typeof caches === "undefined") return always;
+    if (!(await caches.has(KEEP_CACHE))) return { ...always, stored: true };
+    const requests = await (await caches.open(KEEP_CACHE)).keys();
+    return { ...redactDownload(requests.map((r) => r.url), import.meta.env.BASE_URL, ortWasmUrl), stored: true };
+  } catch {
+    return always;
+  }
 }

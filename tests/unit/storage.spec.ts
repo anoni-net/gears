@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { KEEP_CACHE, LLM_CACHE, classify, compareKeys } from "../../src/core/storage.ts";
+import { KEEP_CACHE, LLM_CACHE, OCR_MB, RUNTIME_MB, classify, compareKeys, redactDownload } from "../../src/core/storage.ts";
 import { MODEL_CACHE } from "../../src/core/models.ts";
 import whisper from "../../src/tools/transcribe/models.json" with { type: "json" };
 
@@ -32,4 +32,25 @@ test("逐字稿的模型照 models.json 的順序排在最前面，其他照用�
     { group: "llm" },
     { group: "other" },
   ]);
+});
+
+test("遮蔽的自動尋找還要下載多少：執行環境兩者共用，文字辨識要兩個模型都在", () => {
+  const base = "/gears/";
+  const runtime = "/gears/assets/ort-wasm-simd-threaded-Redact01.wasm";
+  const ort = `https://anoni.net${runtime}`;
+  const det = "https://anoni.net/gears/models/ppocr/PP-OCRv5_mobile_det.onnx";
+  const rec = "https://anoni.net/gears/models/ppocr/PP-OCRv5_mobile_rec.onnx";
+  const yunet = "https://anoni.net/gears/models/yunet-2023mar-dynamic.onnx";
+  const need = (paths: string[]) => redactDownload(paths, base, runtime);
+  expect(need([])).toEqual({ faces: RUNTIME_MB, text: RUNTIME_MB + OCR_MB });
+  // 用過找人臉：執行環境已經在，文字辨識只差模型
+  expect(need([ort, yunet])).toEqual({ faces: 0, text: OCR_MB });
+  expect(need([ort, det])).toEqual({ faces: 0, text: OCR_MB });
+  expect(need([ort, det, rec])).toEqual({ faces: 0, text: 0 });
+  // 只有模型、沒有執行環境時仍要下載執行環境
+  expect(need([det, rec])).toEqual({ faces: RUNTIME_MB, text: RUNTIME_MB });
+  // Transformers.js 帶的另一份 onnxruntime（逐字稿用的）不算
+  expect(need(["https://anoni.net/gears/assets/ort-wasm-simd-threaded-Tjs00002.wasm"])).toEqual({ faces: RUNTIME_MB, text: RUNTIME_MB + OCR_MB });
+  // onion 版的路徑在根目錄
+  expect(redactDownload(["http://x.onion/assets/ort-wasm-a.wasm"], "/", "/assets/ort-wasm-a.wasm")).toEqual({ faces: 0, text: OCR_MB });
 });

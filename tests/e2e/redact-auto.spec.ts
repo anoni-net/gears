@@ -82,3 +82,8 @@ test("還沒辨識過文字時按框起所有文字，先辨識再把每一行�
   await expect(page.getByTestId("redact-auto-status")).toHaveText("加了 3 個框，請逐一確認，框錯的點一下就會拿掉。", { timeout: 90_000 });
   await expect(page.getByText("已經框了 3 個範圍")).toBeVisible();
 });
+
+test("按下自動尋找之前寫出第一次要下載多少", async ({ page }) => {
+  await openRedact(page, await screenshot(page, false));
+  await expect(page.getByTestId("redact-download")).toHaveText("第一次使用自動尋找要下載辨識模型，找人臉約 14 MB、辨識文字約 35 MB，之後存在這台裝置的瀏覽器裡。");
+});
