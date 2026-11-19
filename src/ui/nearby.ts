@@ -130,7 +130,8 @@ export async function opened(p: Pending): Promise<Channel> {
   });
 }
 
-export const confirmOf = (p: Pending) => (p.remote ? confirmCode(p.local.fingerprint, p.remote.fingerprint) : "");
+// nonces 是資料通道連上之後兩端交換的隨機數（tools/nearby/confirm.ts 的 agreeNonces）
+export const confirmOf = (p: Pending, nonces: Uint8Array) => (p.remote ? confirmCode(p.local.fingerprint, p.remote.fingerprint, nonces) : "");
 
 export function close(p: Pending | null) {
   p?.pc.close();

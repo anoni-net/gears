@@ -462,6 +462,7 @@ export const en: Record<MessageKey, string> = {
   "nearby.error.tooLarge": "The files add up to more than 1 GB, which may be more than the receiving browser's memory can hold. Send them in smaller batches.",
   "nearby.error.noNetwork": "This device has no local network address. Make sure it's connected to Wi-Fi or a phone hotspot, then start over.",
   "nearby.error.failed": "Something went wrong during the transfer. Please start over.",
+  "nearby.error.version": "The two sides are running different versions of Gears. Reload the page on both sides and try again.",
   "tool.remote": "Remote transfer",
   "tool.remote.desc": "When the other person isn't with you, create a link for them and send the files in your tray through the community's relay server, and exchange text messages or make a video call once connected. Encrypted end to end: the server can't see the contents and doesn't keep the files.",
   "meta.remote.title": "Send files remotely | Gears",

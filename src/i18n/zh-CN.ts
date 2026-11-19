@@ -463,6 +463,7 @@ export const zhCN: Record<MessageKey, string> = {
   "nearby.error.tooLarge": "文件合计超过 1 GB，接收端的浏览器内存可能不够。请分批传送。",
   "nearby.error.noNetwork": "找不到这台设备的局域网地址，请确认已经连上 Wi-Fi 或手机热点，再重新开始。",
   "nearby.error.failed": "传送时发生错误，请重新开始。",
+  "nearby.error.version": "两边的 Gears 版本不同，请两边都重新整理页面再试一次。",
   "tool.remote": "远程传送",
   "tool.remote.desc": "对方不在身边时，生成一个链接交给对方，经过社区的中继服务器传暂存区的文件，连上之后也能互传文字消息、视频通话。两端之间加密，服务器无法读取内容，也不保存文件。",
   "meta.remote.title": "远程传送文件 | Gears 文件工作台",
