@@ -1,6 +1,7 @@
 import { useMemo, useState } from "preact/hooks";
 import { getLocale, t, tDynamic } from "../i18n/index.ts";
-import { FIXABLE, HABIT_CODES, type Habit, type HabitCode, applyHabits, findHabits, fixHabits, replacementOf } from "../tools/writing-style/index.ts";
+import { PII_KINDS, type PiiKind } from "../tools/redact/pii.ts";
+import { CLUES, FIXABLE, HABIT_CODES, type Habit, type HabitCode, applyHabits, findHabits, fixHabits, replacementOf, tagPii } from "../tools/writing-style/index.ts";
 import { useDoneOnce } from "./analytics.ts";
 import { CopyButton } from "./CopyButton.tsx";
 import type { CreateToolProps } from "./types.ts";
@@ -8,6 +9,8 @@ import type { CreateToolProps } from "./types.ts";
 // 寫作習慣檢查：貼上要匿名交出去的文字，標出表情符號、語助詞、中英夾雜、地區用語這類
 // 會讓人認出作者的習慣。標點與符號可以一鍵修正。有建議寫法的（視頻改成影片、刪掉「啦」）
 // 讀者逐項按下才套用，每一處修改都看得見，可以一步一步復原。
+// 電話、Email 這類個資可以逐項換成代稱（〔電話〕）。人名、職稱、時間這類工具找不到的線索，
+// 列成清單讓讀者逐項讀過再勾起來。
 // 規則在 src/tools/writing-style/，只在這個分頁裡處理，不送出也不存下來。
 
 const isFixable = (h: Habit) => FIXABLE.includes(h.code) && h.fix !== undefined;
@@ -32,7 +35,6 @@ function Marked({ text, habits }: { text: string; habits: Habit[] }) {
 }
 
 function suggestion(h: Habit): string {
-  if (h.code === "pii") return tDynamic(`style.pii.${h.pii}`);
   if (isFixable(h)) {
     if (!h.fix) return t("style.willRemove");
     // 引號的修正本身就是「」，不再多包一層
@@ -64,6 +66,7 @@ function Examples({ habits, onApply }: { habits: Habit[]; onApply: (chosen: Habi
         return (
           <li key={text}>
             <code>{text}</code>
+            {h.code === "pii" ? <span class="hint">{tDynamic(`style.pii.${h.pii}`)}</span> : null}
             {applicable(h) ? (
               <button
                 type="button"
@@ -113,7 +116,9 @@ export function WritingStyleTool(_: CreateToolProps) {
   // 每次修正或套用前的文字，復原時一步一步退回。讀者自己打字之後清空
   const [history, setHistory] = useState<string[]>([]);
   const [note, setNote] = useState("");
-  const habits = useMemo(() => findHabits(text), [text]);
+  const locale = getLocale();
+  const tags = useMemo(() => Object.fromEntries(PII_KINDS.map((kind) => [kind, tDynamic(`style.piiTag.${kind}`)])) as Record<PiiKind, string>, [locale]);
+  const habits = useMemo(() => tagPii(findHabits(text, Object.values(tags)), tags), [text, tags]);
   const fixable = habits.filter(isFixable).length;
   const groups = HABIT_CODES.map((code) => [code, habits.filter((h) => h.code === code)] as [HabitCode, Habit[]]).filter(([, list]) => list.length);
   // 需要讀者自己改的放前面，可以直接修正的放後面
@@ -156,7 +161,7 @@ export function WritingStyleTool(_: CreateToolProps) {
         <>
           <p role="status" data-testid="style-summary">
             {/* 英文的句子之間空一格，中文不空 */}
-            {note ? `${note}${getLocale() === "en" ? " " : ""}` : ""}
+            {note ? `${note}${locale === "en" ? " " : ""}` : ""}
             {!habits.length ? t("style.none") : fixable ? t("style.found", { n: habits.length, fixable }) : t("style.foundManual", { n: habits.length })}
           </p>
           <div class="buttons">
@@ -192,10 +197,21 @@ export function WritingStyleTool(_: CreateToolProps) {
               ) : null}
             </>
           ) : null}
-        </>
-      ) : null}
 
-      <p class="alert">{t("style.limit")}</p>
+          <section class="style-clues" aria-labelledby="style-clues-title" data-testid="style-clues">
+            <h3 id="style-clues-title">{t("style.clues.title")}</h3>
+            <p class="hint">{t("style.clues.hint")}</p>
+            {Array.from({ length: CLUES }, (_, i) => (
+              <label key={i} class="check">
+                <input type="checkbox" />
+                <span>{tDynamic(`style.clues.${i + 1}`)}</span>
+              </label>
+            ))}
+          </section>
+        </>
+      ) : (
+        <p class="alert">{t("style.limit")}</p>
+      )}
     </div>
   );
 }

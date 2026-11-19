@@ -4,6 +4,8 @@ import { tDynamic } from "../../src/i18n/index.ts";
 import { zhTW } from "../../src/i18n/zh-TW.ts";
 import { createTools, editorTools, fileTools, toolIds } from "../../src/tools/index.ts";
 import { TOOL_GROUPS } from "../../src/ui/tool-meta.ts";
+import { PII_KINDS } from "../../src/tools/redact/pii.ts";
+import { CLUES } from "../../src/tools/writing-style/index.ts";
 import qrSamples from "../../src/tools/qr-read/samples.json" with { type: "json" };
 
 // 介面上有些字串的鍵是組出來的（finding.location、tool.qrcode.desc），漏了翻譯不會
@@ -24,6 +26,9 @@ test("每個代碼與工具都有正體中文的字串", () => {
     // 產生檔案放進暫存區的工具，處理紀錄的第一步寫出是哪個工具建立的（src/ui/FileView.tsx 的 History）
     // 逐字稿與影片的關鍵影格也會把產生的檔案放進暫存區
     ...[...createTools.filter((tool) => tool.output === "file").map((tool) => tool.id), "transcribe", "video-frames"].map((id) => `file.version.${id}`),
+    // 寫作習慣檢查：個資的類別與代稱，以及工具找不到的線索（src/ui/WritingStyleTool.tsx）
+    ...PII_KINDS.flatMap((kind) => [`style.pii.${kind}`, `style.piiTag.${kind}`]),
+    ...Array.from({ length: CLUES }, (_, i) => `style.clues.${i + 1}`),
     // QR code 讀取的範例與分組
     ...qrSamples.flatMap((sample) => [`qrread.sample.${sample.id}`, `qrread.samples.${sample.group}`]),
   ];

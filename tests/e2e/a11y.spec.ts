@@ -60,6 +60,15 @@ test("QR code 產生器的聯絡資料與錯誤訊息、讀取的付款提醒沒
   expect(await audit(page)).toEqual([]);
 });
 
+test("寫作習慣檢查的結果與線索清單沒有無障礙問題", async ({ page }) => {
+  await page.goto("./writing-style/");
+  await page.getByLabel("要交出去的文字").fill("老實說這個視頻很多啦😤 有事打 0912-345-678!!!");
+  await expect(page.getByTestId("style-clues")).toBeVisible();
+  expect(await audit(page)).toEqual([]);
+  await page.emulateMedia({ colorScheme: "dark" });
+  expect(await audit(page)).toEqual([]);
+});
+
 test("逐字稿的編輯畫面沒有無障礙問題", async ({ page }) => {
   await page.goto("./transcribe/");
   await page.getByTestId("file-input").setInputFiles({ name: "talk.wav", mimeType: "audio/wav", buffer: Buffer.from(wav(2)) });
