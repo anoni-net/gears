@@ -30,6 +30,12 @@ concurrency:
   group: deploy
   cancel-in-progress: false
 
+# onnxruntime-node（Transformers.js 帶進來的相依套件）的安裝腳本會從 nuget.org 另外下載 Linux 的
+# CUDA 檔案，GitHub 的機器連不上時 npm ci 整個失敗（2026-11-20 兩次）。網頁只用 onnxruntime-web，
+# Node 裡的單元測試用的 CPU 版已經包在 npm 套件裡，用不到 CUDA，所以略過
+env:
+  ONNXRUNTIME_NODE_INSTALL: skip
+
 jobs:
   deploy:
     # workflow_run 的 branches 比對的是來源分支的名稱，fork 從自己的 main 開 PR 也符合，

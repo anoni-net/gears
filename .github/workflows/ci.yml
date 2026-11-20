@@ -8,6 +8,12 @@ on:
 permissions:
   contents: read
 
+# onnxruntime-node（Transformers.js 帶進來的相依套件）的安裝腳本會從 nuget.org 另外下載 Linux 的
+# CUDA 檔案，GitHub 的機器連不上時 npm ci 整個失敗（2026-11-20 兩次）。網頁只用 onnxruntime-web，
+# Node 裡的單元測試用的 CPU 版已經包在 npm 套件裡，用不到 CUDA，所以略過
+env:
+  ONNXRUNTIME_NODE_INSTALL: skip
+
 jobs:
   # 依瀏覽器拆成四台機器同時跑。GitHub 的機器是 4 核心，Playwright 只開 2 個 worker，
   # 全部放在一台要 6 分鐘左右。單元測試與型別檢查很快，跟 Chromium 放在同一台。
