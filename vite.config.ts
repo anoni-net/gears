@@ -210,6 +210,10 @@ function localized(html: string, locale: Locale, id: string) {
     )
     .replace(/<meta name="description" content="[^"]*"/, `<meta name="description" content="${escape(description)}"`)
     .replace(/<noscript>[^<]*<\/noscript>/, `<noscript>${escape(meta["app.noscript"]!)}</noscript>`)
+    // 太舊的瀏覽器（iOS 16.4 以前）的提示，public/legacy-check.js 偵測到時才顯示
+    .replace(/(<p id="legacy-browser"[^>]*>)[^<]*<\/p>/, `$1${escape(meta["app.legacy"]!)}</p>`)
+    // public/ 的檔案 Vite 不改寫路徑，onion 版的網站在根目錄
+    .replace(`<script src="/gears/legacy-check.js">`, `<script src="${BASE}legacy-check.js">`)
     // 這一頁的標題、說明與連到其他工具的連結（src/static-content.ts），打開之後換成工作台
     .replace(/<div id="app"><\/div>/, `<div id="app">${body}</div>`);
 }

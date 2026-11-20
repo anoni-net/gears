@@ -15,8 +15,10 @@
     <title>檔案工作台 | anoni.net</title>
   </head>
   <body>
+    <p id="legacy-browser" class="legacy-browser" role="alert" hidden>這個瀏覽器的版本太舊，沒有辦法執行檔案工作台。</p>
     <div id="app"></div>
     <noscript>檔案工作台需要 JavaScript 才能在你的瀏覽器裡處理檔案。</noscript>
+    <script src="/gears/legacy-check.js"></script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

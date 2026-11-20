@@ -3,6 +3,7 @@
 
 export const zhTW = {
   "app.noscript": "檔案工作台需要 JavaScript 才能在你的瀏覽器裡處理檔案。",
+  "app.legacy": "這個瀏覽器的版本太舊，沒有辦法執行檔案工作台。iPhone 與 iPad 請更新到 iOS 16.4 以上，電腦請把 Safari、Chrome、Firefox 更新到最新版。",
   "app.language": "語言",
   "list.separator": "、",
   "app.title": "檔案工作台",
