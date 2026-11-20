@@ -182,6 +182,14 @@ CI（`.github/workflows/ci.yml`）依瀏覽器拆成四台機器同時執行：C
 - 授權與來源寫在 `licenses/redact-detect.txt`
 - 網址帶 `?debug-faces`（例如 `/gears/redact/?debug-faces`）時，找人臉會在主控台印出建置的 commit 與每次偵測的尺寸、分數、位置與有沒有採用，讀者回報漏判、誤判時請對方整段貼回來。只有數字與座標，不含圖片的內容。不同的瀏覽器與照片的原始解析度會讓分數略有不同，本機重現不出來時靠它
 
+### 個資辨識模型（#187，進行中）
+
+規則找不到的人名、地址與單位，用個資辨識模型 nym-pii 補上（模型與下載見下方「裝置量測」的「個資辨識」）。共用的程式在 `src/tools/redact/pii-model.ts`：
+
+- `joinLines`：文字辨識或 PDF 文字層的每一行接成一段交給模型，行與行之間放換行，記下每個位置來自哪一行的第幾個字。社群工作區的研究（`research/gears-ocr/` 的 `pipeline.mjs`）用這個做法，被換行拆開的個資也找得到
+- `spanBoxes`：模型找到的範圍換回字框，跨行的範圍每一行各給一個框，只有空白或換行的那一段不給框。字框合成一個框沿用 `pii.ts` 的 `boxOf`
+- 遮蔽的按鈕、跟規則的框合併、記憶體不夠時的處理與檢查畫面內容、寫作習慣檢查、逐字稿的接法，照 #187 的順序做
+
 ## 檢查畫面內容
 
 清除中繼資料不會改變畫面，照片裡的人臉、截圖上的電話與 Email 仍然看得到。檔案畫面的右欄在找到的資訊下面多一區「畫面上看得到的」（`src/ui/ScreenCheck.tsx`，2026-11-20 起），照片類的檔案（`isPhoto`，大檔案除外）都有，讀者按「檢查畫面內容」才載入模型。
@@ -559,9 +567,9 @@ ProofMode（Guardian Project 給人權紀錄者的 Android App）拍照時不改
 
 找人名、地址、機構用的個資辨識模型（#139）在這台裝置上要多久、記憶體夠不夠（`src/ui/PiiBench.tsx`，Worker 是 `src/ui/pii-bench.worker.ts`，2026-11-19 起）。社群工作區的評測（`research/gears-pii/01-models.md`）選出 nym-pii 的 q4 版，跟規則合併之後找到約八成五的個資，但模型約 211 MB，上線之前要先知道手機能不能用。
 
-- 模型是 `onnx-community/nym-pii-multilingual-ONNX`（MIT），從 Hugging Face 下載，鎖定 commit（`src/tools/bench/pii.ts` 的 `PII_MODEL`），伺服器送的 CSP 多開這一個下載路徑（`vite.config.ts`）。Transformers.js 的設定照語言模型：`env.remotePathTemplate` 鎖在這個 commit，不帶 cookie 與 Referer，WebAssembly 用 `?url` 從自己的網域載入，檔案存在 `transformers-cache`，「已下載的模型」算在語言模型那一列。畫面上說明 Hugging Face 看得到 IP 位址、瀏覽器與下載了哪個模型
+- 模型是 `onnx-community/nym-pii-multilingual-ONNX`（MIT）的 q4 版，照原樣放在 assets.anoni.net 的 `nym-pii-7ce7f1a/`（附 `README.txt` 與授權全文，onion 版由同一個網站的 `/models/assets/` 提供），2026-11-20 以前從 Hugging Face 下載。Hugging Face 送的是原始大小 210.7 MB，超過 #139 的 200 MB 門檻，從自己的網域經過 Cloudflare 時 tokenizer 會壓縮，實際傳輸約 200 MB（權重檔是 `application/octet-stream`，Cloudflare 不壓縮，#187）。模型、檔案清單與每個檔案的 SHA-256 在 `src/tools/redact/pii-model.ts` 的 `PII_MODEL`，遮蔽與其他工具之後共用同一份。Worker 照語言模型的社群轉檔版：`env.remoteHost` 換成 `ASSETS_MODELS`，`env.fetch` 只下載清單上的檔案、用 `downloadVerified` 比對 SHA-256，模型目錄以外的請求一律不送，CSP 不必另外開。WebAssembly 用 `?url` 從自己的網域載入，檔案存在 `transformers-cache`，「已下載的模型」算在語言模型那一列
 - 設定：CPU 1 個執行緒、4 個執行緒（要 cross-origin isolation）與顯示卡。每種設定換一個 Worker，三段虛構的範例文字（聊天訊息、通知單、中英夾雜，`PII_SAMPLES`）各辨識 3 次取中位數，另外記下載入時間與這次實際下載的位元組
-- Transformers.js 4.3 的 `token-classification` 不回傳字元位置，詞元對回原文的做法照研究的 `eval/pii-model.mjs` 移植成 `align`、`groupSpans`（有單元測試）。「找到」是範例文字裡應該找到的人名、地址、單位、電話與 Email 找到幾個（`foundCount`，一半以上的字被蓋住才算），用來確認每種設定的結果一樣，評測在社群工作區
+- Transformers.js 4.3 的 `token-classification` 不回傳字元位置，詞元對回原文的做法照研究的 `eval/pii-model.mjs` 移植成 `align`、`groupSpans`（`src/tools/redact/pii-model.ts`，單元測試在 `tests/unit/pii-model.spec.ts`）。範例文字與 `foundCount` 留在 `src/tools/bench/pii.ts`。「找到」是範例文字裡應該找到的人名、地址、單位、電話與 Email 找到幾個（`foundCount`，一半以上的字被蓋住才算），用來確認每種設定的結果一樣，評測在社群工作區
 - 手機記憶體不夠時，系統會把分頁重新載入，量測的結果跟著不見（2026-10-24 Gemma 4 E2B 在 iPhone 15 Pro 上就是這樣）。開始每一種設定之前在 `history.state` 記下設定（`gearsPiiBench`），做完或停止時清掉。打開頁面時記號還在，代表上一次量到一半被重新載入，結果多一筆 `crashed: true`，讀者照樣可以送出。`history.state` 只在這個分頁裡，不寫進 localStorage
 - 結果的 JSON 多一個 `pii`（`schema` 從 1 變 2），只有設定、時間、詞元數與找到幾個，範例文字與找到的範圍不放進去
 - 2026-11-19 在 Apple M5 Pro 的 Chromium（正式建置）實測：下載 210.7 MB，載入 14.8 秒，單執行緒每段 0.24 到 0.39 秒，13 處找到 12 處

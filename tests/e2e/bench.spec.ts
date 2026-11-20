@@ -1,5 +1,6 @@
 import models from "../../src/tools/llm-bench/models.json" with { type: "json" };
-import { PII_MODEL } from "../../src/tools/bench/pii.ts";
+import { assetsUrl } from "../../src/core/models.ts";
+import { PII_MODEL } from "../../src/tools/redact/pii-model.ts";
 import { expect, test } from "./guard.ts";
 
 test("裝置量測：實驗頁說明下載來源，不進 sitemap，搜尋引擎不收錄", async ({ page, request }) => {
@@ -8,7 +9,7 @@ test("裝置量測：實驗頁說明下載來源，不進 sitemap，搜尋引擎
   await expect(page.getByRole("heading", { name: "文字辨識" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "語言模型" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "個資辨識" })).toBeVisible();
-  await expect(page.getByTestId("bench-pii-remote")).toContainText("Hugging Face 看得到你的 IP 位址");
+  await expect(page.getByTestId("bench-pii-remote")).toContainText("從社群的 assets.anoni.net 下載");
   await expect(page.getByTestId("bench-remote")).toContainText("Hugging Face 看得到你的 IP 位址");
   await expect(page.getByTestId("bench-env")).toContainText("核心");
   // localhost 算安全的連線，不出現要用 HTTPS 的說明
@@ -110,20 +111,21 @@ test("裝置量測：語言模型從鎖定的 commit 下載，下載失敗時畫
   guard.errors = guard.errors.filter((e) => !e.includes("status of 404"));
 });
 
-test("裝置量測：個資辨識從鎖定的 commit 下載，下載失敗時說明，結果記下失敗的設定", async ({ page, guard }) => {
+test("裝置量測：個資辨識從 assets.anoni.net 下載，內容對不上 SHA-256 時說明，結果記下失敗的設定", async ({ page, guard }) => {
   const asked: string[] = [];
-  await page.context().route("https://huggingface.co/**", (route) => {
+  const dir = assetsUrl(PII_MODEL.dir, "");
+  // 回一份內容不對的檔案，確認會停下來
+  await page.context().route("https://assets.anoni.net/**", (route) => {
     asked.push(route.request().url());
-    return route.fulfill({ status: 404, body: "" });
+    return route.fulfill({ status: 200, body: "not the model" });
   });
   await page.goto("./bench/");
   await expect(page.getByTestId("bench-env")).toContainText("核心");
   const section = page.locator('section[aria-labelledby="bench-pii-title"]');
   await section.getByRole("button", { name: /^量測個資辨識/ }).click();
   await expect(page.getByTestId("bench-pii-status")).toContainText("量測失敗", { timeout: 30_000 });
-  const pinned = `https://huggingface.co/${PII_MODEL.repo}/resolve/${PII_MODEL.revision}/`;
   expect(asked.length).toBeGreaterThan(0);
-  expect(asked.every((url) => url.startsWith(pinned))).toBe(true);
+  expect(asked.every((url) => url.startsWith(dir))).toBe(true);
   await expect(page.getByTestId("bench-pii-table")).toContainText("量測失敗");
   // 結果的 JSON 帶著這一筆，格式是第 2 版
   await page.getByText("看複製的內容", { exact: true }).click();
@@ -131,7 +133,7 @@ test("裝置量測：個資辨識從鎖定的 commit 下載，下載失敗時說
   expect(report.schema).toBe(2);
   expect(report.pii[0].error).toBeTruthy();
   expect(report.pii[0].model).toContain(PII_MODEL.repo);
-  guard.requests = guard.requests.filter((url) => !url.startsWith("https://huggingface.co/"));
+  guard.requests = guard.requests.filter((url) => !url.startsWith(dir));
   guard.errors = guard.errors.filter((e) => !e.includes("status of 404"));
 });
 

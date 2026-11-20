@@ -101,7 +101,8 @@ function nextLine(a: Box, b: Box): boolean {
 // 個資裡會出現的字：上一行的結尾與下一行的開頭都是這種字，才可能是同一段個資被換行拆開
 const CONTINUES = /[\w@.+*-]/;
 
-const boxOf = (boxes: (Box | null)[]) => {
+// 一串字框合成一個框，補上的空白（null）不算。個資辨識模型的範圍換回字框時也用（pii-model.ts）
+export const boxOf = (boxes: (Box | null)[]) => {
   const real = boxes.filter((b): b is Box => !!b);
   return real.length ? union(real) : null;
 };

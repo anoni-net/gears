@@ -1,12 +1,13 @@
-// 裝置量測的個資辨識（src/ui/PiiBench.tsx）的 Worker：從 Hugging Face 下載 nym-pii 的 q4 版，
-// 辨識內建的三段虛構文字，回報下載量、載入時間與每段的辨識時間。
-// Transformers.js 的設定照 llm-bench.worker.ts：鎖定 commit、不帶 cookie 與 Referer、
+// 裝置量測的個資辨識（src/ui/PiiBench.tsx）的 Worker：從 assets.anoni.net 下載 nym-pii 的 q4 版
+// （onion 版是同一個網站的 /models/assets/），辨識內建的三段虛構文字，回報下載量、載入時間與每段的辨識時間。
+// Transformers.js 的設定照 llm-bench.worker.ts 的社群轉檔模型：只下載清單上的檔案、逐一比對 SHA-256，
 // WebAssembly 用 ?url 從自己的網域載入，下載的檔案存在 transformers-cache。
 import asyncifyMjs from "../../node_modules/@huggingface/transformers/node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.asyncify.mjs?url";
 import asyncifyWasm from "../../node_modules/@huggingface/transformers/node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.asyncify.wasm?url";
 import plainMjs from "../../node_modules/@huggingface/transformers/node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.mjs?url";
 import plainWasm from "../../node_modules/@huggingface/transformers/node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.wasm?url";
-import { type Decoder, PII_MODEL, type PiiSpan, align, argmax, groupSpans, labelKind } from "../tools/bench/pii.ts";
+import { ASSETS_MODELS, assetsUrl, downloadVerified } from "../core/models.ts";
+import { type Decoder, PII_MODEL, type PiiSpan, align, argmax, groupSpans, labelKind } from "../tools/redact/pii-model.ts";
 
 export interface PiiBenchRequest {
   device: "wasm" | "webgpu";
@@ -26,23 +27,24 @@ const post = (reply: PiiBenchReply) => self.postMessage(reply);
 
 const files: Record<string, [number, number]> = {};
 let downloaded = 0;
-function counted(response: Response, key: string): Response {
-  const total = Number(response.headers.get("content-length")) || 0;
-  if (!response.body || !total) return response;
-  let loaded = 0;
-  const body = response.body.pipeThrough(
-    new TransformStream<Uint8Array, Uint8Array>({
-      transform(chunk, controller) {
-        loaded += chunk.length;
-        downloaded += chunk.length;
-        files[key] = [loaded, total];
-        const sum = Object.values(files).reduce((a, [l, t]) => [a[0]! + l, a[1]! + t], [0, 0]);
-        post({ type: "download", loaded: sum[0]!, total: sum[1]! });
-        controller.enqueue(chunk);
-      },
-    }),
-  );
-  return new Response(body, { status: response.status, statusText: response.statusText, headers: response.headers });
+
+function report(key: string, loaded: number, total: number) {
+  files[key] = [loaded, total];
+  const sum = Object.values(files).reduce((a, [l, t]) => [a[0]! + l, a[1]! + t], [0, 0]);
+  post({ type: "download", loaded: sum[0]!, total: sum[1]! });
+}
+
+// 清單外的檔案（Transformers.js 會試著讀一些選用的設定檔）當成不存在。對不上 SHA-256 時丟出錯誤，不存進快取
+async function fromAssets(file: string): Promise<Response> {
+  const sha256 = PII_MODEL.files[file];
+  if (!sha256) return new Response(null, { status: 404 });
+  let last = 0;
+  const data = await downloadVerified({ url: (name) => assetsUrl(PII_MODEL.dir, name), file, sha256 }, (n, total) => {
+    downloaded += n - last;
+    last = n;
+    report(file, n, total);
+  });
+  return new Response(data, { headers: { "content-type": "application/octet-stream", "content-length": String(data.length) } });
 }
 
 self.onmessage = async ({ data }: MessageEvent<PiiBenchRequest>) => {
@@ -53,16 +55,17 @@ self.onmessage = async ({ data }: MessageEvent<PiiBenchRequest>) => {
     env.useBrowserCache = true;
     // WebAssembly 的載入程式不存快取：存了之後改用 blob: 網址載入，CSP 的 script-src 不允許
     env.useWasmCache = false;
-    // Transformers.js 有幾處讀檔沒有把 revision 傳下去，直接把下載路徑鎖在這個 commit
-    env.remotePathTemplate = `{model}/resolve/${PII_MODEL.revision}/`;
-    env.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = input instanceof Request ? input.url : String(input);
-      return fetch(input, { ...init, credentials: "omit", referrerPolicy: "no-referrer" }).then(
-        (r) => counted(r, url),
-        (error: Error) => {
-          throw new Error(`${error.message}（${url}）`);
-        },
-      );
+    // assets.anoni.net 上的目錄當模型名稱，目錄名稱帶著 commit，內容不會變
+    env.remoteHost = ASSETS_MODELS;
+    env.remotePathTemplate = "{model}/";
+    const dir = new URL(assetsUrl(PII_MODEL.dir, ""), self.location.href).href;
+    env.fetch = (input: RequestInfo | URL) => {
+      const url = new URL(input instanceof Request ? input.url : String(input), self.location.href).href;
+      // 模型目錄以外的請求一律不送
+      if (!url.startsWith(dir)) return Promise.resolve(new Response(null, { status: 404 }));
+      return fromAssets(url.slice(dir.length).split("?")[0]!).catch((error: Error) => {
+        throw new Error(`${error.message}（${url}）`);
+      });
     };
     const wasm = env.backends.onnx.wasm!;
     const asyncify = JSON.stringify(wasm.wasmPaths ?? "").includes(".asyncify");
@@ -70,9 +73,8 @@ self.onmessage = async ({ data }: MessageEvent<PiiBenchRequest>) => {
     wasm.numThreads = self.crossOriginIsolated ? data.threads : 1;
 
     const start = performance.now();
-    const options = { revision: PII_MODEL.revision };
-    const tokenizer = await AutoTokenizer.from_pretrained(PII_MODEL.repo, options);
-    const net = await AutoModelForTokenClassification.from_pretrained(PII_MODEL.repo, { ...options, device: data.device, dtype: PII_MODEL.dtype });
+    const tokenizer = await AutoTokenizer.from_pretrained(PII_MODEL.dir);
+    const net = await AutoModelForTokenClassification.from_pretrained(PII_MODEL.dir, { device: data.device, dtype: PII_MODEL.dtype });
     post({ type: "loaded", ms: performance.now() - start, bytes: downloaded, isolated: self.crossOriginIsolated });
 
     const id2label = (net.config as unknown as { id2label: Record<number, string> }).id2label;
