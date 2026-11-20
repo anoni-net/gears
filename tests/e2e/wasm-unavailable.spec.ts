@@ -73,3 +73,21 @@ test("遮蔽 PDF：有文字層時不必辨識，照樣找得到個資", async (
   await page.getByRole("button", { name: "找人臉" }).click();
   await expect(page.getByTestId("redact-auto-status")).toContainText("關掉了 WebAssembly");
 });
+
+test("檢查畫面內容：說明這個瀏覽器關掉了 WebAssembly，請讀者自己看一次", async ({ page }) => {
+  await page.goto("./");
+  const png = await page.evaluate(async () => {
+    const c = document.createElement("canvas");
+    c.width = 400;
+    c.height = 200;
+    c.getContext("2d")!.fillRect(40, 40, 120, 60);
+    const b = await new Promise<Blob>((r) => c.toBlob((x) => r(x!), "image/png"));
+    return Array.from(new Uint8Array(await b.arrayBuffer()));
+  });
+  await page.getByTestId("file-input").setInputFiles({ name: "chat.png", mimeType: "image/png", buffer: Buffer.from(png) });
+  await page.getByRole("button", { name: "檢查畫面內容" }).click();
+  const status = page.getByTestId("screen-status");
+  await expect(status).toContainText("關掉了 WebAssembly");
+  await expect(status).toContainText("請自己看一次整張圖");
+  await expect(status).toHaveClass("error");
+});

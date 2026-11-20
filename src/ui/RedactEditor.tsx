@@ -4,9 +4,7 @@ import { pdfFailReason, trackFail } from "./analytics.ts";
 import type { Format } from "../core/bytes.ts";
 import type { Report } from "../core/tool.ts";
 import { list, t } from "../i18n/index.ts";
-import { KEEP_CACHE, OCR_MB, RUNTIME_MB, redactDownload } from "../core/storage.ts";
-// 只取網址，不載入。跟 onnxruntime-web/wasm 自己載入的是同一個檔案（內容相同，建置出來的檔名也相同）
-import ortWasmUrl from "../../node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.wasm?url";
+import { type DetectDownload, detectDownload } from "./detect-download.ts";
 import { type Box, boxFromPoints, isDark, isUsable, samplePoints } from "../tools/redact/index.ts";
 import { assertCanvasReadable, isCanvasBlocked } from "./canvas-access.ts";
 import { decodeImage } from "./image-decode.ts";
@@ -82,14 +80,16 @@ async function render(bitmap: ImageBitmap, boxes: Box[], format: Format, exif: U
   return new Blob([(jpeg ? insertExifJpeg(bytes, exif) : insertExifPng(bytes, exif)) as Uint8Array<ArrayBuffer>], { type });
 }
 
-export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps) {
+export function RedactEditor({ blob, format, found, onDone, onCancel }: FileEditorProps) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const [bitmap, setBitmap] = useState<ImageBitmap | null>(null);
   // PDF 一頁一頁框選，每一頁的框分開存。圖片只有一頁
   const isPdf = format === "pdf";
   const [pdf, setPdf] = useState<PdfPages | null>(null);
   const [pageIndex, setPageIndex] = useState(0);
-  const [pageBoxes, setPageBoxes] = useState<Box[][]>([]);
+  // 從檔案畫面的「檢查畫面內容」打開時，找到的框直接放好（只有圖片，PDF 不經過那裡）
+  const preset = found && !isPdf ? found : null;
+  const [pageBoxes, setPageBoxes] = useState<Box[][]>(() => (preset ? [preset.boxes] : []));
   const boxes = pageBoxes[pageIndex] ?? [];
   const setBoxes = (next: Box[] | ((list: Box[]) => Box[])) =>
     setPageBoxes((all) => {
@@ -106,10 +106,10 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
   const [draft, setDraft] = useState<Box | null>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "working" | "failed" | "decodeFailed">("loading");
   // 自動尋找第一次使用要下載多少，打開時算一次。下載完之後不重算，說明消失時圖片會往上跳
-  const [download, setDownload] = useState<{ faces: number; text: number; stored: boolean } | null>(null);
+  const [download, setDownload] = useState<DetectDownload | null>(null);
   useEffect(() => {
     let live = true;
-    downloadNeeded().then((d) => live && setDownload(d));
+    detectDownload().then((d) => live && setDownload(d));
     return () => {
       live = false;
     };
@@ -126,16 +126,17 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
   const middle = () => [...touches.current.values()].reduce((n, [, y]) => n + y, 0) / touches.current.size;
   // 自動尋找：哪一種正在跑、找到幾個，文字辨識另外留下每一行的範圍
   // progress 是 0 到 1，null 表示還在載入模型
+  // check 是檢查畫面內容已經找到、打開時放好的框
   const [auto, setAuto] = useState<{
-    kind: "faces" | "text" | "lines";
+    kind: "faces" | "text" | "lines" | "check";
     state: "running" | "done" | "failed" | "blocked" | "noWasm";
     n: number;
     progress?: number | null;
-  } | null>(null);
+  } | null>(() => (preset ? { kind: "check", state: "done", n: preset.boxes.length } : null));
   const [textLines, setTextLines] = useState<Box[]>([]);
   useWorking(status === "working" || auto?.state === "running" || !!building);
   // 找人臉時「可能是臉」的範圍，畫成虛線，讀者點一下才變成遮蔽框
-  const [maybe, setMaybe] = useState<Box[]>([]);
+  const [maybe, setMaybe] = useState<Box[]>(() => preset?.maybe ?? []);
   // 原檔的拍攝資訊（已經重組、拿掉縮圖），沒有時間、地點或型號就不提供保留的選項
   const [exif, setExif] = useState<Uint8Array | null>(null);
   const [keepExif, setKeepExif] = useState(false);
@@ -357,7 +358,7 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
     const added = addFound(picked);
     setMaybe((list) => list.filter((m) => !picked.includes(m)));
     // 訊息裡的框數跟著加上
-    setAuto((a) => (a?.kind === "faces" && a.state === "done" ? { ...a, n: a.n + added } : a));
+    setAuto((a) => ((a?.kind === "faces" || a?.kind === "check") && a.state === "done" ? { ...a, n: a.n + added } : a));
   };
 
   const runAuto = async (kind: "faces" | "text" | "lines") => {
@@ -426,6 +427,7 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
       if (a.kind === "faces") return t(a.progress == null ? "redact.loadingFaces" : "redact.findingFaces");
       return t(a.progress == null ? "redact.loadingText" : "redact.findingText");
     }
+    if (a.kind === "check") return maybe.length ? t("redact.fromCheckMaybe", { n: a.n, m: maybe.length }) : t("redact.fromCheck", { n: a.n });
     if (a.kind === "faces" && maybe.length) {
       return a.n ? t("redact.foundMaybe", { n: a.n, m: maybe.length }) : t("redact.onlyMaybe", { m: maybe.length });
     }
@@ -518,7 +520,7 @@ export function RedactEditor({ blob, format, onDone, onCancel }: FileEditorProps
             <p key={key}>{t(key, { n: 999, m: 99 })}</p>
           ))}
           {/* 有「全部加上」按鈕的那兩則，連同按鈕一起佔位 */}
-          {(["redact.foundMaybe", "redact.onlyMaybe"] as const).map((key) => (
+          {(["redact.foundMaybe", "redact.onlyMaybe", "redact.fromCheckMaybe"] as const).map((key) => (
             <div key={key}>
               <p>{t(key, { n: 999, m: 99 })}</p>
               <span class="link">{t("redact.addMaybe", { m: 99 })}</span>
@@ -619,6 +621,7 @@ const AUTO_MESSAGES = [
   "redact.findingText",
   "redact.found",
   "redact.foundNone",
+  "redact.fromCheck",
 ] as const;
 
 // 自動尋找的進度條，蓋在圖片上。載入模型時不知道要多久，顯示來回移動的條紋；偵測時顯示百分比
@@ -639,18 +642,4 @@ function AutoProgress({ label, value }: { label: string; value: number | null })
       <span aria-hidden="true">{percent === null ? "" : `${percent}%`}</span>
     </div>
   );
-}
-
-// 讀 gears-keep 看自動尋找還要下載多少。不能用 Cache API 時（私密瀏覽、Tor Browser）存不下來，
-// 每次都照第一次的大小寫
-async function downloadNeeded(): Promise<{ faces: number; text: number; stored: boolean }> {
-  const always = { faces: RUNTIME_MB, text: RUNTIME_MB + OCR_MB, stored: false };
-  try {
-    if (typeof caches === "undefined") return always;
-    if (!(await caches.has(KEEP_CACHE))) return { ...always, stored: true };
-    const requests = await (await caches.open(KEEP_CACHE)).keys();
-    return { ...redactDownload(requests.map((r) => r.url), import.meta.env.BASE_URL, ortWasmUrl), stored: true };
-  } catch {
-    return always;
-  }
 }
