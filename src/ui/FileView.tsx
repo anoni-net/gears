@@ -5,7 +5,9 @@ import type { TrayFile, Version } from "../core/tray.ts";
 import { list, t, tDynamic } from "../i18n/index.ts";
 import { tray } from "../state.ts";
 import { editorTools, fileTools } from "../tools/index.ts";
+import type { Box } from "../tools/redact/index.ts";
 import { FileEditorView } from "./registry.tsx";
+import { ScreenCheck } from "./ScreenCheck.tsx";
 import { Icon, IconCircle } from "./Icon.tsx";
 import { TOOL_META } from "./tool-meta.ts";
 import { useObjectUrl } from "./hooks.ts";
@@ -484,6 +486,10 @@ export function FileView({ file, others, index, busy, preferred, onOpenTool }: P
   const base = useRef<Version>(current);
   const section = useRef<HTMLElement>(null);
   if (!editing) base.current = current;
+  // 檢查畫面內容找到的框，按「打開遮蔽」時交給遮蔽放好。記下是哪個版本的，座標只對那個版本有效，
+  // 遮蔽關掉時清掉，之後從工具列打開遮蔽不會再帶進來
+  const [screenFound, setScreenFound] = useState<{ version: number; boxes: Box[]; maybe: Box[] } | null>(null);
+  const canRedact = editorTools.some((tool) => tool.id === "redact" && tool.accepts(current.format));
 
   const run = async (toolId: string, options?: RunOptions) => {
     const tool = fileTools.find((x) => x.id === toolId)!;
@@ -560,13 +566,18 @@ export function FileView({ file, others, index, busy, preferred, onOpenTool }: P
             id={editing}
             blob={base.current.blob}
             format={base.current.format}
-            onCancel={() => setEditing(null)}
+            found={editing === "redact" && screenFound?.version === base.current.id ? screenFound : undefined}
+            onCancel={() => {
+              setEditing(null);
+              setScreenFound(null);
+            }}
             onDone={(blob, report) => {
               setError(undefined);
               tray
                 .addVersion(file.id, blob, editing, report)
                 .then(() => {
                   setEditing(null);
+                  setScreenFound(null);
                   // 編輯畫面很長，套用的按鈕在底部。關掉之後畫面變短，停在原處的話看到的是工具列表，
                   // 捲回檔案的開頭，下載、步驟與預覽就在眼前
                   if ((section.current?.getBoundingClientRect().top ?? 0) < 0) section.current?.scrollIntoView({ block: "start" });
@@ -596,6 +607,20 @@ export function FileView({ file, others, index, busy, preferred, onOpenTool }: P
           ) : (
             <p class="note">{t(noInspectMessage(current, !!signals.signature))}</p>
           )}
+
+          {/* 中繼資料之外，畫面上看得到的人臉與個資。按下檢查才載入模型，結果跟著版本走 */}
+          {isImage && !current.large ? (
+            <ScreenCheck
+              key={current.id}
+              blob={current.blob}
+              busy={busy}
+              canRedact={canRedact}
+              onRedact={(found) => {
+                setScreenFound({ version: current.id, ...found });
+                setEditing("redact");
+              }}
+            />
+          ) : null}
 
           {isImage && file.versions[0]!.tool === null ? <QrInImage blob={current.blob} onOpenTool={onOpenTool} /> : null}
 

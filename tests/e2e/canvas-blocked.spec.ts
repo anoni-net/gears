@@ -132,3 +132,16 @@ test("遮蔽 PDF：讀文字層不必讀 canvas，讀者還沒允許也找得到
   await page.getByRole("button", { name: "找電話、Email 等個資" }).click();
   await expect(page.getByTestId("redact-auto-status")).toHaveText("加了 2 個框，請逐一確認，框錯的點一下就會拿掉。");
 });
+
+test("檢查畫面內容：讀不到 canvas 時說明要在網址列允許，允許之後再按一次就能檢查", async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.goto("./");
+  await page.getByTestId("file-input").setInputFiles({ name: "chat.png", mimeType: "image/png", buffer: await image(page) });
+  const button = page.getByRole("button", { name: "檢查畫面內容" });
+  await button.click();
+  const status = page.getByTestId("screen-status");
+  await expect(status).toContainText("網址列跳出詢問");
+  await allow(page);
+  await button.click();
+  await expect(status).toContainText("沒有找到人臉", { timeout: 90_000 });
+});
