@@ -3,6 +3,7 @@ import type { MessageKey } from "./zh-TW.ts";
 
 export const en: Record<MessageKey, string> = {
   "app.noscript": "Gears needs JavaScript to process files in your browser.",
+  "app.legacy": "This browser is too old to run Gears. On iPhone and iPad, update to iOS 16.4 or later. On a computer, update Safari, Chrome or Firefox to the latest version.",
   "app.language": "Language",
   "list.separator": ", ",
   "app.title": "File Workbench",

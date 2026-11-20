@@ -4,6 +4,7 @@ import type { MessageKey } from "./zh-TW.ts";
 
 export const zhCN: Record<MessageKey, string> = {
   "app.noscript": "文件工作台需要 JavaScript 才能在你的浏览器里处理文件。",
+  "app.legacy": "这个浏览器的版本太旧，没有办法运行文件工作台。iPhone 与 iPad 请更新到 iOS 16.4 以上，电脑请把 Safari、Chrome、Firefox 更新到最新版。",
   "app.language": "语言",
   "list.separator": "、",
   "app.title": "文件工作台",

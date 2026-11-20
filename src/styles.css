@@ -3611,3 +3611,12 @@ body > noscript {
   margin: 0 auto 1.25rem;
   padding: 0 1rem;
 }
+
+/* 太舊的瀏覽器（iOS 16.4 以前）的提示，public/legacy-check.js 偵測到時才拿掉 hidden。
+   不設 display，否則會蓋過 hidden 屬性 */
+.legacy-browser {
+  margin: 1rem;
+  padding: 0.75rem 1rem;
+  border-left: 4px solid var(--warn);
+  font-weight: 600;
+}

@@ -34,6 +34,29 @@ Gears 結合兩件事：可以在本機使用的工具，以及用開源模型�
 - iPhone 線的參數只能靠真機量測。Playwright 的 WebKit 在電腦上執行，模擬不出 iPhone 分頁的記憶體上限，CI 的 iPhone 那一台只是畫面尺寸。依據是裝置量測頁收到的 iPhone 結果，需要有 iPhone 的社群成員定期量測（#144）
 - Android 手機的記憶體差距大，低階機可能比 iPhone 更吃力。主線的模型要有記憶體不夠時的退回方式，例如自動改用小一號的模型
 
+### 最低需求
+
+Safari 16.4（iOS 16.4，2023-03）以前打不開 Gears。主程式的正規表示式用到 lookbehind（`pii.ts`、寫作習慣檢查、逐字稿的段落整理、QR code 讀取），舊版讀到時整支程式出錯，不是只有某個工具不能用。WebAssembly SIMD（onnxruntime-web 與 Transformers.js 的 WebAssembly）、壓縮串流（`DecompressionStream`，Office 文件與 PNG 的文字欄位）與 `OffscreenCanvas` 的 2D 也是 16.4 才有。建置目標是 `es2022`（`vite.config.ts`），不另外轉譯成舊的語法。
+
+- 舊版的提示（`public/legacy-check.js`，2026-11-20 起）：在主程式之前執行，只用舊瀏覽器也認得的寫法，`new RegExp("(?<=a)b")` 丟出錯誤時顯示 HTML 裡依語系寫好的提示（`#legacy-browser`，字串是 `app.legacy`，`vite.config.ts` 的 `localized` 寫進每一頁）。原本舊版只看得到建置時寫進 HTML 的說明，按了沒反應，讀者不知道原因。不轉址、不送出任何資料。瀏覽器測試（`tests/e2e/legacy-browser.spec.ts`）把 `RegExp` 換成遇到 lookbehind 就出錯的版本來模擬
+- 主程式之後再用到更新的語法或 API 時，先確認 Safari 16.4 有沒有，沒有的話要另外偵測、退回，或把這裡的最低需求跟著提高，並更新 `legacy-check.js` 的偵測
+- Safari 26（iOS 26，2025-09）才有的：WebGPU（沒有時模型只用 CPU）、WebCodecs 的 `AudioDecoder`（沒有時逐字稿把 MP4、M4A 整個檔案一次解碼，上限 256 MB 與 2 小時）
+
+iPhone 能升級到的 iOS 與記憶體（Apple 不公布記憶體，數字來自拆解與供應鏈的報導，2026-11-20 整理）：
+
+| 機型 | 能升級到的 iOS | 記憶體 | Gears |
+|---|---|---|---|
+| iPhone 7 以前 | iOS 15 | 3 GB 以下 | 打不開，顯示舊版的提示 |
+| iPhone 8、8 Plus、X | iOS 16 | 約 2–3 GB | 更新到 16.4 以上才打得開，模型功能不保證 |
+| iPhone XS、XS Max、XR | iOS 18 | 約 3–4 GB | 沒有 WebGPU 與 `AudioDecoder` |
+| iPhone 11、SE（第 2、3 代） | iOS 26 | 3–4 GB | 所有功能都打得開，大模型受記憶體限制 |
+| iPhone 12、13（非 Pro） | iOS 26 | 4 GB | 同上 |
+| iPhone 12 Pro、13 Pro、14、15 | iOS 26 | 6 GB | 同上 |
+| iPhone 15 Pro、16、16e | iOS 26 | 8 GB | Gemma 4 E2B 在 iPhone 15 Pro 上分頁被重新載入 |
+| iPhone 17、Air | iOS 26 | 8–12 GB（各來源不一） | |
+
+各功能在 iPhone 上要多少記憶體還沒有實測，要靠裝置量測頁收到的結果補上（#144）。iOS 上的 Chrome、Brave、Firefox 都是 WebKit 核心，看的是 iOS 的版本。鎖定模式不分機型都會關掉 WebAssembly，模型功能全部不能用（見「介面上的限制」）。
+
 ## 開發
 
 需要 Node.js 22.12 以上。
@@ -67,7 +90,7 @@ CI（`.github/workflows/ci.yml`）依瀏覽器拆成四台機器同時執行：C
 | `tests/unit/` | 在 Node 裡測純邏輯 |
 | `tests/e2e/` | 在 Chromium、WebKit、Firefox 與 iPhone 尺寸上測整個流程 |
 | `tests/helpers/` | 產生測試檔案的程式 |
-| `public/` | 網站圖示、主畫面圖示與 manifest |
+| `public/` | 網站圖示、主畫面圖示、manifest，以及偵測太舊的瀏覽器的 `legacy-check.js`（見「支援的瀏覽器」的「最低需求」） |
 | `licenses/` | 第三方圖示、HEIC 解碼器、pdf-lib、pdf.js、自動尋找與逐字稿的授權全文，也會跟著網站部署（見下方「第三方資料」） |
 
 ## 工具模組
