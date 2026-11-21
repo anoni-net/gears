@@ -14,7 +14,8 @@ import { LocaleHint } from "./ui/LocaleHint.tsx";
 import { TrayList } from "./ui/TrayList.tsx";
 import { isReloading, useOffline } from "./ui/offline.ts";
 import { useAnyWorking } from "./ui/working.ts";
-import { useTray } from "./ui/hooks.ts";
+import { WIDE, useMedia, useTray } from "./ui/hooks.ts";
+import { CONTENT_ID, PageAside } from "./ui/PageAside.tsx";
 import { CreateToolView } from "./ui/registry.tsx";
 import { Icon, IconCircle } from "./ui/Icon.tsx";
 import { TOOL_META, groupOf } from "./ui/tool-meta.ts";
@@ -198,6 +199,7 @@ export function App() {
   const state = useTray();
   useKeepTray(state.files.length > 0);
   const route = useRoute();
+  const wide = useMedia(WIDE);
   // 建議與回饋記下讀者從哪個工具過來（src/feedback.ts），在建議與回饋裡換語系時不變
   const from = useRef("");
   if (route !== "feedback") from.current = route;
@@ -396,9 +398,14 @@ export function App() {
       ) : null}
       <LocaleHint />
 
-      {/* 授權、建議與回饋這類工具以外的頁面不顯示暫存區，左邊那一欄空著，內容的位置跟首頁相同（styles.css 的 .workbench.solo）。檔案仍在記憶體裡，回到桌面就看得到 */}
+      {/* 授權、建議與回饋這類工具以外的頁面不顯示暫存區，內容的位置跟首頁相同（styles.css 的 .workbench.solo）。
+          寬螢幕上左邊那一欄放暫存區的摘要、使用者區的頁面與本頁目錄（src/ui/PageAside.tsx），手機上不顯示 */}
       <main class={isPage(route) ? "workbench solo frame" : "workbench frame"}>
-        {isPage(route) ? null : (
+        {isPage(route) ? (
+          wide ? (
+            <PageAside route={route} files={state.files.length} onHome={() => home()} />
+          ) : null
+        ) : (
           <TrayList
             files={state.files}
             selected={state.selected}
@@ -411,7 +418,10 @@ export function App() {
             keep={groupOf(route) === "check" || state.files.every((f) => f.intent === "check")}
           />
         )}
-        <div class="view">{view}</div>
+        {/* 左欄的「跳到主內容」以這裡為目標，工具以外的頁面加上 tabindex 讓它接得住焦點 */}
+        <div class="view" id={CONTENT_ID} tabIndex={isPage(route) ? -1 : undefined}>
+          {view}
+        </div>
       </main>
 
       {/* 寬螢幕分左右兩欄，說明在左，連結與語系在右並靠右對齊。手機上照原本的順序排下來 */}

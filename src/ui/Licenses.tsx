@@ -4,25 +4,54 @@ import projectLicense from "../../LICENSE?raw";
 
 // 授權與來源：工作台本身的授權，以及用到的第三方程式、模型與資料。授權全文是 licenses/ 底下的
 // 純文字檔，用 ?url 匯入，跟著建置一起輸出（檔名帶雜湊），service worker 也會存起來，離線也能看。
-// 新增 licenses/ 的檔案時，在 ENTRIES 加一筆，三個語系加上 licenses.<id> 與 licenses.<id>.desc
+// 新增 licenses/ 的檔案時，在 GROUPS 對應的那一組加一筆，三個語系加上 licenses.<id> 與 licenses.<id>.desc
 const files = import.meta.glob<string>("../../licenses/*.txt", { query: "?url", import: "default", eager: true });
 const fileUrl = (name: string) => files[`../../licenses/${name}.txt`];
 
-const ENTRIES: { id: string; url?: string; text?: string }[] = [
-  { id: "gears", text: projectLicense },
-  { id: "transcribe", url: fileUrl("transcribe") },
-  { id: "redact-detect", url: fileUrl("redact-detect") },
-  { id: "pdfjs", url: fileUrl("pdfjs") },
-  { id: "pdf-lib", url: fileUrl("pdf-lib") },
-  { id: "libheif", url: fileUrl("libheif") },
-  { id: "openpgp", url: fileUrl("openpgp") },
-  { id: "c2pa", url: fileUrl("c2pa") },
-  { id: "pkijs", url: fileUrl("pkijs") },
-  { id: "zxing", url: fileUrl("zxing") },
-  { id: "material-design-icons", url: fileUrl("material-design-icons") },
-  // 資料：授權寫在說明裡，沒有獨立的授權檔
-  { id: "data-165" },
-  { id: "data-diceware" },
+// 依用途分組，每組一個 <h2>、每一項一個 <h3>，左欄的本頁目錄照這些小標題產生（src/ui/PageAside.tsx）。
+// 分組照 AGENTS.md「第三方資料」：工作台本身、模型與執行模型的程式、讀寫檔案格式的程式、驗證簽章與憑證，
+// 以及圖示與資料。2026-11-21 以前十三項排成一張清單，沒有小標題
+interface Entry {
+  id: string;
+  url?: string;
+  text?: string;
+}
+
+const GROUPS: { id: string; entries: Entry[] }[] = [
+  { id: "app", entries: [{ id: "gears", text: projectLicense }] },
+  {
+    id: "models",
+    entries: [
+      { id: "transcribe", url: fileUrl("transcribe") },
+      { id: "redact-detect", url: fileUrl("redact-detect") },
+    ],
+  },
+  {
+    id: "files",
+    entries: [
+      { id: "pdfjs", url: fileUrl("pdfjs") },
+      { id: "pdf-lib", url: fileUrl("pdf-lib") },
+      { id: "libheif", url: fileUrl("libheif") },
+      { id: "zxing", url: fileUrl("zxing") },
+    ],
+  },
+  {
+    id: "verify",
+    entries: [
+      { id: "openpgp", url: fileUrl("openpgp") },
+      { id: "c2pa", url: fileUrl("c2pa") },
+      { id: "pkijs", url: fileUrl("pkijs") },
+    ],
+  },
+  {
+    id: "data",
+    entries: [
+      { id: "material-design-icons", url: fileUrl("material-design-icons") },
+      // 資料：授權寫在說明裡，沒有獨立的授權檔
+      { id: "data-165" },
+      { id: "data-diceware" },
+    ],
+  },
 ];
 
 export function Licenses() {
@@ -32,25 +61,32 @@ export function Licenses() {
         {t("licenses.title")}
       </h1>
       <p class="hint">{t("licenses.intro")}</p>
-      <ul data-testid="licenses">
-        {ENTRIES.map(({ id, url, text }) => (
-          <li key={id}>
-            <strong>{tDynamic(`licenses.${id}`)}</strong>
-            <p class="hint">{tDynamic(`licenses.${id}.desc`)}</p>
-            {url ? (
-              <a href={url} target="_blank" rel="noopener">
-                {t("licenses.fullText")}
-              </a>
-            ) : null}
-            {text ? (
-              <details>
-                <summary>{t("licenses.fullText")}</summary>
-                <pre>{text}</pre>
-              </details>
-            ) : null}
-          </li>
+      <div data-testid="licenses">
+        {GROUPS.map((group) => (
+          <section key={group.id} aria-labelledby={`licenses-group-${group.id}`}>
+            <h2 id={`licenses-group-${group.id}`}>{tDynamic(`licenses.group.${group.id}`)}</h2>
+            <ul>
+              {group.entries.map(({ id, url, text }) => (
+                <li key={id}>
+                  <h3 id={`licenses-${id}`}>{tDynamic(`licenses.${id}`)}</h3>
+                  <p class="hint">{tDynamic(`licenses.${id}.desc`)}</p>
+                  {url ? (
+                    <a href={url} target="_blank" rel="noopener">
+                      {t("licenses.fullText")}
+                    </a>
+                  ) : null}
+                  {text ? (
+                    <details>
+                      <summary>{t("licenses.fullText")}</summary>
+                      <pre>{text}</pre>
+                    </details>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          </section>
         ))}
-      </ul>
+      </div>
     </section>
   );
 }

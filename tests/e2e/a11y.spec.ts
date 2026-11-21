@@ -140,3 +140,44 @@ test("深色模式沒有對比問題", async ({ page }) => {
   await page.goto("./");
   expect(await audit(page)).toEqual([]);
 });
+
+// 工具以外的頁面的左欄（src/ui/PageAside.tsx）：暫存區有檔案、目前頁面的標示與本頁目錄，深淺色都檢查。
+// 上面逐頁的檢查是暫存區沒有檔案、淺色的畫面
+test("工具以外的頁面的左欄，暫存區有檔案時深淺色都沒有無障礙問題", async ({ page }) => {
+  await page.goto("./");
+  await page.getByTestId("file-input").setInputFiles({ name: "a.txt", mimeType: "text/plain", buffer: Buffer.from("x") });
+  await expect(page.locator(".tray .item")).toHaveCount(1);
+  for (const id of ["licenses", "bench", "feedback", "samples", "remote-server", "storage", "privacy", "testing"]) {
+    await page.evaluate((id) => {
+      history.pushState(null, "", `/gears/${id}/`);
+      dispatchEvent(new Event("gears:navigate"));
+    }, id);
+    await expect(page.getByTestId("aside-tray")).toContainText("暫存區有 1 個檔案");
+    for (const colorScheme of ["light", "dark"] as const) {
+      await page.emulateMedia({ colorScheme });
+      expect(await audit(page), `${id} ${colorScheme}`).toEqual([]);
+    }
+  }
+});
+
+test("已下載的模型的持久儲存，申請之前與被拒絕之後深淺色都沒有無障礙問題", async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(StorageManager.prototype, "persisted", { value: async () => false, configurable: true });
+    Object.defineProperty(StorageManager.prototype, "persist", { value: async () => false, configurable: true });
+  });
+  for (const width of [1280, 600]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("./storage/");
+    await expect(page.getByTestId("storage-persist")).toBeVisible();
+    for (const colorScheme of ["light", "dark"] as const) {
+      await page.emulateMedia({ colorScheme });
+      expect(await audit(page), `${width} ${colorScheme}`).toEqual([]);
+    }
+    await page.getByTestId("storage-persist").click();
+    await expect(page.getByTestId("storage-persist-status")).toContainText("瀏覽器沒有同意");
+    for (const colorScheme of ["light", "dark"] as const) {
+      await page.emulateMedia({ colorScheme });
+      expect(await audit(page), `${width} ${colorScheme} denied`).toEqual([]);
+    }
+  }
+});
