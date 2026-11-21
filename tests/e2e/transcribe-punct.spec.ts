@@ -1,3 +1,4 @@
+import AxeBuilder from "@axe-core/playwright";
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import type { Page, TestInfo } from "@playwright/test";
@@ -51,7 +52,11 @@ async function fakeWorkers(page: Page, fake: Fake) {
       }
       reply(data: { type?: string; text?: string }) {
         if (this.kind === "transcribe") {
-          if (data.type === "start") return this.send({ type: "ready" });
+          // 同一個 Worker 會留著給下一次轉錄用，每次 start 重新送段落
+          if (data.type === "start") {
+            this.sent = false;
+            return this.send({ type: "ready" });
+          }
           if (!this.sent) {
             this.sent = true;
             this.send({ type: "segments", segments: fake.segments, pieces: fake.segments.length });
@@ -117,10 +122,16 @@ test("標點建議：華語轉完之後出現按鈕，寫出下載量，轉完�
 
 test("標點建議：英語、台語、粵語與 Omnilingual 的逐字稿不出現按鈕", async ({ page }) => {
   await fakeWorkers(page, { segments: [{ start: 0, end: 2, text: "hello world" }] });
-  for (const language of ["英語", "台語", "粵語", "孟加拉語"]) {
-    await transcribe(page, language);
+  await transcribe(page, "英語");
+  await expect(page.getByTestId("transcript")).toBeVisible();
+  await expect(page.getByRole("button", { name: "建議標點" })).toHaveCount(0);
+  // 同一個檔案換語言再轉一次（不重新載入頁面，暫存區有檔案時重新整理會先跳出確認）
+  for (const language of ["台語", "粵語", "孟加拉語", "華語"]) {
+    await page.getByLabel(language, { exact: true }).check();
+    await page.getByRole("button", { name: /^(再轉一次|從 Hugging Face 下載並開始)$/ }).click();
+    await expect(page.getByTestId("transcribe-status")).toHaveText(/^完成，共 \d+ 段/);
     await expect(page.getByTestId("transcript")).toBeVisible();
-    await expect(page.getByRole("button", { name: "建議標點" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "建議標點" })).toHaveCount(language === "華語" ? 1 : 0);
   }
 });
 
@@ -171,6 +182,19 @@ test("標點建議：接受之前匯出原文，可以逐段接受、全部接�
   await expect(page.getByTestId("transcribe-status")).toHaveText(/^完成，共 \d+ 段/);
   await expect(marks).toHaveCount(0);
   await expect(page.getByTestId("punct-status")).toHaveCount(0);
+});
+
+test("標點建議：有建議時的畫面沒有無障礙問題，深色模式也是", async ({ page, browserName }) => {
+  test.skip(browserName !== "chromium", "無障礙檢查只在 Chromium 執行（同 a11y.spec.ts）");
+  await fakeWorkers(page, { segments: SEGMENTS, punct: MARKS });
+  await transcribe(page);
+  await suggest(page);
+  await expect(page.getByTestId("punct-status")).toHaveText(/^2 段有建議的標點/);
+  for (const colorScheme of ["light", "dark"] as const) {
+    await page.emulateMedia({ colorScheme });
+    const result = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"]).analyze();
+    expect(result.violations.map((v) => `${v.id}: ${v.help} (${v.nodes.map((n) => n.target.join(" ")).join(" | ")})`), colorScheme).toEqual([]);
+  }
 });
 
 test("標點建議：手機上先說明還在測試，可以先去協助測試頁量測，電腦上直接開始", async ({ page }, testInfo) => {

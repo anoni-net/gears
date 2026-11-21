@@ -330,7 +330,7 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
       const found = inserts.map((list, i) => ({ base: texts[i]!, inserts: list }));
       setSuggestions(found);
       setPunct({ kind: found.some((s) => s.inserts.length) ? "ready" : "none" });
-      // 下次打開逐字稿時不再寫下載量
+      // 模型已經存進快取，捨棄之後再按一次時不寫下載量
       setPunctMb(0);
     } catch (error) {
       if ((error as Error).message === CANCELLED) return;
