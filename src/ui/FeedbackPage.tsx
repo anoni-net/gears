@@ -50,7 +50,7 @@ export function FeedbackPage({ from }: { from: string }) {
     return (
       <section class="feedback" aria-labelledby="feedback-title">
         {title}
-        <div class="alert" role="status" data-testid="feedback-sent">
+        <div class="alert ok" role="status" data-testid="feedback-sent">
           <p>
             <strong>{t("feedback.sent")}</strong>
           </p>

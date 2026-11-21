@@ -9,7 +9,7 @@ interface Props {
   onCopied?: () => void;
 }
 
-export function CopyButton({ text, label, primary = true, onCopied }: Props) {
+export function CopyButton({ text, label, primary = false, onCopied }: Props) {
   const [state, setState] = useState<"idle" | "done" | "failed">("idle");
   useEffect(() => setState("idle"), [text]);
   const copy = async () => {

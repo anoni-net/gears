@@ -600,7 +600,7 @@ export function RemoteTool(_props: CreateToolProps) {
 
   const cancel = (
     <button type="button" onClick={restart}>
-      {["sent", "received", "declined", "talk", "error"].includes(phase.kind) ? t("nearby.again") : t("redact.cancel")}
+      {["sent", "received", "declined", "talk", "error"].includes(phase.kind) ? t("nearby.again") : t("common.cancel")}
     </button>
   );
 
@@ -631,7 +631,7 @@ export function RemoteTool(_props: CreateToolProps) {
     actions = (
       <>
         <button type="button" class="primary" disabled={!state.files.length} onClick={() => setMode("send")}>
-          {t("nearby.send")}
+          {t("transfer.send")}
         </button>
         <button type="button" class={state.files.length ? "" : "primary"} onClick={() => setMode("talk")}>
           {t("remote.talk")}
@@ -720,7 +720,7 @@ export function RemoteTool(_props: CreateToolProps) {
     actions = (
       <>
         <button type="button" class="primary" onClick={() => void accept(phase.incoming)}>
-          {t("nearby.accept")}
+          {t("transfer.accept")}
         </button>
         <button
           type="button"

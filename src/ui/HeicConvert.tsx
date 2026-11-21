@@ -55,7 +55,7 @@ export function HeicConvert({ blob, onDone, onCancel }: FileEditorProps) {
           {status === "working" ? t("heic.working") : t("heic.convert")}
         </button>
         <button type="button" onClick={onCancel}>
-          {t("redact.cancel")}
+          {t("common.cancel")}
         </button>
       </div>
       {status === "failed" || status === "canvasBlocked" || status === "noWasm" ? (

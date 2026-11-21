@@ -116,7 +116,7 @@ function Result({ url, list }: { url: URL; list: ScamList | null | undefined }) 
           {cleaned.clean}
         </output>
         <div class="buttons">
-          <CopyButton text={cleaned.clean} label={t("url.clean.copy")} />
+          <CopyButton primary text={cleaned.clean} label={t("url.clean.copy")} />
         </div>
       </section>
     </div>

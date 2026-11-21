@@ -49,7 +49,7 @@ export function EncryptEditor({ blob, onDone, onCancel }: FileEditorProps) {
           {status === "working" ? t("age.working") : t("age.encrypt")}
         </button>
         <button type="button" onClick={onCancel}>
-          {t("redact.cancel")}
+          {t("common.cancel")}
         </button>
       </div>
       {status === "failed" ? (
@@ -93,7 +93,7 @@ export function DecryptEditor({ blob, onDone, onCancel }: FileEditorProps) {
           {status === "working" ? t("age.working") : t("age.decrypt")}
         </button>
         <button type="button" onClick={onCancel}>
-          {t("redact.cancel")}
+          {t("common.cancel")}
         </button>
       </div>
       {status === "failed" ? (

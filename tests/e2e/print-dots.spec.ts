@@ -45,8 +45,8 @@ test("從任務選掃描的頁面：找到淡黃色，去掉之後追蹤點變�
   await chooser.setFiles({ name: "scan.png", mimeType: "image/png", buffer: png });
 
   await expect(page.getByTestId("print-dots-status")).toContainText("找到淡黃色的像素");
-  await page.getByRole("button", { name: "只看黃色" }).click();
-  await expect(page.getByRole("button", { name: "只看黃色" })).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("radio", { name: "只看黃色" }).check();
+  await expect(page.getByRole("radio", { name: "只看黃色" })).toBeChecked();
   await page.getByRole("button", { name: "套用" }).click();
   await expect(page.getByText("接近白色的淡黃色像素改成白色", { exact: false })).toBeVisible();
 

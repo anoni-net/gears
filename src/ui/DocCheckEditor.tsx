@@ -168,9 +168,9 @@ export function DocCheckEditor({ blob, format, onDone, onCancel }: FileEditorPro
         {pdf ? (
           <button type="button" class="primary" disabled={status === "working"} onClick={toSafePdf}>
             {building
-              ? t("redact.workingPage", { n: Math.min(building[0] + 1, building[1]), total: building[1] })
+              ? t("common.workingPage", { n: Math.min(building[0] + 1, building[1]), total: building[1] })
               : status === "working"
-                ? t("redact.working")
+                ? t("common.working")
                 : t("docCheck.safePdf")}
           </button>
         ) : null}

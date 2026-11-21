@@ -65,7 +65,7 @@ export function BenchPage() {
         <h3 id="bench-report-title">{t("bench.report.title")}</h3>
         <p class="hint">{t("bench.report.hint")}</p>
         <div class="buttons">
-          <CopyButton text={ocr.length || pii.length || llm.length ? report : ""} label={t("bench.copy")} />
+          <CopyButton primary text={ocr.length || pii.length || llm.length ? report : ""} label={t("bench.copy")} />
         </div>
         {ocr.length || pii.length || llm.length ? (
           <details>

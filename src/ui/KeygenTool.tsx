@@ -102,7 +102,7 @@ export function KeygenTool({ onCreate }: CreateToolProps) {
 
           <section aria-labelledby="identity-title">
             <h3 id="identity-title">{t("keygen.identity")}</h3>
-            <p class="alert danger">{t("keygen.identityNote")}</p>
+            <p class="alert warn">{t("keygen.identityNote")}</p>
             <output class="secret key" data-testid="identity">
               {shown ? pair.identity : "AGE-SECRET-KEY-1" + "•".repeat(24)}
             </output>

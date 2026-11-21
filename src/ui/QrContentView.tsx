@@ -291,7 +291,7 @@ export function QrContentView({ text, format = "QRCode", onOpenTool }: { text: s
         {text}
       </output>
       <div class="buttons">
-        <CopyButton text={copy.text} label={copy.label} />
+        <CopyButton primary text={copy.text} label={copy.label} />
         {content.kind === "url" || content.kind === "invite" ? (
           <button type="button" onClick={() => onOpenTool("url-check", content.url)}>
             {t("qrread.checkUrl")}
