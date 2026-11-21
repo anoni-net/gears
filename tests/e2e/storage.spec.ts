@@ -6,7 +6,7 @@ import { expect, test } from "./guard.ts";
 const ENTRIES: [cache: string, url: string, bytes: number][] = [
   ["gears-models", `/gears/models/whisper/${whisper.base.dir}/onnx/encoder_model_quantized.onnx`, 2_000_000],
   ["gears-keep", "/gears/models/yunet-2023mar-dynamic.onnx", 230_000],
-  ["gears-keep", "/gears/models/ppocr/PP-OCRv5_mobile_rec.onnx", 3_000_000],
+  ["gears-keep", "/gears/models/ppocr/PP-OCRv6_small_rec.onnx", 3_000_000],
   ["transformers-cache", "https://huggingface.co/onnx-community/Qwen3-0.6B-ONNX/resolve/abc/onnx/model.onnx", 1_500_000],
 ];
 

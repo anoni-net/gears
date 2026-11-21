@@ -1,5 +1,6 @@
 import whisper from "../tools/transcribe/models.json" with { type: "json" };
 import { PII_MODEL } from "../tools/redact/pii-model.ts";
+import ppocr from "../tools/redact/ppocr-models.json" with { type: "json" };
 import { MODEL_CACHE } from "./models.ts";
 
 // 已下載的模型（src/ui/StoragePage.tsx）：Gears 存在這個瀏覽器裡的模型與程式，依用途分成一列一列，
@@ -60,12 +61,12 @@ export function compareKeys(a: StorageKey, b: StorageKey): number {
 
 // 遮蔽的自動尋找第一次使用要下載多少（src/ui/RedactEditor.tsx），按下按鈕之前就寫在畫面上，
 // 用行動網路的讀者先知道。onnxruntime 的 WebAssembly 兩者共用，約 14 MB（伺服器有壓縮時約 4 MB），
-// 人臉的模型約 0.2 MB 不計，文字辨識的兩個模型約 21 MB。
+// 人臉的模型約 0.2 MB 不計，文字辨識的兩個模型約 26 MB（PP-OCRv5 mobile 的偵測加 PP-OCRv6 small 的辨識）。
 // paths 是 gears-keep 裡的網址，service worker 換版本時已經清掉雜湊對不上的，留下的都能直接用。
 // runtime 是遮蔽用的那一份 WebAssembly 的網址。Transformers.js 另帶一份 onnxruntime（檔名開頭相同、
 // 雜湊不同），用過逐字稿不代表遮蔽的執行環境已經在。數字照沒有壓縮的大小，寧可多寫
 export const RUNTIME_MB = 14;
-export const OCR_MB = 21;
+export const OCR_MB = 26;
 
 export function redactDownload(paths: readonly string[], base: string, runtimeUrl: string): { faces: number; text: number } {
   const rest = paths.map((url) => {
@@ -74,6 +75,7 @@ export function redactDownload(paths: readonly string[], base: string, runtimeUr
   });
   const want = new URL(runtimeUrl, "http://x").pathname;
   const runtime = want.startsWith(base) && rest.includes(want.slice(base.length));
-  const ocr = ["det", "rec"].every((part) => rest.some((p) => p.startsWith("models/ppocr/") && p.includes(`_${part}`)));
+  // 比對清單上現在的檔名：換過模型時，快取裡可能還有舊版的檔案（service worker 換版本時才清掉）
+  const ocr = [ppocr.det.name, ppocr.rec.name].every((name) => rest.includes(`models/ppocr/${name}`));
   return { faces: runtime ? 0 : RUNTIME_MB, text: (ocr ? 0 : OCR_MB) + (runtime ? 0 : RUNTIME_MB) };
 }

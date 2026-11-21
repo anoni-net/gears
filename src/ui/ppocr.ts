@@ -1,9 +1,9 @@
 import { type OcrLine, cropFrame, cropTransform, ctcDecode, dbBoxes, detSize, recWidth } from "../tools/redact/ppocr.ts";
 import models from "../tools/redact/ppocr-models.json" with { type: "json" };
 
-// PP-OCRv5 mobile 的文字辨識：偵測模型找出文字行，辨識模型讀出每一行的字（純邏輯在
+// PaddleOCR 的文字辨識（偵測用 PP-OCRv5 mobile、辨識用 PP-OCRv6 small，src/tools/redact/ppocr-models.json）：偵測模型找出文字行，辨識模型讀出每一行的字（純邏輯在
 // src/tools/redact/ppocr.ts）。用 onnxruntime-web 的單執行緒 WebAssembly 執行，跟找人臉同一份，
-// 模型從自己的網域載入（scripts/fetch-whisper.mjs 下載到 public/models/ppocr/），約 21 MB。
+// 模型從自己的網域載入（scripts/fetch-whisper.mjs 下載到 public/models/ppocr/），約 26 MB。
 // 影像先畫到 canvas 上取像素，讀不到 canvas 的瀏覽器由呼叫的人先檢查（assertCanvasReadable）。
 // 裝置量測（src/ui/ocr-bench.worker.ts）在 Worker 裡執行，畫在 OffscreenCanvas 上
 
@@ -34,7 +34,7 @@ export async function loadPpocr(base: string, { threads = 1, webgpu = false }: P
   // 只印錯誤（logSeverityLevel 3）
   const options = { executionProviders: [webgpu ? "webgpu" : "wasm"], logSeverityLevel: 3 as const };
   const session = (name: string) => ort.InferenceSession.create(`${base}models/ppocr/${name}`, options);
-  // 18,383 字的字典取自辨識模型的 inference.yml（scripts/make-ppocr-dict.py），用到時才載入
+  // 18,708 字的字典取自辨識模型的 inference.yml（scripts/make-ppocr-dict.py），用到時才載入
   const words = import("../tools/redact/ppocr-dict.json").then((m) => m.default as string[]);
   // WebGPU 的推論環境不能同時建立兩個（onnxruntime-web 1.30.0 會丟出錯誤），依序建立
   const [det, rec] = webgpu
@@ -100,6 +100,9 @@ export async function loadPpocr(base: string, { threads = 1, webgpu = false }: P
         );
         const out = (await rec.run({ [rec.inputNames[0]!]: t }))[rec.outputNames[0]!]!;
         const [, T, C] = out.dims as number[];
+        // 辨識模型的輸出是字典加上空白（最前面）與空格（最後面）。換模型時字典沒有跟著換，
+        // 不會報錯、只會整行亂碼，所以在這裡擋下來
+        if (C !== dict.length + 2) throw new Error(`PP-OCR dictionary mismatch: ${C} classes, ${dict.length} characters`);
         const r = ctcDecode((await out.getData()) as Float32Array, T!, C!, dict, frame, width.width, width.padded);
         out.dispose();
         if (r.text.trim()) lines.push({ text: r.text, score: r.score, detScore: score, box, quad, chars: r.chars });

@@ -35,7 +35,7 @@ async function addScreenshot(page: Page, withText: boolean) {
 test("找到電話與 Email，打開遮蔽時框已經放好，套用之後成為新的版本", async ({ page }) => {
   test.setTimeout(120_000);
   await addScreenshot(page, true);
-  await expect(page.getByTestId("screen-download")).toHaveText("第一次檢查要下載約 35 MB 的辨識模型，之後存在這台裝置的瀏覽器裡。");
+  await expect(page.getByTestId("screen-download")).toHaveText("第一次檢查要下載約 40 MB 的辨識模型，之後存在這台裝置的瀏覽器裡。");
   await page.getByRole("button", { name: "檢查畫面內容" }).click();
   const status = page.getByTestId("screen-status");
   // 類別看辨識出的文字，Email 偶爾被讀成帳號，只確認電話與兩筆的數量

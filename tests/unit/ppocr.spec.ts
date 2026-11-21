@@ -129,6 +129,6 @@ test("框起所有文字：一個字而且分數低的不框", () => {
 });
 
 test("字典取自辨識模型，正體與簡體的字都有", () => {
-  expect(dict).toHaveLength(18383);
+  expect(dict).toHaveLength(18708);
   for (const c of ["臺", "台", "灣", "湾", "豪", "綠"]) expect(dict).toContain(c);
 });

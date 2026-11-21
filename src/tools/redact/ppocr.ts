@@ -1,6 +1,6 @@
 import type { Box } from "./index.ts";
 
-// 遮蔽的文字辨識用 PaddleOCR 的 PP-OCRv5 mobile（src/ui/ppocr.ts 載入模型、畫到 canvas 上取像素），
+// 遮蔽的文字辨識用 PaddleOCR 的 PP-OCRv5 mobile 偵測與 PP-OCRv6 small 辨識（src/ui/ppocr.ts 載入模型、畫到 canvas 上取像素），
 // 這裡是不碰 DOM 的前後處理，有單元測試。參數照 PaddleOCR 3.x 的 OCR 流程預設值：偵測 limit_side_len 64
 // （min）、thresh 0.3、box_thresh 0.6、unclip_ratio 1.5，辨識的輸入高度 48、CTC 解碼。長邊的上限從
 // PaddleOCR 的 4000 降到 2560：4032×3024 的手機照片照 4000 算，偵測的輸入要 144 MB，手機上記憶體不夠

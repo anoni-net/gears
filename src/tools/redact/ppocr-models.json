@@ -7,14 +7,14 @@
     "bytes": 4826518
   },
   "rec": {
-    "repo": "PaddlePaddle/PP-OCRv5_mobile_rec_onnx",
-    "revision": "ed152b8b495f84de93cda5709d768548a9127622",
-    "name": "PP-OCRv5_mobile_rec.onnx",
-    "sha256": "da72dc72ca4dc220df0dfde68c1dedc31c58d3e76a25871122e5056227d50092",
-    "bytes": 16534782
+    "repo": "PaddlePaddle/PP-OCRv6_small_rec_onnx",
+    "revision": "b8f84f0b80c529de40b4fbb3544b84fa7233a513",
+    "name": "PP-OCRv6_small_rec.onnx",
+    "sha256": "5435fd747c9e0efe15a96d0b378d5bd157e9492ed8fd80edf08f30d02fa24634",
+    "bytes": 21159378
   },
   "dict": {
-    "source": "PaddlePaddle/PP-OCRv5_mobile_rec_onnx 的 inference.yml（PostProcess.character_dict）",
-    "sha256": "5dfeb2777f6d0db8177d8128a8acfcf6e6276dc4ac73ea3bf0dc06d6a5e85d8e"
+    "source": "PaddlePaddle/PP-OCRv6_small_rec_onnx 的 inference.yml（PostProcess.character_dict）",
+    "sha256": "ab078671bb49f06228eadccd34f1bb501e157f7a047095ffb943ba81512c77d1"
   }
 }
