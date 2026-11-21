@@ -19,13 +19,15 @@ test("原始的 HTML 寫著這一頁的標題、說明與連結，打開之後�
   await expect(page.locator(".site-header__title")).toHaveJSProperty("tagName", "P");
 });
 
-test("桌面與檔案畫面的 h1 是網站名稱", async ({ page }) => {
+test("桌面的 h1 是網站名稱，檔案畫面的 h1 是檔名", async ({ page }) => {
   await page.goto("./");
   await expect(page.locator("h1")).toHaveCount(1);
   await expect(page.locator("h1.site-header__title")).toBeVisible();
   await page.getByTestId("file-input").setInputFiles({ name: "notes.txt", mimeType: "text/plain", buffer: Buffer.from("hello") });
+  // AGENTS.md「設計語言」的標題層級：檔案畫面的 h1 是檔名，頁首的網站名稱改用 <p>
   await expect(page.locator("h1")).toHaveCount(1);
-  await expect(page.locator("h1.site-header__title")).toBeVisible();
+  await expect(page.locator("h1#file-title")).toHaveText("notes.txt");
+  await expect(page.locator(".site-header__title")).toHaveJSProperty("tagName", "P");
 });
 
 test("桌面的工具是連到工具網址的連結，點了不重新載入，暫存區的檔案留著", async ({ page }) => {

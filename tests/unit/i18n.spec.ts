@@ -22,7 +22,7 @@ test("每個代碼與工具都有正體中文的字串", () => {
     // 桌面每個工具一列，名稱下面一行寫讀者會遇到的情況（src/ui/Desktop.tsx）
     ...TOOL_GROUPS.flatMap((group) => group.tools.map((id) => `desk.when.${id}`)),
     // 檔案畫面的工具列：按鈕用動詞，需要編輯畫面的工具還有「再做一次」
-    ...[...fileTools, ...editorTools].map((tool) => `tool.${tool.id}.action`),
+    ...fileTools.map((tool) => `tool.${tool.id}.action`),
     // 工具頁開頭的使用方式，每個工具三步，處理檔案與從空白開始的工具都有（src/ui/ToolIntro.tsx 的 ToolHeader）
     ...toolIds.flatMap((id) => [1, 2, 3].map((n) => `howto.${id}.${n}`)),
     ...editorTools.map((tool) => `tool.${tool.id}.again`),

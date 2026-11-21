@@ -282,7 +282,7 @@ test("不能預覽的檔案說明清楚，只提供加密", async ({ page }) => 
   await expect(page.getByText("這種檔案還沒有辦法檢查裡面的中繼資料")).toBeVisible();
   await expect(page.locator(".tray .item")).toContainText("不能預覽");
   await expect(page.getByRole("button", { name: "清除", exact: true })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "開始加密" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "打開加密" })).toBeVisible();
 });
 
 test("正式建置帶著 CSP，限制頁面能連線的對象", async ({ page, guard }) => {
@@ -313,7 +313,7 @@ test("做了第二個工具之後，前面處理過的仍標示已處理", async
 
   await expect(strip.getByText("已處理")).toBeVisible();
   await expect(strip.getByRole("button")).toHaveCount(0);
-  await redact.getByRole("button", { name: "開始框選" }).click();
+  await redact.getByRole("button", { name: "打開遮蔽" }).click();
   await drawBox(page);
   await page.getByRole("button", { name: "套用遮蔽" }).click();
 
@@ -333,14 +333,14 @@ test("做了第二個工具之後，前面處理過的仍標示已處理", async
   // 復原這一步，遮蔽的版本拿掉，已處理也跟著消失
   await page.getByRole("button", { name: "復原這一步" }).click();
   await expect(redact.getByText("已處理")).toHaveCount(0);
-  await expect(redact.getByRole("button", { name: "開始框選" })).toBeVisible();
+  await expect(redact.getByRole("button", { name: "打開遮蔽" })).toBeVisible();
   await expect(strip.getByText("已處理")).toBeVisible();
 });
 
 test("先遮蔽：說明中繼資料是重新產生整張圖時一起拿掉的", async ({ page }) => {
   const jpeg = insertIntoJpeg(await canvasImage(page, "image/jpeg"), exifSegment(sampleTiff()));
   await addFile(page, "photo.jpg", "image/jpeg", jpeg);
-  await page.getByRole("button", { name: "開始框選" }).click();
+  await page.getByRole("button", { name: "打開遮蔽" }).click();
   await drawBox(page);
   await page.getByRole("button", { name: "套用遮蔽" }).click();
 

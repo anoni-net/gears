@@ -20,7 +20,7 @@ test("沒有 crypto.subtle：金鑰產生器說明需要 HTTPS，按鈕停用", 
 test("沒有 crypto.subtle：用公鑰加密停用，用密語加密照常", async ({ page }) => {
   await page.goto("./");
   await page.getByTestId("file-input").setInputFiles({ name: "notes.txt", mimeType: "text/plain", buffer: Buffer.from("hello") });
-  await page.getByRole("button", { name: "開始加密" }).click();
+  await page.getByRole("button", { name: "打開加密" }).click();
   await page.getByLabel("對方的公鑰").check();
   await expect(page.getByText("只有 https:// 開頭的網址才能使用")).toBeVisible();
   await page.getByLabel("對方的 age 公鑰，一行一把").fill("age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p");

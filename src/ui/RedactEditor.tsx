@@ -20,6 +20,7 @@ import type { FileEditorProps } from "./types.ts";
 import type { PdfPages } from "./pdf-pages.ts";
 import { useWorking } from "./working.ts";
 import { ProgressBar } from "./ProgressBar.tsx";
+import { EditorHelp } from "./EditorHelp.tsx";
 
 // 編輯時畫面上的圖最多 1600 像素寬，框的座標一律存成原圖的像素
 const PREVIEW_MAX = 1600;
@@ -529,16 +530,18 @@ export function RedactEditor({ blob, format, found, onDone, onCancel }: FileEdit
   return (
     <div class="redact">
       <p class="hint">{t("redact.help")}</p>
-      {downloadNote ? (
-        <p class="hint" data-testid="redact-download">
-          {downloadNote}
-        </p>
-      ) : null}
-      {modelAvailable && !phone && download?.pii ? (
-        <p class="hint" data-testid="redact-model-note">
-          {t("redact.model.note", { mb: download.pii })}
-        </p>
-      ) : null}
+      <EditorHelp>
+        {downloadNote ? (
+          <p class="hint" data-testid="redact-download">
+            {downloadNote}
+          </p>
+        ) : null}
+        {modelAvailable && !phone && download?.pii ? (
+          <p class="hint" data-testid="redact-model-note">
+            {t("redact.model.note", { mb: download.pii })}
+          </p>
+        ) : null}
+      </EditorHelp>
       {crashed && !isPdf ? (
         <p class="callout" data-testid="redact-model-crashed">
           {t("redact.model.crashed")}

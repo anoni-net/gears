@@ -70,7 +70,7 @@ test("檢查找到的框不會帶進之後從工具列打開的遮蔽", async ({
   await expect(page.getByText("已經框了 2 個範圍")).toBeVisible();
   await page.getByRole("button", { name: "取消" }).click();
   // 工具列的遮蔽：一般的打開方式，沒有預先放好的框
-  await page.getByRole("button", { name: "開始框選" }).click();
+  await page.getByRole("button", { name: "打開遮蔽" }).click();
   await expect(page.getByTestId("redact-canvas")).toBeVisible();
   await expect(page.getByTestId("redact-auto-status")).toHaveText("側臉、戴口罩的臉、小字與手寫字常會漏掉，套用之前請自己再檢查一次。");
 });

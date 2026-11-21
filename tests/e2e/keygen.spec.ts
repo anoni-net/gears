@@ -42,7 +42,7 @@ test("公鑰的 QR code 直接顯示，金鑰檔放進暫存區之後可以加�
 
   await page.getByRole("button", { name: "放進暫存區，用密語加密再存" }).click();
   await expect(page.getByRole("heading", { name: "age-key.txt" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "開始加密" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "打開加密" })).toBeVisible();
 });
 
 test("到其他工具再回來，金鑰還在", async ({ page }) => {
@@ -87,7 +87,7 @@ test("私鑰下載之後，關掉分頁不再確認", async ({ page }) => {
 test("從加密畫面連到金鑰產生器，暫存區不會被清空", async ({ page }) => {
   await page.goto("./");
   await page.getByTestId("file-input").setInputFiles({ name: "notes.txt", mimeType: "text/plain", buffer: Buffer.from("hello") });
-  await page.getByRole("button", { name: "開始加密" }).click();
+  await page.getByRole("button", { name: "打開加密" }).click();
   await page.getByLabel("對方的公鑰").check();
   await page.getByRole("button", { name: /還沒有金鑰/ }).click();
   await expect(page).toHaveURL(/\/gears\/age-keygen\/$/);

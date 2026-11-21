@@ -111,7 +111,7 @@ export function ScreenCheck({ blob, busy, canRedact, onRedact }: Props) {
 
   return (
     <section class="screen-check" aria-labelledby="screen-check-title" data-testid="screen-check">
-      <h3 id="screen-check-title">{t("screen.title")}</h3>
+      <h2 id="screen-check-title">{t("screen.title")}</h2>
       <p class="hint">{t("screen.note")}</p>
       {downloadNote ? (
         <p class="hint" data-testid="screen-download">
