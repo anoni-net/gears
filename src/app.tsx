@@ -396,7 +396,7 @@ export function App() {
       ) : null}
       <LocaleHint />
 
-      {/* 授權、建議與回饋這類工具以外的頁面不顯示暫存區，改成單欄。檔案仍在記憶體裡，回到桌面就看得到 */}
+      {/* 授權、建議與回饋這類工具以外的頁面不顯示暫存區，左邊那一欄空著，內容的位置跟首頁相同（styles.css 的 .workbench.solo）。檔案仍在記憶體裡，回到桌面就看得到 */}
       <main class={isPage(route) ? "workbench solo frame" : "workbench frame"}>
         {isPage(route) ? null : (
           <TrayList
