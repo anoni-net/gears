@@ -2,7 +2,7 @@ import type { ComponentType } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { COMMUNITY_URL, IS_ONION } from "./site.ts";
 import { LOCALES, getLocale, t, tDynamic } from "./i18n/index.ts";
-import { navigate, onRouteClick, routeUrl, switchLocale, useRoute } from "./router.ts";
+import { navigate, onRouteClick, routeUrl, scrollToHash, switchLocale, useRoute } from "./router.ts";
 import { tray } from "./state.ts";
 import { createTools, editorTools, fileTools } from "./tools/index.ts";
 import { Desktop, type Task } from "./ui/Desktop.tsx";
@@ -27,6 +27,7 @@ import { PrivacyPage } from "./ui/PrivacyPage.tsx";
 import { RemoteServerPage } from "./ui/RemoteServerPage.tsx";
 import { SampleLink, SamplesPage } from "./ui/SamplesPage.tsx";
 import { StoragePage } from "./ui/StoragePage.tsx";
+import { AboutPage } from "./ui/AboutPage.tsx";
 import { TestingPage } from "./ui/TestingPage.tsx";
 import { type FileSample, makeSampleFile } from "./ui/samples.ts";
 
@@ -222,6 +223,14 @@ export function App() {
     trackView();
   }, [route, getLocale()]);
 
+  // 工具以外的頁面帶著 #id 打開時（桌面的「了解更多」連到設計原則頁的一段、另開分頁、複製來的網址），
+  // 畫好之後捲到那一段。寬螢幕的本頁目錄也會捲，手機上沒有左欄，靠這裡
+  useEffect(() => {
+    if (!isPage(route) || !location.hash) return;
+    const frame = requestAnimationFrame(() => void scrollToHash());
+    return () => cancelAnimationFrame(frame);
+  }, [route]);
+
   const pick = () => input.current?.click();
   const onChange = (e: Event) => {
     const el = e.currentTarget as HTMLInputElement;
@@ -327,6 +336,8 @@ export function App() {
     view = <StoragePage />;
   } else if (route === "testing") {
     view = <TestingPage />;
+  } else if (route === "about") {
+    view = <AboutPage offlineReady={offline.ready} />;
   } else if (route === "samples") {
     view = <SamplesPage focus={preset} onOpenFile={openSample} onOpenQr={(id) => openTool("qr-read", `sample:${id}`)} />;
   } else if (selected) {
@@ -433,8 +444,15 @@ export function App() {
         </div>
         <div class="footer-links">
           <p>
-            {/* 連結只留三個，手機上維持一行：隱私說明接在使用統計的說明後面，原始碼放在版本號那一行 */}
+            {/* 社群首頁、設計原則、建議與回饋、授權與來源，隱私說明接在使用統計的說明後面，原始碼放在版本號那一行。
+                原本只有三個、手機上維持一行，2026-11-21 加上設計原則，窄螢幕換行時以「· 連結」為一組換行 */}
             <a href={COMMUNITY_URL}>{t("app.footer.community")}</a>{" "}
+            <span class="footer-item">
+              {"· "}
+              <a href={routeUrl("about")} onClick={(e) => onRouteClick(e, () => navigate("about"))} data-testid="about-link">
+                {t("app.footer.about")}
+              </a>
+            </span>{" "}
             {/* 窄螢幕換行時「· 連結」整組換到下一行，分隔點不會留在行尾 */}
             <span class="footer-item">
               {"· "}

@@ -25,6 +25,10 @@ test("第一次開啟之後，沒有網路也能開啟首頁與工具，產生 Q
   await expect(page.getByRole("img", { name: "QR code 預覽" })).toBeVisible();
   await page.goto("./no-such-page/");
   await expect(page.getByRole("heading", { name: "檔案工作台" })).toBeVisible();
+  // 設計原則頁的即時檢查寫已經可以離線使用（src/ui/AboutPage.tsx）
+  await page.goto("./about/");
+  await expect(page.getByTestId("about-status-offline")).toHaveAttribute("data-state", "ready");
+  await expect(page.getByTestId("about-status-offline")).toContainText("已經可以離線使用。");
   await context.setOffline(false);
 });
 

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "preact/hooks";
-import { STORAGE_CACHES, type StorageKey, classify, compareKeys, keyId } from "../core/storage.ts";
+import { type StorageKey, type StorageRow, formatSize, keyId, scanStorage } from "../core/storage.ts";
 import { t, tDynamic } from "../i18n/index.ts";
 import { WIDE, useMedia } from "./hooks.ts";
 import { IconCircle } from "./Icon.tsx";
@@ -12,55 +12,24 @@ import { PAGE_META } from "./tool-meta.ts";
 
 const BASE = import.meta.env.BASE_URL;
 
-interface Row {
-  key: StorageKey;
-  bytes: number;
-  entries: [cache: string, request: Request][];
-}
-
-// 超過 1 GB 的寫成 1.6 GB，1 MB 以下的寫成 KB
-const size = (bytes: number) => (bytes >= 1e9 ? `${(bytes / 1e9).toFixed(1)} GB` : bytes >= 1e6 ? `${Math.round(bytes / 1e6)} MB` : `${Math.max(1, Math.round(bytes / 1e3))} KB`);
-
-// 讀三個快取，依用途分列。不能用 Cache API 時（私密瀏覽、Tor Browser）回傳 null
-async function scan(): Promise<Row[] | null> {
-  if (typeof caches === "undefined") return null;
-  const names = await caches.keys().catch(() => null);
-  if (!names) return null;
-  const rows = new Map<string, Row>();
-  for (const name of STORAGE_CACHES) {
-    if (!names.includes(name)) continue;
-    const cache = await caches.open(name);
-    for (const request of await cache.keys()) {
-      const key = classify(name, request.url, BASE);
-      // 快取的內容存在磁碟上，blob() 不會把整個檔案讀進記憶體
-      const bytes = (await (await cache.match(request))?.blob())?.size ?? 0;
-      const row = rows.get(keyId(key)) ?? { key, bytes: 0, entries: [] };
-      row.bytes += bytes;
-      row.entries.push([name, request]);
-      rows.set(keyId(key), row);
-    }
-  }
-  return [...rows.values()].sort((a, b) => compareKeys(a.key, b.key));
-}
-
-async function remove(rows: Row[]) {
+async function remove(rows: StorageRow[]) {
   for (const row of rows) for (const [name, request] of row.entries) await (await caches.open(name)).delete(request);
 }
 
-// 這一列的名稱與用在哪裡
-const nameOf = ({ group, model }: StorageKey) => (model ? tDynamic(`transcribe.model.${model}`) : tDynamic(`storage.item.${group}`));
+// 這一列的名稱與用在哪裡。設計原則頁的即時檢查也用這個名稱
+export const nameOf = ({ group, model }: StorageKey) => (model ? tDynamic(`transcribe.model.${model}`) : tDynamic(`storage.item.${group}`));
 const usedBy = ({ group }: StorageKey) => (group === "transcribe" || group === "speaker" || group === "vad" || group === "punct" ? t("tool.transcribe") : group === "faces" || group === "ocr" || group === "pii" ? t("tool.redact") : group === "c2pa" ? t("tool.verify") : group === "other" ? "" : tDynamic(`storage.used.${group}`));
 
 export function StoragePage() {
   // undefined 是還在計算
-  const [rows, setRows] = useState<Row[] | null | undefined>(undefined);
+  const [rows, setRows] = useState<StorageRow[] | null | undefined>(undefined);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const wide = useMedia(WIDE);
-  const load = () => scan().then(setRows, () => setRows(null));
+  const load = () => scanStorage(BASE).then(setRows, () => setRows(null));
   useEffect(() => void load(), []);
 
-  const del = async (targets: Row[], done: string) => {
+  const del = async (targets: StorageRow[], done: string) => {
     setBusy(true);
     try {
       await remove(targets);
@@ -104,7 +73,7 @@ export function StoragePage() {
                     {name}
                     {used ? <small>{used}</small> : null}
                   </span>
-                  <span class="storage-size">{size(row.bytes)}</span>
+                  <span class="storage-size">{formatSize(row.bytes)}</span>
                   <button type="button" disabled={busy} aria-label={t("storage.deleteItem", { name })} onClick={() => void del([row], t("storage.deleted", { name }))}>
                     {t("storage.delete")}
                   </button>
@@ -113,7 +82,7 @@ export function StoragePage() {
             })}
           </ul>
           <div class="storage-total">
-            <p>{t("storage.total", { size: size(total) })}</p>
+            <p>{t("storage.total", { size: formatSize(total) })}</p>
             <button type="button" disabled={busy} onClick={() => void del(rows, t("storage.deletedAll"))}>
               {t("storage.deleteAll")}
             </button>

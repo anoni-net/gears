@@ -44,3 +44,18 @@ test("遠端傳送的對照表不放 Cloudflare 那一欄，中繼伺服器無�
   await expect(who.locator("tbody tr").nth(0).locator("td")).toHaveText(["無法得知", "無法得知"]);
   await expect(page.getByTestId("remote-privacy")).toContainText("你經由 onion 連線，不經過 Cloudflare。");
 });
+
+test("設計原則在根目錄，桌面的了解更多、頁尾與使用者區都連到 onion 版的網址，沒有 clearnet 的 anoni.net", async ({ page }) => {
+  await page.goto("./");
+  await expect(page.getByRole("link", { name: "了解更多：瀏覽器裡就能完成" })).toHaveAttribute("href", "/about/#browser");
+  await expect(page.getByTestId("about-link")).toHaveAttribute("href", "/about/");
+  await expect(page.locator(".desk-user").getByRole("link", { name: "設計原則" })).toHaveAttribute("href", "/about/");
+  await page.getByRole("link", { name: "了解更多：用開源本機模型加強" }).click();
+  await expect(page).toHaveURL(/\/about\/#models$/);
+  const about = page.getByTestId("about");
+  await expect(about.getByTestId("about-models").locator("tbody tr").first()).toBeVisible();
+  const hrefs = await about.locator("a").evaluateAll((links) => links.map((a) => a.getAttribute("href") ?? ""));
+  expect(hrefs.filter((h) => h.includes("anoni.net"))).toEqual([]);
+  expect(hrefs.filter((h) => h.startsWith("/gears/"))).toEqual([]);
+  await expect(about).not.toContainText("assets.anoni.net");
+});

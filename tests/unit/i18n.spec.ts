@@ -7,6 +7,9 @@ import { TOOL_GROUPS } from "../../src/ui/tool-meta.ts";
 import { PII_KINDS } from "../../src/tools/redact/pii.ts";
 import { CLUES } from "../../src/tools/writing-style/index.ts";
 import qrSamples from "../../src/tools/qr-read/samples.json" with { type: "json" };
+import { MODEL_CATALOG } from "../../src/core/model-catalog.ts";
+import { USER_PAGES } from "../../src/ui/tool-meta.ts";
+import { pageIds } from "../../src/pages.ts";
 
 // 介面上有些字串的鍵是組出來的（finding.location、tool.qrcode.desc），漏了翻譯不會
 // 在型別檢查時被抓到，畫面上會直接露出鍵名。
@@ -31,6 +34,11 @@ test("每個代碼與工具都有正體中文的字串", () => {
     ...Array.from({ length: CLUES }, (_, i) => `style.clues.${i + 1}`),
     // QR code 讀取的範例與分組
     ...qrSamples.flatMap((sample) => [`qrread.sample.${sample.id}`, `qrread.samples.${sample.group}`]),
+    // 設計原則頁的模型表：每個模型用在哪個工具（src/core/model-catalog.ts）
+    ...MODEL_CATALOG.map((m) => `about.use.${m.id}`),
+    // 工具以外的頁面：標題與搜尋結果的描述，使用者區的頁面另外要有桌面上的名稱
+    ...pageIds.flatMap((id) => [`${id}.title`, `meta.${id}.title`, `meta.${id}.description`]),
+    ...USER_PAGES.map((id) => `${id}.title`),
   ];
   expect(expected.filter((k) => !keys.has(k))).toEqual([]);
 });
