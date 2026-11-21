@@ -537,7 +537,7 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
           </button>
         )}
         <button type="button" onClick={onCancel} disabled={busy}>
-          {t("redact.cancel")}
+          {t("common.cancel")}
         </button>
       </div>
 

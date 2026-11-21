@@ -160,7 +160,7 @@ export function VideoFramesEditor({ blob, onCancel }: FileEditorProps) {
           </button>
         )}
         <button type="button" onClick={onCancel}>
-          {t("redact.cancel")}
+          {t("common.cancel")}
         </button>
       </div>
     </div>

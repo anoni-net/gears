@@ -82,7 +82,7 @@ export function BlendEditor({ blob, onDone, onCancel }: FileEditorProps) {
         </p>
         <div class="buttons">
           <button type="button" onClick={onCancel}>
-            {t("redact.cancel")}
+            {t("common.cancel")}
           </button>
         </div>
       </div>
@@ -122,10 +122,10 @@ export function BlendEditor({ blob, onDone, onCancel }: FileEditorProps) {
       <p class="hint">{t("blend.limits")}</p>
       <div class="buttons">
         <button type="button" class="primary" disabled={!bitmap || status === "working"} onClick={apply}>
-          {status === "working" ? t("redact.working") : t("blend.apply")}
+          {status === "working" ? t("common.working") : t("blend.apply")}
         </button>
         <button type="button" onClick={onCancel}>
-          {t("redact.cancel")}
+          {t("common.cancel")}
         </button>
       </div>
       {status === "failed" || status === "canvasBlocked" ? (

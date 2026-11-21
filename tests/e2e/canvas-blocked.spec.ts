@@ -96,7 +96,7 @@ test("列印追蹤點：讀不到 canvas 時不判斷、不輸出，允許之後
   await expect(page.getByTestId("history-current").getByText("列印追蹤點", { exact: true })).toHaveCount(0);
 
   await allow(page);
-  await page.getByRole("button", { name: "只看黃色" }).click();
+  await page.getByRole("radio", { name: "只看黃色" }).check();
   await expect(page.getByTestId("print-dots-status")).toContainText("沒有找到");
   await expect(page.getByRole("alert")).toHaveCount(0);
   await page.getByRole("button", { name: "套用" }).click();

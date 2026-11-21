@@ -137,7 +137,7 @@ export function PrintDotsEditor({ blob, format, onDone, onCancel }: FileEditorPr
         </p>
         <div class="buttons">
           <button type="button" onClick={onCancel}>
-            {t("redact.cancel")}
+            {t("common.cancel")}
           </button>
         </div>
       </div>
@@ -148,19 +148,27 @@ export function PrintDotsEditor({ blob, format, onDone, onCancel }: FileEditorPr
   return (
     <div class="print-dots">
       <p class="hint">{t("printDots.intro")}</p>
-      <div class="buttons" role="group" aria-label={t("printDots.view")}>
+      <fieldset class="segmented">
+        <legend>{t("printDots.view")}</legend>
         {(["original", "yellow"] as const).map((v) => (
-          <button key={v} type="button" class={view === v ? "primary" : ""} aria-pressed={view === v} onClick={() => {
-              setView(v);
-              setRetry((n) => n + 1);
-            }}>
+          <label key={v}>
+            <input
+              type="radio"
+              name="print-dots-view"
+              checked={view === v}
+              onChange={() => {
+                setView(v);
+                setRetry((n) => n + 1);
+              }}
+            />
             {tDynamic(`printDots.view.${v}`)}
-          </button>
+          </label>
         ))}
-        <button type="button" aria-pressed={zoom} onClick={() => setZoom((z) => !z)}>
-          {t(zoom ? "printDots.fit" : "printDots.zoom")}
-        </button>
-      </div>
+        <label>
+          <input type="checkbox" checked={zoom} onChange={() => setZoom((z) => !z)} />
+          {t("printDots.zoom")}
+        </label>
+      </fieldset>
       {pdf && total > 1 ? (
         <div class="buttons">
           <button type="button" disabled={pageIndex === 0} onClick={() => setPageIndex((i) => i - 1)}>
@@ -194,10 +202,10 @@ export function PrintDotsEditor({ blob, format, onDone, onCancel }: FileEditorPr
       <p class="hint">{t("printDots.limits")}</p>
       <div class="buttons">
         <button type="button" class="primary" disabled={!bitmap || status === "working"} onClick={apply}>
-          {building ? t("redact.workingPage", { n: Math.min(building[0] + 1, building[1]), total: building[1] }) : status === "working" ? t("redact.working") : t("printDots.apply")}
+          {building ? t("common.workingPage", { n: Math.min(building[0] + 1, building[1]), total: building[1] }) : status === "working" ? t("common.working") : t("printDots.apply")}
         </button>
         <button type="button" onClick={onCancel}>
-          {t("redact.cancel")}
+          {t("common.cancel")}
         </button>
       </div>
       {status === "failed" ? (

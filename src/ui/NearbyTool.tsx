@@ -364,7 +364,7 @@ export function NearbyTool(_props: CreateToolProps) {
   // 每個畫面最下面只有一列按鈕：主要的動作在前，取消或重新開始在後
   const cancel = (
     <button type="button" onClick={restart}>
-      {["sent", "received", "declined", "error"].includes(phase.kind) ? t("nearby.again") : t("redact.cancel")}
+      {["sent", "received", "declined", "error"].includes(phase.kind) ? t("nearby.again") : t("common.cancel")}
     </button>
   );
 
@@ -375,7 +375,7 @@ export function NearbyTool(_props: CreateToolProps) {
     actions = (
       <>
         <button type="button" class="primary" disabled={!state.files.length} onClick={() => setMode("send")}>
-          {t("nearby.send")}
+          {t("transfer.send")}
         </button>
         <button
           type="button"
@@ -442,7 +442,7 @@ export function NearbyTool(_props: CreateToolProps) {
     actions = (
       <>
         <button type="button" class="primary" onClick={() => void accept(phase.incoming)}>
-          {t("nearby.accept")}
+          {t("transfer.accept")}
         </button>
         <button
           type="button"

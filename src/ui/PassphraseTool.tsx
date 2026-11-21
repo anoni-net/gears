@@ -56,7 +56,7 @@ export function PassphraseTool(_: CreateToolProps) {
         {value || t("pw.noCharset")}
       </output>
       <div class="buttons">
-        <CopyButton text={value} onCopied={() => track("tool-done", { tool: "passphrase" })} />
+        <CopyButton primary text={value} onCopied={() => track("tool-done", { tool: "passphrase" })} />
         <button type="button" onClick={() => setSeed((n) => n + 1)}>
           {t("pw.again")}
         </button>

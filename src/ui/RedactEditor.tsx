@@ -678,10 +678,10 @@ export function RedactEditor({ blob, format, found, onDone, onCancel }: FileEdit
         </p>
         <div class="buttons">
           <button type="button" class="primary" disabled={!total || status === "working"} onClick={apply}>
-            {building ? t("redact.workingPage", { n: Math.min(building[0] + 1, building[1]), total: building[1] }) : status === "working" ? t("redact.working") : t("redact.apply")}
+            {building ? t("common.workingPage", { n: Math.min(building[0] + 1, building[1]), total: building[1] }) : status === "working" ? t("common.working") : t("redact.apply")}
           </button>
           <button type="button" onClick={onCancel}>
-            {t("redact.cancel")}
+            {t("common.cancel")}
           </button>
         </div>
       </div>

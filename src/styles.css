@@ -1635,6 +1635,21 @@ button.pick-files .icon {
   resize: vertical;
 }
 
+/* 加密文字的結果：唯讀的密文，跟輸入框一樣寬 */
+textarea.cipher {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  font-family: ui-monospace, monospace;
+  font-size: 0.9rem;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  resize: vertical;
+}
+
 .check {
   display: flex;
   gap: 0.4rem;
@@ -1754,11 +1769,27 @@ button.pick-files .icon {
   margin-top: 1.5rem;
 }
 
-.alert {
-  border-left: 4px solid var(--ok);
+/* 提示框（AGENTS.md「設計語言」的提示與狀態）：.alert 與 .notice 是說明（品牌青），
+   .alert.warn 是留意（警示橘），.alert.danger 是危險，.alert.ok 是完成（完成綠）。
+   綠色只留給完成，一般的提醒不用綠色 */
+.alert,
+.notice {
+  border-left: 4px solid var(--brand-cyan-500);
   background: var(--surface);
   padding: 0.6rem 0.8rem;
-  border-radius: 6px;
+  border-radius: 8px;
+}
+
+.notice {
+  font-size: 0.9rem;
+}
+
+.alert.warn {
+  border-left-color: var(--warn);
+}
+
+.alert.ok {
+  border-left-color: var(--ok);
 }
 
 .alert.danger {
@@ -2366,14 +2397,7 @@ button.pick-files .icon {
   margin-bottom: 0.75rem;
 }
 
-/* 從 Hugging Face 下載的模型，開始前說明會連到哪裡 */
-.transcribe .notice {
-  border-left: 4px solid var(--brand-cyan-500);
-  background: var(--surface);
-  padding: 0.6rem 0.8rem;
-  border-radius: 6px;
-  font-size: 0.9rem;
-}
+/* 說明框（.notice）改成全域的規則，見 .alert 旁邊 */
 
 /* 使用的模型與授權：收起來放在逐字稿畫面的最下面 */
 .transcribe-models {

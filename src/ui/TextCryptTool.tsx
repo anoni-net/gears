@@ -60,7 +60,7 @@ function Encrypt({ onOpenTool }: CreateToolProps) {
           <h3 id="textcrypt-out">{t("textcrypt.cipher")}</h3>
           <textarea class="cipher" rows={8} readOnly value={out} data-testid="textcrypt-cipher" />
           <div class="buttons">
-            <CopyButton text={out} />
+            <CopyButton primary text={out} />
             {out.length <= QR_LIMIT ? (
               <button type="button" onClick={() => onOpenTool("qrcode", out)}>
                 {t("textcrypt.toQr")}
@@ -131,7 +131,7 @@ function Decrypt({ preset }: { preset?: string }) {
           <h3 id="textcrypt-plain">{t("textcrypt.plainOut")}</h3>
           <textarea rows={6} readOnly value={plain} data-testid="textcrypt-plain" />
           <div class="buttons">
-            <CopyButton text={plain} />
+            <CopyButton primary text={plain} />
             <button type="button" onClick={() => setPlain(null)}>
               {t("textcrypt.hide")}
             </button>
