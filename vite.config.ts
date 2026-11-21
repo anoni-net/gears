@@ -7,7 +7,6 @@ import { LOCALES, messagesOf } from "./src/i18n/index.ts";
 import { NOT_FOUND, labIds, pageIds } from "./src/pages.ts";
 import { toolIds } from "./src/tools/index.ts";
 import benchModels from "./src/tools/llm-bench/models.json" with { type: "json" };
-import { PII_MODEL } from "./src/tools/bench/pii.ts";
 import whisper from "./src/tools/transcribe/models.json" with { type: "json" };
 import { ASSETS_MODELS } from "./src/core/models.ts";
 import speakerModel from "./src/tools/transcribe/speaker-model.json" with { type: "json" };
@@ -57,7 +56,8 @@ const CSP = policy(ONION ? `'self' ${FEEDBACK_ENDPOINT}` : `'self' ${ANALYTICS_E
 // - Hugging Face（讀者選擇之後才連）：huggingface.co 限定在每個模型的下載路徑，不開放上傳用的
 //   API，下載會轉址到 *.hf.co 的 CDN（轉址之後 CSP 不比對路徑，只能寫主機）。語言模型速度量測的
 //   實驗頁（src/tools/llm-bench/models.json）也一樣，每個模型鎖定 commit
-// - assets.anoni.net：社群轉檔的模型，限定在模型的目錄（onion 版由自己的網域提供）
+// - assets.anoni.net：社群轉檔的模型與個資辨識模型（src/tools/redact/pii-model.ts），限定在模型的目錄
+//   （onion 版由自己的網域提供）
 const HEADER_CSP = policy(
   [
     "'self'",
@@ -69,8 +69,6 @@ const HEADER_CSP = policy(
     ...Object.values(benchModels)
       .filter((m) => m.host === "hf")
       .map((m) => `https://huggingface.co/${m.repo}/resolve/${m.revision}/`),
-    // 裝置量測的個資辨識模型（src/tools/bench/pii.ts）
-    `https://huggingface.co/${PII_MODEL.repo}/resolve/${PII_MODEL.revision}/`,
     "https://*.hf.co",
     ...(ONION ? [] : [ASSETS_MODELS]),
   ].join(" "),

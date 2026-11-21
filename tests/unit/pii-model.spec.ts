@@ -1,5 +1,7 @@
 import { expect, test } from "@playwright/test";
-import { PII_SAMPLES, align, foundCount, groupSpans, labelKind } from "../../src/tools/bench/pii.ts";
+import { PII_SAMPLES, foundCount } from "../../src/tools/bench/pii.ts";
+import type { LineText } from "../../src/tools/redact/pii.ts";
+import { PII_MODEL, align, groupSpans, joinLines, labelKind, spanBoxes } from "../../src/tools/redact/pii-model.ts";
 
 // 假的 tokenizer：一個 id 對一段文字，0 與 1 是特殊詞元，2 是 [UNK]
 function fake(pieces: string[]) {
@@ -51,4 +53,40 @@ test("找到幾個：一半以上的字被蓋住才算，標籤對應到幾類�
   expect(labelKind("B-DATE")).toBeNull();
   // 範例文字裡每一個應該找到的字都真的出現在文字裡
   for (const s of PII_SAMPLES) for (const word of s.expect) expect(s.text, word).toContain(word);
+});
+
+// 一行文字，每個字一個寬 10 的框，y 是行的位置。空白是補上的（null）
+function line(text: string, y: number): LineText {
+  return { text, boxes: [...text].map((c, i) => (c === " " ? null : { x: i * 10, y, w: 10, h: 10 })) };
+}
+
+test("文字行接成一段：行與行之間放換行，記下每個位置來自哪一行的第幾個字", () => {
+  const { text, at } = joinLines([line("林志明", 0), line("0912", 20)]);
+  expect(text).toBe("林志明\n0912");
+  expect(at).toEqual([[0, 0], [0, 1], [0, 2], null, [1, 0], [1, 1], [1, 2], [1, 3]]);
+});
+
+test("模型的範圍換回字框：同一行合成一個框，跨行的每一行各給一個框", () => {
+  const lines = [line("聯絡人 陳怡", 0), line("君 電話", 20)];
+  const { text, at } = joinLines(lines);
+  const start = text.indexOf("陳");
+  // 「陳怡\n君」被換行拆開，模型的範圍跨過換行
+  const found = spanBoxes(lines, at, [{ kind: "person", start, end: start + 4 }]);
+  expect(found).toEqual([
+    { kind: "person", text: "陳怡", box: { x: 40, y: 0, w: 20, h: 10 } },
+    { kind: "person", text: "君", box: { x: 0, y: 20, w: 10, h: 10 } },
+  ]);
+});
+
+test("模型的範圍只有空白或換行時不給框", () => {
+  const lines = [line("甲 乙", 0), line("丙", 20)];
+  const { at } = joinLines(lines);
+  expect(spanBoxes(lines, at, [{ kind: "org", start: 1, end: 2 }])).toEqual([]);
+  expect(spanBoxes(lines, at, [{ kind: "org", start: 3, end: 4 }])).toEqual([]);
+});
+
+test("模型檔放在 assets.anoni.net，每個檔案都有 SHA-256", () => {
+  expect(PII_MODEL.dir).toBe(`nym-pii-${PII_MODEL.revision.slice(0, 7)}`);
+  for (const file of ["config.json", "tokenizer.json", "tokenizer_config.json", `onnx/model_${PII_MODEL.dtype}.onnx`, `onnx/model_${PII_MODEL.dtype}.onnx_data`])
+    expect(PII_MODEL.files[file], file).toMatch(/^[0-9a-f]{64}$/);
 });

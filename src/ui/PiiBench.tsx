@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import { t, tDynamic } from "../i18n/index.ts";
 import { median } from "../tools/bench/ocr.ts";
-import { PII_MODEL, PII_SAMPLES, type PiiSampleId, foundCount } from "../tools/bench/pii.ts";
+import { PII_SAMPLES, type PiiSampleId, foundCount } from "../tools/bench/pii.ts";
+import { PII_MODEL } from "../tools/redact/pii-model.ts";
 import { type BenchEnv, hasGpu } from "./bench-env.ts";
 import type { PiiBenchReply, PiiBenchRequest } from "./pii-bench.worker.ts";
 import workerUrl from "./pii-bench.worker.ts?worker&url";
