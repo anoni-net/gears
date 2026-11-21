@@ -2,7 +2,7 @@ import type { ComponentType } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { COMMUNITY_URL, IS_ONION } from "./site.ts";
 import { LOCALES, getLocale, t, tDynamic } from "./i18n/index.ts";
-import { navigate, onRouteClick, routeUrl, scrollToHash, switchLocale, useRoute } from "./router.ts";
+import { navigate, onRouteClick, routeUrl, scrollToHash, switchLocale, takeHashScroll, useRoute } from "./router.ts";
 import { tray } from "./state.ts";
 import { createTools, editorTools, fileTools } from "./tools/index.ts";
 import { Desktop, type Task } from "./ui/Desktop.tsx";
@@ -224,9 +224,9 @@ export function App() {
   }, [route, getLocale()]);
 
   // 工具以外的頁面帶著 #id 打開時（桌面的「了解更多」連到設計原則頁的一段、另開分頁、複製來的網址），
-  // 畫好之後捲到那一段。寬螢幕的本頁目錄也會捲，手機上沒有左欄，靠這裡
+  // 畫好之後捲到那一段。寬螢幕的本頁目錄也會捲，手機上沒有左欄，靠這裡。上一頁、下一頁不捲，由瀏覽器還原
   useEffect(() => {
-    if (!isPage(route) || !location.hash) return;
+    if (!takeHashScroll() || !isPage(route) || !location.hash) return;
     const frame = requestAnimationFrame(() => void scrollToHash());
     return () => cancelAnimationFrame(frame);
   }, [route]);

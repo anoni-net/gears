@@ -28,8 +28,18 @@ const EVENT = "gears:navigate";
 // 換頁時捲回頂端。只換網址與畫面的話，瀏覽器沿用原本的捲動位置：手機上從桌面下方點進比較長的頁面
 // （建議與回饋），畫面會停在新頁面的最底部。上一頁由瀏覽器自己還原捲動位置，換語系留在原處，都不經過這裡。
 // hash 是新頁面裡的一段（桌面的「了解更多」連到設計原則頁的 #browser），畫好之後由 scrollToHash 捲過去
+// 要不要捲到網址的 #id：第一次載入與 navigate() 帶著 hash 時才捲。上一頁、下一頁由瀏覽器還原原本的捲動位置，
+// 不然從設計原則的 #models 換到別頁再按上一頁，會被拉回 #models 而不是原本讀到的地方
+let hashPending = true;
+export function takeHashScroll(): boolean {
+  const pending = hashPending;
+  hashPending = false;
+  return pending;
+}
+
 export function navigate(id: string, hash?: string) {
   if (parseRoute(location.pathname) === id) return;
+  hashPending = !!hash;
   history.pushState(null, "", `${routeUrl(id)}${hash ? `#${hash}` : ""}`);
   window.dispatchEvent(new Event(EVENT));
   window.scrollTo(0, 0);
@@ -37,7 +47,7 @@ export function navigate(id: string, hash?: string) {
 
 // 網址帶著 #id、頁面上也有這個 id 時捲過去，焦點移到那裡，讀螢幕軟體與鍵盤從那一段接著讀。
 // 頁面的內容是 JavaScript 畫的，瀏覽器載入時找不到這一段，站內換頁也不會自己捲，所以由 src/app.tsx
-// 在每次換頁畫好之後呼叫（手機上沒有左欄的本頁目錄，不能靠它）。遠端傳送的連結金鑰也放在 # 後面，
+// 在第一次載入與 navigate() 帶著 hash 換頁、畫好之後呼叫（takeHashScroll，手機上沒有左欄的本頁目錄，不能靠它）。遠端傳送的連結金鑰也放在 # 後面，
 // 頁面上沒有那個 id，不做任何事
 export function scrollToHash(): boolean {
   let id = "";
