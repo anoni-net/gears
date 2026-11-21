@@ -1,10 +1,10 @@
-逐字稿：語音辨識模型、語音偵測、Transformers.js、sherpa-onnx 與 OpenCC
+逐字稿：語音辨識模型、語音偵測、標點建議、Transformers.js、sherpa-onnx 與 OpenCC
 ====================================================================
 
 逐字稿在讀者按下「開始轉逐字稿」時，才從本站載入以下檔案，在瀏覽器的 Web Worker 裡
 執行，錄音不會上傳。程式與模型原封不動使用，沒有修改，只有社群轉檔的模型做過量化（見下方）。
 large-v3-turbo 例外，讀者選擇之後由網頁直接從 Hugging Face 下載，本站不轉發這個模型。社群轉檔的
-模型與 sherpa-onnx 從 assets.anoni.net 載入。
+模型、標點建議的模型與 sherpa-onnx 從 assets.anoni.net 載入。
 
 語音辨識模型（scripts/fetch-whisper.mjs 下載，版本與每個檔案的 SHA-256 寫在
 src/tools/transcribe/models.json）
@@ -38,6 +38,24 @@ SHA-256 寫在 src/tools/transcribe/vad-model.json）
   官方 repo 附的 ONNX 檔，沒有修改
   來源：https://github.com/snakers4/silero-vad（tag v6.2.3，commit 5cd7945676eb32225748052e2e6a0580e4686a08）
   get_speech_timestamps 照 src/silero_vad/utils_vad.py 改寫成 TypeScript（src/tools/transcribe/segments.ts）
+
+標點建議的模型（華語的逐字稿轉完之後，讀者按下「建議標點」時才載入，從
+https://assets.anoni.net/gears/models/horizon-punct-a527b62/ 載入，每個檔案的 SHA-256 寫在
+src/tools/transcribe/punct.ts）
+- Horizon-Labs/multilingual-punctuation-truecase-small（Apache-2.0，Copyright 2026 Horizon Labs）
+  原始模型：https://huggingface.co/Horizon-Labs/multilingual-punctuation-truecase-small
+  （commit a527b62e5a3e16de7e316f03234c99422b1c8814）
+  底層模型：mmBERT-small（MIT，Copyright (c) the mmBERT authors (Johns Hopkins University CLSP)），
+  https://huggingface.co/jhu-clsp/mmBERT-small
+- 修改：onnx/model_quantized.onnx 是 anoni.net 社群重新量化的版本。原始模型附的 model_quantized.onnx
+  只把詞嵌入存成 uint8，其餘 MatMul 權重是 fp32。這裡把 MatMul 的常數權重改存成 int8（每個輸出通道
+  一組 scale、對稱），執行時用 DequantizeLinear 還原成 fp32 再相乘，輸入的激活值不量化，詞嵌入維持
+  原本的 uint8。config.json、tokenizer.json、tokenizer_config.json、special_tokens_map.json 照原樣，
+  沒有修改。做法與評測記錄在社群工作區的 research/gears-punct/，目錄裡的 README.txt 也有說明
+- 只用模型輸出的標點（逗號、句號、問號），大小寫的標籤不用
+- 訓練資料與各自的授權列在原始模型 README.md 的 Training 一節（NOTICE 的最後一句指的就是這一節）：
+  https://huggingface.co/Horizon-Labs/multilingual-punctuation-truecase-small/blob/a527b62e5a3e16de7e316f03234c99422b1c8814/README.md
+- 原始模型的 NOTICE 全文在下方，Apache License 2.0 全文在最後
 
 緬甸語、高棉語、寮語、孟加拉語、尼泊爾語、蒙古語的模型（從 https://assets.anoni.net/gears/models/ 載入）
 - Meta Omnilingual ASR CTC 300M（Apache-2.0，Copyright Meta Platforms, Inc. and affiliates）的 sherpa-onnx 轉檔版
@@ -139,6 +157,33 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+
+---- NOTICE（Horizon-Labs/multilingual-punctuation-truecase-small）----
+
+multilingual-punctuation-truecase-small
+Copyright 2026 Horizon Labs
+
+This model is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+It is a fine-tuned version of mmBERT-small (https://huggingface.co/jhu-clsp/mmBERT-small), which is licensed under the MIT License. The model weights
+and the tokenizer files derive from mmBERT-small; its license notice follows.
+
+  Copyright (c) the mmBERT authors (Johns Hopkins University CLSP)
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files
+  (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge,
+  publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so,
+  subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+  CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+  SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+Training data sources and their licenses are listed in the "Training" section of README.md.
 
 
 ---- Apache License 2.0 ----

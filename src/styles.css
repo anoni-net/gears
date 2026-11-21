@@ -2256,6 +2256,30 @@ button.pick-files .icon {
   font-variant-numeric: tabular-nums;
 }
 
+/* 標點建議（src/ui/TranscribeEditor.tsx）：還沒接受的標點用連結色、加粗、加底線，深色模式也看得清楚。
+   不用警示橘（留給會透露身分的資訊）與完成綠 */
+.transcript .punct-suggest {
+  color: var(--link);
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.2em;
+}
+
+.transcript .punct-accept {
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.transcribe-punct {
+  margin: 0 0 1rem;
+}
+
+.transcribe-punct .hint,
+.transcribe-punct .error {
+  margin: 0.25rem 0;
+}
+
 /* 換人的地方標出說話者，放在那一段文字的上方 */
 .transcript .speaker {
   display: block;
