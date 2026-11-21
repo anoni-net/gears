@@ -82,7 +82,10 @@ if (!manifest && (!wanted.length || wanted.includes("ppocr"))) {
 }
 
 if (!wanted.length || wanted.includes("speaker")) {
-  await download(speaker.url, speaker.sha256, join(root, "public/models/speaker", speaker.dir, speaker.file), `speaker ${speaker.file}`);
+  // 從 assets.anoni.net 下載社群保存的那一份（speaker-model.json 的 upstream 是上游原本的位置，
+  // 2026-11-19 被重新上傳、SHA-256 變了）。網址在這裡組出來，不寫進 JSON：JSON 會被打包進網頁，
+  // onion 版的產物不能出現 clearnet 的 anoni.net（scripts/check-site.mjs）
+  await download(`https://assets.anoni.net/gears/models/${speaker.dir}/${speaker.file}`, speaker.sha256, join(root, "public/models/speaker", speaker.dir, speaker.file), `speaker ${speaker.file}`);
 }
 
 for (const [id, model] of Object.entries(models)) {
