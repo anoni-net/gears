@@ -110,7 +110,7 @@ function Decrypt({ preset }: { preset?: string }) {
         <textarea rows={2} value={secret} spellcheck={false} autocomplete="off" onInput={(e) => setSecret(e.currentTarget.value)} />
       </label>
       <p class="hint">{t("age.keyNote")}</p>
-      {blocked ? <p class="alert danger">{t("age.needsHttps")}</p> : null}
+      {blocked ? <p class="callout danger">{t("age.needsHttps")}</p> : null}
       <div class="buttons">
         <button type="button" class="primary" disabled={!cipher.trim() || !secret.trim() || blocked || status === "working"} onClick={run}>
           {status === "working" ? t("age.working") : t("textcrypt.decrypt")}

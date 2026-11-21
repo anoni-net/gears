@@ -80,7 +80,7 @@ export function BlendEditor({ blob, onDone, onCancel }: FileEditorProps) {
         <p class="error" role="alert">
           {t("redact.decodeFailed")}
         </p>
-        <div class="buttons">
+        <div class="buttons action-bar">
           <button type="button" onClick={onCancel}>
             {t("common.cancel")}
           </button>
@@ -120,7 +120,7 @@ export function BlendEditor({ blob, onDone, onCancel }: FileEditorProps) {
         })}
       </fieldset>
       <p class="hint">{t("blend.limits")}</p>
-      <div class="buttons">
+      <div class="buttons action-bar">
         <button type="button" class="primary" disabled={!bitmap || status === "working"} onClick={apply}>
           {status === "working" ? t("common.working") : t("blend.apply")}
         </button>

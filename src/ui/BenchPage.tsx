@@ -52,7 +52,7 @@ export function BenchPage() {
           : t("bench.probing")}
       </p>
       {env && !env.secure ? (
-        <p class="notice" data-testid="bench-insecure">
+        <p class="callout" data-testid="bench-insecure">
           {t("bench.insecure")}
         </p>
       ) : null}

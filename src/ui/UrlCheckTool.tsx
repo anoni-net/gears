@@ -73,11 +73,11 @@ function Result({ url, list }: { url: URL; list: ScamList | null | undefined }) 
         ) : list === null ? (
           <p class="hint">{t("url.scam.unavailable")}</p>
         ) : scam ? (
-          <p class="alert danger" role="alert">
+          <p class="callout danger" role="alert">
             {t("url.scam.hit", { domain: scam, to: list.to ?? "" })}
           </p>
         ) : (
-          <p class="alert">{t("url.scam.miss", { to: list.to ?? "" })}</p>
+          <p class="callout">{t("url.scam.miss", { to: list.to ?? "" })}</p>
         )}
       </section>
 
@@ -94,7 +94,7 @@ function Result({ url, list }: { url: URL; list: ScamList | null | undefined }) 
             ))}
           </ul>
         ) : null}
-        {isShortener(cleaned.url.hostname) ? <p class="alert">{t("url.shortener")}</p> : null}
+        {isShortener(cleaned.url.hostname) ? <p class="callout">{t("url.shortener")}</p> : null}
       </section>
 
       <section aria-labelledby="clean-title">

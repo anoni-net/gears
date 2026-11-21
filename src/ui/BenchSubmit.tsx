@@ -88,7 +88,7 @@ export function BenchSubmit({ report, disabled }: { report: string; disabled: bo
         </p>
       ) : null}
       {status === "sent" ? (
-        <p class="alert ok" role="status" data-testid="bench-sent">
+        <p class="callout ok" role="status" data-testid="bench-sent">
           {t("bench.send.sent")}
         </p>
       ) : null}

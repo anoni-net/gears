@@ -162,7 +162,7 @@ export function PiiBench({ env, runs, setRuns, busy, setBusy }: Props) {
     <section class="bench-section" aria-labelledby="bench-pii-title">
       <h3 id="bench-pii-title">{t("bench.pii.title")}</h3>
       <p class="hint">{t("bench.pii.intro", { mb: PII_MB })}</p>
-      <p class="notice" data-testid="bench-pii-remote">
+      <p class="callout" data-testid="bench-pii-remote">
         {t("bench.pii.remote", { mb: PII_MB })}
       </p>
 

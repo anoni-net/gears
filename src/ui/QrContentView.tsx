@@ -3,6 +3,7 @@ import { getLocale, list, t } from "../i18n/index.ts";
 import { type InvoiceItem, type QrContent, classify } from "../tools/qr-read/index.ts";
 import { dayOfYear } from "../tools/qr-read/barcode.ts";
 import { CopyButton } from "./CopyButton.tsx";
+import { callout } from "./callout.ts";
 
 const COINS = { bitcoin: "Bitcoin", monero: "Monero", zcash: "Zcash" } as const;
 
@@ -303,7 +304,7 @@ export function QrContentView({ text, format = "QRCode", onOpenTool }: { text: s
           </button>
         ) : null}
       </div>
-      {note ? <p class={WARN.has(content.kind) ? "warn" : "hint"}>{t(note as "qrread.inviteNote", content.kind === "invite" ? { app: content.app } : undefined)}</p> : null}
+      {note ? <p class={WARN.has(content.kind) ? callout("warn") : "hint"}>{t(note as "qrread.inviteNote", content.kind === "invite" ? { app: content.app } : undefined)}</p> : null}
     </div>
   );
 }

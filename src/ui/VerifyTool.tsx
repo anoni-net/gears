@@ -39,6 +39,7 @@ import {
 } from "./verify-report.ts";
 import { useWorking } from "./working.ts";
 import { COMMIT, VERSION } from "../version.ts";
+import { callout, verdictCallout } from "./callout.ts";
 
 // 查證：把暫存區裡讀者加入的檔案當成一批，整理出每個檔案的重點與檔案之間的關聯，
 // 比對出需要留意的地方，可以匯出成查證紀錄。一律讀原檔（第一個版本），不看處理過的版本。
@@ -290,7 +291,7 @@ function ProofModeBlock({ proof }: { proof: NonNullable<Evidence["proofmode"]> }
         <p class="error">{t("verify.proofmode.noKey")}</p>
       )}
       <p class="hint">{t("verify.proofmode.keyNote")}</p>
-      {proof.unmatched.length ? <p class="verify-card-warn">{t("verify.proofmode.unmatched", { names: list(proof.unmatched) })}</p> : null}
+      {proof.unmatched.length ? <p class={callout("warn")}>{t("verify.proofmode.unmatched", { names: list(proof.unmatched) })}</p> : null}
       {proof.items.map((item) => (
         <div key={item.hash} class="verify-proof">
           <ul>
@@ -334,7 +335,7 @@ function EmailBlock({ email }: { email: NonNullable<Evidence["email"]> }) {
   };
   return (
     <div class="verify-block">
-      <div class={`email-verdict ${email.verdict}`}>
+      <div class={verdictCallout(email.verdict)}>
         <strong>{verdictTitle(email)}</strong>
         <p>{verdictDetail(email)}</p>
       </div>
@@ -382,7 +383,7 @@ function FileCard(props: { file: TrayFile; entry?: CaseEntry; failed: boolean; w
       {props.failed ? <p class="error">{t("verify.failed")}</p> : null}
       {!ev && !props.failed ? <p class="hint">{t("verify.reading")}</p> : null}
       {props.warnings.length ? (
-        <p class="verify-card-warn">{t("verify.cardWarnings", { list: list(props.warnings.map(warningTitle)) })}</p>
+        <p class={callout("warn")}>{t("verify.cardWarnings", { list: list(props.warnings.map(warningTitle)) })}</p>
       ) : null}
       {checkableFormat(original.format) ? (
         <div class="buttons">

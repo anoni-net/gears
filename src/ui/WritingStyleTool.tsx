@@ -221,7 +221,7 @@ export function WritingStyleTool(_: CreateToolProps) {
           </section>
         </>
       ) : (
-        <p class="alert">{t("style.limit")}</p>
+        <p class="callout">{t("style.limit")}</p>
       )}
     </div>
   );

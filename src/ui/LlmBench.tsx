@@ -180,7 +180,7 @@ export function LlmBench({ env, runs, setRuns, busy, setBusy }: Props) {
     <section class="bench-section" aria-labelledby="bench-llm-title">
       <h3 id="bench-llm-title">{t("bench.llm.title")}</h3>
       <p class="hint">{t("bench.intro")}</p>
-      <p class="notice" data-testid="bench-remote">
+      <p class="callout" data-testid="bench-remote">
         {t("bench.remote")}
       </p>
 
@@ -230,7 +230,7 @@ export function LlmBench({ env, runs, setRuns, busy, setBusy }: Props) {
       ) : null}
       {!usable ? <p class="hint">{gpuOnly && device === "wasm" ? t("bench.gpuOnly") : t("bench.noGpu")}</p> : null}
       {usable && bytes > MOBILE_LIMIT && onPhone() ? (
-        <p class="notice" data-testid="bench-mobile">
+        <p class="callout" data-testid="bench-mobile">
           {t("bench.mobileHint", { gb: gb(bytes) })}
         </p>
       ) : null}

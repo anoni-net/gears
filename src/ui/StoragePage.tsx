@@ -54,7 +54,7 @@ export function StoragePage() {
       {rows === undefined ? (
         <p class="hint">{t("storage.loading")}</p>
       ) : rows === null ? (
-        <p class="notice" data-testid="storage-unavailable">
+        <p class="callout" data-testid="storage-unavailable">
           {t("storage.unavailable")}
         </p>
       ) : !rows.length ? (

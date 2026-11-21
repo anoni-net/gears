@@ -3,6 +3,7 @@ import { t, tDynamic } from "../i18n/index.ts";
 import { type CheckItem, type DocCheck, type HostGroup, checkDocument, groupByHost, hostOf, isUnc } from "../tools/doc-check/index.ts";
 import { track, trackFail } from "./analytics.ts";
 import type { FileEditorProps } from "./types.ts";
+import { callout } from "./callout.ts";
 
 // 文件開啟前檢查：列出文件打開時會連到哪裡、會不會執行程式。只讀檔案的結構，不打開、
 // 不執行、不連線（src/tools/doc-check/）。PDF 可以轉成安全的 PDF：每一頁畫成圖片再組回去，
@@ -124,12 +125,12 @@ export function DocCheckEditor({ blob, format, onDone, onCancel }: FileEditorPro
   return (
     <div class="doc-check">
       <p class="hint">{t("docCheck.intro")}</p>
-      <div class={`email-verdict ${verdict === "clean" ? "pass" : verdict === "connect" ? "fail" : "unclear"}`} role="status" data-testid="doc-check-verdict">
+      <div class={callout(verdict === "clean" ? "info" : verdict === "connect" ? "danger" : "warn")} role="status" data-testid="doc-check-verdict">
         <strong>{tDynamic(`docCheck.verdict.${verdict}`)}</strong>
         <p>{tDynamic(`docCheck.verdict.${verdict}.detail`, { n: String(connect.length) })}</p>
       </div>
       {result.partial ? (
-        <p class="warn" role="note">
+        <p class={callout("warn")} role="note">
           {tDynamic(`docCheck.partial.${result.partial}`)}
         </p>
       ) : null}
@@ -138,7 +139,7 @@ export function DocCheckEditor({ blob, format, onDone, onCancel }: FileEditorPro
         <section aria-labelledby="doc-check-connect">
           <h3 id="doc-check-connect">{t("docCheck.section.connect")}</h3>
           <Items items={connect} />
-          {unc ? <p class="warn">{t("docCheck.unc")}</p> : null}
+          {unc ? <p class={callout("warn")}>{t("docCheck.unc")}</p> : null}
         </section>
       ) : null}
       {code.length ? (
@@ -164,7 +165,7 @@ export function DocCheckEditor({ blob, format, onDone, onCancel }: FileEditorPro
       <h3>{t("docCheck.section.next")}</h3>
       <p class="hint">{t(pdf ? "docCheck.next.pdf" : office ? "docCheck.next.office" : "docCheck.next.markup")}</p>
       <p class="hint">{t("docCheck.limits")}</p>
-      <div class="buttons">
+      <div class="buttons action-bar">
         {pdf ? (
           <button type="button" class="primary" disabled={status === "working"} onClick={toSafePdf}>
             {building

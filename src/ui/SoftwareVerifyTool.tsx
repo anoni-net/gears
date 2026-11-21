@@ -8,6 +8,8 @@ import type { CreateToolProps } from "./types.ts";
 import { useWorking } from "./working.ts";
 import { tray } from "../state.ts";
 import { latestAsFile, trayFileFromPreset } from "./tray-preset.ts";
+import { verdictCallout } from "./callout.ts";
+import { ProgressBar } from "./ProgressBar.tsx";
 
 // 下載的軟體驗證（src/tools/software-verify/）。讀者選下載的檔案與簽章檔，選好就開始驗證。
 // 檔案不放進暫存區：安裝檔動輒幾百 MB，驗證只需要讀一次。
@@ -22,7 +24,7 @@ function Verdict({ outcome, created }: { outcome: Outcome; created?: string }) {
   const tone = outcome.kind === "good" ? "pass" : outcome.kind === "bad" ? "fail" : "unclear";
   const signer = "signer" in outcome ? tDynamic(`software.signer.${outcome.signer}`) : "";
   return (
-    <div class={`email-verdict ${tone}`} role="status" data-testid="software-verdict">
+    <div class={verdictCallout(tone)} role="status" data-testid="software-verdict">
       <strong>{tDynamic(`software.result.${outcome.kind}`)}</strong>
       <p>{tDynamic(`software.result.${outcome.kind}.desc`, { signer, keyId: outcome.kind === "unknown-key" ? outcome.keyId : "" })}</p>
       {outcome.kind === "good" ? (
@@ -126,9 +128,9 @@ export function SoftwareVerifyTool({ preset }: CreateToolProps) {
         </p>
       ) : null}
       {progress !== null && file ? (
-        <div role="status">
-          <progress max={file.size} value={progress} />
-          <p class="hint">{t("software.reading", { n: Math.floor((progress / Math.max(file.size, 1)) * 100) })}</p>
+        <div aria-busy="true">
+          <ProgressBar label={t("tool.software-verify")} value={progress / Math.max(file.size, 1)} />
+          <p class="hint" role="status">{t("software.reading", { n: Math.floor((progress / Math.max(file.size, 1)) * 100) })}</p>
         </div>
       ) : null}
       {failed ? (

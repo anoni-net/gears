@@ -19,6 +19,7 @@ import { Icon } from "./Icon.tsx";
 import { size, useOutgoing, useWakeLock } from "./transfer-ui.tsx";
 import type { CreateToolProps } from "./types.ts";
 import { useWorking } from "./working.ts";
+import { ProgressBar } from "./ProgressBar.tsx";
 
 type Reason = "noRoom" | "wrongKey" | "gone" | "busy" | "rateLimited" | "version" | "connect" | "quota" | "tooLarge" | "failed";
 
@@ -734,7 +735,7 @@ export function RemoteTool(_props: CreateToolProps) {
       </>
     );
   } else if (phase.kind === "transfer") {
-    body = <progress max={phase.total} value={phase.done} />;
+    body = <ProgressBar label={t("tool.remote")} value={phase.done / Math.max(phase.total, 1)} />;
   } else if (phase.kind === "talk") {
     // 連線中用文字訊息底下的「結束連線」，結束之後才能重新開始
     actions = ended ? cancel : null;

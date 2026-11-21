@@ -25,6 +25,7 @@ import { decodeQrFromVideo } from "./qr-scan.ts";
 import { size, useOutgoing, useWakeLock } from "./transfer-ui.tsx";
 import type { CreateToolProps } from "./types.ts";
 import { useWorking } from "./working.ts";
+import { ProgressBar } from "./ProgressBar.tsx";
 
 type Phase =
   | { kind: "idle" }
@@ -456,7 +457,7 @@ export function NearbyTool(_props: CreateToolProps) {
       </>
     );
   } else if (phase.kind === "transfer") {
-    body = <progress max={phase.total} value={phase.done} />;
+    body = <ProgressBar label={t("tool.nearby")} value={phase.done / Math.max(phase.total, 1)} />;
   } else if (!busy) {
     actions = cancel;
   }

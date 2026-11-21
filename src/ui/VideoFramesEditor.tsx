@@ -141,7 +141,7 @@ export function VideoFramesEditor({ blob, onCancel }: FileEditorProps) {
         </ul>
       ) : null}
       {status.kind === "ready" ? <p class="hint">{t("frames.searchNote")}</p> : null}
-      <div class="buttons">
+      <div class="buttons action-bar">
         {status.kind === "canvasBlocked" ? (
           <button
             type="button"
