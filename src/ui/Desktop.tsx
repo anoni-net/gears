@@ -31,8 +31,8 @@ function ToolTags({ id }: { id: string }) {
   );
 }
 
-// 點工具時的動作：在 src/ui/tasks.ts 有一筆的照它打開（處理檔案的工具直接請讀者選檔案，使用統計記成 task），
-// 沒有的就打開工具頁
+// 點工具時的動作：在 src/ui/tasks.ts 有一筆的照它打開（使用統計記成 task），沒有的就打開工具頁。
+// 兩種都只換到工具頁，不自動打開選檔案的視窗
 const taskOf = (id: string) => TASKS.find((task) => task.tool === id);
 
 // 每一列是連到工具網址的連結（#164），原本是按鈕，搜尋引擎從桌面找不到任何工具頁
