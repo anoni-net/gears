@@ -20,7 +20,7 @@ const size = (bytes: number) => (bytes >= 1e9 ? `${(bytes / 1e9).toFixed(1)} GB`
 const api = () => (typeof navigator !== "undefined" ? navigator.storage : undefined);
 
 export function StorageQuota({ inAside }: { inAside: boolean }) {
-  // undefined 是還在讀，null 是這個瀏覽器沒有這個 API。Safari 16.4 有 persisted()、沒有 estimate()，各自偵測
+  // undefined 是還在讀，null 是這個瀏覽器沒有這個 API。依 MDN，Safari 16.4 有 persisted()、還沒有 estimate()，各自偵測
   const [usage, setUsage] = useState<{ usage: number; quota: number } | null | undefined>(undefined);
   const [persisted, setPersisted] = useState<boolean | null | undefined>(undefined);
   const [result, setResult] = useState<Result | null>(null);

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "preact/hooks";
+import { useEffect, useRef, useState } from "preact/hooks";
 import { getLocale, t, tDynamic } from "../i18n/index.ts";
 import { navigate, onRouteClick, routeUrl } from "../router.ts";
 import { Icon } from "./Icon.tsx";
@@ -118,9 +118,31 @@ function PageToc({ route }: { route: string }) {
   const headings = useHeadings(route);
   const shown = headings.length >= MIN_HEADINGS ? headings : [];
   const [active, setActive] = useActive(shown);
+  const nav = useRef<HTMLElement>(null);
+
+  // 直接打開帶 #id 的網址（從目錄複製的這一段）：小標題是之後才畫出來的，瀏覽器載入時找不到，第一次讀到時捲過去
+  const jumped = useRef("");
+  useEffect(() => {
+    const id = decodeURIComponent(location.hash.slice(1));
+    if (!id || jumped.current === `${route}#${id}` || !headings.some((h) => h.id === id)) return;
+    jumped.current = `${route}#${id}`;
+    document.getElementById(id)?.scrollIntoView({ block: "start" });
+  }, [headings, route]);
+
+  // 左欄比視窗長、本身可以捲動時（授權與來源的目錄有十幾項），讀到的那一項保持在左欄看得到的範圍裡。
+  // 只捲左欄，不用 scrollIntoView，以免連整頁一起捲動
+  useEffect(() => {
+    const aside = nav.current?.closest<HTMLElement>(".page-aside");
+    const link = nav.current?.querySelector<HTMLElement>('[aria-current="location"]');
+    if (!aside || !link || aside.scrollHeight <= aside.clientHeight) return;
+    const top = link.getBoundingClientRect().top - aside.getBoundingClientRect().top;
+    if (top < 0) aside.scrollTop += top - 8;
+    else if (top + link.offsetHeight > aside.clientHeight) aside.scrollTop += top + link.offsetHeight - aside.clientHeight + 8;
+  }, [active]);
+
   if (!shown.length) return null;
   return (
-    <nav class="aside-toc" aria-labelledby="aside-toc-label" data-testid="aside-toc">
+    <nav ref={nav} class="aside-toc" aria-labelledby="aside-toc-label" data-testid="aside-toc">
       <p id="aside-toc-label" class="aside-label">
         {t("aside.toc")}
       </p>

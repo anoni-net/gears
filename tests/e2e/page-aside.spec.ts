@@ -106,6 +106,35 @@ test.describe("寬螢幕的左欄", () => {
     await expect(toc.locator("li.sub a").nth(1)).toHaveText("逐字稿");
   });
 
+  test("目錄跟著晚一點出現的小標題與換語系更新，帶 #id 的網址打開時捲到那一段", async ({ page }) => {
+    // 裝置量測的內容用到時才載入，小標題在第一次讀的時候還不在
+    await page.goto("./bench/");
+    const toc = page.getByTestId("aside-toc");
+    await expect(toc.getByRole("link")).toHaveCount(5);
+    await expect(toc.getByRole("link").first()).toHaveText(await page.locator("#bench-ocr-title").innerText());
+
+    await page.goto("./testing/");
+    await expect(toc.getByRole("link").first()).toHaveText("手機上的模型量測");
+    await page.locator(".languages").getByRole("button", { name: "English" }).click();
+    await expect(toc.getByRole("link").first()).toHaveText(await page.locator("#testing-phone").innerText());
+    await expect(toc.getByRole("link").first()).not.toHaveText("手機上的模型量測");
+
+    await page.setViewportSize({ width: 1280, height: 600 });
+    await page.goto("./testing/#testing-report");
+    await expect.poll(async () => (await page.locator("#testing-report").boundingBox())!.y).toBeLessThan(300);
+  });
+
+  test("左欄比視窗長時，讀到的那一項留在左欄看得到的地方", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await page.goto("./licenses/");
+    const aside = page.getByTestId("page-aside");
+    expect(await aside.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);
+    await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
+    const current = page.getByTestId("aside-toc").locator('[aria-current="location"]');
+    await expect(current).toHaveText("密語的字詞表");
+    await expect(current).toBeInViewport();
+  });
+
   test("英文版的左欄與目錄", async ({ page }) => {
     await page.goto("./en/licenses/");
     await expect(page.getByTestId("aside-tray")).toHaveText("The tray is empty.");
