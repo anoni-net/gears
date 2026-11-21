@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { addedNumbers, missingFacts } from "../../src/tools/writing-style/facts.ts";
-import { FIXABLE, HABIT_CODES, applyHabits, countHabits, findHabits, fixHabits } from "../../src/tools/writing-style/index.ts";
+import { PII_KINDS } from "../../src/tools/redact/pii.ts";
+import { FIXABLE, HABIT_CODES, applyHabits, countHabits, findHabits, fixHabits, nextAlias, replaceInParts, replaceTerm, tagPii } from "../../src/tools/writing-style/index.ts";
 
 const codes = (text: string) => findHabits(text).map((h) => [h.code, h.text.trim()]);
 
@@ -131,4 +132,80 @@ test("逐項套用建議：只改選的那幾處，刪掉語助詞與口頭禪�
   // 沒有建議寫法的不動：用到三次的「其實」、注音文
   const plain = "其實還好，其實沒事，其實ㄏㄏ";
   expect(applyHabits(plain, findHabits(plain))).toBe(plain);
+});
+
+test("個資換成代稱：只換讀者選的，代稱的括號跟中文一樣前後不留空白", () => {
+  const tags = { phone: "〔電話〕", email: "〔Email〕", id: "〔身分證號碼〕", card: "〔卡號〕", ip: "〔IP 位址〕", plate: "〔車牌〕", number: "〔號碼〕", url: "〔網址〕", handle: "〔帳號〕" };
+  const text = "有事打 0912-345-678 或寫信到 tipster@example.com，帳號 @anon_tw";
+  // 沒有代稱時個資沒有建議寫法，套用也不會動
+  expect(applyHabits(text, findHabits(text))).toBe(text);
+  const habits = tagPii(findHabits(text), tags);
+  expect(habits.filter((h) => h.code === "pii").map((h) => [h.text, h.suggest])).toEqual([
+    ["0912-345-678", "〔電話〕"],
+    ["tipster@example.com", "〔Email〕"],
+    ["@anon_tw", "〔帳號〕"],
+  ]);
+  // 其他習慣的建議不受影響
+  expect(tagPii(findHabits("這個視頻"), tags).map((h) => h.suggest)).toEqual(["影片"]);
+  const pick = (kind: string) => habits.filter((h) => h.pii === kind);
+  expect(applyHabits(text, pick("phone"))).toBe("有事打〔電話〕或寫信到 tipster@example.com，帳號 @anon_tw");
+  expect(applyHabits(text, habits.filter((h) => h.code === "pii"))).toBe("有事打〔電話〕或寫信到〔Email〕，帳號〔帳號〕");
+  // 英文的代稱照樣保留空白
+  const en = { ...tags, phone: "[phone]" };
+  expect(applyHabits("Call 0912-345-678 now", tagPii(findHabits("Call 0912-345-678 now"), en).filter((h) => h.code === "pii"))).toBe("Call [phone] now");
+});
+
+test("換上的代稱不再被標成寫作習慣，三個語系的代稱都一樣", async () => {
+  const { zhTW } = await import("../../src/i18n/zh-TW.ts");
+  const { zhCN } = await import("../../src/i18n/zh-CN.ts");
+  const { en } = await import("../../src/i18n/en.ts");
+  for (const messages of [zhTW, zhCN, en] as Record<string, string>[]) {
+    const tags = Object.entries(messages).filter(([k]) => k.startsWith("style.piiTag.")).map(([, v]) => v);
+    expect(tags).toHaveLength(PII_KINDS.length);
+    // 中文句子與英文句子裡各放一次
+    const text = `有事打${tags.join("，或是")}給我。Call me at ${tags.join(" or ")} now`;
+    const spans = tags.flatMap((tag) => [...text.matchAll(new RegExp(tag.replace(/[[\]]/g, "\\$&"), "g"))].map((m) => [m.index, m.index + tag.length]));
+    const inside = findHabits(text, tags).filter((h) => spans.some(([s, e]) => h.start < e! && h.end > s!));
+    expect(inside, text).toEqual([]);
+  }
+  // 沒有傳入代稱時照舊，〔Email〕裡的英文算中英夾雜
+  expect(findHabits("寫信到〔Email〕").map((h) => h.code)).toEqual(["english"]);
+  expect(findHabits("寫信到〔Email〕", ["〔Email〕"])).toEqual([]);
+});
+
+test("自己指定要換掉的字：全部換成同一個代稱，下一個代稱換字母，代稱裡的字不動", () => {
+  const format = (letter: string) => `〔人名 ${letter}〕`;
+  const text = "林組長說小美跟 林組長 都知道";
+  expect(nextAlias(text, format)).toBe("〔人名 A〕");
+  const first = replaceTerm(text, " 林組長 ", "〔人名 A〕");
+  expect(first).toEqual({ text: "〔人名 A〕說小美跟〔人名 A〕都知道", count: 2 });
+  expect(nextAlias(first.text, format)).toBe("〔人名 B〕");
+  expect(replaceTerm(first.text, "小美", nextAlias(first.text, format)).text).toBe("〔人名 A〕說〔人名 B〕跟〔人名 A〕都知道");
+  // 指定的字剛好出現在代稱裡時，代稱不動
+  expect(replaceTerm(first.text, "人名", "〔代稱 A〕", [format("A")])).toEqual({ text: first.text, count: 0 });
+  // 沒有出現、空白的字不動
+  expect(replaceTerm(text, "王", "〔人名 A〕").count).toBe(0);
+  expect(replaceTerm(text, "  ", "〔人名 A〕")).toEqual({ text, count: 0 });
+  // 英文的代稱保留空白
+  expect(replaceTerm("Ask Kevin or Kevin's boss", "Kevin", "[Person A]").text).toBe("Ask [Person A] or [Person A]'s boss");
+  // 換上的代稱不再被標成寫作習慣
+  const keep = ["〔人名 A〕", "[Person A]"];
+  expect(findHabits("問〔人名 A〕就知道", keep)).toEqual([]);
+  expect(findHabits("問 [Person A] 就知道", keep)).toEqual([]);
+});
+
+test("逐字稿這類分段的文字：每一段各自換，時間與說話者不動，切在兩段之間的換不到", () => {
+  const parts = [
+    { start: 0, end: 2, text: "王經理說明天開會", speaker: 0 },
+    { start: 2, end: 4, text: "我跟王經理不熟", speaker: 1 },
+    { start: 4, end: 5, text: "王", speaker: 1 },
+    { start: 5, end: 6, text: "經理也來了", speaker: 1 },
+  ];
+  const result = replaceInParts(parts, "王經理", "〔人名 A〕");
+  expect(result.count).toBe(2);
+  expect(result.parts.map((p) => p.text)).toEqual(["〔人名 A〕說明天開會", "我跟〔人名 A〕不熟", "王", "經理也來了"]);
+  expect(result.parts.map((p) => [p.start, p.speaker])).toEqual(parts.map((p) => [p.start, p.speaker]));
+  // 沒有換到的段落沿用原本的物件，整份沒有換到時回傳原本的陣列
+  expect(result.parts[2]).toBe(parts[2]);
+  expect(replaceInParts(parts, "李", "〔人名 B〕").parts).toBe(parts);
 });

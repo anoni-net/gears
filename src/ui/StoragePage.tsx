@@ -46,7 +46,7 @@ async function remove(rows: Row[]) {
 
 // 這一列的名稱與用在哪裡
 const nameOf = ({ group, model }: StorageKey) => (model ? tDynamic(`transcribe.model.${model}`) : tDynamic(`storage.item.${group}`));
-const usedBy = ({ group }: StorageKey) => (group === "transcribe" || group === "speaker" ? t("tool.transcribe") : group === "faces" || group === "ocr" ? t("tool.redact") : group === "c2pa" ? t("tool.verify") : group === "other" ? "" : tDynamic(`storage.used.${group}`));
+const usedBy = ({ group }: StorageKey) => (group === "transcribe" || group === "speaker" ? t("tool.transcribe") : group === "faces" || group === "ocr" || group === "pii" ? t("tool.redact") : group === "c2pa" ? t("tool.verify") : group === "other" ? "" : tDynamic(`storage.used.${group}`));
 
 export function StoragePage() {
   // undefined 是還在計算
@@ -72,10 +72,10 @@ export function StoragePage() {
 
   return (
     <section class="storage" aria-labelledby="storage-title">
-      <h2 id="storage-title" class="tool-title">
+      <h1 id="storage-title" class="tool-title">
         <IconCircle name={PAGE_META.storage.icon} cat={PAGE_META.storage.cat} />
         {t("storage.title")}
-      </h2>
+      </h1>
       <p>{t("storage.intro")}</p>
       {rows === undefined ? (
         <p class="hint">{t("storage.loading")}</p>

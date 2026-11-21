@@ -66,3 +66,14 @@ test("Word：勾選刪除註解與接受修訂，套用之後兩者都不在", a
   const left = (await stripMetadata.inspect(file.data, "docx")).map((f) => f.code);
   expect(left).toEqual(["attachments"]);
 });
+
+test("Word：內文的電話與 Email 列在文件內容裡要留意的，清除之後仍然在", async ({ page }) => {
+  await add(page, "plan.docx", await syntheticDocx(undefined, "<w:r><w:t>聯絡窗口 0912-345-678，</w:t></w:r><w:r><w:t>tips@example.org</w:t></w:r>"));
+  const content = page.getByTestId("content-findings");
+  await expect(content.getByText(/^內文裡的電話、Email 等個資/)).toBeVisible();
+  await expect(content.getByText("0912-345-678", { exact: false })).toBeVisible();
+  await expect(content.getByText("tips@example.org", { exact: false })).toBeVisible();
+  await page.getByRole("button", { name: "清除", exact: true }).click();
+  await expect(page.getByText("沒有找到可能透露身分的中繼資料。")).toBeVisible();
+  await expect(content.getByText(/^內文裡的電話、Email 等個資/)).toBeVisible();
+});

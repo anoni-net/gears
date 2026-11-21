@@ -17,9 +17,9 @@ const SECTIONS = [
 export function RemoteServerPage() {
   return (
     <section class="remote-server" aria-labelledby="remote-server-title" data-testid="remote-server">
-      <h2 id="remote-server-title" class="tool-title">
+      <h1 id="remote-server-title" class="tool-title">
         {t("remote-server.title")}
-      </h2>
+      </h1>
       <p>{t("remote-server.intro")}</p>
       {SECTIONS.map(([id, count]) => (
         <section key={id} aria-labelledby={`remote-server-${id}`}>

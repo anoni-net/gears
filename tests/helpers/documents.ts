@@ -89,7 +89,8 @@ const commonTypes: [string, string][] = [
 
 const pack = (parts: { name: string; data: Uint8Array }[]) => writeZip(parts.map((p) => ({ ...p, compress: true })));
 
-export async function syntheticDocx(embedded?: Uint8Array): Promise<Uint8Array> {
+// body：另外加在內文最後一段的 XML（一段或幾個 w:r），測內文的個資用
+export async function syntheticDocx(embedded?: Uint8Array, body = ""): Promise<Uint8Array> {
   const document = xml(
     `<w:document ${W} ${R} xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml"><w:body>` +
       `<w:p w:rsidR="00AB12CD" w:rsidRDefault="00AB12CD" w14:paraId="1A2B3C4D"><w:r w:rsidRPr="00AB12CD"><w:t>${VISIBLE}</w:t></w:r>` +
@@ -98,6 +99,7 @@ export async function syntheticDocx(embedded?: Uint8Array): Promise<Uint8Array> 
       '<w:del w:id="2" w:author="SECRET-EDITOR" w:date="2024-06-01T10:00:00Z" w16du:dateUtc="2024-06-01T10:00:00Z" xmlns:w16du="http://schemas.microsoft.com/office/word/2023/wordml/word16du"><w:r><w:delText>removed</w:delText></w:r></w:del></w:p>' +
       '<w:p><w:hyperlink r:id="rId7"><w:r><w:t>link</w:t></w:r></w:hyperlink></w:p>' +
       '<w:p><w:r><w:drawing><a:blip xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" r:embed="rId5"/></w:drawing></w:r></w:p>' +
+      (body ? `<w:p>${body}</w:p>` : "") +
       '<w:sectPr w:rsidR="00AB12CD"/></w:body></w:document>',
   );
   const documentRels = rels([

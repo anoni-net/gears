@@ -357,14 +357,22 @@ const FINDERS: [HabitCode, (text: string, out: Habit[]) => void][] = [
   ["english", english],
 ];
 
-export function findHabits(text: string): Habit[] {
+// keep 是讀者已經換上的代稱（〔Email〕、[phone]），出現的地方先佔位、不回報，
+// 代稱裡的英文才不會被標成中英夾雜
+export function findHabits(text: string, keep: readonly string[] = []): Habit[] {
   const result: Habit[] = [];
+  const kept: { start: number; end: number }[] = [];
+  for (const word of keep) {
+    if (!word) continue;
+    for (let i = text.indexOf(word); i !== -1; i = text.indexOf(word, i + word.length)) kept.push({ start: i, end: i + word.length });
+  }
   for (const [, find] of FINDERS) {
     const found: Habit[] = [];
     find(text, found);
     for (const habit of found.sort((a, b) => a.start - b.start)) {
       if (habit.end <= habit.start && habit.code !== "layout") continue;
       if (result.some((r) => r.start < habit.end && r.end > habit.start)) continue;
+      if (kept.some((r) => r.start < habit.end && r.end > habit.start)) continue;
       result.push(habit);
     }
   }
@@ -404,6 +412,19 @@ export function replacementOf(habit: Habit): string | undefined {
   return habit.suggest;
 }
 
+// 工具找不到、要讀者自己判斷的線索有幾項（style.clues.<n>）。參考 TAB（Text Anonymization Benchmark）
+// 對間接識別符的說明與英國 ICO 的「動機明確的入侵者」整理，見社群工作區的 research/gears-pii/02-text-deid-standards.md
+export const CLUES = 6;
+
+// 個資換成標示類別的代稱，例如把電話換成〔電話〕。代稱跟著介面的語系，由畫面傳進來。
+// 同一類的個資換成同一個代稱，讀者逐項按下才套用，跟其他建議一樣可以復原
+export function tagPii(habits: Habit[], tags: Record<PiiKind, string>): Habit[] {
+  return habits.map((h) => (h.code === "pii" && h.pii ? { ...h, suggest: tags[h.pii] } : h));
+}
+
+// 代稱的括號〔〕跟中文一樣，前後不留空白
+const isHanLike = (c: string | undefined) => isHan(c) || c === "〔" || c === "〕";
+
 // 套用讀者選的幾處建議，例如把「視頻」改成「影片」、刪掉「啦」。其他地方一個字都不動。
 // 換上中文時，夾在中文之間的空白一起拿掉（「的 App 會」改成「的應用程式會」）
 export function applyHabits(text: string, chosen: Habit[]): string {
@@ -413,8 +434,8 @@ export function applyHabits(text: string, chosen: Habit[]): string {
     if (to === undefined || next.slice(h.start, h.end) !== h.text) continue;
     let start = h.start;
     let end = h.end;
-    if (!to || isHan(to[0])) while (start > 0 && next[start - 1] === " " && isHan(next[start - 2])) start--;
-    if (!to || isHan(to.at(-1))) while (end < next.length && next[end] === " " && isHan(next[end + 1])) end++;
+    if (!to || isHanLike(to[0])) while (start > 0 && next[start - 1] === " " && isHanLike(next[start - 2])) start--;
+    if (!to || isHanLike(to.at(-1))) while (end < next.length && next[end] === " " && isHanLike(next[end + 1])) end++;
     next = next.slice(0, start) + to + next.slice(end);
   }
   return tidy(next);
@@ -425,4 +446,48 @@ export function countHabits(habits: Habit[]): Partial<Record<HabitCode, number>>
   const counts: Partial<Record<HabitCode, number>> = {};
   for (const h of habits) counts[h.code] = (counts[h.code] ?? 0) + 1;
   return counts;
+}
+
+// 讀者自己指定要換掉的字（人名、單位、地點），全文出現的地方換成同一個代稱，例如「林組長」換成〔人名 A〕。
+// 人名、單位與地點沒有固定格式，規則找不到，模型（#139）上線之前只能靠讀者自己指定
+export const ALIAS_KINDS = ["person", "org", "place", "other"] as const;
+export type AliasKind = (typeof ALIAS_KINDS)[number];
+
+// 代稱的字母：A 到 Z，用完接 AA 到 AZ
+export const ALIAS_LETTERS = [..."ABCDEFGHIJKLMNOPQRSTUVWXYZ", ..."ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").map((c) => `A${c}`)];
+
+// 還沒出現在文字裡的下一個代稱。format 把字母套進代稱的格式（跟著介面的語系）
+export function nextAlias(text: string, format: (letter: string) => string): string {
+  return format(ALIAS_LETTERS.find((letter) => !text.includes(format(letter))) ?? ALIAS_LETTERS.at(-1)!);
+}
+
+// 把 term 全部換成 alias，回傳換好的文字與換了幾處。已經換上的代稱（keep）裡面的字不動，
+// 例如指定「人名」時，〔人名 A〕裡的「人名」不會被換掉。換上代稱時照 applyHabits 拿掉夾在中文之間的空白
+export function replaceTerm(text: string, term: string, alias: string, keep: readonly string[] = []): { text: string; count: number } {
+  const word = term.trim();
+  if (!word) return { text, count: 0 };
+  const kept: { start: number; end: number }[] = [];
+  for (const k of [...keep, alias]) {
+    if (!k) continue;
+    for (let i = text.indexOf(k); i !== -1; i = text.indexOf(k, i + k.length)) kept.push({ start: i, end: i + k.length });
+  }
+  const chosen: Habit[] = [];
+  for (let i = text.indexOf(word); i !== -1; i = text.indexOf(word, i + word.length)) {
+    const end = i + word.length;
+    if (kept.some((r) => r.start < end && r.end > i)) continue;
+    chosen.push({ code: "pii", start: i, end, text: word, suggest: alias });
+  }
+  return { text: chosen.length ? applyHabits(text, chosen) : text, count: chosen.length };
+}
+
+// 逐字稿這類分成好幾段的文字：每一段各自換，其他欄位（時間、說話者）不動。
+// 一個名字被切在兩段之間時換不到，數量只算換到的。放在這裡，逐字稿的 Worker 不必載入寫作習慣檢查的規則
+export function replaceInParts<T extends { text: string }>(parts: T[], term: string, alias: string, keep: readonly string[] = []): { parts: T[]; count: number } {
+  let count = 0;
+  const next = parts.map((part) => {
+    const result = replaceTerm(part.text, term, alias, keep);
+    count += result.count;
+    return result.count ? { ...part, text: result.text } : part;
+  });
+  return { parts: count ? next : parts, count };
 }

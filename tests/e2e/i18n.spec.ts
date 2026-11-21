@@ -30,7 +30,7 @@ test("切換語系不重新載入，暫存區的檔案留著，上一頁回到�
 
 test("在英文版打開工具，網址留在英文", async ({ page }) => {
   await page.goto("./en/");
-  await page.getByRole("button", { name: /Passphrase and password generator/ }).first().click();
+  await page.getByRole("link", { name: /Passphrase and password generator/ }).first().click();
   await expect(page).toHaveURL(/\/gears\/en\/passphrase\/$/);
   await expect(page).toHaveTitle("Passphrase and password generator | Gears");
 });
@@ -44,7 +44,7 @@ test.describe("瀏覽器的語言是英文", () => {
     await expect(hint).toContainText("This page is available in English.");
     await hint.getByRole("button", { name: "Close" }).click();
     await expect(hint).toHaveCount(0);
-    await page.getByRole("button", { name: /QR code 產生器/ }).first().click();
+    await page.getByRole("link", { name: /QR code 產生器/ }).first().click();
     await expect(page).toHaveURL(/\/gears\/qrcode\/$/);
     await expect(hint).toHaveCount(0);
   });

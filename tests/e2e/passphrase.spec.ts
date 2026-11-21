@@ -2,7 +2,7 @@ import { expect, test } from "./guard.ts";
 
 test("密語預設 6 個字，可以重新產生，也可以換成隨機密碼", async ({ page }) => {
   await page.goto("./");
-  await page.getByRole("button", { name: /密語與密碼產生器/ }).click();
+  await page.getByRole("link", { name: /密語與密碼產生器/ }).click();
   await expect(page).toHaveURL(/\/gears\/passphrase\/$/);
   await expect(page).toHaveTitle("密語與密碼產生器 | Gears 檔案工作台");
 

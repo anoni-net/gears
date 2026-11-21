@@ -4,7 +4,9 @@
 
 **正體中文** | [English](#en)
 
-anoni.net Gears 檔案工作台，在瀏覽器裡處理要交出去的檔案：清除照片與文件的中繼資料、遮蔽畫面上的個資、加密之後再傳送。收到檔案時，也能整理出可以查證的線索。由[匿名網路社群 anoni.net](https://anoni.net/) 維護，網址是 <https://anoni.net/gears/>，用 Tor Browser 開啟 onion 版 <http://gears.anoninetru5tflukgfaehun7q6khowgmymcff3gtk5oyesqazhmfxtyd.onion/>。
+anoni.net Gears 檔案工作台結合兩件事：可以在本機使用的工具，以及用開源模型加強的功能。檔案在瀏覽器裡處理，第一次開啟之後也能離線使用。
+
+Gears 處理要交出去的檔案：清除照片與文件的中繼資料、遮蔽畫面上的個資、加密之後再傳送。收到檔案時，也能整理出可以查證的線索。由[匿名網路社群 anoni.net](https://anoni.net/) 維護，網址是 <https://anoni.net/gears/>，用 Tor Browser 開啟 onion 版 <http://gears.anoninetru5tflukgfaehun7q6khowgmymcff3gtk5oyesqazhmfxtyd.onion/>。
 
 第一版的工具：
 
@@ -37,11 +39,13 @@ anoni.net Gears 檔案工作台，在瀏覽器裡處理要交出去的檔案：�
 
 ## 原則
 
-- 預設在你的瀏覽器裡處理，要傳送時先加密，伺服器只取得密文
-- 影片這類比較吃重的處理，另外提供上傳到社群伺服器處理的選項。上傳前會告知檔案送到哪裡、誰看得到、保留多久，由你決定要不要上傳
+- 檔案一律在你的瀏覽器裡處理，不上傳到伺服器處理。要傳送時先加密，經手的伺服器只取得密文
+- 每個工具不靠模型也能完成基本的功能。開源模型負責加強，例如找出畫面上的人臉與個資、把錄音轉成逐字稿，找到的結果由你確認，不自動套用
+- 用到的模型都是權重公開、授權可以跟 Gears 一起散布的開源模型，鎖定版本並比對檔案的雜湊值，優先從社群自己的網域下載。要從 Hugging Face 下載時，先告知對方看得到你的 IP 位址
+- 加密、簽章驗證、金鑰與密語產生這類需要確定結果的工具，不加入模型
 - 需要連網的功能在畫面上標示，並寫明送出了什麼
 - 使用統計只記工具的使用次數，送到社群自架的 Umami，不含檔案、檔名與你輸入的內容，可以在頁尾關掉。瀏覽器的 Do Not Track 與 Global Privacy Control 一律遵守
-- 先支援 Brave、Safari 與 Firefox
+- 以 Chrome、Brave、Firefox 的能力設計，iPhone 的 Safari 另外調整模型的參數，Tor Browser 保證一般的功能可以使用（見 [AGENTS.md](./AGENTS.md) 的「支援的瀏覽器」）
 
 會連到哪裡、經過的服務與社群的伺服器記下什麼（包括存取紀錄裡的 IP），完整寫在[隱私說明](https://anoni.net/gears/privacy/)。
 
@@ -67,7 +71,9 @@ npm test
 
 [正體中文](#zh-tw) | **English**
 
-anoni.net Gears handles the files you are about to hand over. It strips metadata from photos and documents, redacts personal details on screen, and encrypts files before they are sent. For files you receive, it lays out leads you can verify. Maintained by the [anoni.net community](https://anoni.net/) at <https://anoni.net/gears/>. In Tor Browser, use the onion version at <http://gears.anoninetru5tflukgfaehun7q6khowgmymcff3gtk5oyesqazhmfxtyd.onion/>.
+anoni.net Gears combines two things: tools you can use on your own device, and features strengthened by open-source models. Files are processed in your browser, and Gears keeps working offline after the first visit.
+
+Gears handles the files you are about to hand over. It strips metadata from photos and documents, redacts personal details on screen, and encrypts files before they are sent. For files you receive, it lays out leads you can verify. Maintained by the [anoni.net community](https://anoni.net/) at <https://anoni.net/gears/>. In Tor Browser, use the onion version at <http://gears.anoninetru5tflukgfaehun7q6khowgmymcff3gtk5oyesqazhmfxtyd.onion/>.
 
 Tools in the first version:
 
@@ -100,11 +106,13 @@ The tools already online live in the [utilities section of the docs site](https:
 
 ## Principles
 
-- Processing happens in your browser by default, and anything sent is encrypted first, so the server only receives ciphertext
-- For heavier jobs such as video, you can choose to upload a file to a community server instead. Before anything is uploaded, Gears tells you where the file goes, who can see it and how long it is kept, and the choice is yours
+- Files are always processed in your browser and are never uploaded to a server for processing. Anything sent is encrypted first, so the servers along the way only receive ciphertext
+- Every tool does its basic job without a model. Open-source models add to it, for example finding faces and personal details on screen or turning a recording into a transcript, and you confirm what they find before anything is applied
+- The models Gears uses are open-source models with published weights and licences compatible with Gears. Each one is pinned to a version and checked against its file hashes, and is downloaded from the community's own domains where possible. Before a model is downloaded from Hugging Face, Gears tells you that Hugging Face can see your IP address
+- Tools whose results must be exact, such as encryption, signature verification and key and passphrase generation, do not use models
 - Features that need the network are labelled, along with what they send
 - Usage statistics only count how tools are used and go to the community's self-hosted Umami, with no files, file names or anything you type. You can turn them off in the footer, and Do Not Track and Global Privacy Control are always honoured
-- Brave, Safari and Firefox are supported first
+- Gears is designed around what Chrome, Brave and Firefox can do. Safari on iPhone gets its own tuned model settings, and in Tor Browser the basic features are guaranteed to work (see "支援的瀏覽器" in [AGENTS.md](./AGENTS.md))
 
 Where Gears connects, and what the services along the way and the community's servers record (including IP addresses in access logs), is described in full on the [privacy page](https://anoni.net/gears/en/privacy/).
 

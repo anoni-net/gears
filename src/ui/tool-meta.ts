@@ -50,13 +50,14 @@ export const TOOL_META: Record<string, { icon: IconName; cat: Category; tags?: T
   TOOL_GROUPS.flatMap((group) => group.tools.map((id) => [id, { ...ICONS[id]!, cat: GROUP_CAT[group.id] }])),
 );
 
-// 桌面最後的使用者區：跟 Gears 本身有關、不是工具的頁面：範例、建議與回饋、已下載的模型、裝置量測，之後的設定也放這裡。
+// 桌面最後的使用者區：跟 Gears 本身有關、不是工具的頁面：範例、建議與回饋、協助測試、已下載的模型、裝置量測，之後的設定也放這裡。
 // label 是桌面上的名稱，沒有時用頁面的標題（<id>.title）。裝置量測是實驗頁，名稱後面標出「實驗」
-export const USER_PAGES = ["samples", "feedback", "storage", "bench"] as const;
+export const USER_PAGES = ["samples", "feedback", "testing", "storage", "bench"] as const;
 
 export const PAGE_META: Record<(typeof USER_PAGES)[number], { icon: IconName; cat: Category; label?: string }> = {
   feedback: { icon: "message-reply-text-outline", cat: "user" },
   samples: { icon: "folder-play-outline", cat: "user" },
+  testing: { icon: "cellphone-check", cat: "user" },
   storage: { icon: "database-outline", cat: "user" },
   bench: { icon: "speedometer", cat: "user", label: "bench.desk" },
 };

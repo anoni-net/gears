@@ -1,19 +1,61 @@
 # AGENTS.md
 
-給參與開發的人與 AI 工具的說明。anoni.net Gears 檔案工作台是匿名網路社群 anoni.net 的產品，產品名稱是 Gears，每個語系都一樣，網頁標題與主畫面圖示寫成「Gears 檔案工作台」（简体「Gears 文件工作台」），英文版就叫 Gears。頁首的名稱寫「檔案工作台」（英文版 File Workbench，`app.title`），右上角的小標記寫 Gears（`app.badge`）。2026-10-16 從「隱私工作台」改名，三組工具裡只有「交出去之前」在保護隱私，查證檔案的記者看到「隱私」容易以為跟自己無關。「隱私」原本改寫在桌面最上面的標語，那句跟三組工具的說明、頁尾都重複，2026-10-17 拿掉，在瀏覽器裡處理改寫在暫存區的說明（`tray.hint`），讀者選檔案時就看得到（見下方「介面文字」）。網址是 `anoni.net/gears/`，在瀏覽器裡處理讀者要交出去的檔案，也替收到檔案的人整理可以查證的線索。文件站的小工具區（`anoni-net/docs` 的 `utils/`）是另一套，兩邊各自開發，不共用程式。
+給參與開發的人與 AI 工具的說明。anoni.net Gears 檔案工作台是匿名網路社群 anoni.net 的產品，產品名稱是 Gears，每個語系都一樣，網頁標題與主畫面圖示寫成「Gears 檔案工作台」（简体「Gears 文件工作台」），英文版就叫 Gears。頁首的名稱寫「檔案工作台」（英文版 File Workbench，`app.title`），右上角的小標記寫 Gears（`app.badge`）。2026-10-16 從「隱私工作台」改名，三組工具裡只有「交出去之前」在保護隱私，查證檔案的記者看到「隱私」容易以為跟自己無關。「隱私」原本改寫在桌面最上面的標語，那句跟三組工具的說明、頁尾都重複，2026-10-17 拿掉，在瀏覽器裡處理改寫在暫存區的說明（`tray.hint`），讀者選檔案時就看得到。2026-11-20 起桌面最上方另有兩段定位說明，桌面上這一句改寫在那裡（見下方「桌面」與「介面文字」）。網址是 `anoni.net/gears/`，在瀏覽器裡處理讀者要交出去的檔案，也替收到檔案的人整理可以查證的線索。文件站的小工具區（`anoni-net/docs` 的 `utils/`）是另一套，兩邊各自開發，不共用程式。
+
+## 定位
+
+Gears 結合兩件事：可以在本機使用的工具，以及用開源模型加強的功能（2026-11-20 確定）。瀏覽器分成三條線設計，見下方「支援的瀏覽器」。
+
+- 模型是加強的那一層：每個工具不靠模型也要能完成基本的功能，模型只負責標出來，由讀者確認，不自動套用（照遮蔽的自動尋找的做法）。鎖定模式關掉 WebAssembly、Tor Browser 擋下 canvas 的讀取時，退回不用模型的路徑
+- 開源模型的條件：權重公開、授權能跟 MIT 一起散布（CKIP 的 GPL-3.0 就卡在這裡）、鎖定 commit 並比對 SHA-256（`src/core/models.ts`）、優先放在自己的網域或 assets.anoni.net。要從 Hugging Face 下載時，先在畫面上說明 Hugging Face 看得到 IP 位址、瀏覽器與下載了哪個模型（照逐字稿的 large-v3-turbo）
+- 新增模型的門檻沿用 #139 的草案：主線只用 CPU 也能在幾秒內完成、下載量在 200 MB 以內，只能用顯示卡的模型當選配的一層（#159）。每個模型都要有自己的評測資料，評測放在社群工作區的 `research/`
+- 需要確定結果的工具不加模型：加密、解密、加密文字、age 金鑰產生器、密語與密碼產生器、下載的軟體驗證。結果要嘛對、要嘛不對，模型的機率只會增加風險
 
 ## 原則
 
-- 預設在瀏覽器裡處理。之後若提供上傳到社群伺服器的選項，上傳前要在畫面上寫清楚檔案送到哪裡、誰看得到、保留多久、伺服器會不會留下紀錄，由讀者決定
+- 檔案一律在瀏覽器裡處理，不提供上傳到伺服器處理的選項。原本規劃影片這類吃重的處理可以上傳，跟「本機使用」的定位不一致，2026-11-20 拿掉。伺服器只經手兩件事：遠端傳送途中的密文，以及模型的下載
 - 上傳端點不經過 Cloudflare。Cloudflare 在邊緣解開 TLS，經過的檔案對它是明文。兩端之間另有加密、Cloudflare 只經手密文的通道可以經過，畫面上要寫明 Cloudflare 看得到 IP 與時間（遠端傳送的 clearnet 入口，見下方「遠端傳送的轉送服務」）
 - 伺服器不保存讀者的檔案，加密過的也一樣。遠端傳送的轉送服務只在轉給對方的途中經手，對方不在時直接丟掉，兩端一律同時在線（見下方「遠端傳送的轉送服務」）
-- 頁面能連線的對象寫死在 CSP 裡（`vite.config.ts`），新增任何對外連線都要改那裡，並在畫面上標示。頁面的 meta 標籤只有自己的網域、使用統計的送出網址（`https://aa.anoni.net/api/send`，見下方「使用統計」）與建議與回饋的送出網址（見下方「建議與回饋」）。逐字稿的大模型從 Hugging Face 下載（見下方「逐字稿」），只開在伺服器送的 CSP 標頭 <!-- docs-style-lint: disable-line -->
+- 頁面能連線的對象寫死在 CSP 裡（`vite.config.ts`），新增任何對外連線都要改那裡，並在畫面上標示。伺服器送的標頭另外有 `frame-ancestors 'none'`，別的網站不能把工作台嵌進頁框（meta 標籤裡寫這一項沒有作用）。頁面的 meta 標籤只有自己的網域、使用統計的送出網址（`https://aa.anoni.net/api/send`，見下方「使用統計」）與建議與回饋的送出網址（見下方「建議與回饋」）。逐字稿的大模型從 Hugging Face 下載（見下方「逐字稿」），只開在伺服器送的 CSP 標頭 <!-- docs-style-lint: disable-line -->
 - 執行期的相依套件只有 `preact`、`qrcode-generator`（QR code 產生）、`jsqr`（QR code 讀取）、`zxing-wasm`（QR code 以外的條碼，見下方「QR code 的內容格式」）、`age-encryption`（加密，連同它相依的 noble 系列）、`libheif-js`（HEIC 解碼，LGPL-3.0，見下方「HEIC」）、`pdf-lib`（PDF 的解析與寫出，見下方「文件」）、`pdfjs-dist`（PDF 的遮蔽，見下方「PDF 的遮蔽」），以及遮蔽的自動尋找用的 `onnxruntime-web`（見下方「遮蔽的自動尋找」，人臉與文字辨識都用它）、逐字稿用的 `@huggingface/transformers` 與 `opencc-js`（見下方「逐字稿」，分辨說話者用的 onnxruntime 是 Transformers.js 帶的那一份），以及查證計算 SHA-256 用的 `@noble/hashes`（age 加密原本就相依它，鎖定同一個版本，見下方「查證」）、遠端傳送的加密用的 `@noble/curves` 與 `@noble/ciphers`（同樣是 age 加密已經帶進來的版本，見下方「遠端傳送的轉送服務」）、下載的軟體驗證用的 `openpgp`（LGPL-3.0，見下方「下載的軟體驗證」，查證的 ProofMode 證明檔也用它），以及查證驗證內容憑證用的 `@contentauth/c2pa-web`（MIT，見下方「內容憑證的驗證」）、驗證 PDF 數位簽章用的 `pkijs` 與 `asn1js`（BSD-3-Clause，見下方「PDF 數位簽章的驗證」）。新增套件前先想能不能自己寫，必要時鎖定確切的版本。工具用到的套件在打開工具時才載入
 - 結構有問題的檔案就停下來，不交出一份沒處理乾淨的檔案
 
 ## 支援的瀏覽器
 
-Brave、Safari、Firefox，桌面與手機。iOS 上的瀏覽器都是 WebKit 核心，行為與 Safari 相同。Tor Browser 用 onion 版，有幾項功能受限，見下方「onion 版與 Tor Browser」。
+分成三條線（2026-11-20 確定，原本是 Brave、Safari、Firefox 三個並列）：
+
+| 線 | 瀏覽器 | 設計方式 |
+|---|---|---|
+| 主線 | Chrome、Brave、Firefox，桌面與 Android | 以這些瀏覽器的能力設計，模型的預設值照它們調整 |
+| iPhone 線 | Safari，以及 iOS 上的所有瀏覽器（都是 WebKit 核心，行為與 Safari 相同） | 功能跟主線相同，模型另外調教參數：選哪個模型、量化的位元數、執行緒與顯示卡的設定 |
+| 基本線 | Tor Browser（onion 版） | 一般的 JavaScript 功能保證可以使用，模型與需要 WebAssembly、canvas、service worker 的功能不保證，受限的部分見下方「onion 版與 Tor Browser」 |
+
+- iPhone 的運算力足夠，限制在分頁的記憶體：2026-10-24 在 iPhone 15 Pro 上執行 Gemma 4 E2B，分頁被系統重新載入（見「裝置量測」）。調教的重點放在記憶體，例如選小一號的模型、分段載入
+- iPhone 線的參數只能靠真機量測。Playwright 的 WebKit 在電腦上執行，模擬不出 iPhone 分頁的記憶體上限，CI 的 iPhone 那一台只是畫面尺寸。依據是裝置量測頁收到的 iPhone 結果，需要有 iPhone 的社群成員定期量測（#144）
+- Android 手機的記憶體差距大，低階機可能比 iPhone 更吃力。主線的模型要有記憶體不夠時的退回方式，例如自動改用小一號的模型
+
+### 最低需求
+
+Safari 16.4（iOS 16.4，2023-03）以前打不開 Gears。主程式的正規表示式用到 lookbehind（`pii.ts`、寫作習慣檢查、逐字稿的段落整理、QR code 讀取），舊版讀到時整支程式出錯，不是只有某個工具不能用。WebAssembly SIMD（onnxruntime-web 與 Transformers.js 的 WebAssembly）、壓縮串流（`DecompressionStream`，Office 文件與 PNG 的文字欄位）與 `OffscreenCanvas` 的 2D 也是 16.4 才有。建置目標是 `es2022`（`vite.config.ts`），不另外轉譯成舊的語法。
+
+- 舊版的提示（`public/legacy-check.js`，2026-11-20 起）：在主程式之前執行，只用舊瀏覽器也認得的寫法，`new RegExp("(?<=a)b")` 丟出錯誤時顯示 HTML 裡依語系寫好的提示（`#legacy-browser`，字串是 `app.legacy`，`vite.config.ts` 的 `localized` 寫進每一頁）。原本舊版只看得到建置時寫進 HTML 的說明，按了沒反應，讀者不知道原因。不轉址、不送出任何資料。瀏覽器測試（`tests/e2e/legacy-browser.spec.ts`）把 `RegExp` 換成遇到 lookbehind 就出錯的版本來模擬
+- 主程式之後再用到更新的語法或 API 時，先確認 Safari 16.4 有沒有，沒有的話要另外偵測、退回，或把這裡的最低需求跟著提高，並更新 `legacy-check.js` 的偵測
+- Safari 26（iOS 26，2025-09）才有的：WebGPU（沒有時模型只用 CPU）、WebCodecs 的 `AudioDecoder`（沒有時逐字稿把 MP4、M4A 整個檔案一次解碼，上限 256 MB 與 2 小時）
+
+iPhone 能升級到的 iOS 與記憶體（Apple 不公布記憶體，數字來自拆解與供應鏈的報導，2026-11-20 整理）：
+
+| 機型 | 能升級到的 iOS | 記憶體 | Gears |
+|---|---|---|---|
+| iPhone 7 以前 | iOS 15 | 3 GB 以下 | 打不開，顯示舊版的提示 |
+| iPhone 8、8 Plus、X | iOS 16 | 約 2–3 GB | 更新到 16.4 以上才打得開，模型功能不保證 |
+| iPhone XS、XS Max、XR | iOS 18 | 約 3–4 GB | 沒有 WebGPU 與 `AudioDecoder` |
+| iPhone 11、SE（第 2、3 代） | iOS 26 | 3–4 GB | 所有功能都打得開，大模型受記憶體限制 |
+| iPhone 12、13（非 Pro） | iOS 26 | 4 GB | 同上 |
+| iPhone 12 Pro、13 Pro、14、15 | iOS 26 | 6 GB | 同上 |
+| iPhone 15 Pro、16、16e | iOS 26 | 8 GB | Gemma 4 E2B 在 iPhone 15 Pro 上分頁被重新載入 |
+| iPhone 17、Air | iOS 26 | 8–12 GB（各來源不一） | |
+
+各功能在 iPhone 上要多少記憶體還沒有實測，要靠裝置量測頁收到的結果補上（#144）。iOS 上的 Chrome、Brave、Firefox 都是 WebKit 核心，看的是 iOS 的版本。鎖定模式不分機型都會關掉 WebAssembly，模型功能全部不能用（見「介面上的限制」）。
 
 ## 開發
 
@@ -31,7 +73,7 @@ npm run build:server # 轉送服務打包成 dist-server/relay.mjs，node script
 
 第一次執行瀏覽器測試前要下載核心：`npx playwright install chromium webkit firefox`。Linux 上的 WebKit 另外需要系統函式庫，有 sudo 權限時用 `npx playwright install-deps webkit` 安裝，CI 用 `--with-deps` 一併處理。
 
-CI（`.github/workflows/ci.yml`）依瀏覽器拆成四台機器同時執行：Chromium（加上單元測試與型別檢查）、Firefox、WebKit、iPhone。GitHub 的機器只有 4 核心，Playwright 只開 2 個 worker，全部放在一台要 6 分鐘左右。四台都通過才算通過，部署（`deploy.yml`）等的就是它。新增 Playwright 的 project 時，矩陣也要加一列。
+CI（`.github/workflows/ci.yml`）依瀏覽器拆成四台機器同時執行：Chromium（加上單元測試與型別檢查）、Firefox、WebKit、iPhone。GitHub 的機器只有 4 核心，Playwright 只開 2 個 worker，全部放在一台要 6 分鐘左右。四台都通過才算通過，部署（`deploy.yml`）等的就是它。每台的上限是 30 分鐘：GitHub 機器的 apt 有時很慢，2026-11-19 安裝 ffmpeg 與瀏覽器的相依套件就花掉 10 分鐘以上，原本 15 分鐘的上限讓測試還沒執行完就被中止，部署跟著停住。新增 Playwright 的 project 時，矩陣也要加一列。兩個 workflow 都設了 `ONNXRUNTIME_NODE_INSTALL=skip`：onnxruntime-node（Transformers.js 的相依套件）安裝時會從 nuget.org 另外下載 Linux 的 CUDA 檔案，GitHub 的機器連不上時 `npm ci` 整個失敗（2026-11-20 遇到兩次），網頁與單元測試都用不到。
 
 開發伺服器沒有 CSP，瀏覽器測試用的是 `vite preview` 提供的正式建置，CSP 會一起生效。
 
@@ -48,7 +90,7 @@ CI（`.github/workflows/ci.yml`）依瀏覽器拆成四台機器同時執行：C
 | `tests/unit/` | 在 Node 裡測純邏輯 |
 | `tests/e2e/` | 在 Chromium、WebKit、Firefox 與 iPhone 尺寸上測整個流程 |
 | `tests/helpers/` | 產生測試檔案的程式 |
-| `public/` | 網站圖示、主畫面圖示與 manifest |
+| `public/` | 網站圖示、主畫面圖示、manifest，以及偵測太舊的瀏覽器的 `legacy-check.js`（見「支援的瀏覽器」的「最低需求」） |
 | `licenses/` | 第三方圖示、HEIC 解碼器、pdf-lib、pdf.js、自動尋找與逐字稿的授權全文，也會跟著網站部署（見下方「第三方資料」） |
 
 ## 工具模組
@@ -97,25 +139,28 @@ CI（`.github/workflows/ci.yml`）依瀏覽器拆成四台機器同時執行：C
 
 ## 桌面
 
-桌面依讀者的目的分成三組，每個工具一列：圖示、名稱與圖示標籤，名稱下面一行寫讀者會遇到的情況（`desk.when.<工具 id>`，例如清除中繼資料寫「照片的拍攝位置、文件的作者」），工具的完整說明放在 `title`。寬一點的畫面每組排成多欄的清單。最下面一行是範例、建議與回饋、已下載的模型與裝置量測，接著是圖示說明（`src/ui/Desktop.tsx`）。
+桌面依讀者的目的分成三組，每個工具一列：圖示、名稱與圖示標籤，名稱下面一行寫讀者會遇到的情況（`desk.when.<工具 id>`，例如清除中繼資料寫「照片的拍攝位置、文件的作者」），工具的完整說明放在 `title`。每一列是連到工具網址的連結（見「介面上的限制」的站內導覽）。寬一點的畫面每組排成多欄的清單。最下面一行是範例、建議與回饋、協助測試、已下載的模型與裝置量測，接著是圖示說明（`src/ui/Desktop.tsx`）。
 
-2026-10-19 以前，三組工具上面另有 12 張「常見的情況」卡片，其中 11 張跟下面的工具卡打開同一個工具，說明也幾乎一樣，首頁有 36 張卡片，桌面要捲 3.2 個畫面、手機 8.3 個畫面。改成清單之後是 1.3 與 3.6 個畫面（Chromium，1440 寬與 iPhone 15），手機的第一個畫面就看得到第一組。情況的說法改寫進每個工具的那一列，點下去照 `src/ui/tasks.ts` 那一筆打開：處理檔案的工具直接請讀者選檔案，使用統計記成 `task`，跟原本的情況卡相同。同一個工具的第二個情況（文件的作者）與帶預設值的 Wi-Fi 拿掉，`task` 事件跨 2026-10-19 不能逐項比較。
+三組工具上面是兩段定位說明（`src/ui/DeskIntro.tsx`，`desk.intro.*`），讓第一次打開的讀者知道 Gears 分成兩層：每個工具在瀏覽器裡就能完成，不必安裝或註冊，第一次開啟之後可以離線使用。名稱旁標著大腦圖示的工具，可以再用這台裝置的算力執行開源模型。寬一點的畫面兩段左右並排，暫存區在旁邊，手機上排成一欄，接在暫存區下面。第二段下面一行寫這台裝置的支援狀況（`desk.device.*`）：可以用顯示卡加速、只能用 CPU（會比較慢），或瀏覽器關掉了 WebAssembly（鎖定模式），後面連到裝置量測看細節。顯示卡沿用逐字稿的 `detectGpu`，軟體模擬的顯示卡當成沒有，WebAssembly 用 `wasmAvailable`。偵測結果只顯示在畫面上，不送出、不記錄，讀者回報問題時可以照這一行說明自己的環境。建置時寫進首頁 HTML 的內容（`src/static-content.ts`）也有這兩段，裝置狀況要執行 JavaScript 才查得到，不寫。2026-11-20 加上，原本桌面只有三組工具，第一次打開的讀者看不出模型是額外加強的一層，也不知道自己的裝置能不能用。
+
+2026-10-19 以前，三組工具上面另有 12 張「常見的情況」卡片，其中 11 張跟下面的工具卡打開同一個工具，說明也幾乎一樣，首頁有 36 張卡片，桌面要捲 3.2 個畫面、手機 8.3 個畫面。改成清單之後是 1.3 與 3.6 個畫面（Chromium，1440 寬與 iPhone 15），手機的第一個畫面就看得到第一組。情況的說法改寫進每個工具的那一列，點下去照 `src/ui/tasks.ts` 那一筆打開，使用統計記成 `task`，跟原本的情況卡相同。只換到工具頁，選檔案由讀者在工具頁按「選擇檔案」。2026-11-21 以前處理檔案的工具點下去的同時用程式打開系統的選檔案視窗（`input.click()`），讀者點的是工具的連結，預期看到工具頁，卻先跳出系統視窗，所以拿掉。不在讀者沒有明確要求時打開系統的視窗（選檔案、相機、分享），新增工具時也照這一條同一個工具的第二個情況（文件的作者）與帶預設值的 Wi-Fi 拿掉，`task` 事件跨 2026-10-19 不能逐項比較。
 
 新增工具時，三個語系要加上 `desk.when.<工具 id>`，`tests/unit/i18n.spec.ts` 會檢查。寫成名詞片語，用讀者的說法寫出遇到的情況，不重複工具的名稱。
 
 ## 桌面的圖示標籤
 
-桌面的工具在名稱後面用圖示標出讀者在打開之前就該知道的事，例如會在瀏覽器裡執行模型、會跳出相機的權限詢問（`src/ui/tool-tags.ts`）。標籤的名稱一律用名詞（本機模型、相機），完整的意思寫在桌面最下方的「圖示說明」，只列出有工具用到的標籤。手機上沒有滑鼠移上去的提示，圖示又在按鈕裡面不能單獨點，所以圖示說明不能省。
+桌面的工具在名稱後面用圖示標出讀者在打開之前就該知道的事，例如會在瀏覽器裡執行模型、會跳出相機的權限詢問（`src/ui/tool-tags.ts`）。標籤的名稱一律用名詞（開源本機模型、相機），完整的意思寫在桌面最下方的「圖示說明」，只列出有工具用到的標籤。手機上沒有滑鼠移上去的提示，圖示又在按鈕裡面不能單獨點，所以圖示說明不能省。
 
 | 標籤 | 圖示 | 工具 |
 |---|---|---|
-| 本機模型 | `brain` | 逐字稿、遮蔽（只有自動尋找人臉與個資用到） |
+| 開源本機模型 | `brain` | 逐字稿、遮蔽（只有自動尋找人臉與個資用到） |
 | 相機 | `camera-outline` | QR code 與條碼讀取、面對面傳送、遠端傳送 |
 
 - 只標讀者在打開之前就該知道的事：會下載大型檔案、會跳出權限詢問、會連到其他網站、還在實驗中。不拿來標功能特色。每個工具最多兩個（`MAX_TAGS`）
+- 模型的標籤 2026-11-20 從「本機模型」改成「開源本機模型」（简体「开源本地模型」，英文 Open-source on-device model），跟桌面的定位說明一致，推廣時「開源」也是讀者會搜尋的詞。能這樣寫是因為模型一律符合上方「開源模型的條件」，新增模型時照那一條檢查
 - 每個標籤只有一個圖示。同一個標籤在不同工具的差別寫在補充說明（`tag.<標籤>.<工具 id>`，例如遮蔽的「自動尋找人臉與個資時用到」），圖示帶著它當名稱，讀螢幕軟體唸按鈕名稱時唸得到，滑鼠移上去也看得到。原本分成「本機模型」與「本機模型輔助」兩個，小尺寸時分不出來，2026-10-18 合併。圖示原本用三顆星（`creation`，科技業常用來代表 AI），不常用這類產品的讀者聯想不到，又帶著「魔法」的意味，2026-10-18 改成大腦
 - 標籤一律中性灰（`--icon`），畫成淡底色、外框與同色圖示的小色塊，桌面與圖示說明共用 `.tool-tag`。標籤是打開之前的提醒，不是分類，靠圖示本身分辨。2026-10-22 以前每個標籤借一個品牌分類色（開發與技術的靛藍、匿名支付的橘），跟圖示圈的分類色混在一起，一個畫面上有四種顏色。標籤也是 span，另外用 `.tool-row-text .tool-tags .tool-tag` 蓋回標籤的顏色，`tests/e2e/workbench.spec.ts` 比對桌面與圖示說明的顏色一致
-- 新增標籤：在 `TAGS` 加一筆，三個語系加上 `tag.<id>`、`tag.<id>.desc` 與每個工具的補充說明。`tests/unit/tool-meta.spec.ts` 檢查圖示、字串與數量。能從程式判斷的標籤在 `DETECT` 加一條：從每個工具的畫面元件沿著 import 一路往下追，「本機模型」看有沒有用到 onnxruntime、Transformers.js 或 sherpa-onnx，「相機」看有沒有呼叫 `getUserMedia`，標了沒用到、用到沒標都會失敗
+- 新增標籤：在 `TAGS` 加一筆，三個語系加上 `tag.<id>`、`tag.<id>.desc` 與每個工具的補充說明。`tests/unit/tool-meta.spec.ts` 檢查圖示、字串與數量。能從程式判斷的標籤在 `DETECT` 加一條：從每個工具的畫面元件沿著 import 一路往下追，「開源本機模型」看有沒有用到 onnxruntime、Transformers.js 或 sherpa-onnx，「相機」看有沒有呼叫 `getUserMedia`，標了沒用到、用到沒標都會失敗
 
 ## 遮蔽時保留拍攝資訊
 
@@ -127,17 +172,47 @@ CI（`.github/workflows/ci.yml`）依瀏覽器拆成四台機器同時執行：C
 
 ## 遮蔽的自動尋找
 
-遮蔽畫面有「找人臉」與「找電話、Email 等個資」兩個按鈕，找到的範圍直接加成框，讀者逐一確認、點一下刪掉框錯的。自動尋找一定會漏，畫面上寫明，不自動套用（`src/ui/redact-detect.ts`）。
+遮蔽畫面有「找人臉」、「找電話、Email 等個資」與「找人名、地址與單位」（見下方「個資辨識模型」）三個按鈕，找到的範圍直接加成框，讀者逐一確認、點一下刪掉框錯的。自動尋找一定會漏，畫面上寫明，不自動套用（`src/ui/redact-detect.ts`）。
 
 - 人臉：OpenCV 的 YuNet 模型（`public/models/yunet-2023mar-dynamic.onnx`，進版控，約 225 KB），用 onnxruntime-web 的 WebAssembly 執行，不需要 WebGL。官方模型的輸入固定 640×640，`scripts/make-yunet.py` 從官方檔案改成可變的輸入尺寸（權重不動，比對過 sha256）。整張圖縮到長邊 960 與 320 各偵測一次：960 抓合照裡的小臉，320 抓佔滿畫面的大臉（模型適合約 10 到 300 像素的臉）。縮小時每次最多縮一半，原始解析度的照片一口氣縮小會產生鋸齒，分數會掉。0.7 以上直接加成框，0.6 到 0.7 列為「可能是臉」，畫成黃色虛線，讀者點一下才變成遮蔽框，訊息區也有「全部加上」的按鈕。同一張臉在兩種尺寸都找到時只留分數最高的。解碼與合併在 `src/tools/redact/faces.ts`，有單元測試。實測 14 張照片，Chromium、WebKit、Firefox、Brave 都是 71 張臉全找到、零誤判，真臉最低 0.81，不是臉最高 0.55
-- 個資：PP-OCRv5 辨識文字（見下一項），`src/tools/redact/pii.ts` 把同一行的字接起來比對電話（含帶國碼的與部分遮住的手機號碼）、Email、台灣的身分證與居留證、香港身分證、卡號、長串數字、網址與 @帳號，再把對到的字合成一個框。換行把一段個資拆成兩行時（聊天紀錄的對話框窄，Email 與電話常被拆開），上一行的結尾與下一行的開頭都是英數或 `@ . - _ + *`、下一行在正下方而且左邊大致對齊，就接起來再比對一次，跨過換行的在兩行各給一個框，上一行只對到半截的（`02-2963-01` 接 `88`）由接起來的取代（`findPiiInLineTexts`，有單元測試）。清單裡相鄰的兩項（一行電話、下一行 Email）版面也是這樣，所以上一行的那一半已經是別種個資，或本身就是完整的 Email、網址與帳號時不接。下一行的那一半完整時照樣接，`r119` 接 `21047@example.edu.tw` 的前半段一樣認得出人。2026-10-22 用 196 張合成截圖量過，規則找得到的個資，Tesseract 蓋住的從 64% 變成 69%，PP-OCRv5 從 85% 變成 93%（#140），多出的框只有 Tesseract 的一處雜訊碎片（上一行結尾的 `@` 接下一行的英文字）。「框起所有文字」把每一行文字都框起來，還沒辨識過時先辨識。照片、頭像與標點的碎片常被認成一個字，分數都很低，所以只有一個字、辨識的分數又低於 0.6 的行不框（`keepLine`），分數低但字多的行是縮小、壓縮過的小字，裡面可能有個資，照樣框
+- 個資：PP-OCRv5 辨識文字（見下一項），`src/tools/redact/pii.ts` 把同一行的字接起來比對電話（含帶國碼的與部分遮住的手機號碼）、Email、台灣的身分證與居留證、香港身分證、卡號、IP 位址、車牌（台灣的 `ABC-1234`、`1234-AB`，中國以省份簡稱開頭的 `粵B·D12345`，`ISO-8601` 這類標準編號除外，2026-11-19 起）、長串數字、網址與 @帳號，再把對到的字合成一個框。換行把一段個資拆成兩行時（聊天紀錄的對話框窄，Email 與電話常被拆開），上一行的結尾與下一行的開頭都是英數或 `@ . - _ + *`、下一行在正下方而且左邊大致對齊，就接起來再比對一次，跨過換行的在兩行各給一個框，上一行只對到半截的（`02-2963-01` 接 `88`）由接起來的取代（`findPiiInLineTexts`，有單元測試）。清單裡相鄰的兩項（一行電話、下一行 Email）版面也是這樣，所以上一行的那一半已經是別種個資，或本身就是完整的 Email、網址與帳號時不接。下一行的那一半完整時照樣接，`r119` 接 `21047@example.edu.tw` 的前半段一樣認得出人。2026-10-22 用 196 張合成截圖量過，規則找得到的個資，Tesseract 蓋住的從 64% 變成 69%，PP-OCRv5 從 85% 變成 93%（#140），多出的框只有 Tesseract 的一處雜訊碎片（上一行結尾的 `@` 接下一行的英文字）。「框起所有文字」把每一行文字都框起來，還沒辨識過時先辨識。照片、頭像與標點的碎片常被認成一個字，分數都很低，所以只有一個字、辨識的分數又低於 0.6 的行不框（`keepLine`），分數低但字多的行是縮小、壓縮過的小字，裡面可能有個資，照樣框
 - 文字辨識：PaddleOCR 的 PP-OCRv5 mobile（Apache-2.0，偵測 4.8 MB、辨識 16.5 MB，單一模型辨識正體、簡體、英文與日文），2026-10-22 取代 Tesseract（#140）。用 onnxruntime-web 的單執行緒 WebAssembly 執行，跟找人臉同一份（`src/ui/ppocr.ts`），前後處理照 PaddleOCR 3.x 的預設值自己寫（`src/tools/redact/ppocr.ts`，有單元測試）：偵測的長邊上限 2560（PaddleOCR 是 4000，手機照片照 4000 算偵測的輸入要 144 MB），DB 後處理算最小外接旋轉矩形，辨識前把歪的那一行轉正再裁切，CTC 解碼，再從時間步推算一行裡每個字的位置，交給 `findPii`。只用水平的外接矩形時，轉歪 3 度的長行整行被丟掉，模擬翻拍的圖片只找得到三成的文字行。字典（18,383 字）取自辨識模型的 `inference.yml`，由 `scripts/make-ppocr-dict.py` 轉成 `src/tools/redact/ppocr-dict.json`，用到時才載入。評測（196 張合成截圖與 392 張模擬的掃描與翻拍，在社群的工作區）：字錯率截圖 4.3%、翻拍 11.7%，Tesseract 是 26% 與 40%，規則找得到的個資（含跨行比對）蓋住 94% 與 91%（Tesseract 69% 與 61%），每張的雜訊 0.07 與 0（Tesseract 0.18 與 0.77）。M5 Pro 上單執行緒一張手機截圖約 1 秒，Tesseract 約 0.3 秒。Safari 開多執行緒反而變慢，所以跟找人臉一樣只用單執行緒
 - PDF 有文字層時不辨識，直接讀文字層（見下方「PDF 的遮蔽」的自動尋找）
 - PP-OCRv5 的兩個模型不進版控，`node scripts/fetch-whisper.mjs ppocr` 從 Hugging Face 下載到 `public/models/ppocr/`（鎖定 commit 並比對 SHA-256，寫在 `src/tools/redact/ppocr-models.json`），CI 與部署在建置前下載，跟著網站一起部署，讀者只從自己的網域取得。onnxruntime 的 WebAssembly 由 Vite 打包到 `assets/ort-wasm-*.wasm`（檔名帶雜湊）。都是按下按鈕時才下載，人臉約 14 MB（伺服器有壓縮時約 4 MB），文字另外加上 21 MB 的模型，第一次約 35 MB
+- 按下按鈕之前，遮蔽畫面在使用說明下面寫出還要下載多少（`redact.download.*`），用行動網路的讀者先知道。打開時讀一次 `gears-keep`（`src/ui/detect-download.ts`，計算在 `src/core/storage.ts` 的 `redactDownload`，檢查畫面內容也用同一份）：執行環境不在時找人臉寫 14 MB、辨識文字寫 35 MB，執行環境已經在、文字的兩個模型還沒下載時只寫辨識文字 21 MB，都在時不顯示。人臉的模型只有 0.2 MB，不計。執行環境比對遮蔽用的那一份檔名（`?url` 取得），Transformers.js 另帶一份檔名開頭相同、雜湊不同的 onnxruntime，用過逐字稿不代表遮蔽的執行環境已經在。數字照沒有壓縮的大小。下載完之後不重算，說明消失時圖片會往上跳，下次打開才更新。不能用 Cache API 時改寫每次都要重新下載
 - onnxruntime-web 只用單執行緒的 WebAssembly（`env.wasm.numThreads = 1`），多執行緒要伺服器另外送 cross-origin isolation 的標頭。升級前先在套件裡搜尋對外的網址，1.30.0 只在一段警告文字裡有說明頁的網址。先前用的 MediaPipe 1.0.0 起會把使用紀錄送到 `odml.pa.googleapis.com`，這種事要在升級時擋下來，不該靠 CSP
 - 處理中在圖片上蓋一層遮罩，中間顯示進度條：載入模型時不知道要多久，條紋來回移動，偵測時顯示百分比。按鈕下方的訊息區高度固定，所有可能出現的訊息疊在同一格、由最長的那一則撐開，換訊息時圖片不會跳動。人臉的進度依兩種尺寸的偵測推進，文字的進度依辨識完的文字行推進
 - 授權與來源寫在 `licenses/redact-detect.txt`
 - 網址帶 `?debug-faces`（例如 `/gears/redact/?debug-faces`）時，找人臉會在主控台印出建置的 commit 與每次偵測的尺寸、分數、位置與有沒有採用，讀者回報漏判、誤判時請對方整段貼回來。只有數字與座標，不含圖片的內容。不同的瀏覽器與照片的原始解析度會讓分數略有不同，本機重現不出來時靠它
+
+### 個資辨識模型
+
+規則找不到的人名、地址與單位，用個資辨識模型 nym-pii 補上（#187，2026-11-21 起，模型與下載見下方「裝置量測」的「個資辨識」）。第一版只做圖片，PDF 與檢查畫面內容之後接上。社群工作區的評測（`research/gears-ocr/` 的 `pipeline.mjs`）在 196 張合成截圖上，規則加上模型蓋住 74% 的個資，規則本身 15%，每張多框 0.10 處。
+
+- 按鈕「找人名、地址與單位」前面帶著大腦圖示（開源本機模型的標籤）。還沒辨識過文字時先辨識，規則找到的電話、Email 一起加上，模型找到的框跟規則的框一次加上，重疊的只留一個（`addFound` 讀的是上一次畫面更新時的框，連續呼叫兩次會漏算）。框直接加上、讀者逐一確認，評測裡每張只多框 0.10 處，不另外畫「可能是」的虛線
+- 流程（`src/ui/pii-detect.ts`）：文字辨識讀出的每一行（`findText` 的 `texts`，`pii.ts` 的 `lineTexts`）留著，再按一次不必重新辨識。`chunkLines` 依行分塊（每塊不超過 3,000 字，模型一次最多讀 8,192 個詞元，超過的部分會被截掉、不會報錯），`joinLines` 接成一段、行與行之間放換行，字與字之間補上的空白只在兩邊都是英數時留著，跟評測的做法相同。Worker（`src/ui/pii.worker.ts`）找到的範圍由 `spanBoxes` 換回字框，往外多留 15%，跟規則的框一樣
+- Worker 在編輯畫面打開時第一次用到才建立，之後留著，關掉編輯畫面時結束。模型的載入與辨識在 `src/ui/pii-runtime.ts`，裝置量測的 Worker 也用它：只用單執行緒的 WebAssembly，模型存在 `transformers-cache`，量測頁下載過的遮蔽直接用。service worker 換版本時只清 `gears-` 開頭的快取，不會清掉它
+- 按下按鈕之前寫出要下載約 200 MB（`PII_MB`，經過 Cloudflare 的實際傳輸量，量測頁與協助測試頁也用這個數字），以及手機上可能因為記憶體不夠讓頁面重新載入、暫存區會跟著清空，請先下載需要的檔案（`redact.model.note`）。下載量跟找人臉、辨識文字的下載量在同一次查詢裡算出來（`detect-download.ts` 的 `pii`），說明一起出現，圖片只會跳一次。模型已經在快取時不寫
+- 記憶體不夠：開始之前在 sessionStorage 記下（`gears-pii-redact`），做完、失敗或取消（關掉編輯畫面時 `dispose`）時清掉。打開遮蔽時記號還在，代表上一次做到一半分頁被重新載入，畫面說明原因（`redact.model.crashed`），同一個分頁不再出現按鈕。不用量測頁的 `history.state`：它是每一筆歷史紀錄各一份，回到桌面再點進遮蔽就讀不到。sessionStorage 關掉分頁就清掉，私密瀏覽存不進去時只是記不住。沒有讀到文字的圖不下載模型，直接說沒有找到。手機與平板上（`src/ui/phone.ts` 的 `onPhone`，iPadOS 回報的是 Mac，靠觸控點數分出來）第一次按下時先展開說明（`redact.model.phone`）：功能在手機上還在測試、要下載約 200 MB、記憶體不夠時暫存區會清空，下面是「仍要使用」與「先幫忙量測」（連到協助測試頁）。手機上的下載量與記憶體提醒寫在這段說明裡，上方的模型說明只給電腦，同一件事不寫兩次。2026-11-21 決定：手機上直接拿掉按鈕的話，之後會忘記這裡還有功能要做，多一步確認讓功能一直看得到，也把讀者導去量測。協助測試頁收到 iPhone 的數字之後，再決定拿掉這一步或依機型調整
+- 關掉 WebAssembly 時說明原因、不下載模型，讀不到 canvas 時照其他自動尋找的做法
+- 「已下載的模型」把它列成獨立的一列（`storage.item.pii`，`classify` 依網址裡的模型目錄分出來），刪語言模型時不會一起刪掉
+- 授權與來源寫在 `licenses/redact-detect.txt`
+- 瀏覽器測試在 `tests/e2e/redact-model.spec.ts`：攔下模型的請求、回內容不對的檔案時停下來，記號還在時不提供按鈕，關掉 WebAssembly 的情況在 `wasm-unavailable.spec.ts`。真的下載與載入只在本機設了 `GEARS_PII_MODEL=1` 時執行（`GEARS_PII_MODEL=1 npx playwright test tests/e2e/redact-model.spec.ts --project=chromium`），請求直接經過 Cloudflare 的快取到 assets.anoni.net：從測試裡攔下再回 194 MB 的檔案太慢，200 秒還在下載。CI 不執行這一項，assets.anoni.net 連不上時會擋住部署（2026-11-21 決定），改模型或流程時在本機執行一次。2026-11-21 在 M5 Pro 的 Chromium（正式建置、還沒有快取）下載加辨識約 12 秒，英文的截圖裡人名、公司與電話都框到
+
+## 檢查畫面內容
+
+清除中繼資料不會改變畫面，照片裡的人臉、截圖上的電話與 Email 仍然看得到。檔案畫面的右欄在找到的資訊下面多一區「畫面上看得到的」（`src/ui/ScreenCheck.tsx`，2026-11-20 起），照片類的檔案（`isPhoto`，大檔案除外）都有，讀者按「檢查畫面內容」才載入模型。
+
+- 找人臉與辨識文字跟遮蔽的自動尋找是同一套（`src/ui/redact-detect.ts` 的 `findFaces`、`findText`），模型與執行環境存在同一個 `gears-keep`，用過其中一邊，另一邊不必再下載。先找人臉、再辨識文字，一次只執行一個模型，手機上不會同時佔兩份記憶體
+- 按下按鈕之前寫出還要下載多少，跟遮蔽讀同一份 `src/ui/detect-download.ts`。辨識文字的大小已經包含執行環境，找人臉的模型只有 0.2 MB，不另外算
+- 結果只列每一類的數量（人臉、可能是臉的範圍、各類個資，`src/tools/redact/screen.ts` 的 `piiCounts`，有單元測試），不列找到的文字。看到位置與內容、決定要不要遮的地方是遮蔽的畫面
+- 找到東西時有「打開遮蔽，框已經放好」：確定的人臉與個資合成框（重疊的只留一個，`screenBoxes`），可能是臉的範圍照遮蔽的做法畫成虛線，透過 `FileEditorProps` 的 `found` 交給遮蔽。遮蔽的訊息寫明框是檢查找到的、要逐一確認（`redact.fromCheck`）。遮蔽不收的格式（TIFF 這類）只顯示結果
+- 框的座標只對檢查的那個版本有效：元件依版本建立（`key` 是版本的 id），縮成常見尺寸、HEIC 轉 JPEG 這類會改像素的處理之後，結果跟著清掉。檔案畫面記下框是哪個版本的，遮蔽關掉（取消或套用）時清掉，之後從工具列打開遮蔽不會再帶進來
+- 沒有找到用灰色寫明自動尋找會漏，不用代表完成的綠色。人名與地址目前找不到，說明裡寫明，個資辨識模型（#139）上線之後接進同一個檢查
+- 順序跟遮蔽的自動尋找一樣：先看 WebAssembly（`wasmAvailable()`），再在點擊的當下讀一次 canvas（Tor Browser 這時才會在網址列跳出詢問），之後才解碼與下載模型。檢查中不出現換版本的提示（`useWorking`）
+- 使用統計目前不記錄這一項。要記的話，`EVENTS` 與隱私說明要一起改（見下方「使用統計」、「隱私說明」）
+- 只做了檔案畫面的照片，PDF 的頁面、查證與影片的關鍵影格之後依序接上
+- 瀏覽器測試在 `tests/e2e/screen-check.spec.ts`，關掉 WebAssembly 與讀不到 canvas 的情況在 `wasm-unavailable.spec.ts`、`canvas-blocked.spec.ts`
 
 ## PDF 的遮蔽
 
@@ -256,7 +331,7 @@ GB 45438 的服務提供者編碼（TC260-PG-20252A，27 碼）拆成主體類�
 
 PDF 帶著數位簽章時，查證用 `pkijs`（3.4.2，鎖定版本，BSD-3-Clause）驗證（#128），程式在 `src/tools/verify/pdf-signature.ts`，瀏覽器端的載入在 `src/ui/pdf-signature-check.ts`。每一層的結果分開列出，不合成一個「有效」：
 
-- 簽章本身：依 `/ByteRange` 取出簽署的範圍算摘要，比對 CMS 裡的 `messageDigest`，再用簽署者憑證的公鑰驗簽章值。對不上的列在需要留意的地方（`pdf-signature-invalid`），簽完之後又改了內容的列 `signed-then-modified`（見下方「簽完之後加上的驗證資料」）
+- 簽章本身：依 `/ByteRange` 取出簽署的範圍算摘要，比對 CMS 裡的 `messageDigest`，再用簽署者憑證的公鑰驗簽章值。簽署的範圍要從檔案的開頭算起，中間空出來的那一段只能是 `/Contents` 本身（`gapIsContents`），空隙裡多了別的內容算成對不上。對不上的列在需要留意的地方（`pdf-signature-invalid`），簽完之後又改了內容的列 `signed-then-modified`（見下方「簽完之後加上的驗證資料」）
 - 簽署者：用簽章附的憑證與內建的中繼憑證建憑證鏈，接到內建的根憑證才算確認身分。現在驗不過時，先用時間戳記證明的時間再驗一次，沒有可信的時間戳記才用簽章裡簽署端自己填的時間，過了就寫明「以簽章裡寫的時間來看當時有效，但這個時間由簽署端自己填寫」
 - 時間戳記（RFC 3161）有兩種：附在簽章上的（簽章的 unsigned attribute `1.2.840.113549.1.9.16.2.14`，證明簽章值在那個時間已經存在），以及整份文件的時間戳記（`/SubFilter` 為 `ETSI.RFC3161`，CMS 的內容是 TSTInfo，直接證明簽署的範圍）。驗時間戳記裡的雜湊值、時間戳記服務的簽章與憑證鏈，接到內建的根憑證才採信它的時間。附在簽章上的時間戳記對不上或驗不過時，列在需要留意的地方（`pdf-timestamp-invalid`），整份文件的時間戳記對不上就是簽章驗不過（`pdf-signature-invalid`）
 - 撤銷狀態只讀檔案裡已經存好的資料：簽章裡附的（Adobe 的 adbe-revocationInfoArchival 與 CMS 的 crls），以及 PAdES 長期驗證存在文件目錄 `/DSS` 的 OCSP 回應與憑證撤銷清單，不連線查詢。`/DSS` 裡的憑證也拿來建憑證鏈。只檢查簽署者的憑證，憑證鏈接到內建的根憑證才檢查，接不到的話分不出撤銷資料是誰簽的。OCSP 回應要由簽發者或它授權的回應者簽（回應者的憑證由簽發者簽發、有 OCSP 簽署的用途、回應產生時在效期內），撤銷清單要由簽發者簽。pkijs 的 `BasicOCSPResponse.verify` 用現在的時間驗回應者的憑證鏈，回應者的憑證效期通常只有幾天，存在檔案裡的舊回應都會失敗，所以這一段自己判斷。撤銷的時間晚於可信的時間戳記時，寫明簽章在撤銷之前就已經存在，其他被撤銷的列在需要留意的地方（`pdf-signature-revoked`）
@@ -322,7 +397,8 @@ ProofMode（Guardian Project 給人權紀錄者的 Android App）拍照時不改
 - 候選只留 UDP 的 host，丟掉 loopback、link-local、CGNAT（`100.64.0.0/10`）與 Tailscale（`fd7a:115c:a1e0::/48`）。`iceServers` 是空的，不用 STUN 與 TURN，連線不會走到網際網路
 - 配對：送出端的 QR code 是工作台的網址，連線描述放在 `#` 後面（不會送到伺服器），手機用系統相機掃就直接打開、自動回應，讀完就用 `history.replaceState` 從網址清掉。接收端的回應由送出端頁面裡的相機掃。沒有相機時複製貼上同一段代碼
 - 先開相機、再建立連線描述：Chrome 與 Safari 取得相機權限之後才交出區網位址，只交 mDNS 名稱的話，網路不支援 mDNS 時兩邊都連不上（文件站的實機測試與 GitHub 的 CI 機器都遇過）。送出端本來就要開相機掃回應，接收端在工作台裡掃也是，至少一邊交出區網位址就連得上。接收端用系統相機打開網址時只交 mDNS 名稱，靠送出端的區網位址。Firefox 在無頭的假相機下仍然只交 mDNS 名稱，真的使用者允許相機之後如何還沒驗證，兩台都是 Firefox 又都沒有相機時要靠 mDNS。區網位址只交給面對面配對的對方，Tailscale 與 CGNAT 的位址濾掉
-- 確認碼：兩邊的 DTLS 指紋排序後取 SHA-256，換成 6 位數字（`src/tools/nearby/protocol.ts`）。鏡頭對螢幕換不掉指紋，複製貼上可能經過別人的伺服器，要靠確認碼核對
+- 確認碼：兩邊的 DTLS 指紋排序後，加上兩端在資料通道連上之後交換的隨機數，取 SHA-256 換成 6 位數字（`src/tools/nearby/protocol.ts`）。鏡頭對螢幕換不掉指紋，複製貼上可能經過別人的伺服器，要靠確認碼核對
+- 確認碼的隨機數（`src/tools/nearby/confirm.ts`，2026-11-19 起，有單元測試）：發起的一端先送隨機數的雜湊，回應的一端送出隨機數，發起的一端再揭露。只用指紋算的話，在中間換掉連線描述的人可以一直換憑證，試大約一百萬次就能讓兩邊的確認碼相同。對方送來的第一則不是這個交換（舊版的頁面直接送檔案清單）時顯示版本不同，不退回舊的做法，否則中間的人假裝成舊版就能繞過。新版的送出端遇到舊版的接收端時，舊版只會顯示一般的錯誤
 - 通道（`src/tools/nearby/channel.ts`）：傳輸的流程只認 `Channel` 介面（送出、等緩衝降下來、依序取出下一則、關閉），不管底下是什麼連線。WebRTC 的資料通道由 `src/ui/nearby.ts` 的 `rtcChannel` 包成 `Channel`，之後的遠端傳送接 WebSocket 轉送（#104），同一套流程與單元測試都沿用。單元測試（`tests/unit/nearby-transfer.spec.ts`）用記憶體裡的一對通道走完整個傳送流程，涵蓋拒絕、內容被改、超過上限、不合格的訊息與中途關閉
 - 傳輸（`src/tools/nearby/transfer.ts`）：一條有序、可靠的通道，先送檔案清單與每個檔案的 SHA-256，接收端的讀者按「接收」才開始傳，別人不能把檔案直接塞過來。64 KB 一塊，`bufferedAmount` 超過 4 MB 就等。接收端邊收邊算 SHA-256，對不上的不放進暫存區。檔名預設跟下載一樣改成 `gears-第幾個`，讀者可以勾選保留原本的檔名（傳給自己的其他裝置時）。接收端的檔案放在記憶體裡，合計上限先抓 1 GB
 - 自己這一側一個可用的位址都沒有時（沒連上網路，或只剩被濾掉的位址），說明要先連上 Wi-Fi 或熱點
@@ -341,25 +417,25 @@ ProofMode（Guardian Project 給人權紀錄者的 Android App）拍照時不改
 - 不傳檔案：暫存區是空的也能從「只傳文字訊息或視訊通話」產生連結。檔案的協定（`nearby/protocol.ts`）不收空的清單，所以不走檔案那一條，送出端在確認碼出現之後送 `via` 加上 `files: false`，兩端直接進入只有文字訊息與視訊通話的狀態（`talk`）。接收端打開連結時還不知道對方要不要傳檔案，邀請的說明兩種都寫
 - A 版：經過 TURN 的 WebRTC 資料通道（`src/tools/remote/direct.ts`，#104）。轉送服務在配對之後發一則 `ice`（伺服器與帳密，`server/turn.ts` 向 Cloudflare Realtime 申請，效期跟房間的上限相同），只發給在開房、加入、接回時聲明 `ice: true` 的一端，舊版的頁面不認得這則訊息，不發才不會斷線。沒有設定 TURN key 時發 `off`。兩端在加密過的信令那一條（`mux.ts` 的 `s`）交換 SDP 與候選，DTLS 的指紋經過兩端之間的加密送達，轉送服務與 Cloudflare 都換不掉。`iceTransportPolicy` 是 `relay`，只經過 TURN，兩端看不到彼此的 IP，STUN 與 port 53 的網址拿掉。10 秒內打不開、瀏覽器沒有 WebRTC、onion 版（TURN 走 UDP、不經過 Tor，會讓 Cloudflare 看到讀者的 IP）都改走轉送服務。送出端決定檔案走哪一條，用 `via` 告訴接收端，畫面上標出這次經過哪裡。資料通道傳到一半斷掉時，送出端用 `via` 的 `retry` 改走轉送服務重傳，接收端清單相同就直接接收。文字訊息一律留在轉送服務上
 - TURN key 由維護者在 Cloudflare 控制台（Realtime → TURN）建立，Key ID 與 API token 寫進 m6 的 `/srv/anoni-net-gears/relay.env`（`CF_TURN_KEY_ID`、`CF_TURN_KEY_TOKEN`，權限 600），`tools/relay-compose.yml` 的 `env_file` 讀它，沒有這個檔案時不發 TURN。Cloudflare 的 API 會把建立時回傳的 key 標成敏感欄位，透過 MCP 這類工具建立時拿不到，2026-10-21 試過一次、刪掉了。每月前 1,000 GB 免費，之後每 GB 0.05 美元，要在帳號設用量警示
-- 自架的 TURN（`tools/coturn/`，還沒上線，等 VPS）：coturn 4.15.0（鎖定 digest），用 docker compose 在 VPS 上執行（主機的網路，中繼用一整段 UDP port）。帳密用 coturn 的 TURN REST API，轉送服務用共用密鑰自己簽（`server/turn.ts` 的 `coturnIce`），不必連線。`relay.env` 設了 `TURN_SECRET` 與 `TURN_URLS` 時優先用 coturn，否則用 Cloudflare Realtime。設定照 #104：`denied-peer-ip` 擋掉全部、`allowed-peer-ip` 只放自己的公開 IP，中繼只能轉到自己的中繼位址，不能拿來連其他主機。2026-10-21 在 m6 的 Tailscale 位址上起暫時的 coturn 驗證過：兩端都走 TURN 時連得上，一端不走 TURN 時 12 秒內連不上。4.15.0 起 `no-cli` 已經淘汰，命令列介面預設關閉。上線的步驟：開 VPS（只做 DNS 解析的子網域）、申請憑證放進 `/srv/gears-turn/certs/`、`turnserver.conf` 填好子網域與公開 IP 與密鑰、防火牆開 3478（UDP、TCP）、443（TCP）與中繼的 port、m6 的 `relay.env` 加上同一把 `TURN_SECRET` 與 `TURN_URLS`、重建轉送服務的容器
+- 自架的 TURN（`tools/coturn/`，還沒上線，等 VPS）：coturn 4.15.0（鎖定 digest），用 docker compose 在 VPS 上執行（主機的網路，中繼用一整段 UDP port）。帳密用 coturn 的 TURN REST API，轉送服務用共用密鑰自己簽（`server/turn.ts` 的 `coturnIce`），不必連線。`relay.env` 設了 `TURN_SECRET` 與 `TURN_URLS` 時優先用 coturn，否則用 Cloudflare Realtime。設定照 #104：`denied-peer-ip` 擋掉全部、`allowed-peer-ip` 只放自己的公開 IP，中繼只能轉到自己的中繼位址，不能拿來連其他主機。`no-tcp-relay` 關掉 TCP 的中繼（資料通道與視訊只用 UDP），否則可以經過它連到這台自己的公開 IP 上、防火牆沒有對外開放的 TCP 服務。2026-10-21 在 m6 的 Tailscale 位址上起暫時的 coturn 驗證過：兩端都走 TURN 時連得上，一端不走 TURN 時 12 秒內連不上。4.15.0 起 `no-cli` 已經淘汰，命令列介面預設關閉。上線的步驟：開 VPS（只做 DNS 解析的子網域）、申請憑證放進 `/srv/gears-turn/certs/`、`turnserver.conf` 填好子網域與公開 IP 與密鑰、防火牆開 3478（UDP、TCP）、443（TCP）與中繼的 port、m6 的 `relay.env` 加上同一把 `TURN_SECRET` 與 `TURN_URLS`、重建轉送服務的容器
 - 速度（2026-10-21，Chromium，兩端在同一台電腦，每種條件 3 次的中位數）：資料通道不經過 TURN 每秒約 37 MB，經過 Cloudflare 的 TURN 走 UDP 約 2.8 MB、走 TCP 3478 約 0.4 MB、走 TLS 443 約 0.5 MB，經過 m6 上的 coturn（Tailscale）約 1.2 MB，經過轉送服務約 6.9 MB（這台電腦離 m6 近，轉送服務占了便宜）。調整過的條件都沒有穩定的改善：每則訊息 16 KB 約 2.2 MB、256 KB 約 3.8 MB，緩衝門檻 1 MB 約 1.5 MB、16 MB 約 1.9 MB，2、4、8 條連線並行約 1.2、3.4、2.6 MB。瓶頸在 TURN，所以檔案預設走轉送服務（`direct.ts` 的 `FILES_OVER_DIRECT`），不建立資料通道，雙方的 IP 只在開始視訊時才交給 TURN。自架的 TURN 上線、量過比較快之後再打開（#104）
 - 視訊通話（`src/tools/remote/call.ts`）：每一通另外建一個只有影音的 `RTCPeerConnection`，不跟檔案的資料通道共用，也不必重新協商。邀請（`ring`）、接聽（`pick`）、掛斷與拒絕（`bye`）、SDP（`coffer`、`canswer`）與候選（`ccand`）都走加密過的信令那一條，每則帶這一通的編號 `n`。發起的一端先取得相機與麥克風才送出邀請，接聽的一端按下接聽才取得，權限被拒時不接通。對方接聽之後由發起的一端送 offer。一次只有一通，兩端同時按下時編號大的那一通算數，另一端改當接聽的人。onion 版、沒有 WebRTC 或相機 API 的瀏覽器、伺服器沒有發 TURN 時不能打，收到邀請時回 `bye` 加上 `why: "unsupported"`，打的一端說明對方無法視訊。舊版的頁面不認得這些信令，直接丟掉，打的一端 45 秒後顯示沒有接聽。關掉麥克風或鏡頭是把軌道停用（`enabled = false`），不必重新協商。整個連線結束時通話一起結束、相機與麥克風停掉。工具的 meta 因此標了 `camera`
-- 瀏覽器測試的轉送服務設 `RELAY_TEST_ICE=all`：不發 TURN、允許區網的位址，Chromium 在同一台機器上打得開資料通道。`FILES_OVER_DIRECT` 打開時另外測傳到一半把 `RTCPeerConnection` 關掉、改走轉送服務重傳。視訊通話在 `tests/e2e/remote-call.spec.ts`，只在 Chromium 執行（`--use-fake-device-for-media-stream` 提供假的相機與麥克風），測邀請、接聽、關掉鏡頭與麥克風、掛斷、拒絕與兩端同時按下。其他核心在 CI 上可能蒐集不到候選，逾時之後走轉送服務
+- 瀏覽器測試的轉送服務設 `RELAY_TEST_ICE=all`：不發 TURN、允許區網的位址，Chromium 在同一台機器上打得開資料通道。`all` 會讓兩端交出自己的位址，頁面只在轉送服務是本機（localhost）時接受，正式的網域收到時當成沒有 TURN（`relay-client.ts`）。`FILES_OVER_DIRECT` 打開時另外測傳到一半把 `RTCPeerConnection` 關掉、改走轉送服務重傳。視訊通話在 `tests/e2e/remote-call.spec.ts`，只在 Chromium 執行（`--use-fake-device-for-media-stream` 提供假的相機與麥克風），測邀請、接聽、關掉鏡頭與麥克風、掛斷、拒絕與兩端同時按下。其他核心在 CI 上可能蒐集不到候選，逾時之後走轉送服務
 - 連結只讀 `#` 後面，clearnet 與 onion 的連結都能貼到任何一邊的 Gears。clearnet 的頁面另外給 onion 的連結，onion 的頁面不給 clearnet 的（onion 版的產物不放 clearnet 的網址，`scripts/check-site.mjs`），改說明請對方把連結貼進一般瀏覽器的 Gears
 - 轉送服務跟網頁在同一個網域（clearnet 的 `/gears/relay/`、onion 的 `/relay/`），CSP 的 `'self'` 就涵蓋。瀏覽器測試由 `playwright.config.ts` 另外起打包好的轉送服務（port 8791），預覽伺服器把 `/gears/relay/` 轉過去（`vite.config.ts` 的 `preview.proxy`）
 - 瀏覽器測試（`tests/e2e/remote.spec.ts`）用兩個 context 當作兩個人：打開連結按加入、確認碼相同、接收之後放進暫存區，貼上連結（包括 onion 的）加入與拒絕，金鑰不對時說明連結不完整，用過的連結不能再用。斷線接回來的情境在單元測試
 
 - 流程：一端開房間取得房間代碼與 token，另一端用房間代碼加入，配對之後兩端送的二進位訊息由伺服器原樣轉給對方。伺服器送來的文字仍是控制訊息（`away`、`back`、`gone`、`error`），兩端要送文字時包成框（第一個位元組分文字與二進位）。`RelayLink` 實作 `Channel`，面對面傳送的 `transfer.ts` 直接用
 - 這一層不加密，送出的內容伺服器看得到，傳檔案一律包上兩端之間的加密（`src/tools/remote/secure.ts` 的 `secure()`）
-- 兩端之間的加密：連結金鑰 K（32 位元組）由開房的一端產生，放在分享連結的 `#` 後面。配對之後兩端用明文交換暫時的 X25519 公鑰，共同推出的值當輸入、K 當 salt，用 HKDF-SHA256 導出每個方向一把金鑰（info 帶版本與兩端的公鑰），之後每則訊息包成框再用 AES-256-GCM 加密，nonce 是遞增的序號。第一則加密的訊息是 ready，K 不對時兩端都在這裡停下來。確認碼由兩端的公鑰算出（沿用面對面傳送的 `confirmCode`）。順序不對、被丟掉、重送或被改過的訊息都解不開，通道關閉。斷線重連之後序號對不上，要重新握手（同一個 K、新的暫時金鑰），hello 帶著 `epoch`，上一段連線還在路上的二進位訊息與比較舊的 hello 在握手時略過。只用純 JavaScript，Tor Browser 關掉 WebAssembly 的安全等級也能用，Node 上每秒約加密 100 MB
+- 兩端之間的加密：連結金鑰 K（32 位元組）由開房的一端產生，放在分享連結的 `#` 後面。配對之後兩端用明文交換暫時的 X25519 公鑰：開房的一端先送公鑰的雜湊，收到對方的公鑰才揭露自己的，加入的一端確認揭露的公鑰跟雜湊相符（握手的版本 2，2026-11-19 起）。確認碼只有 6 位數，版本 1 兩端同時送出公鑰，知道連結金鑰又在轉送路徑上的人看到雙方的公鑰之後，試一百萬把金鑰就能讓兩邊的確認碼相同。新舊版本的頁面相遇時兩端都顯示版本不同，請讀者重新整理。共同推出的值當輸入、K 當 salt，用 HKDF-SHA256 導出每個方向一把金鑰（info 帶版本與兩端的公鑰），之後每則訊息包成框再用 AES-256-GCM 加密，nonce 是遞增的序號。第一則加密的訊息是 ready，K 不對時兩端都在這裡停下來。確認碼由兩端的公鑰算出（沿用面對面傳送的 `confirmCode`）。順序不對、被丟掉、重送或被改過的訊息都解不開，通道關閉。斷線重連之後序號對不上，要重新握手（同一個 K、新的暫時金鑰），第一次握手導出的秘密（`chain`）算進之後每一次握手的 salt：讀者只核對第一次的確認碼，不綁在一起的話，知道連結金鑰的中間人可以等兩人核對完、讓連線斷一次，在重新握手時才介入。第一次握手只有一端完成就斷線時（很少見），兩端接回來會在 ready 停下來，要重新產生連結。hello 帶著 `epoch`，上一段連線還在路上的二進位訊息與比較舊的 hello 在握手時略過。只用純 JavaScript，Tor Browser 關掉 WebAssembly 的安全等級也能用，Node 上每秒約加密 100 MB
 - 續傳（`src/tools/remote/session.ts` 的 `RemoteSession`，實作 `Channel`，傳輸的流程不知道中間斷過線）：每一段連線先握手，送出的訊息依序編號、留在送出端的記憶體裡，對方回 ack（每 16 則或閒下來 200 毫秒）才放掉，還沒 ack 的超過 8 MB 時 `drained()` 等。接回來握手之後兩端先互報收到的最後一個編號（`sync`），收到對方的 `sync` 之前不送資料，之後從下一則重送，重複的略過，跳號就停下來。自己斷線時自動接回去（間隔 0、1、2、4、8、15 秒），手機切回前景時 `reconnectNow()` 馬上試，房間已經關了就結束。留著重送的是讀者自己的記憶體，伺服器仍然不保存
 - 續傳的單元測試（`tests/unit/remote-session.spec.ts`）經過真的轉送服務：送出端與接收端傳到一半斷線、兩端輪流斷四次、伺服器還沒發現舊連線斷了讀者就接回來、還沒 ack 的量不超過 8 MB、對方結束、斷線太久房間關閉、連結金鑰不對。檔案都比對到每一個位元組
-- 加密的單元測試（`tests/unit/remote-secure.spec.ts`）：確認碼相同、途中只看得到公鑰與密文、K 不對、內容被改丟重送、知道 K 的中間人讓確認碼對不上、不知道 K 的中間人換掉公鑰，以及經過轉送服務加密傳完一份檔案
+- 加密的單元測試（`tests/unit/remote-secure.spec.ts`）：確認碼相同、途中只看得到公鑰與密文、K 不對、內容被改丟重送、知道 K 的中間人讓確認碼對不上、不知道 K 的中間人換掉公鑰、揭露的公鑰跟雜湊不同、加入的一端不先送公鑰、遇到舊版的握手、重新握手時沒有參與第一次握手的人接不進來，以及經過轉送服務加密傳完一份檔案
 - 斷線：用 1000 關閉代表離開，房間跟著關閉。其他的斷線（手機切到背景、網路中斷）對方收到 `away`，5 分鐘內用房間代碼與自己的 token 接回來（`resume`），對方收到 `back`。對方不在時送的直接丟掉，要靠上層的續傳補回來。每次有一端接回來，房間的 `epoch` 加一，兩端在 `resumed` 與 `back` 收到同一個數字（對方沒發現有一端斷過時也收到 `back`）。`RelayLink.epoch()` 取得目前那一段連線的 `Channel`，換了一段之後，舊的收不到也送不出。伺服器每 20 秒 ping 一次，找出斷了卻沒有送出關閉的連線，也讓 Cloudflare 不會把閒置的 WebSocket 關掉
-- 限制（`DEFAULTS`）：一則訊息 256 KB、沒人加入的房間 30 分鐘、配對之後最長 6 小時、同時 200 個房間、每個房間轉送 3 GB、同一個鍵 10 分鐘內開 20 個房間（onion 共用一個鍵，300 個）。連上之後 10 秒內沒送控制訊息、版本不對、配對之後送文字都會被斷線
+- 限制（`DEFAULTS`）：一則訊息 256 KB、沒人加入的房間 30 分鐘、配對之後最長 6 小時、同時 200 個房間、每個房間轉送 3 GB、同一個鍵 10 分鐘內開 20 個房間（onion 共用一個鍵，300 個），從 onion 開的房間同時最多 100 個（`roomsOnion`，2026-11-19 起，原本單一個 onion 的讀者就能把 200 個房間佔滿）。clearnet 的鍵是 IP 位址，IPv6 只取前 64 位元（`clientKey`），同一段 /64 換位址不算新的鍵。連上之後 10 秒內沒送控制訊息、版本不對、配對之後送文字都會被斷線
 - 不保存、不記錄：訊息只在轉給對方的途中經過記憶體，不寫進磁碟。房間只在記憶體裡，開房次數時間到就清掉，log 只寫啟動與程式的錯誤，nginx 的這兩個 location 也不記 access log
 - 部署：`vite.server.config.ts` 連同 `ws` 打包成單一個 `dist-server/relay.mjs`，`deploy.yml` 推到 `build` 分支的 `server/`，推送前用 `scripts/check-relay.mjs` 實際開房、配對、轉送一次。m6 用 docker compose 在 `node:24-slim`（鎖定 digest）的容器裡執行（`tools/relay-compose.yml`，主機用 apt 裝的 Node.js 是 18，不拿來執行），只聽本機的 8790，根目錄唯讀。拉取腳本發現 `server/` 有更新時重建容器。`ws` 只給轉送服務用，放在 devDependencies，不進網頁的執行期相依
-- nginx：clearnet 是 `/gears/relay/`，經過 Cloudflare（內容由兩端另外加密，Cloudflare 只經手密文，告知畫面要寫明），onion 是 `gears.<onion>/relay/`，兩個入口接到同一個程序，一端走 clearnet、一端走 onion 也配得起來。`X-Relay-Client` 帶計算開房次數用的鍵：clearnet 用 Cloudflare 的 `CF-Connecting-IP`，onion 一律是 `onion`（`tools/nginx-gears.conf`）。上線時把這兩個 location 加進 m6 的設定
+- nginx：clearnet 是 `/gears/relay/`，經過 Cloudflare（內容由兩端另外加密，Cloudflare 只經手密文，告知畫面要寫明），onion 是 `gears.<onion>/relay/`，兩個入口接到同一個程序，一端走 clearnet、一端走 onion 也配得起來。`X-Relay-Client` 帶計算開房次數用的鍵：clearnet 用 Cloudflare 的 `CF-Connecting-IP`，onion 一律是 `onion`（`tools/nginx-gears.conf`）。這個標頭誰都能自己帶，能直接採信是因為 m6 上 anoni.net 的 server block include 了 `cloudflare-allow.conf`，不經過 Cloudflare 的外部連線在 nginx 就被擋下。2026-11-19 曾在範本另外抄一份 Cloudflare 的網段來判斷，跟 m6 既有的那一份重複，當天收回。上線時把這兩個 location 加進 m6 的設定
 - 單元測試（`tests/unit/relay.spec.ts`）在 Node 裡起轉送服務、用真的 WebSocket 連線：配對與轉送、面對面傳送的傳輸流程經過轉送（含 24 MB 的檔案）、斷線重連、等太久關閉、各種拒絕與限制
 
 ## QR code 的內容格式
@@ -466,15 +542,27 @@ ProofMode（Guardian Project 給人權紀錄者的 Android App）拍照時不改
 
 - 可以直接修正（`FIXABLE`）：表情符號與顏文字、笑聲（哈哈哈、XD、www）、誇張的標點（!!!、~~、...）、中文句子裡的半形標點、"" 與 “” 換成「」、全形英數、排版（段首空格、用空格斷句、連續空行）。只動標點、空白與符號。刪掉表情符號時兩邊都是文字就補一個逗號，避免兩句接成一句。修正一次可能讓另一個習慣浮出來，最多重做三次
 - 需要讀者自己改：句尾語助詞與句首發語詞（啦、喔、欸）、口頭禪（`老實說`、`說真的`，以及用到三次以上的 `其實`、`然後`）、中英夾雜（常見的詞附上中文說法，單一個字母不算）、中國用語與粵語用字（附上台灣書面語的說法）、注音文、個資（電話、Email、身分證字號，規則與遮蔽的自動尋找共用 `findPiiInText`）
-- 有建議寫法的項目（語助詞、口頭禪、附了中文說法的英文詞、中國用語、粵語用字）可以逐項套用，同樣的寫法出現好幾次時一起改，一組裡有兩種以上的寫法時可以整組套用（`applyHabits`）。只改讀者選的那幾處，換上中文時拿掉夾在中文之間的空白。沒有一次全部套用的按鈕，每一處修改都由讀者按下，修正與套用可以一步一步復原。用到三次的「其實」、注音文、個資沒有建議寫法，只標出來 <!-- docs-style-lint: disable-line -->
+- 有建議寫法的項目（語助詞、口頭禪、附了中文說法的英文詞、中國用語、粵語用字）可以逐項套用，同樣的寫法出現好幾次時一起改，一組裡有兩種以上的寫法時可以整組套用（`applyHabits`）。只改讀者選的那幾處，換上中文時拿掉夾在中文之間的空白。沒有一次全部套用的按鈕，每一處修改都由讀者按下，修正與套用可以一步一步復原。用到三次的「其實」與注音文沒有建議寫法，只標出來 <!-- docs-style-lint: disable-line -->
+- 個資可以換成標示類別的代稱（`〔電話〕`、`〔Email〕`，英文版 `[phone]`），2026-11-19 起。原本只標出、不給建議，讀者要自己一處一處改，貼上文字的路徑沒有一個地方能交出已經換掉個資的文字。代稱跟著介面的語系，由畫面透過 `tagPii` 傳給規則，純邏輯不碰 i18n。代稱的括號跟中文一樣，換上時拿掉兩邊夾在中文之間的空白。同一類的個資換成同一個代稱，分不出是第幾支電話，要區分時讀者自己改
+- 讀者可以自己指定要換掉的字（`replaceTerm`，2026-11-19 起）：輸入「林組長」、選類別（人名、單位、地點、其他），全文出現的地方一次換成同一個代稱，例如 `〔人名 A〕`。人名、單位與地點沒有固定格式，規則找不到，個資辨識模型（#139）上線之前只能靠讀者指定。表單在 `src/ui/AliasForm.tsx`，逐字稿也用同一份。字母依類別各自從 A 開始，用 `nextAlias` 找文字裡還沒用過的下一個，所以同一個人換一次就好，不同的人自動分開。已經換上的代稱與個資的代稱（`keep`）裡面的字不會被換掉，也不會被標成寫作習慣。只有一個字時，其他詞裡的同一個字也會被換掉（「林」與「林口」），訊息裡提醒讀者再讀一次。跟其他修改一樣可以復原
+- 有文字時，畫面最下面列出工具找不到的線索（`style.clues.<n>`，數量是 `CLUES`）：人名與稱呼、職稱與單位、精確的時間與地點、少數人知道的事件、引述的原話、跟讀者有關的數字與特徵。讀者逐項讀過再勾起來，勾選不記住。項目是社群自己整理的，參考 TAB（Text Anonymization Benchmark）對間接識別符的說明與英國 ICO 的「動機明確的入侵者」，標準與研究的整理在社群工作區的 `research/gears-pii/02-text-deid-standards.md`。還沒貼上文字時只顯示一句提醒（`style.limit`）
 - 基準是台灣正體中文的書面語：中國用語與粵語用字標出來，台灣用語不標。地區用語只收意思不會混淆的，「程序」、「項目」、「支持」在台灣也用，不收
 - 比對的順序有意義，前面的先佔位，重疊的後者不算，例如網址裡的英文不算中英夾雜、ㄏㄏ算注音文
-- 畫面最下面寫明改變寫作風格不會拿掉內容透露的線索（只有作者知道的細節、時間、職位與單位）
 - `facts.ts` 的 `missingFacts` 比對改寫前後的數字（中文數字換成阿拉伯數字再比）、引號裡的原話與個資，給之後用語言模型改寫時檢查有沒有改掉事實。`addedNumbers` 反過來列出改寫後多出、原文沒有的數字，研究裡 Qwen3 4B 把「大概二十幾家分店」寫成「約二十三家」，捏造的精確數字跟少了數字一樣危險。原文那一邊放寬認定，冠詞的「一個」、列舉的「一、」與序數的「第三」都算，改寫成阿拉伯數字時不會被標出來。社群工作區的 `research/gears-llm/` 用同一套規則評測模型，規則改了評測的數字也會跟著變
+
+## 協助測試
+
+`/gears/testing/`（`src/ui/TestingPage.tsx`，2026-11-20 起）列出社群需要讀者用自己的裝置幫忙的測試。模型要在讀者手上的手機與電腦都能用，iPhone 線的參數只能靠真機的數字（見「支援的瀏覽器」），社群自己只有幾台裝置。原本只有裝置量測頁，讀者打開之後不知道社群想要哪些機型、要按哪幾個按鈕、送出前要補什麼，量測頁上線一個月只收到 2 筆，都是 Mac。
+
+- 每一項測試是 `REQUESTS` 的一筆：為什麼需要、需要的裝置、測試的步驟、要打開的頁面與 anoni-net/gears 上整理結果的 issue。字串是 `testing.<id>.*`，項目與步驟的數量寫在 `REQUESTS`，瀏覽器測試（`tests/e2e/testing.spec.ts`）確認沒有露出字串的鍵
+- 步驟照畫面上的按鈕名稱寫（`bench.ocr.start`、`bench.send.button` 這類），改了按鈕的字串時一起改
+- 測試結束就把那一筆與字串拿掉，頁面最下面的更新日期（`testing.updated`）跟著改。頁面一律留著「使用時遇到的問題」，連到建議與回饋，請讀者不要附上真實的照片或文件
+- 第一項是手機上的模型量測（#144）：個資辨識（#187 上線前要知道手機能不能載入）與文字辨識，機型照 #144 的記憶體分級。Safari 的 `userAgent` 不一定帶著真實的 iOS 版本，所以請讀者在備註寫機型與系統版本
+- 入口在桌面的使用者區（`USER_PAGES`，圖示 `cellphone-check`）。不是實驗頁，搜尋引擎可以收錄，對外徵求測試時連到這一頁，不直接連裝置量測
 
 ## 裝置量測（實驗頁）
 
-`/gears/bench/`（`src/ui/BenchPage.tsx`，#157）在讀者的瀏覽器裡量 Gears 用到的模型要多久，給社群收集手機、平板與舊電腦的數字（#144），模型能不能上線、預設值怎麼訂都看這些數字。目前有文字辨識與語言模型兩個區塊，各自執行，結果合成一份 JSON，讀者確認過內容之後送給社群，或按「複製結果」保留。只用內建的範例，不讀暫存區的檔案。
+`/gears/bench/`（`src/ui/BenchPage.tsx`，#157）在讀者的瀏覽器裡量 Gears 用到的模型要多久，給社群收集手機、平板與舊電腦的數字（#144），模型能不能上線、預設值怎麼訂都看這些數字。目前有文字辨識、個資辨識與語言模型三個區塊，各自執行，結果合成一份 JSON，讀者確認過內容之後送給社群，或按「複製結果」保留。只用內建的範例，不讀暫存區的檔案。
 
 - 實驗頁的清單是 `src/pages.ts` 的 `labIds`：不進 sitemap，頁面帶 `<meta name="robots" content="noindex">`。入口在桌面最下面的使用者區（`USER_PAGES`），名稱寫「裝置量測（實驗）」（`PAGE_META` 的 `label`），2026-10-23 以前只從頁尾連過去
 - 原本只量語言模型，網址是 `/gears/llm-bench/`。實驗頁沒有對外連結過，舊網址不轉址，打開是找不到這一頁
@@ -483,7 +571,7 @@ ProofMode（Guardian Project 給人權紀錄者的 Android App）拍照時不改
 - 結果的 JSON 帶 `schema`（格式有變時加一）、Gears 的版本與 commit、裝置資訊、`userAgent` 與各區塊的數字，畫面上可以展開看複製的內容。讀者在語言模型區塊自己輸入的文字，連同它的改寫與從裡面取出的數字、引述，都不放進去（`llmReport`）
 - 一次只執行一個區塊（`BenchPage` 的 `busy`），量測中不出現換版本的提示（`useWorking`）
 - 記憶體不夠時 iOS 的 Safari 會直接重新載入分頁，量測的結果一筆都不剩（2026-10-24 在 iPhone 15 Pro、iOS 26 的 Safari 下載 Gemma 4 E2B 時遇到）。語言模型開始量測時把模型、裝置與精度記在 `history.state`（`gears-bench-running`，做法同 `src/ui/offline.ts`，不寫進 localStorage），結束、失敗或按停止時清掉。重新載入之後還讀得到，就記成一筆 `error: "reloaded"` 的結果，畫面上說明可能是記憶體不夠，讀者可以照樣送出。只記一次
-- 手機與平板（iPadOS 的 WebKit 回報成 Macintosh，用觸控點分辨）選了下載量超過 1 GB 的模型時，開始之前先提醒可能會重新載入（`bench.mobileHint`）
+- 手機與平板（`src/ui/phone.ts` 的 `onPhone`，遮蔽的「找人名、地址與單位」也用它）選了下載量超過 1 GB 的模型時，開始之前先提醒可能會重新載入（`bench.mobileHint`）
 - 送給社群（`src/ui/BenchSubmit.tsx`，送出的內容在 `src/bench-submit.ts`）：讀者選裝置類型（必填），可以補上大約的年份、記憶體與備註，按下送出才送，不會自動送出。送到 Formbricks 的「Gears 裝置量測」問卷，跟建議與回饋同一個送出網址與 `sendFeedback`，CSP 不必另外開，onion 版一樣送到 onion 的表單伺服器。三個語系共用一份問卷，選擇題一律送正體中文的選項（`BENCH_DEVICES`、`BENCH_MEMORIES`），要跟社群工作區的 `formbricks/gears_bench_survey.py` 一字不差。量測結果的 JSON 放在 `report`，問卷的上限是 5 萬字（只量文字辨識約 3 KB，2026-10-23 實測 2 萬字的內容完整存進去）。同一份結果送過之後按鈕停用，換一種設定再量才能再送。整理在社群工作區（`formbricks/gears_bench.py`），不記錄提交的人是誰
 
 ### 文字辨識
@@ -495,6 +583,17 @@ ProofMode（Guardian Project 給人權紀錄者的 Android App）拍照時不改
 - 每張辨識 3 次取中位數（WebGPU 的第一次包含編譯 shader 的時間，是之後的四五倍），`recognize` 的 `timing` 分開記下偵測與辨識的時間。字錯率用第一次的結果，算法跟 #140 的評測相同（`cer`，不算空白），各種設定應該一樣，差很多時代表那個設定的結果有問題
 - 讀不到 canvas 時（Brave 的防指紋、Safari 無痕、Tor Browser）不能量，畫面上說明，結果的 `env.canvas` 記成 `false`
 - 2026-10-23 在 Apple M5 Pro 上的中位數（手機截圖）：Chromium 1 執行緒 1.30 秒、4 執行緒 0.49 秒、8 執行緒 0.35 秒、WebGPU 0.24 秒。Playwright 的 WebKit 是 1.27、0.50、0.33、0.28 秒，多執行緒沒有變慢，跟 #140 在 Safari 上量到的不同，要在真的 Safari 與 iPhone 上確認
+
+### 個資辨識
+
+找人名、地址、機構用的個資辨識模型（#139）在這台裝置上要多久、記憶體夠不夠（`src/ui/PiiBench.tsx`，Worker 是 `src/ui/pii-bench.worker.ts`，2026-11-19 起）。社群工作區的評測（`research/gears-pii/01-models.md`）選出 nym-pii 的 q4 版，跟規則合併之後找到約八成五的個資，但模型約 200 MB（經過 Cloudflare 的實際傳輸量），上線之前要先知道手機能不能用。
+
+- 模型是 `onnx-community/nym-pii-multilingual-ONNX`（MIT）的 q4 版，照原樣放在 assets.anoni.net 的 `nym-pii-7ce7f1a/`（附 `README.txt` 與授權全文，onion 版由同一個網站的 `/models/assets/` 提供），2026-11-20 以前從 Hugging Face 下載。Hugging Face 送的是原始大小 210.7 MB，超過 #139 的 200 MB 門檻，從自己的網域經過 Cloudflare 時 tokenizer 會壓縮，實際傳輸約 200 MB（權重檔是 `application/octet-stream`，Cloudflare 不壓縮，#187）。模型、檔案清單與每個檔案的 SHA-256 在 `src/tools/redact/pii-model.ts` 的 `PII_MODEL`，遮蔽也用同一份（見上方「個資辨識模型」）。載入與辨識在 `src/ui/pii-runtime.ts`，照語言模型的社群轉檔版：`env.remoteHost` 換成 `ASSETS_MODELS`，`env.fetch` 只下載清單上的檔案、用 `downloadVerified` 比對 SHA-256，模型目錄以外的請求一律不送，CSP 不必另外開。WebAssembly 用 `?url` 從自己的網域載入，檔案存在 `transformers-cache`，「已下載的模型」另外列成一列。2026-11-21 起每段的時間包含詞元對回原文（遮蔽實際用的流程），之前只量模型本身，兩者差幾毫秒
+- 設定：CPU 1 個執行緒、4 個執行緒（要 cross-origin isolation）與顯示卡。每種設定換一個 Worker，三段虛構的範例文字（聊天訊息、通知單、中英夾雜，`PII_SAMPLES`）各辨識 3 次取中位數，另外記下載入時間與這次實際下載的位元組
+- Transformers.js 4.3 的 `token-classification` 不回傳字元位置，詞元對回原文的做法照研究的 `eval/pii-model.mjs` 移植成 `align`、`groupSpans`（`src/tools/redact/pii-model.ts`，單元測試在 `tests/unit/pii-model.spec.ts`）。範例文字與 `foundCount` 留在 `src/tools/bench/pii.ts`。「找到」是範例文字裡應該找到的人名、地址、單位、電話與 Email 找到幾個（`foundCount`，一半以上的字被蓋住才算），用來確認每種設定的結果一樣，評測在社群工作區
+- 手機記憶體不夠時，系統會把分頁重新載入，量測的結果跟著不見（2026-10-24 Gemma 4 E2B 在 iPhone 15 Pro 上就是這樣）。開始每一種設定之前在 `history.state` 記下設定（`gearsPiiBench`），做完或停止時清掉。打開頁面時記號還在，代表上一次量到一半被重新載入，結果多一筆 `crashed: true`，讀者照樣可以送出。`history.state` 只在這個分頁裡，不寫進 localStorage
+- 結果的 JSON 多一個 `pii`（`schema` 從 1 變 2），只有設定、時間、詞元數與找到幾個，範例文字與找到的範圍不放進去
+- 2026-11-19 在 Apple M5 Pro 的 Chromium（正式建置）實測：下載 210.7 MB，載入 14.8 秒，單執行緒每段 0.24 到 0.39 秒，13 處找到 12 處
 
 ### 語言模型
 
@@ -529,7 +628,7 @@ ProofMode（Guardian Project 給人權紀錄者的 Android App）拍照時不改
 - 推論在 Web Worker（`src/ui/transcribe.worker.ts`）用 Transformers.js 執行。關掉 Hugging Face 的下載（`allowRemoteModels`）與 Transformers.js 自己的快取（`useBrowserCache`、`useWasmCache`），請求不寫 HTTP 快取（`cache: "no-store"`，模型檔最大 157 MB，無痕視窗的記憶體快取寫不下時整個請求會失敗）
 - Transformers.js 帶著自己的 onnxruntime-web（1.31.0 的開發版，跟找人臉的 1.30.0 分開），不指定的話會從 jsDelivr 的 CDN 載入 WebAssembly。Worker 不受頁面 meta 標籤的 CSP 約束，請求真的會送出去，所以用 `?url` 匯入它那一份 WebAssembly，從自己的網域載入。預覽伺服器也用標頭送 CSP，部署時 nginx 一樣要送（見下方「部署」）
 - 語音偵測：Whisper 在靜音上會產生重複的幻覺文字（實測 base 對 5 秒的靜音輸出「你懂你懂……」直到長度上限）。先用音量找出說話的段落，裝成不超過 30 秒的片段（裝得下就連同停頓放在一起，Whisper 不管片段多短都補到 30 秒再算），只把這些片段送進模型。每個片段依長度限制最多產生的詞元數。整理結果時拿掉靜音段落、短短一段的字幕標語（「字幕製作」、「請不吝點讚」這類），收掉重複的迴圈（`src/tools/transcribe/segments.ts`，有單元測試）
-- 語言由讀者選（`src/tools/transcribe/languages.ts`）：華語、台語、粵語、英語、日語、韓語、越南語、泰語、印尼語、馬來語、菲律賓語、緬甸語、高棉語、寮語、孟加拉語、尼泊爾語、蒙古語。畫面先選語言，再列出這個語言能用的模型（`models.json` 的 `languages`），泰語預設用泰語模型、台語只有 Breeze-ASR-26，其他語言預設 small。台語傳給 Whisper 的語言代碼是 `zh`。粵語在 Transformers.js 沒有語言代碼，只列 large-v3-turbo、指定 `zh`，輸出書面中文（FLEURS 粵語字錯率 8.8%，不指定語言時會翻成英文），口語用字可能被改寫成書面語，畫面上說明。換語言時回到這個語言預設的模型。Transformers.js 4.3.1 沒有實作 Whisper 的語言偵測，不指定語言時一律當成英文，華語的錄音會直接翻成英文（原本的「自動判斷」就是這樣壞掉的）。粵語在 Transformers.js 沒有語言代碼，等另外的模型
+- 語言由讀者選（`src/tools/transcribe/languages.ts`）：華語、台語、粵語、英語、日語、韓語、越南語、泰語、印尼語、馬來語、菲律賓語、緬甸語、高棉語、寮語、孟加拉語、尼泊爾語、蒙古語。畫面先選語言，再列出這個語言能用的模型（`models.json` 的 `languages`），泰語預設用泰語模型、台語只有 Breeze-ASR-26，其他語言預設 small。台語傳給 Whisper 的語言代碼是 `zh`。粵語在 Transformers.js 沒有語言代碼，只列 large-v3-turbo、指定 `zh`，輸出書面中文（FLEURS 粵語字錯率 8.8%，不指定語言時會翻成英文），口語用字可能被改寫成書面語，畫面上說明。換語言時回到這個語言預設的模型。Transformers.js 4.3.2 沒有實作 Whisper 的語言偵測，不指定語言時一律當成英文，華語的錄音會直接翻成英文（原本的「自動判斷」就是這樣壞掉的）。粵語在 Transformers.js 沒有語言代碼，等另外的模型
 - 簡體轉台灣正體與台灣慣用詞：`opencc-js` 的 `cn2t`（cn → twp），在 Worker 裡用到時才載入。只在選華語、台語、粵語時轉，半形標點換成全形也是。粵語用香港的字形（裏、着、麪，`chineseVariant`），日文的漢字與其他語言的標點不動。Breeze 本來就輸出正體字（`models.json` 的 `traditional`），不再轉
 - 同時使用的 CPU 核心讀者自己選（1、2、4、8、12、16），預設值依瀏覽器回報的核心數決定（`src/tools/transcribe/threads.ts`，有單元測試）。多執行緒要頁面在 cross-origin isolation 底下（COOP 與 COEP 標頭），換核心數時換一個新的 Worker（onnxruntime 第一次載入時就決定了執行緒數）。實測差距很大：15 核心的 MacBook Pro 上，同一段錄音 4 個核心要 40 分鐘、8 個 8 分鐘、12 個 4 分鐘（這台開發機在其他程式同時執行、負載很高時量到的差距小很多，不準）。`navigator.hardwareConcurrency` 只會比實際少：Brave 回報 2 到真實數字之間的隨機數，Safari 桌機最多回報 8、iPhone 一律回報 2，Firefox 防指紋時固定回報 2。所以回報 12 以上就用 12，Chrome 這類回報真實數字的用不超過它的最大選項，數字不可信的用 8，iPhone、iPad 用 4，Firefox 用 1（見下方推論環境停住的說明）
 - 切成好幾段的模型檔（`src/core/models.ts` 的 `joinParts`，有單元測試）：社群轉檔的大模型放在 assets.anoni.net，前面是 Cloudflare，免費方案的單一檔案快取上限是 512 MB。超過的檔案用 `node scripts/split-model.mjs <檔案> [每段的 MB]` 切成 `<檔名>.part0`、`.part1`…（預設每段 400 MB），把印出的內容填進 `models.json` 該模型的 `parts`（每段都要在 512 MB 以下，`tests/unit/transcribe.spec.ts` 會檢查）。Worker 依序下載每一段、比對 SHA-256，直接寫進預先配置好的一整塊記憶體，接回來的就是原本的檔案，再交給 Transformers.js。「已下載」看最後一段在不在快取裡
@@ -545,6 +644,7 @@ ProofMode（Guardian Project 給人權紀錄者的 Android App）拍照時不改
 - 用 Whisper 的段落當單位，不另外執行分段模型：研究時比較過 pyannote 的分段、固定視窗與音量偵測，Whisper 的段落最準。換人點落在同一段裡時，那一段只能整段標給一個人，兩人同時說話時也只標一位。實測（base 模型，在畫面上用四位朗讀者剪接的錄音）兩人的錄音 71 段、三人的困難組（切在句子中間、沒有停頓就換人）130 段，人數都估對，以段落計標對 96.6% 與 93.7%
 - CAM++ 的 ONNX 檔取自 sherpa-onnx 的 release，來源與 SHA-256 寫在 `src/tools/transcribe/speaker-model.json`，`node scripts/fetch-whisper.mjs` 一起下載到 `public/models/speaker/`。存進跟 Whisper 同一個不隨版本清掉的快取
 - `src/ui/speaker-embed.ts` 跟 Transformers.js 共用同一份 onnxruntime（從同一個檔案路徑匯入，Vite 當成同一個模組），不另外下載 WebAssembly。這個檔案只能匯入 Transformers.js 與 onnxruntime，跟 Worker 共用的程式（模型清單、分群）由參數傳進來：打包時共用的程式會放進 Worker 的進入點，這裡再匯入它的話，WebKit 會把 Worker 的進入點當成另一份模組再執行一次，蓋掉 `onmessage`。瀏覽器測試會檢查建置產物裡沒有其他檔案匯入 Worker 的進入點
+- 自己指定要換掉的字（2026-11-19 起，#143 的後半裡不需要模型的部分）：轉完之後，讀者輸入「王經理」、選類別，逐字稿每一段裡的「王經理」都換成同一個代稱（`〔人名 A〕`），下載的 TXT、SRT、複製的文字與放進暫存區的檔案都跟著換，可以一步一步復原，重新轉一次時清空。表單跟寫作習慣檢查共用 `src/ui/AliasForm.tsx`，逐段替換是 `src/tools/writing-style/` 的 `replaceInParts`，時間與說話者不動。這支函式放在寫作習慣檢查的模組、不放在 `segments.ts`：`segments.ts` 也給 Worker 用，在那裡匯入寫作習慣檢查的規則會一起打包進 Worker。名字剛好被切在兩段之間時換不到，畫面上寫明。自動標出人名要等個資辨識模型（#139）
 - 失敗時在主控台印出錯誤訊息（不含錄音的內容），讀者回報問題時用
 
 ## 使用統計
@@ -580,7 +680,7 @@ ProofMode（Guardian Project 給人權紀錄者的 Android App）拍照時不改
 
 ## 建議與回饋
 
-讀者在「建議與回饋」許願新功能、回報問題，或寫下哪裡不好用（`/gears/feedback/`，畫面在 `src/ui/FeedbackPage.tsx`，送出在 `src/feedback.ts`）。原本叫「許願區」，回報問題放在許願底下不自然，2026-10-18 改名，許願新功能改寫在說明裡。入口有兩個：桌面最下面一行的「使用者區」，以及頁尾的「建議與回饋」。使用者區放跟 Gears 本身有關、不是工具的頁面（`src/ui/tool-meta.ts` 的 `USER_PAGES`），目前是範例、建議與回饋、已下載的模型與裝置量測，之後的設定也放這裡。2026-10-19 起桌面改成清單，使用者區從一組卡片縮成一行連結，畫面上不寫「使用者區」這個標題，只留給讀螢幕軟體（`aria-label`）。
+讀者在「建議與回饋」許願新功能、回報問題，或寫下哪裡不好用（`/gears/feedback/`，畫面在 `src/ui/FeedbackPage.tsx`，送出在 `src/feedback.ts`）。原本叫「許願區」，回報問題放在許願底下不自然，2026-10-18 改名，許願新功能改寫在說明裡。入口有兩個：桌面最下面一行的「使用者區」，以及頁尾的「建議與回饋」。使用者區放跟 Gears 本身有關、不是工具的頁面（`src/ui/tool-meta.ts` 的 `USER_PAGES`），目前是範例、建議與回饋、協助測試、已下載的模型與裝置量測，之後的設定也放這裡。2026-10-19 起桌面改成清單，使用者區從一組卡片縮成一行連結，畫面上不寫「使用者區」這個標題，只留給讀螢幕軟體（`aria-label`）。
 
 - 表單由 Gears 自己畫，送到社群自架的 Formbricks（`form.anoni.net`），用它給網頁用的公開 API（`/api/v1/client/<環境>/responses`），不需要金鑰。不嵌入 Formbricks 的頁面：整個網站送了 `Cross-Origin-Embedder-Policy: require-corp`，別的網站的頁面嵌不進來，讀者也不必認識另一個服務。畫面上不提 Formbricks
 - CSP 的 `connect-src` 只開送出的那一個路徑（`FEEDBACK_ENDPOINT_CLEARNET`，meta 標籤與標頭都有）。onion 版送到 `form.<onion>` 的同一個路徑（`FEEDBACK_ENDPOINT_ONION`），兩個網址分成兩個常數，建置時沒用到的會被拿掉，onion 版的產物裡沒有 clearnet 的網址
@@ -619,7 +719,7 @@ ProofMode（Guardian Project 給人權紀錄者的 Android App）拍照時不改
 - 用到時才存的這些檔案放在不隨版本清掉的快取（`gears-keep`，#142）。工作台一天常部署好幾次，原本放在隨版本清掉的快取，每次換版本之後第一次找人臉或個資都要重新下載約 23 MB。網址不變，建置時 `vite.config.ts` 的 `serviceWorker()` 替每個檔案算內容的雜湊，寫進 `sw.js` 的 `LAZY`，service worker 存的時候在回應加上 `x-gears-hash`。讀的時候雜湊對不上就重新下載，新版本接手時刪掉內容變了或不在清單上的。存進去的內容已經解壓縮，原本的 `content-encoding` 與 `content-length` 拿掉。這份清單也算進 service worker 的版本，只換了用到時才存的檔案時一樣會換一版
 - 逐字稿的 Whisper 模型存在另一個不隨版本清掉的快取（`gears-models`），換新版本時不必重新下載 80 到 250 MB。網址帶著模型的版本，清單以外的在新版本接手時刪掉。畫面上標出已下載的模型，可以刪除
 - 模型檔的下載、比對 SHA-256、切段與這個快取共用 `src/core/models.ts`（#142）：`downloadVerified` 下載並比對，`cachedModel` 先找快取、同一個檔案同時有好幾個請求時共用一次下載、存不進去時這次照樣使用，`isCached`、`removeCached` 給畫面判斷「已下載」與刪除。逐字稿、sherpa-onnx 與裝置量測的語言模型的 Worker 都用它，量測頁只用下載與比對，快取留給 Transformers.js。分辨說話者的 `speaker-embed.ts` 只能匯入 Transformers.js 與 onnxruntime（見上方「逐字稿」），不用這裡，靠 service worker 快取
-- 已下載的模型（`/gears/storage/`，畫面在 `src/ui/StoragePage.tsx`，分類在 `src/core/storage.ts`，#142）：讀 `gears-models`、`gears-keep` 與量測頁的 `transformers-cache`，逐字稿的模型一個一列，其他依用途分列（分辨說話者、找人臉、辨識文字、執行模型的程式、pdf.js 的資料、驗證內容憑證），列出大小，可以逐列刪除或全部刪除，刪除之後下次用到時再下載。工作台本身的頁面與程式（`gears-<版本>`）是離線使用要用的，不列進來。大小用快取裡每個回應的 `blob().size` 加總，快取的內容在磁碟上，不會整個讀進記憶體。不能用 Cache API 時（私密瀏覽、Tor Browser）說明每次都要重新下載。入口在桌面的使用者區，逐字稿畫面原本的「刪除模型」保留
+- 已下載的模型（`/gears/storage/`，畫面在 `src/ui/StoragePage.tsx`，分類在 `src/core/storage.ts`，#142）：讀 `gears-models`、`gears-keep` 與 `transformers-cache`，逐字稿的模型一個一列，其他依用途分列（分辨說話者、找人臉、辨識文字、找人名與地址、執行模型的程式、pdf.js 的資料、驗證內容憑證、裝置量測的語言模型），列出大小，可以逐列刪除或全部刪除，刪除之後下次用到時再下載。工作台本身的頁面與程式（`gears-<版本>`）是離線使用要用的，不列進來。大小用快取裡每個回應的 `blob().size` 加總，快取的內容在磁碟上，不會整個讀進記憶體。不能用 Cache API 時（私密瀏覽、Tor Browser）說明每次都要重新下載。入口在桌面的使用者區，逐字稿畫面原本的「刪除模型」保留
 - 只存工作台自己的檔案。讀者放進暫存區的檔案只在記憶體裡，不寫進快取，只有換版本的那一刻經過 service worker（見下一項）
 - 換版本要重新載入頁面，暫存區只在記憶體裡，重新載入就沒了（`src/ui/offline.ts`）。暫存區是空的、畫面上也沒有填到一半的東西時（桌面、授權頁、還沒選檔案的工具說明，從空白開始的工具不算），不出現提示：讀者還沒在這個頁面按過或打過字，新版本裝好就直接換。已經在操作的，出現一行較輕的提示（`app.updateIdle`，不提暫存區），讀者按重新載入或分頁切到背景（`visibilitychange`）時換。換上之後一律顯示「已換上新版本」。新版本要先下載約 7 MB 才裝得好，這段時間讀者多半已經點過畫面，原本這時不出現提示、只等切到背景，桌面上永遠看不到提示，要切到從空白開始的工具或放進檔案才看得到（2026-10-22 的使用回饋）。2026-10-22 以前一律等切到背景、換上之後也不說，讀者重新整理之後看到的仍然是舊版（瀏覽器這時才下載新版本），切出去再回來才換好，不知道中間發生了什麼。暫存區有檔案時，畫面上方提示，讀者按「重新載入」才換上，避免同一個分頁混用新舊程式
 - 帶著暫存區換版本：新版本接手之後，頁面把暫存區（`tray.snapshot()`，檔案的每個版本、檢查結果與選取的檔案）用 `postMessage` 交給它，service worker 只放在自己的記憶體裡，用 `waitUntil` 撐到重新載入的頁面拿走（`tray.restore()`），最多 60 秒就放掉，不寫進快取或任何儲存空間。Blob 是參照，大檔案不會多複製一份。交給的對象是重新載入之後會接手的那一個：等新版本接手完成（`activated`）再交給它，不用固定的等待時間，電腦忙的時候新版本比較晚接手，交給舊版本的話它在重新載入的途中就被換掉了。新版本被更新的一版取代，或 8 秒內沒有接手，就交給目前的版本，重新載入不會讓等著的版本接手。5 秒內沒有回應就不重新載入，提示讀者先下載需要的檔案，再按一次才清空暫存區重新載入。2026-10-17 在 Chromium、WebKit、Firefox 實測過（含 50 MB 的檔案），測試也在這三種核心與 iPhone 尺寸執行。這個流程由舊頁面的程式交出、新版本的 service worker 收下，之後的版本都要保留 `sw-template.js` 的 `hold` 與 `take`
@@ -637,6 +737,7 @@ ProofMode（Guardian Project 給人權紀錄者的 Android App）拍照時不改
 網址是 `https://anoni.net/gears/`，做法跟新聞導讀一樣：GitHub Actions 建置、推到 `build` 分支，m6 每 5 分鐘拉一次。
 
 - `.github/workflows/deploy.yml`：main 的 CI 通過之後執行（`workflow_run`），每週一另外重建一次更新 165 清單，也可以手動觸發。產物沒變時不推
+- CI 觸發的部署建置的是那一次 CI 的 commit，只有它是 main 最新的一筆時才部署（`latest` job），比較舊的略過，等最新那一筆的 CI。好幾個 PR 接連合併時，CI 完成的順序不一定照合併的順序，2026-11-21 合併四個 PR，倒數第二個的 CI 最晚完成，它的部署把最後一個的版本蓋了回去，靠手動觸發才換回最新版。手動觸發（`gh workflow run deploy.yml --ref main`）一律部署 main 最新的一筆
 - `build` 分支的 `site/` 是網站，`deploy/models.txt` 是逐字稿的模型清單（`node scripts/fetch-whisper.mjs --manifest`），`deploy/nginx-headers.conf` 是 nginx 送的標頭（`vite.config.ts` 的 `nginxHeaders`，跟預覽伺服器送的同一組 CSP 與 cross-origin isolation）
 - Whisper small、base 與 CAM++ 不進 `build` 分支（單一檔案超過 GitHub 的 100 MB）。m6 照清單下載到 `/srv/anoni-net-gears/models/`，比對 SHA-256，nginx 的 `/gears/models/whisper/`、`/gears/models/speaker/` 讀那裡。路徑帶著模型的版本，換版本時舊的目錄不會自動刪除
 - `assets/` 的檔名帶雜湊，上一版的檔案多留一輪：已經開著舊頁面的讀者，之後才載入的工具還會要舊的檔案
@@ -662,7 +763,7 @@ Tor Browser 15.0（Firefox 140 ESR）一般安全等級的實測結果：
 - 沒有 service worker，不能離線使用，畫面上也不會出現可以離線使用的提示
 - 沒有 cross-origin isolation，逐字稿只能用 1 個核心（實測 15 秒的華語錄音，base 模型 7.5 秒轉完）。沒有 WebGPU 與 `AudioDecoder`，MP4、M4A 整檔解碼（上限 256 MB）
 - 不能用相機，QR code 讀取改選照片
-- 「較安全」等級關掉 JIT，WebAssembly 照樣可以用，只是比較慢。「最安全」等級關掉 JavaScript，只看得到 `noscript` 的說明
+- 「較安全」等級關掉 JIT，WebAssembly 照樣可以用，只是比較慢。「最安全」等級關掉 JavaScript，看得到建置時寫進 HTML 的說明（見「搜尋引擎與分享預覽」）與 `noscript` 的一行
 
 在本機用無頭的 Tor Browser 測試：用 `TOR_PROVIDER=none` 啟動、不連 Tor，profile 的 `user.js` 讓本機網址不走代理（`network.proxy.allow_hijacking_localhost` 與 `no_proxies_on`），加上 `--marionette -remote-allow-system-access` 就能用 Marionette 操作頁面與瀏覽器本身。Tor Browser 一直是私密瀏覽、又有 first-party 隔離，允許 canvas 的權限要用分頁的 `contentPrincipal` 加（`Services.perms.addFromPrincipal(p, "canvas", ALLOW_ACTION)`），不能預先寫進 profile。Marionette 與 WebDriver BiDi 不能同時開 session，安全等級改過之後會留在 profile（NoScript 自己也存了一份），換回來要重建 profile。
 
@@ -686,7 +787,7 @@ node scripts/fetch-165.mjs   # 下載並整理成 public/data/165.txt
 
 ## 網址
 
-每個工具有自己的網址，例如 `/gears/qrcode/`，簡體中文與英文在前面加上 `zh-cn/`、`en/`（`/gears/en/qrcode/`）。建置時 `vite.config.ts` 替每個語系、每個工具產生一份 HTML，`lang`、標題、描述與 `noscript` 取自該語系的字串，並列出其他語系的 `hreflang`。內容跟首頁相同，打開之後由 `src/router.ts` 判斷語系與要顯示哪個工具。主機不需要轉址設定。
+每個工具有自己的網址，例如 `/gears/qrcode/`，簡體中文與英文在前面加上 `zh-cn/`、`en/`（`/gears/en/qrcode/`）。建置時 `vite.config.ts` 替每個語系、每個工具產生一份 HTML，`lang`、標題、描述與 `noscript` 取自該語系的字串，並列出其他語系的 `hreflang`。程式跟首頁相同，打開之後由 `src/router.ts` 判斷語系與要顯示哪個工具，HTML 裡另外寫著這一頁的說明（見下方「搜尋引擎與分享預覽」）。主機不需要轉址設定。
 
 認不得的網址（`src/pages.ts` 的 `NOT_FOUND`）顯示「找不到這一頁」與回到桌面的按鈕（`src/ui/NotFoundPage.tsx`），不當成桌面，讀者才知道網址打錯了。建置時另外產生 `404.html`（不寫 canonical 與分享卡片，帶 `noindex`），nginx 找不到檔案時送出它，狀態碼仍是 404（`tools/nginx-gears.conf` 的 `error_page`）。原本落到 nginx 預設的英文 404 頁。
 
@@ -700,6 +801,20 @@ node scripts/fetch-165.mjs   # 下載並整理成 public/data/165.txt
 
 建置時也產生 `sitemap.xml`，列出每個語系的每一頁與彼此的 `hreflang`。社群首頁的 `robots.txt`（`anoni-net/www` 的 `templates/robots.txt.j2`）指到這裡。
 
+每一頁的程式都一樣，`lastmod` 不能用建置的 commit 日期，一天部署好幾次，每一頁的日期一直跟著變，搜尋引擎會判斷它不可信。git 的檔案日期也分不出來，一個語系的文字都在同一個 `src/i18n/<語系>.ts`。2026-11-17 起改成比對內容：`sitemap()` 把每一頁搜尋引擎讀得到的文字（標題、描述與 `staticContent` 的輸出）算成雜湊，跟上一版的 `sitemap-state.json` 比，沒變就沿用上一版的日期，變了或新出現的頁面寫建置當天。上一版由 `deploy.yml` 從 build 分支取出，路徑放在 `GEARS_SITEMAP_STATE`。沒有上一版時（本機建置、build 分支取不到）不寫 `lastmod`，只記下雜湊給下一版比對，所以改版前就存在、之後內容沒動過的頁面一直不會有 `lastmod`。`sitemap-state.json` 不進離線預存的清單。
+
+工作台的畫面全靠 JavaScript 畫出來。2026-10-26 以前每一頁的 HTML 只有 `noscript` 的一行，Google 執行 JavaScript 之後看得到內容，Bing 與 DuckDuckGo 的處理不完整，AI 的爬蟲完全不執行 JavaScript，它們看到的 90 頁內文都一樣（#164）。現在 `localized` 另外把 `src/static-content.ts` 的 `staticContent` 寫進 `<div id="app">`：
+
+- 桌面：網站名稱、首頁描述、三組工具（每個工具連到自己的網址，下面一行是 `desk.when.*`），以及工具以外的頁面，實驗頁除外
+- 工具頁：工具名稱（`<h1>`）、說明、處理檔案的工具另有三步的使用方式、同一組的其他工具、回到桌面
+- 工具以外的頁面：標題、`meta.<id>.description`、回到桌面。找不到的頁面（`404.html`）不寫
+
+打開之後 `src/main.tsx` 清空 `#app`、換成工作台，JavaScript 載入之前與 Tor Browser 最安全的等級看得到這一份。只用字串組成，網址跟著語系與建置目標（onion 版在根目錄），單元測試在 `tests/unit/static-content.spec.ts`，瀏覽器測試在 `tests/e2e/seo.spec.ts`。
+
+每一頁只有一個 `<h1>`：工具與工具以外的頁面是自己的標題（`.tool-title`，外觀維持原本 `<h2>` 的大小），頁首的網站名稱改用 `<p>`。桌面與檔案畫面沒有自己的標題，`<h1>` 是頁首的網站名稱（`src/app.tsx` 的 `titled`）。找不到的頁面不收錄，也用網站名稱，讀者看得出還在 Gears 裡。
+
+英文的 `meta.<id>.description` 不超過 160 個字元，搜尋結果的摘要超過就截斷，`tests/unit/static-content.spec.ts` 會檢查。
+
 分享卡片（`og:image`）由 `node scripts/make-og.mjs <輸出目錄>` 產生，不進 repo，上傳到 m6 的 `/srv/images-anoni-net/gears/og/`，網址填進 `src/og-images.json`。檔名帶內容雜湊，改了卡片上的文字或樣式就重新產生一次。
 
 首頁描述（`meta.home.description`）要涵蓋三組工具，新增或改名工具時一起看一次。網頁標題用名詞片語寫出這一頁能做什麼，不必跟桌面上的工具名稱一字不差。
@@ -712,8 +827,8 @@ node scripts/fetch-165.mjs   # 下載並整理成 public/data/165.txt
 
 - 能不用 canvas 輸出圖檔就不用。Brave 預設會擾動 canvas 讀出來的像素，QR code 的 PNG 由 `src/core/png-encode.ts` 直接寫位元組。遮蔽與 QR code 讀取必須解碼影像，只能用 canvas：遮蔽輸出後抽查每個框是否夠黑，門檻容許這點雜訊。QR code 讀取對雜訊不敏感
 - 用到 WebAssembly 的功能（逐字稿、遮蔽的自動尋找、HEIC 的解碼器、QR code 以外的條碼）先用 `src/ui/wasm.ts` 的 `wasmAvailable()` 檢查。iPhone、iPad 與 Mac 的鎖定模式會關掉 Safari 的 WebAssembly，不檢查的話讀者要等模型下載完才失敗，收到的還是「記憶體不夠」這類錯誤的原因。檢查時實際編譯一個 8 個位元組的空模組，只看 `typeof WebAssembly` 不夠。逐字稿一打開就說明、開始的按鈕不能按，自動尋找請讀者手動框選，HEIC 說明載入不了解碼器。瀏覽器測試（`tests/e2e/wasm-unavailable.spec.ts`）把頁面的 `WebAssembly` 拿掉來模擬
-- 工具以外的頁面（`src/pages.ts` 的 `pageIds`：授權與來源、裝置量測、建議與回饋、範例、遠端傳送的伺服器說明、已下載的模型、隱私說明）不顯示暫存區，版面改成單欄（`.workbench.solo`），寬度上限跟首頁暫存區旁邊那一欄相同（52rem），靠左對齊頁首的 logo。原本撐滿整個版面，從桌面點進範例時內容突然變寬（2026-10-20 遇到）。頁面一律顯示捲軸（`html { overflow-y: scroll }`）：首頁不長，高一點的螢幕不需要捲動，範例頁需要，捲軸出現時置中的頁首會往左移半個捲軸寬，兩頁來回切換時 logo 左右跳。`scrollbar-gutter: stable` 也能固定位置，但不捲動的頁面會在頁首右邊留一條白色的空位。暫存區的檔案仍在記憶體裡，回到桌面就看得到
-- 站內導覽不用一般的 `<a href>`。一般的連結會重新載入頁面，暫存區只在記憶體裡，會整個清空。改用 `src/router.ts` 的 `navigate()`，外觀要像連結時用 `button.link`。`navigate()` 換頁之後捲回頂端，不然瀏覽器會沿用原本的捲動位置，手機上從桌面下方點進比較長的頁面時，畫面停在新頁面的最底部（2026-10-18 建議與回饋遇到）
+- 工具以外的頁面（`src/pages.ts` 的 `pageIds`：授權與來源、裝置量測、建議與回饋、範例、遠端傳送的伺服器說明、已下載的模型、隱私說明、協助測試）不顯示暫存區，版面改成單欄（`.workbench.solo`），寬度上限跟首頁暫存區旁邊那一欄相同（52rem），靠左對齊頁首的 logo。原本撐滿整個版面，從桌面點進範例時內容突然變寬（2026-10-20 遇到）。頁面一律顯示捲軸（`html { overflow-y: scroll }`）：首頁不長，高一點的螢幕不需要捲動，範例頁需要，捲軸出現時置中的頁首會往左移半個捲軸寬，兩頁來回切換時 logo 左右跳。`scrollbar-gutter: stable` 也能固定位置，但不捲動的頁面會在頁首右邊留一條白色的空位。暫存區的檔案仍在記憶體裡，回到桌面就看得到
+- 站內導覽不能讓瀏覽器照一般的連結換頁。一般的連結會重新載入頁面，暫存區只在記憶體裡，會整個清空。換頁用 `src/router.ts` 的 `navigate()`。連到另一頁的入口（桌面的工具與使用者區、頁尾的隱私說明、建議與回饋與授權）寫成 `<a href={routeUrl(id)}>`，點擊交給 `onRouteClick`：一般的點擊不重新載入、改用 `navigate()`，按著 Ctrl、⌘、Shift 或用中鍵時照瀏覽器原本的做法另開分頁。2026-10-26 以前這些入口都是按鈕，搜尋引擎從桌面找不到任何工具頁，讀者也不能另開分頁（#164）。不換頁的動作仍然用按鈕，外觀要像連結時用 `button.link`。`navigate()` 換頁之後捲回頂端，不然瀏覽器會沿用原本的捲動位置，手機上從桌面下方點進比較長的頁面時，畫面停在新頁面的最底部（2026-10-18 建議與回饋遇到）
 - 檔案畫面的版面（`.file` 的 grid，2026-10-22 起）：檔名與下載同一列（下載與分享在檔名的右邊，說明是按鈕下的一行小字，窄螢幕上不換行、說明只留給讀螢幕軟體），接著是檔案本身（預覽與處理紀錄包在同一張淡藍灰的卡片，處理紀錄是預覽的說明），最後是找到的資訊與工具。寬螢幕上檔案本身在左欄、找到的資訊與工具在右欄，處理前後右欄都從預覽的高度開始。手機排成一欄，順序一樣，預覽約三成畫面高。沒有預覽的文件排成一欄（寬度上限 40rem）。加密之後給對方的說明放在右欄最上面。打開編輯畫面時，要在圖上操作的（遮蔽、列印追蹤點、PDF 頁面選取、影片的關鍵影格，`WIDE_EDITORS`）用整個寬度，其他的放在右欄，左邊的預覽與處理紀錄留著。中間幾版的問題都是使用回饋：處理紀錄橫跨兩欄放在最上面，份量太重、預覽下方空一大塊。下載原本是一個有「交出去」標題的區塊，處理之後才出現，把右欄或檔名那一列撐高一百多 px。手機上還沒處理時先排找到的資訊、預覽排到工具列之後，處理之後又跳回檔名下面。編輯畫面套用之後捲回檔案的開頭
 - 沒有找到中繼資料不用綠色：暫存區的狀態寫「沒有中繼資料」、用灰色，檔案畫面另外說明只檢查了中繼資料，截圖裡的電話要用遮蔽、文件打開時會不會連線要用開啟前檢查（`findings.scope`）。綠色讀起來像「這個檔案安全」，只留給加密完成
 - 解碼圖片一律用 `src/ui/image-decode.ts` 的 `decodeImage()`，不要直接呼叫 `createImageBitmap()`，HEIC 才會在不支援的瀏覽器上改用 libheif
@@ -777,6 +892,7 @@ Office 與 LibreOffice 的文件都是 zip 包著一組 XML，`src/core/zip.ts` 
 
 - 註解與追蹤修訂是讀者寫進去的內容，預設保留下來，作者改成 `Author`，時間拿掉或改成固定的值。檢查時列在「文件內容裡要留意的」，提醒讀者刪除的文字仍在檔案裡（`CONTENT_FINDINGS`，清除中繼資料的 `resolves` 不包含它們）
 - 讀者可以在同一區勾選「刪除所有註解」、「接受所有追蹤修訂」，選擇透過 `RunOptions` 傳給清除工具，內嵌的文件照同樣的選擇處理。Word 接受修訂時，刪除的內容與格式修訂前的舊值整個拿掉，插入的內容拿掉標籤留下文字，刪除的表格列整列拿掉。Excel、PowerPoint 的註解連同 VML 方塊、討論串與作者清單一起拿掉。ODF 拿掉 `office:annotation` 與 `tracked-changes`。PDF 拿掉標記類的註解與彈出視窗，表單欄位不動
+- 內文的個資（`body-pii`，#143，2026-11-19 起）：檢查 Office 與 ODF 文件時讀出內文的文字（`src/tools/strip-metadata/body-pii.ts`），用遮蔽與寫作習慣檢查同一套規則（`findPiiInText`）找電話、Email、身分證這類有固定格式的個資，列在「文件內容裡要留意的」，提醒讀者回到原本的軟體刪掉或換成代稱。工作台不改寫內文。OOXML 讀 `word/`、`ppt/`、`xl/` 底下 XML 的 `t` 與刪除的追蹤修訂（`delText`，仍然留在檔案裡），同一段拆成好幾個 run 時直接接起來（「0912-」、「345-678」），段落、儲存格之間斷開。ODF 讀 `content.xml` 與 `styles.xml`（頁首頁尾）裡 `text:p`、`text:h` 的文字。文件摘要、屬性值與 `customXml` 是中繼資料，另外列，不算內文。PDF 沒有做：pdf-lib 讀不出中日韓字型的文字，PDF 內文的個資用遮蔽的自動尋找（讀文字層）。人名、地址與單位名稱要等個資辨識模型（#139）
 - 內嵌的圖片交給對應格式的處理程式，內嵌的 Office 文件也是，最多三層
 - 加密的文件、有巨集的 Office 文件（docm 等）不處理
 
@@ -859,8 +975,8 @@ iPhone 預設拍出來的是 HEIC，在網頁上選照片時交出來的也是�
 - 瀏覽器的語言清單裡沒有目前的語系時，頁首下方建議換成清單裡第一個認得的語系，文字用建議的那個語系寫（`src/ui/LocaleHint.tsx`，對應規則在 `src/i18n/suggest.ts`，有單元測試）。不自動轉址，關掉的狀態只在記憶體裡：站內換頁不再出現，重新整理或重新打開會再出現一次。只有 `zh` 分不出字系，不猜。onion 版不顯示，Tor Browser 一律回報英文。瀏覽器測試預設把語言設成 `zh-TW`（`playwright.config.ts`），測這個提示的另外指定
 - 文字照社群的[寫作風格規範](https://anoni.net/join/writing-style/)，品牌寫成小寫的 `anoni.net`。三個語系各照各的規則（英文另有一套），檢查時把字串放在 `docs/zh-CN/`、`docs/en/` 這樣的路徑底下，linter 才會套用該語系的規則
 - 簡體版的用詞跟著文件站簡體版：元数据、遮蔽、复制、生成器、识别、个资、截图、社区、账号。正體的「套用」寫成「应用」
-- 在瀏覽器裡處理是工作台的預設，畫面上只在暫存區的說明（`tray.hint`）寫一次。搜尋結果與分享預覽的描述（`meta.<id>.description`、`scripts/make-og.mjs`、`public/manifest.webmanifest`）不再以「在你的瀏覽器裡處理，檔案不上傳」收尾，改寫工具能處理什麼、交出什麼，首頁寫不必安裝或註冊、沒有網路也能用。2026-10-22 以前幾乎每個工具、頁尾與圖示說明都有一行「不會上傳」、「不會送出」、「不會存起來」，手機的桌面就出現四次，讀起來像工作台什麼都不碰，使用的方法反而沒有地方寫。工具畫面只寫例外，也就是會連到哪裡、誰看得到什麼（Hugging Face 的模型下載、遠端傳送經過的伺服器與 Cloudflare、建議與回饋送出的內容），以及限制（不連線查詢撤銷狀態這類）。原本放隱私說明的位置改寫讀者接下來要做的事，例如離開頁面之前先複製、讀到的網址可以先交給網址檢查
-- 處理檔案的工具在還沒選檔案的畫面列出三步的使用方式（`howto.<工具 id>.<n>`，`src/ui/ToolIntro.tsx`）。從桌面點工具會直接跳出選檔案，這個畫面主要是從搜尋引擎或分享的連結進來的讀者看到。從工具頁選檔案會直接打開編輯畫面，步驟從那裡寫起，按鈕名稱照畫面上的寫，改了按鈕的字串時一起改。`tests/unit/i18n.spec.ts` 檢查每個工具三步都有
+- 在瀏覽器裡處理是工作台的預設，同一個畫面只寫一次：桌面寫在最上方的定位說明（`desk.intro.browser.body`），暫存區改用不含這一句的 `tray.hint.home`。工具頁沒有定位說明，暫存區仍用 `tray.hint` 寫這一句，從搜尋結果直接打開工具的讀者也看得到。搜尋結果與分享預覽的描述（`meta.<id>.description`、`scripts/make-og.mjs`、`public/manifest.webmanifest`）不再以「在你的瀏覽器裡處理，檔案不上傳」收尾，改寫工具能處理什麼、交出什麼，首頁寫不必安裝或註冊、沒有網路也能用。2026-10-22 以前幾乎每個工具、頁尾與圖示說明都有一行「不會上傳」、「不會送出」、「不會存起來」，手機的桌面就出現四次，讀起來像工作台什麼都不碰，使用的方法反而沒有地方寫。工具畫面只寫例外，也就是會連到哪裡、誰看得到什麼（Hugging Face 的模型下載、遠端傳送經過的伺服器與 Cloudflare、建議與回饋送出的內容），以及限制（不連線查詢撤銷狀態這類）。原本放隱私說明的位置改寫讀者接下來要做的事，例如離開頁面之前先複製、讀到的網址可以先交給網址檢查
+- 處理檔案的工具在還沒選檔案的畫面列出三步的使用方式（`howto.<工具 id>.<n>`，`src/ui/ToolIntro.tsx`）。從桌面點工具、搜尋引擎或分享的連結進來的讀者都先看到這個畫面，按「選擇檔案」才打開系統的選檔案視窗。從工具頁選檔案會直接打開編輯畫面，步驟從那裡寫起，按鈕名稱照畫面上的寫，改了按鈕的字串時一起改。`tests/unit/i18n.spec.ts` 檢查每個工具三步都有
 
 ## 規劃
 
@@ -878,7 +994,7 @@ iPhone 預設拍出來的是 HEIC，在網頁上選照片時交出來的也是�
 - PDF 的解析與寫出用 [pdf-lib](https://github.com/Hopding/pdf-lib) 1.17.1（MIT），見 `licenses/pdf-lib.txt`
 - PDF 的遮蔽用 [pdf.js](https://github.com/mozilla/pdf.js)（pdfjs-dist 6.4.299，Apache-2.0）與它附帶的 CMap、標準字型與解碼器，見 `licenses/pdfjs.txt`
 - 遮蔽的自動尋找用 [YuNet](https://github.com/opencv/opencv_zoo/tree/main/models/face_detection_yunet) 模型（MIT）、PaddleOCR 的 [PP-OCRv5](https://github.com/PaddlePaddle/PaddleOCR) mobile 模型（Apache-2.0）與 [onnxruntime-web](https://github.com/microsoft/onnxruntime) 1.30.0（MIT），見 `licenses/redact-detect.txt`
-- 逐字稿用 [Transformers.js](https://github.com/huggingface/transformers.js) 4.3.1（Apache-2.0）、Whisper small 與 base 的 ONNX 檔（onnx-community，原始模型的模型卡標示 Apache-2.0）、讀者選擇之後從 Hugging Face 下載的 large-v3-turbo（模型卡標示 MIT）、分辨說話者用的 3D-Speaker CAM++（Apache-2.0，ONNX 檔取自 sherpa-onnx）、[opencc-js](https://github.com/nk2028/opencc-js) 1.4.2（MIT，字典 Apache-2.0），見 `licenses/transcribe.txt`
+- 逐字稿用 [Transformers.js](https://github.com/huggingface/transformers.js) 4.3.2（Apache-2.0）、Whisper small 與 base 的 ONNX 檔（onnx-community，原始模型的模型卡標示 Apache-2.0）、讀者選擇之後從 Hugging Face 下載的 large-v3-turbo（模型卡標示 MIT）、分辨說話者用的 3D-Speaker CAM++（Apache-2.0，ONNX 檔取自 sherpa-onnx）、[opencc-js](https://github.com/nk2028/opencc-js) 1.4.2（MIT，字典 Apache-2.0），見 `licenses/transcribe.txt`
 - 下載的軟體驗證用 [OpenPGP.js](https://github.com/openpgpjs/openpgpjs) 6.3.2（LGPL-3.0），內建 Tor Project 與 Tails 公開的簽章公鑰，見 `licenses/openpgp.txt`
 - 查證驗證 PDF 數位簽章用 [pkijs](https://github.com/PeculiarVentures/PKI.js) 3.4.2（BSD-3-Clause）與它相依的 asn1js 等套件，內建台灣政府憑證總管理中心公開的根憑證與下屬憑證機構的憑證，見 `licenses/pkijs.txt`
 - 查證驗證內容憑證用 [c2pa-web](https://github.com/contentauth/c2pa-js) 0.15.4（MIT，裡面是 [c2pa-rs](https://github.com/contentauth/c2pa-rs) 編成的 WebAssembly），內建 C2PA 的正式信任清單（CC BY 4.0）與過渡信任清單（Apache-2.0），見 `licenses/c2pa.txt`

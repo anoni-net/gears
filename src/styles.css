@@ -469,8 +469,11 @@ main {
   padding: 1.25rem 0;
 }
 
-h2 {
+/* 工具與頁面的標題是 <h1>（#164），外觀維持原本 <h2> 的大小與邊距，頁首的網站名稱在這些頁面是 <p> */
+h2,
+h1.tool-title {
   font-size: 1.15rem;
+  margin-block: 0.83em;
 }
 
 h3 {
@@ -1141,8 +1144,41 @@ button.pick-files .icon {
    手機要捲 8 個畫面，改成清單，列與列之間只留細線 */
 
 .desktop h2:first-child,
-.view > section > h2:first-child {
+.view > section > h2:first-child,
+.view > section > h1:first-child {
   margin-top: 0;
+}
+
+/* 桌面最上方的兩段說明（src/ui/DeskIntro.tsx）：瀏覽器裡就能完成、用開源本機模型加強。
+   寬一點的畫面左右並排，手機上排成一欄，接在暫存區下面 */
+.desk-intro {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: 0.75rem 1.5rem;
+  margin-bottom: 1.75rem;
+  padding: 0.9rem 1rem;
+  border-radius: var(--radius);
+  background: var(--fill);
+}
+
+.desk-intro h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0 0 0.25rem;
+  font-size: 1rem;
+  color: var(--strong);
+}
+
+.desk-intro p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.desk-intro .desk-device {
+  margin-top: 0.4rem;
+  color: var(--muted);
+  font-size: 0.875rem;
 }
 
 .tool-group + .tool-group {
@@ -1191,7 +1227,7 @@ button.pick-files .icon {
   text-align: left;
 }
 
-.tool-row:hover:not(:disabled) {
+.tool-row:hover {
   background: var(--fill);
 }
 
@@ -1238,7 +1274,7 @@ button.pick-files .icon {
   gap: 0.5rem 1.5rem;
 }
 
-.desk-user button.link {
+.desk-user a {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
@@ -1730,6 +1766,22 @@ button.pick-files .icon {
   width: fit-content;
   max-width: 100%;
   margin: 0.5rem 0;
+}
+
+/* 手機上按「找人名、地址與單位」時先展開的說明（src/ui/RedactEditor.tsx 的 phoneAsk） */
+.redact-model-ask {
+  margin: 0.5rem 0;
+  padding: 0.75rem 0.9rem;
+  border-radius: var(--radius);
+  background: var(--fill);
+}
+
+.redact-model-ask p {
+  margin: 0 0 0.5rem;
+}
+
+.redact-model-ask .buttons {
+  margin: 0;
 }
 
 /* 自動尋找的訊息區：所有訊息疊在同一格，高度由最長的那一則決定 */
@@ -2812,6 +2864,27 @@ button.link {
   margin-top: 1.25rem;
 }
 
+/* 自己指定要換掉的字：跟上下的區塊用分隔線隔開 */
+.style-alias {
+  border-top: 1px solid var(--line);
+  padding-top: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.style-alias .field input {
+  max-width: 20rem;
+}
+
+/* 線索清單的項目常換行，勾選框對齊第一行 */
+.style-clues .check {
+  align-items: flex-start;
+  margin-bottom: 0.5rem;
+}
+
+.style-clues .check input {
+  margin-top: 0.3rem;
+}
+
 /* 清單裡逐項套用的按鈕，比一般按鈕小 */
 .writing-style button.small {
   font-size: 0.85rem;
@@ -3496,6 +3569,41 @@ button.link {
   margin-top: 1.5rem;
 }
 
+/* 協助測試（src/ui/TestingPage.tsx）：每一項測試一個區塊，跟隱私說明一樣的寬度與清單 */
+.testing {
+  max-width: 44rem;
+}
+
+.testing-request {
+  margin-top: 1.75rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+}
+
+.testing-request h2 {
+  margin: 0 0 0.35rem;
+  font-size: 1.15rem;
+}
+
+.testing-request h3 {
+  margin: 1.25rem 0 0.25rem;
+  font-size: 1rem;
+}
+
+.testing-request ul,
+.testing-request ol {
+  margin: 0.25rem 0;
+  padding-left: 1.25rem;
+}
+
+.testing-request li + li {
+  margin-top: 0.35rem;
+}
+
+.testing-request .buttons {
+  margin: 1rem 0 0.5rem;
+}
+
 /* 面對面與遠端傳送要送出的檔案（src/ui/transfer-ui.tsx）：有外框的清單，一個檔案一列，大小靠右 */
 .transfer-files {
   border: 1px solid var(--line);
@@ -3568,4 +3676,30 @@ button.link {
 .verify-proof ul {
   margin: 0 0 0.4rem;
   padding-left: 1.1rem;
+}
+
+/* 建置時寫進 HTML 的說明（src/static-content.ts），JavaScript 載入之前與不執行 JavaScript 時看得到 */
+.static-page {
+  padding-block: 1.25rem;
+}
+
+.static-page h1 {
+  font-size: 1.5rem;
+}
+
+/* 關掉 JavaScript 時接在說明下面，左右留白跟說明對齊 */
+body > noscript {
+  display: block;
+  max-width: 72rem;
+  margin: 0 auto 1.25rem;
+  padding: 0 1rem;
+}
+
+/* 太舊的瀏覽器（iOS 16.4 以前）的提示，public/legacy-check.js 偵測到時才拿掉 hidden。
+   不設 display，否則會蓋過 hidden 屬性 */
+.legacy-browser {
+  margin: 1rem;
+  padding: 0.75rem 1rem;
+  border-left: 4px solid var(--warn);
+  font-weight: 600;
 }

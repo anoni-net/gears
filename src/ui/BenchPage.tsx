@@ -6,6 +6,7 @@ import { BenchSubmit } from "./BenchSubmit.tsx";
 import { CopyButton } from "./CopyButton.tsx";
 import { type LlmRun, LlmBench, llmReport } from "./LlmBench.tsx";
 import { type OcrRun, OcrBench, ocrReport } from "./OcrBench.tsx";
+import { type PiiRun, PiiBench, piiReport } from "./PiiBench.tsx";
 import { useWorking } from "./working.ts";
 
 // 裝置量測（實驗頁，/gears/bench/，#157）：在這台裝置的瀏覽器裡量 Gears 用到的模型要多久，
@@ -14,14 +15,15 @@ import { useWorking } from "./working.ts";
 // 原本只量語言模型，網址是 /gears/llm-bench/，舊網址不轉址。
 // 入口在桌面最下面的使用者區，不進 sitemap。
 
-// 結果的格式有變時加一，整理數字的人才分得出新舊
-const SCHEMA = 1;
+// 結果的格式有變時加一，整理數字的人才分得出新舊。2 起多了個資辨識（pii）
+const SCHEMA = 2;
 
 export function BenchPage() {
   const [env, setEnv] = useState<BenchEnv | null>(null);
   const [busy, setBusy] = useState(false);
   const [ocr, setOcr] = useState<OcrRun[]>([]);
   const [llm, setLlm] = useState<LlmRun[]>([]);
+  const [pii, setPii] = useState<PiiRun[]>([]);
   useWorking(busy);
 
   useEffect(() => {
@@ -29,16 +31,16 @@ export function BenchPage() {
   }, []);
 
   const report = JSON.stringify(
-    { schema: SCHEMA, version: VERSION, commit: COMMIT, env, userAgent: navigator.userAgent, ocr: ocrReport(ocr), llm: llmReport(llm) },
+    { schema: SCHEMA, version: VERSION, commit: COMMIT, env, userAgent: navigator.userAgent, ocr: ocrReport(ocr), pii: piiReport(pii), llm: llmReport(llm) },
     null,
     2,
   );
 
   return (
     <section class="bench" aria-labelledby="bench-title">
-      <h2 id="bench-title" class="tool-title">
+      <h1 id="bench-title" class="tool-title">
         {t("bench.title")}
-      </h2>
+      </h1>
       <p class="hint">{t("bench.pageIntro")}</p>
       <p class="hint" data-testid="bench-env">
         {env
@@ -56,15 +58,16 @@ export function BenchPage() {
       ) : null}
 
       <OcrBench env={env} runs={ocr} setRuns={setOcr} busy={busy} setBusy={setBusy} />
+      <PiiBench env={env} runs={pii} setRuns={setPii} busy={busy} setBusy={setBusy} />
       <LlmBench env={env} runs={llm} setRuns={setLlm} busy={busy} setBusy={setBusy} />
 
       <section class="bench-section" aria-labelledby="bench-report-title">
         <h3 id="bench-report-title">{t("bench.report.title")}</h3>
         <p class="hint">{t("bench.report.hint")}</p>
         <div class="buttons">
-          <CopyButton text={ocr.length || llm.length ? report : ""} label={t("bench.copy")} />
+          <CopyButton text={ocr.length || pii.length || llm.length ? report : ""} label={t("bench.copy")} />
         </div>
-        {ocr.length || llm.length ? (
+        {ocr.length || pii.length || llm.length ? (
           <details>
             <summary>{t("bench.report.show")}</summary>
             <pre class="bench-text" data-testid="bench-report">
@@ -74,7 +77,7 @@ export function BenchPage() {
         ) : null}
       </section>
 
-      <BenchSubmit report={ocr.length || llm.length ? report : ""} disabled={busy} />
+      <BenchSubmit report={ocr.length || pii.length || llm.length ? report : ""} disabled={busy} />
     </section>
   );
 }

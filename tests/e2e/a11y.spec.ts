@@ -17,7 +17,7 @@ async function audit(page: Page) {
   return result.violations.map((v) => `${v.id}: ${v.help} (${v.nodes.map((n) => n.target.join(" ")).slice(0, 3).join(" | ")})`);
 }
 
-for (const path of ["./", "./en/", "./qrcode/", "./url-check/", "./passphrase/", "./age-keygen/", "./text-crypt/", "./qr-read/", "./redact/", "./pdf-pages/", "./strip-metadata/", "./verify/", "./email-check/", "./writing-style/", "./video-frames/", "./nearby/", "./remote/", "./licenses/", "./bench/", "./feedback/", "./samples/", "./remote-server/", "./storage/", "./privacy/"]) {
+for (const path of ["./", "./en/", "./qrcode/", "./url-check/", "./passphrase/", "./age-keygen/", "./text-crypt/", "./qr-read/", "./redact/", "./pdf-pages/", "./strip-metadata/", "./verify/", "./email-check/", "./writing-style/", "./video-frames/", "./nearby/", "./remote/", "./licenses/", "./bench/", "./feedback/", "./samples/", "./remote-server/", "./storage/", "./privacy/", "./testing/"]) {
   test(`${path} 沒有無障礙問題`, async ({ page }) => {
     await page.goto(path);
     await page.waitForLoadState("networkidle");
@@ -55,6 +55,15 @@ test("QR code 產生器的聯絡資料與錯誤訊息、讀取的付款提醒沒
   await page.getByTestId("sample-link").click();
   await page.locator('[data-sample="boarding-pdf417"]').click();
   await expect(page.getByTestId("qr-fields")).toContainText("登機證");
+  expect(await audit(page)).toEqual([]);
+  await page.emulateMedia({ colorScheme: "dark" });
+  expect(await audit(page)).toEqual([]);
+});
+
+test("寫作習慣檢查的結果與線索清單沒有無障礙問題", async ({ page }) => {
+  await page.goto("./writing-style/");
+  await page.getByLabel("要交出去的文字").fill("老實說這個視頻很多啦😤 有事打 0912-345-678!!!");
+  await expect(page.getByTestId("style-clues")).toBeVisible();
   expect(await audit(page)).toEqual([]);
   await page.emulateMedia({ colorScheme: "dark" });
   expect(await audit(page)).toEqual([]);

@@ -26,7 +26,7 @@ const stored = (page: Page) =>
 test("已下載的模型：依用途列出大小，可以逐列刪除與全部刪除", async ({ page }) => {
   await page.goto("./");
   await seed(page);
-  await page.getByRole("button", { name: "已下載的模型" }).click();
+  await page.getByRole("link", { name: "已下載的模型" }).click();
   await expect(page.getByRole("heading", { name: "已下載的模型" })).toBeVisible();
   const rows = page.getByTestId("storage-list").locator("li");
   await expect(rows).toHaveCount(4);

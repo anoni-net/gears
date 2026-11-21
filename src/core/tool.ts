@@ -27,6 +27,7 @@ export const FINDING_CODES = [
   "system-files",
   "other",
   // 以下是文件的內容，清除中繼資料不會改動，列出來提醒讀者
+  "body-pii",
   "doc-comments",
   "revisions",
   "attachments",
@@ -34,8 +35,8 @@ export const FINDING_CODES = [
 
 export type FindingCode = (typeof FINDING_CODES)[number];
 
-// 註解、追蹤修訂與附加檔案是讀者自己寫進去或放進去的內容，工具不替讀者決定要不要刪
-export const CONTENT_FINDINGS: readonly FindingCode[] = ["doc-comments", "revisions", "attachments"];
+// 內文的個資、註解、追蹤修訂與附加檔案是讀者自己寫進去或放進去的內容，工具不替讀者決定要不要刪
+export const CONTENT_FINDINGS: readonly FindingCode[] = ["body-pii", "doc-comments", "revisions", "attachments"];
 
 export interface Finding {
   code: FindingCode;

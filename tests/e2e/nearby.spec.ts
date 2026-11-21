@@ -14,7 +14,7 @@ async function startSender(page: Page): Promise<string> {
     { name: "data.bin", mimeType: "application/octet-stream", buffer: random },
   ]);
   await page.getByRole("button", { name: "回到桌面" }).click();
-  await page.getByRole("button", { name: /^面對面傳送/ }).click();
+  await page.getByRole("link", { name: /^面對面傳送/ }).click();
   await page.getByRole("button", { name: "送出暫存區的檔案" }).click();
   await page.getByRole("button", { name: "開始配對（2 個檔案）" }).click();
   await expect(page.getByTestId("nearby-status")).toContainText("掃這個 QR code");
@@ -144,7 +144,7 @@ test("找不到區網位址時說明要先連上 Wi-Fi 或熱點", async ({ page
   await page.goto("./");
   await page.getByTestId("file-input").setInputFiles({ name: "n.txt", mimeType: "text/plain", buffer: Buffer.from("hello") });
   await page.getByRole("button", { name: "回到桌面" }).click();
-  await page.getByRole("button", { name: /^面對面傳送/ }).click();
+  await page.getByRole("link", { name: /^面對面傳送/ }).click();
   await page.getByRole("button", { name: "送出暫存區的檔案" }).click();
   await page.getByRole("button", { name: "開始配對（1 個檔案）" }).click();
   await expect(page.getByTestId("nearby-status")).toContainText("找不到這台裝置的區網位址");

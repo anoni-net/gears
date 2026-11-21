@@ -17,6 +17,7 @@ import {
   writeParts,
 } from "./package.ts";
 import { other } from "./preview.ts";
+import { bodyPiiFindings, isOoxmlBody, ooxmlText } from "./body-pii.ts";
 
 // Office 文件（docx、xlsx、pptx，Office Open XML）。zip 裡是一組 XML，部件之間用
 // .rels 檔裡的關聯互相指向，[Content_Types].xml 列出每個部件的類型。
@@ -458,6 +459,7 @@ export async function inspectOoxml(bytes: Uint8Array, inner: Inner): Promise<Fin
   names.delete(NEUTRAL_AUTHOR);
   if (names.size) findings.unshift({ code: "owner", value: [...names].slice(0, 5).join("、") });
   findings.push(...(await inspectInner(parts, inner, (p) => !isMediaPart(p) || /\/embeddings\//.test(p.name))));
+  findings.push(...bodyPiiFindings(parts.filter((p) => isOoxmlBody(p.name)).map((p) => ooxmlText(partText(p))).join("\n")));
   if (comments) findings.push({ code: "doc-comments" });
   if (revisions) findings.push({ code: "revisions" });
   if (attachments.length) findings.push({ code: "attachments", value: attachments.slice(0, 5).join("、") });

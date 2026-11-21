@@ -61,7 +61,9 @@ test("讀不到 canvas 時說明要在網址列允許，允許之後再讀一次
 
 test("遮蔽：讀不到 canvas 時不產生雜訊圖，框留著，允許之後再套用", async ({ page }) => {
   await page.goto("./");
-  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.getByRole("button", { name: /截圖上的名字與電話/ }).click()]);
+  // 桌面的工具連結只換到工具頁，選檔案由讀者在工具頁按下（不自動打開系統的選檔案視窗）
+  await page.getByRole("link", { name: /截圖上的名字與電話/ }).click();
+  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.locator(".intro").getByRole("button", { name: "選擇檔案" }).click()]);
   await chooser.setFiles({ name: "chat.png", mimeType: "image/png", buffer: await image(page) });
   const canvas = page.getByTestId("redact-canvas");
   await expect(canvas).toBeVisible();
@@ -131,4 +133,17 @@ test("遮蔽 PDF：讀文字層不必讀 canvas，讀者還沒允許也找得到
   await expect(page.getByTestId("redact-auto-status")).toContainText("側臉、戴口罩的臉", { timeout: 15000 });
   await page.getByRole("button", { name: "找電話、Email 等個資" }).click();
   await expect(page.getByTestId("redact-auto-status")).toHaveText("加了 2 個框，請逐一確認，框錯的點一下就會拿掉。");
+});
+
+test("檢查畫面內容：讀不到 canvas 時說明要在網址列允許，允許之後再按一次就能檢查", async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.goto("./");
+  await page.getByTestId("file-input").setInputFiles({ name: "chat.png", mimeType: "image/png", buffer: await image(page) });
+  const button = page.getByRole("button", { name: "檢查畫面內容" });
+  await button.click();
+  const status = page.getByTestId("screen-status");
+  await expect(status).toContainText("網址列跳出詢問");
+  await allow(page);
+  await button.click();
+  await expect(status).toContainText("沒有找到人臉", { timeout: 90_000 });
 });

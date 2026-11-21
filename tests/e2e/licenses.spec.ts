@@ -10,7 +10,7 @@ const licenses = ["transcribe", "redact-detect", "pdfjs", "pdf-lib", "libheif", 
 
 test("從頁尾打開授權與來源，每份授權全文都下載得到、內容跟 licenses/ 相同", async ({ page }) => {
   await page.goto("./");
-  await page.getByRole("button", { name: "授權與來源" }).click();
+  await page.getByRole("link", { name: "授權與來源" }).click();
   await expect(page).toHaveURL(/\/gears\/licenses\/$/);
   await expect(page.getByRole("heading", { name: "授權與來源" })).toBeVisible();
   const links = page.getByTestId("licenses").getByRole("link", { name: "授權全文" });

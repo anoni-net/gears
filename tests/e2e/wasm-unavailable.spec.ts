@@ -17,6 +17,13 @@ test.beforeEach(async ({ page }) => {
   await noWasm(page);
 });
 
+test("桌面：裝置狀況那一行說明關掉了 WebAssembly，標著大腦圖示的工具不能用模型", async ({ page }) => {
+  await page.goto("./");
+  const device = page.getByTestId("desk-device");
+  await expect(device).toContainText("鎖定模式");
+  await expect(device).toContainText("其他功能照常使用");
+});
+
 test("逐字稿：一打開就說明這個瀏覽器關掉了 WebAssembly，開始的按鈕不能按", async ({ page }) => {
   const models: string[] = [];
   page.on("request", (r) => r.url().includes("/models/") && models.push(r.url()));
@@ -37,12 +44,36 @@ test("遮蔽：自動尋找說明原因，請讀者手動框選", async ({ page 
     const b = await new Promise<Blob>((r) => c.toBlob((x) => r(x!), "image/png"));
     return Array.from(new Uint8Array(await b.arrayBuffer()));
   });
-  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.getByRole("button", { name: /截圖上的名字與電話/ }).click()]);
+  // 桌面的工具連結只換到工具頁，選檔案由讀者在工具頁按下（不自動打開系統的選檔案視窗）
+  await page.getByRole("link", { name: /截圖上的名字與電話/ }).click();
+  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.locator(".intro").getByRole("button", { name: "選擇檔案" }).click()]);
   await chooser.setFiles({ name: "chat.png", mimeType: "image/png", buffer: Buffer.from(png) });
   await expect(page.getByTestId("redact-canvas")).toBeVisible();
   await page.getByRole("button", { name: "找人臉" }).click();
   await expect(page.getByTestId("redact-auto-status")).toContainText("關掉了 WebAssembly");
   await expect(page.getByTestId("redact-auto-status")).toContainText("請手動框選");
+});
+
+test("遮蔽：找人名、地址與單位也說明原因，不下載模型", async ({ page }) => {
+  const asked: string[] = [];
+  page.on("request", (r) => r.url().includes("nym-pii") && asked.push(r.url()));
+  await page.goto("./");
+  const png = await page.evaluate(async () => {
+    const c = document.createElement("canvas");
+    c.width = 400;
+    c.height = 200;
+    c.getContext("2d")!.fillRect(40, 40, 120, 60);
+    const b = await new Promise<Blob>((r) => c.toBlob((x) => r(x!), "image/png"));
+    return Array.from(new Uint8Array(await b.arrayBuffer()));
+  });
+  // 桌面的工具連結只換到工具頁，選檔案由讀者在工具頁按下（不自動打開系統的選檔案視窗）
+  await page.getByRole("link", { name: /截圖上的名字與電話/ }).click();
+  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.locator(".intro").getByRole("button", { name: "選擇檔案" }).click()]);
+  await chooser.setFiles({ name: "chat.png", mimeType: "image/png", buffer: Buffer.from(png) });
+  await expect(page.getByTestId("redact-canvas")).toBeVisible();
+  await page.getByRole("button", { name: "找人名、地址與單位" }).click();
+  await expect(page.getByTestId("redact-auto-status")).toContainText("關掉了 WebAssembly");
+  expect(asked).toEqual([]);
 });
 
 test("HEIC：瀏覽器不能直接顯示又沒有 WebAssembly 時，說明載入不了解碼器", async ({ page, browserName }) => {
@@ -72,4 +103,22 @@ test("遮蔽 PDF：有文字層時不必辨識，照樣找得到個資", async (
   // 找人臉一定要 WebAssembly
   await page.getByRole("button", { name: "找人臉" }).click();
   await expect(page.getByTestId("redact-auto-status")).toContainText("關掉了 WebAssembly");
+});
+
+test("檢查畫面內容：說明這個瀏覽器關掉了 WebAssembly，請讀者自己看一次", async ({ page }) => {
+  await page.goto("./");
+  const png = await page.evaluate(async () => {
+    const c = document.createElement("canvas");
+    c.width = 400;
+    c.height = 200;
+    c.getContext("2d")!.fillRect(40, 40, 120, 60);
+    const b = await new Promise<Blob>((r) => c.toBlob((x) => r(x!), "image/png"));
+    return Array.from(new Uint8Array(await b.arrayBuffer()));
+  });
+  await page.getByTestId("file-input").setInputFiles({ name: "chat.png", mimeType: "image/png", buffer: Buffer.from(png) });
+  await page.getByRole("button", { name: "檢查畫面內容" }).click();
+  const status = page.getByTestId("screen-status");
+  await expect(status).toContainText("關掉了 WebAssembly");
+  await expect(status).toContainText("請自己看一次整張圖");
+  await expect(status).toHaveClass("error");
 });

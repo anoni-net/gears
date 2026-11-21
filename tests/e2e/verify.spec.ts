@@ -14,7 +14,9 @@ test("從任務選照片與 PDF：雜湊值、時間線、裝置、人名、位�
   const { bytes, firstEnd } = await incrementalPdf();
   const pdf = Buffer.from(bytes);
   await page.goto("./");
-  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.getByRole("button", { name: /收到的照片與文件/ }).click()]);
+  // 桌面的工具連結只換到工具頁，選檔案由讀者在工具頁按下（不自動打開系統的選檔案視窗）
+  await page.getByRole("link", { name: /收到的照片與文件/ }).click();
+  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.locator(".create").getByRole("button", { name: "選擇檔案" }).click()]);
   await chooser.setFiles([
     { name: "photo.jpg", mimeType: "image/jpeg", buffer: photo },
     { name: "report.pdf", mimeType: "application/pdf", buffer: pdf },

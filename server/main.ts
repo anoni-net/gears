@@ -21,6 +21,7 @@ const options: RelayOptions = {
   roomBytes: number("RELAY_ROOM_BYTES", DEFAULTS.roomBytes),
   opensPerClient: number("RELAY_OPENS_PER_CLIENT", DEFAULTS.opensPerClient),
   opensOnion: number("RELAY_OPENS_ONION", DEFAULTS.opensOnion),
+  roomsOnion: number("RELAY_ROOMS_ONION", DEFAULTS.roomsOnion),
 };
 
 // A 版的 TURN：自架的 coturn（TURN_SECRET 與 TURN_URLS，逗號分隔）優先，其次是 Cloudflare Realtime

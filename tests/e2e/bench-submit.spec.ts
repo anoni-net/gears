@@ -37,7 +37,8 @@ async function measureOcr(page: Page) {
   await page.goto("./bench/");
   await expect(page.getByTestId("bench-env")).toContainText("核心");
   for (const label of ["CPU，4 個執行緒", "CPU，8 個執行緒"]) {
-    const box = page.getByLabel(label);
+    // 個資辨識也有同樣的選項，只在文字辨識那一區裡找
+    const box = page.locator('section[aria-labelledby="bench-ocr-title"]').getByLabel(label);
     if (await box.isChecked()) await box.uncheck();
   }
   const gpu = page.getByLabel("顯示卡", { exact: true }).first();
@@ -80,7 +81,8 @@ test("裝置量測：英文介面送出的選項仍是正體中文，表單沒�
   await page.goto("./en/bench/");
   await expect(page.getByTestId("bench-env")).toContainText("cores");
   for (const label of ["CPU, 4 threads", "CPU, 8 threads"]) {
-    const box = page.getByLabel(label);
+    // 個資辨識也有同樣的選項，只在文字辨識那一區裡找
+    const box = page.locator('section[aria-labelledby="bench-ocr-title"]').getByLabel(label);
     if (await box.isChecked()) await box.uncheck();
   }
   const gpu = page.getByLabel("GPU", { exact: true }).first();

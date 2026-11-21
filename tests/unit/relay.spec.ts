@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
-import { type Relay, type RelayOptions, startRelay } from "../../server/relay.ts";
+import { WebSocket as WsClient } from "ws";
+import { type Relay, type RelayOptions, clientKey, startRelay } from "../../server/relay.ts";
 import { CHUNK } from "../../src/tools/nearby/protocol.ts";
 import { receiveFiles, sendFiles } from "../../src/tools/nearby/transfer.ts";
 import { MAX_FRAME, RELAY_VERSION, frame, isId, parseClientControl, parseServerControl, randomId, unframe } from "../../src/tools/remote/relay.ts";
@@ -267,4 +268,50 @@ test("RelayError 帶著原因", () => {
   const e = new RelayError("busy");
   expect(e.code).toBe("busy");
   expect(e.message).toBe("busy");
+});
+
+test("計次的鍵：IPv6 只取前 64 位元，IPv4 與對應到 IPv4 的位址不動", () => {
+  expect(clientKey("2001:db8:1:2:aaaa:bbbb:cccc:dddd")).toBe("2001:db8:1:2::/64");
+  expect(clientKey("2001:DB8:1:2::1")).toBe("2001:db8:1:2::/64");
+  expect(clientKey("2001:db8::1")).toBe("2001:db8:0:0::/64");
+  expect(clientKey("2001:db8:1:2:aaaa:bbbb:cccc:dddd")).toBe(clientKey("2001:db8:1:2::9"));
+  expect(clientKey("2001:db8:1:3::9")).not.toBe(clientKey("2001:db8:1:2::9"));
+  expect(clientKey("203.0.113.7")).toBe("203.0.113.7");
+  expect(clientKey("::ffff:203.0.113.7")).toBe("::ffff:203.0.113.7");
+  expect(clientKey("onion")).toBe("onion");
+  expect(clientKey("not:an:address")).toBe("not:an:address");
+});
+
+// 帶著 nginx 會加的 X-Relay-Client 開房，回傳伺服器的第一則控制訊息
+function openAs(url: string, client: string) {
+  const ws = new WsClient(url, { headers: { "x-relay-client": client } });
+  const reply = new Promise<{ t: string; code?: string }>((resolve, reject) => {
+    ws.on("open", () => ws.send(JSON.stringify({ t: "open", v: RELAY_VERSION })));
+    ws.on("message", (data) => resolve(JSON.parse(data.toString())));
+    ws.on("error", reject);
+  });
+  return { ws, reply };
+}
+
+test("從 onion 開的房間有自己的上限，佔滿之後 clearnet 照樣開得了", async () => {
+  await withRelay({ roomsOnion: 2, maxRooms: 100 }, async (relay) => {
+    const first = openAs(relay.url, "onion");
+    const second = openAs(relay.url, "onion");
+    expect((await first.reply).t).toBe("room");
+    expect((await second.reply).t).toBe("room");
+    expect(await openAs(relay.url, "onion").reply).toMatchObject({ t: "error", code: "busy" });
+    expect((await openAs(relay.url, "203.0.113.7").reply).t).toBe("room");
+    // 房間關掉之後名額還回來
+    first.ws.close(1000);
+    await until(() => relay.rooms() === 2);
+    expect((await openAs(relay.url, "onion").reply).t).toBe("room");
+  });
+});
+
+test("同一段 /64 的 IPv6 位址算同一個鍵", async () => {
+  await withRelay({ opensPerClient: 1, maxRooms: 100 }, async (relay) => {
+    expect((await openAs(relay.url, "2001:db8:1:2::1").reply).t).toBe("room");
+    expect(await openAs(relay.url, "2001:db8:1:2:ffff::2").reply).toMatchObject({ t: "error", code: "rate-limited" });
+    expect((await openAs(relay.url, "2001:db8:1:3::1").reply).t).toBe("room");
+  });
 });

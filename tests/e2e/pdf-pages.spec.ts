@@ -17,7 +17,9 @@ async function threePages(): Promise<Buffer> {
 
 test("從任務選 PDF，勾選第一頁與第三頁，第二頁與文件資訊不在新檔裡", async ({ page }) => {
   await page.goto("./");
-  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.getByRole("button", { name: /PDF 的其中幾頁/ }).click()]);
+  // 桌面的工具連結只換到工具頁，選檔案由讀者在工具頁按下（不自動打開系統的選檔案視窗）
+  await page.getByRole("link", { name: /PDF 的其中幾頁/ }).click();
+  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.locator(".intro").getByRole("button", { name: "選擇檔案" }).click()]);
   await chooser.setFiles({ name: "statement.pdf", mimeType: "application/pdf", buffer: await threePages() });
 
   const apply = page.getByRole("button", { name: "只留下選中的頁面" });

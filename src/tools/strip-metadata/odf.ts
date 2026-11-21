@@ -15,6 +15,7 @@ import {
   writeParts,
 } from "./package.ts";
 import { other } from "./preview.ts";
+import { bodyPiiFindings, isOdfBody, odfText } from "./body-pii.ts";
 
 // ODF 文件（odt、ods、odp、odg，LibreOffice 的預設格式）。zip 的第一個檔案是不壓縮的
 // mimetype，META-INF/manifest.xml 列出每個檔案。
@@ -229,6 +230,7 @@ export async function inspectOdf(bytes: Uint8Array, inner: Inner): Promise<Findi
   names.delete(NEUTRAL_AUTHOR);
   if (names.size) findings.unshift({ code: "owner", value: [...names].slice(0, 5).join("、") });
   findings.push(...(await inspectInner(parts, inner, (p) => isXml(p.name) || p.name === "mimetype")));
+  findings.push(...bodyPiiFindings(parts.filter((p) => isOdfBody(p.name)).map((p) => odfText(partText(p))).join("\n")));
   if (comments) findings.push({ code: "doc-comments" });
   if (revisions) findings.push({ code: "revisions" });
   return findings;

@@ -38,6 +38,16 @@ target=$(git -C "$REPO" rev-parse FETCH_HEAD)
 failed=0
 git -C "$REPO" show "$target:deploy/models.txt" | while read -r url hash path; do
     [ -n "$url" ] || continue
+    # 清單來自 build 分支，不直接相信：只從 HTTPS 下載，只寫進 $BASE/models/ 底下
+    case "$url" in
+        https://*) ;;
+        *) log "模型清單的網址不是 HTTPS：$url"; exit 1 ;;
+    esac
+    case "/$path/" in
+        */../* | */./* | *//*) log "模型清單的路徑不合格：$path"; exit 1 ;;
+        /models/*) ;;
+        *) log "模型清單的路徑不在 models/ 底下：$path"; exit 1 ;;
+    esac
     dest="$BASE/$path"
     [ -f "$dest" ] && continue
     mkdir -p "$(dirname "$dest")"
@@ -58,6 +68,7 @@ fi
 
 # 2. nginx 標頭：clearnet 與 onion 各一份。內容不同的才換上，全部換好之後 nginx -t 通過才 reload，
 #    沒通過就全部退回原本那一份
+HEADER_LINE='^(#.*|add_header [A-Za-z-]+ ("[^"\\$]*"|\$gears_(onion_)?cache_control) always;)?$'
 changed=""
 backup=$(mktemp -d)
 for pair in "nginx-headers.conf:$SNIPPET" "nginx-headers-onion.conf:$ONION_SNIPPET"; do
@@ -66,6 +77,14 @@ for pair in "nginx-headers.conf:$SNIPPET" "nginx-headers-onion.conf:$ONION_SNIPP
     new=$(mktemp)
     # build 分支還沒有 onion 版時略過
     if git -C "$REPO" show "$target:deploy/$file" >"$new" 2>/dev/null && ! cmp -s "$new" "$dest"; then
+        # 這份檔案會用 sudo 裝進 nginx 的設定，內容來自 build 分支，不直接相信：
+        # 只接受註解與 add_header，值是一段雙引號字串或快取的對照變數，其他指令一律不裝
+        if grep -qvE "$HEADER_LINE" "$new"; then
+            log "nginx 標頭有 add_header 以外的內容，不換上，停在 $before：$file"
+            rm -f "$new"
+            rm -rf "$backup"
+            exit 1
+        fi
         [ -f "$dest" ] && cp "$dest" "$backup/$(basename "$dest")"
         sudo install -m 644 "$new" "$dest"
         changed="$changed $dest"

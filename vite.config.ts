@@ -15,6 +15,7 @@ import ogImages from "./src/og-images.json" with { type: "json" };
 import { ONION_HOST } from "./src/site.ts";
 import { FEEDBACK_ENDPOINT_CLEARNET, FEEDBACK_ENDPOINT_ONION } from "./src/feedback.ts";
 import { calver } from "./src/core/version.ts";
+import { staticContent } from "./src/static-content.ts";
 
 // onion 版（GEARS_TARGET=onion）：給 gears.<onion> 的建置，網站放在子網域的根目錄，輸出到 dist-onion/。
 // 頁面只連自己的網域：不送使用統計，社群轉檔的模型也由同一個 onion 網站提供（src/site.ts）。
@@ -26,7 +27,7 @@ const OUT_DIR = ONION ? "dist-onion" : "dist";
 // 頁面能連線的對象寫死在 CSP 裡。就算某個相依套件被植入程式，檔案也送不出去，
 // 讀者也能從頁面原始碼自行確認。connect-src 只有自己的網域，之後的伺服器處理與
 // 統計都要在這裡明列。只在正式建置加上，開發伺服器需要的內嵌腳本會被它擋掉。
-const policy = (connect: string) => [
+const policy = (connect: string, extra: string[] = []) => [
   "default-src 'none'",
   // WebAssembly（HEIC 的解碼器 libheif）需要 wasm-unsafe-eval，它只允許編譯 WebAssembly，
   // 不會開放 JavaScript 的 eval
@@ -41,6 +42,7 @@ const policy = (connect: string) => [
   "manifest-src 'self'",
   "base-uri 'none'",
   "form-action 'none'",
+  ...extra,
 ].join("; ");
 
 // 頁面的 meta 標籤只允許自己的網域，加上使用統計的送出網址（社群自架的 Umami，見 src/ui/analytics.ts）
@@ -54,7 +56,8 @@ const CSP = policy(ONION ? `'self' ${FEEDBACK_ENDPOINT}` : `'self' ${ANALYTICS_E
 // - Hugging Face（讀者選擇之後才連）：huggingface.co 限定在每個模型的下載路徑，不開放上傳用的
 //   API，下載會轉址到 *.hf.co 的 CDN（轉址之後 CSP 不比對路徑，只能寫主機）。語言模型速度量測的
 //   實驗頁（src/tools/llm-bench/models.json）也一樣，每個模型鎖定 commit
-// - assets.anoni.net：社群轉檔的模型，限定在模型的目錄（onion 版由自己的網域提供）
+// - assets.anoni.net：社群轉檔的模型與個資辨識模型（src/tools/redact/pii-model.ts），限定在模型的目錄
+//   （onion 版由自己的網域提供）
 const HEADER_CSP = policy(
   [
     "'self'",
@@ -69,6 +72,8 @@ const HEADER_CSP = policy(
     "https://*.hf.co",
     ...(ONION ? [] : [ASSETS_MODELS]),
   ].join(" "),
+  // 不讓別的網站把工作台嵌進頁框。只能用標頭送，寫在 meta 標籤裡沒有作用
+  ["frame-ancestors 'none'"],
 );
 
 function csp(): Plugin {
@@ -81,9 +86,9 @@ function csp(): Plugin {
   };
 }
 
-// 每個語系、每個工具一份 HTML（/gears/qrcode/、/gears/en/qrcode/），標題、描述與 lang 各自
-// 不同，可以被搜尋到，也不需要伺服器的轉址設定。內容跟首頁相同，打開之後由 src/router.ts
-// 判斷語系與要顯示哪個工具。
+// 每個語系、每個工具一份 HTML（/gears/qrcode/、/gears/en/qrcode/），標題、描述、lang 與寫在
+// #app 裡的說明（src/static-content.ts）各自不同，可以被搜尋到，也不需要伺服器的轉址設定。程式跟
+// 首頁相同，打開之後由 src/router.ts 判斷語系與要顯示哪個工具。
 const SITE = ONION ? `http://gears.${ONION_HOST}/` : "https://anoni.net/gears/";
 const COMMUNITY = ONION ? `http://${ONION_HOST}/` : "https://anoni.net/";
 const escape = (s: string) => s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
@@ -144,23 +149,56 @@ function seoTags(locale: Locale, id: string, title: string, description: string,
   return tags.join("\n    ");
 }
 
-// 每個語系、每個頁面的網址，sitemap.xml 用
-function sitemap(ids: string[]) {
-  const entries = ids.flatMap((id) =>
-    LOCALES.map((locale) => {
-      const links = [...LOCALES.map((l) => [l.lang, pageUrl(l, id)]), ["x-default", pageUrl(LOCALES[0], id)]]
-        .map(([lang, href]) => `    <xhtml:link rel="alternate" hreflang="${lang}" href="${href}" />`)
-        .join("\n");
-      return `  <url>\n    <loc>${pageUrl(locale, id)}</loc>\n${links}\n  </url>`;
-    }),
-  );
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n${entries.join("\n")}\n</urlset>\n`;
+// sitemap 的 lastmod。每一頁搜尋引擎讀得到的文字（標題、說明與 src/static-content.ts 寫進 #app
+// 的內容）算一個雜湊，跟上一版的 sitemap-state.json 比對：沒變沿用上一版的日期，變了寫建置當天。
+// 不用 git 的 commit 日期，一個語系的文字都在同一個檔案（src/i18n/<語系>.ts），分不出改的是哪一頁，
+// 頁面引用的程式檔名每次改程式也都會變。上一版由部署流程從 build 分支取出，路徑放在環境變數
+// GEARS_SITEMAP_STATE。找不到上一版時（第一次部署、本機建置）不寫 lastmod，只記下雜湊給下一版比對，
+// 上一版有、這一頁沒有的就是新頁面，寫建置當天。
+type SitemapState = Record<string, { sha: string; lastmod: string }>;
+
+function previousState(): SitemapState | null {
+  const path = process.env.GEARS_SITEMAP_STATE;
+  if (!path) return null;
+  try {
+    return JSON.parse(readFileSync(path, "utf-8")) as SitemapState;
+  } catch {
+    return null;
+  }
 }
 
-function localized(html: string, locale: Locale, id: string) {
+function pageText(locale: Locale, id: string) {
   const meta = messagesOf(locale.id) as Record<string, string>;
   const title = meta[id ? `meta.${id}.title` : "meta.home.title"]!;
   const description = meta[id ? `meta.${id}.description` : "meta.home.description"]!;
+  return { meta, title, description, body: staticContent(id, { messages: meta, home: `${BASE}${locale.prefix}` }) };
+}
+
+// 每個語系、每個頁面的網址，sitemap.xml 用。回傳 sitemap 與這一版的 sitemap-state.json
+function sitemap(ids: string[], previous: SitemapState | null, today: string) {
+  const state: SitemapState = {};
+  const entries = ids.flatMap((id) =>
+    LOCALES.map((locale) => {
+      const { title, description, body } = pageText(locale, id);
+      const sha = createHash("sha256").update(`${title}\n${description}\n${body}`).digest("hex").slice(0, 16);
+      const key = `${locale.prefix}${id}`;
+      const before = previous?.[key];
+      const lastmod = !previous ? "" : before && before.sha === sha ? before.lastmod : today;
+      state[key] = { sha, lastmod };
+      const links = [...LOCALES.map((l) => [l.lang, pageUrl(l, id)]), ["x-default", pageUrl(LOCALES[0], id)]]
+        .map(([lang, href]) => `    <xhtml:link rel="alternate" hreflang="${lang}" href="${href}" />`)
+        .join("\n");
+      return `  <url>\n    <loc>${pageUrl(locale, id)}</loc>\n${lastmod ? `    <lastmod>${lastmod}</lastmod>\n` : ""}${links}\n  </url>`;
+    }),
+  );
+  return {
+    xml: `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n${entries.join("\n")}\n</urlset>\n`,
+    state: `${JSON.stringify(state, null, 1)}\n`,
+  };
+}
+
+function localized(html: string, locale: Locale, id: string) {
+  const { meta, title, description, body } = pageText(locale, id);
   return html
     .replace(/<html lang="[^"]*">/, `<html lang="${locale.lang}">`)
     // 404.html 沒有自己的網址，不寫 canonical 與分享卡片，也請搜尋引擎不要收錄
@@ -169,7 +207,13 @@ function localized(html: string, locale: Locale, id: string) {
       `<title>${escape(title)}</title>\n    ${id === NOT_FOUND ? `<meta name="robots" content="noindex" />` : seoTags(locale, id, title, description, meta)}`,
     )
     .replace(/<meta name="description" content="[^"]*"/, `<meta name="description" content="${escape(description)}"`)
-    .replace(/<noscript>[^<]*<\/noscript>/, `<noscript>${escape(meta["app.noscript"]!)}</noscript>`);
+    .replace(/<noscript>[^<]*<\/noscript>/, `<noscript>${escape(meta["app.noscript"]!)}</noscript>`)
+    // 太舊的瀏覽器（iOS 16.4 以前）的提示，public/legacy-check.js 偵測到時才顯示
+    .replace(/(<p id="legacy-browser"[^>]*>)[^<]*<\/p>/, `$1${escape(meta["app.legacy"]!)}</p>`)
+    // public/ 的檔案 Vite 不改寫路徑，onion 版的網站在根目錄
+    .replace(`<script src="/gears/legacy-check.js">`, `<script src="${BASE}legacy-check.js">`)
+    // 這一頁的標題、說明與連到其他工具的連結（src/static-content.ts），打開之後換成工作台
+    .replace(/<div id="app"><\/div>/, `<div id="app">${body}</div>`);
 }
 
 function toolPages(): Plugin {
@@ -192,7 +236,10 @@ function toolPages(): Plugin {
       }
       // nginx 找不到檔案時送出（tools/nginx-gears.conf），語系由網址決定，打開之後畫面跟著換
       this.emitFile({ type: "asset", fileName: "404.html", source: localized(template, LOCALES[0], NOT_FOUND) });
-      this.emitFile({ type: "asset", fileName: "sitemap.xml", source: sitemap(["", ...toolIds, ...pageIds.filter((id) => !labIds.includes(id))]) });
+      const today = new Date().toISOString().slice(0, 10);
+      const map = sitemap(["", ...toolIds, ...pageIds.filter((id) => !labIds.includes(id))], previousState(), today);
+      this.emitFile({ type: "asset", fileName: "sitemap.xml", source: map.xml });
+      this.emitFile({ type: "asset", fileName: "sitemap-state.json", source: map.state });
     },
   };
 }
@@ -218,7 +265,7 @@ function serviceWorker(base: string): Plugin {
       };
       walk(dist);
       const lazy = (f: string) => f.startsWith("vendor/") || f.startsWith("models/") || /^assets\/(ort-wasm-|c2pa_bg-)/.test(f);
-      const precache = files.filter((f) => !lazy(f) && f !== "sw.js" && !f.endsWith(".map")).sort();
+      const precache = files.filter((f) => !lazy(f) && f !== "sw.js" && f !== "sitemap-state.json" && !f.endsWith(".map")).sort();
       // 逐字稿的模型另外存（MODEL_DIRS），不列進來。本機建置時 public/models/whisper/ 會在 dist 裡
       const modelDirs = [...Object.values(whisper).map((m) => `models/whisper/${m.dir}/`), `models/speaker/${speakerModel.dir}/`];
       const sha = (f: string) => createHash("sha256").update(readFileSync(join(dist, f))).digest("hex").slice(0, 16);

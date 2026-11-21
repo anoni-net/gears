@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "preact/hooks";
+import { onPhone } from "./phone.ts";
 import { t, tDynamic } from "../i18n/index.ts";
 import models from "../tools/llm-bench/models.json" with { type: "json" };
 import { SAMPLES } from "../tools/llm-bench/samples.ts";
@@ -61,8 +62,6 @@ const markRunning = (run: Running | null) => {
 const runningBefore = () => ((history.state ?? {}) as Record<string, Running | undefined>)[RUNNING] ?? null;
 export const RELOADED = "reloaded";
 
-// 手機與平板：WebKit 的 iPadOS 回報成 Macintosh，用觸控點分辨
-const isMobile = () => /iPhone|iPad|Android/i.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
 // 超過這個下載量的模型，手機上先提醒可能因為記憶體不夠重新載入
 const MOBILE_LIMIT = 1e9;
 
@@ -230,7 +229,7 @@ export function LlmBench({ env, runs, setRuns, busy, setBusy }: Props) {
         </fieldset>
       ) : null}
       {!usable ? <p class="hint">{gpuOnly && device === "wasm" ? t("bench.gpuOnly") : t("bench.noGpu")}</p> : null}
-      {usable && bytes > MOBILE_LIMIT && isMobile() ? (
+      {usable && bytes > MOBILE_LIMIT && onPhone() ? (
         <p class="notice" data-testid="bench-mobile">
           {t("bench.mobileHint", { gb: gb(bytes) })}
         </p>

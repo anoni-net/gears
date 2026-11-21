@@ -74,8 +74,10 @@ export interface SessionOptions {
 }
 
 export class RemoteSession implements Channel {
-  // 第一次握手的確認碼。之後接回來重新握手，伺服器沒有 K 也冒充不了，畫面只顯示第一次的
+  // 第一次握手的確認碼，畫面只顯示這一個。之後接回來重新握手時帶上第一次握手導出的秘密（chain），
+  // 沒有參與第一次握手的人接不進來，就算它知道連結金鑰
   readonly confirm: Promise<string>;
+  private chain: Uint8Array | null = null;
   private resolveConfirm!: (code: string) => void;
   private rejectConfirm!: (e: Error) => void;
   private inbox = new Inbox();
@@ -244,8 +246,9 @@ export class RemoteSession implements Channel {
       let channel: Channel;
       try {
         this.emit("connecting");
-        const secured = await secure(view, this.key, this.role, view.id);
+        const secured = await secure(view, this.key, this.role, view.id, this.chain ?? undefined);
         channel = secured.channel;
+        this.chain ??= secured.chain;
         this.resolveConfirm(secured.confirm);
       } catch (error) {
         if (this.retryEpoch(error)) continue;

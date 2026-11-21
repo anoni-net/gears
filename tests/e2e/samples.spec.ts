@@ -7,7 +7,7 @@ test.beforeEach(async ({ page }) => {
 
 test("從桌面的使用者區打開範例頁", async ({ page }) => {
   await page.goto("./");
-  await page.locator(".desktop").getByRole("button", { name: /^範例/ }).click();
+  await page.locator(".desktop").getByRole("link", { name: /^範例/ }).click();
   await expect(page).toHaveURL(/\/gears\/samples\/$/);
   await expect(page).toHaveTitle("範例檔案與條碼 | Gears 檔案工作台");
   await expect(page.getByRole("heading", { name: "範例", exact: true })).toBeVisible();
@@ -16,7 +16,7 @@ test("從桌面的使用者區打開範例頁", async ({ page }) => {
 
 test("換到範例頁時從頁首開始，從工具的連結過來時那個工具的範例排在最前面", async ({ page }) => {
   await page.goto("./");
-  const card = page.locator(".desktop").getByRole("button", { name: /^範例/ });
+  const card = page.locator(".desktop").getByRole("link", { name: /^範例/ });
   await card.scrollIntoViewIfNeeded();
   expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
   await card.click();

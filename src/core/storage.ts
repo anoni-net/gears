@@ -1,4 +1,5 @@
 import whisper from "../tools/transcribe/models.json" with { type: "json" };
+import { PII_MODEL } from "../tools/redact/pii-model.ts";
 import { MODEL_CACHE } from "./models.ts";
 
 // 已下載的模型（src/ui/StoragePage.tsx）：Gears 存在這個瀏覽器裡的模型與程式，依用途分成一列一列，
@@ -8,16 +9,17 @@ import { MODEL_CACHE } from "./models.ts";
 // 三個快取：
 // - gears-models：逐字稿的模型（src/core/models.ts、service worker 的 MODEL_DIRS）
 // - gears-keep：用到時才存的辨識模型與 WebAssembly（service worker 的 LAZY）
-// - transformers-cache：裝置量測的語言模型，由 Transformers.js 自己存
+// - transformers-cache：Transformers.js 自己存的模型：裝置量測的語言模型，以及遮蔽與量測頁共用的個資辨識模型
+//   （src/ui/pii-runtime.ts，另外列成一列，刪語言模型時不會一起刪掉）
 
 export const KEEP_CACHE = "gears-keep";
 export const LLM_CACHE = "transformers-cache";
 export const STORAGE_CACHES = [MODEL_CACHE, KEEP_CACHE, LLM_CACHE];
 
-export type StorageGroup = "transcribe" | "speaker" | "faces" | "ocr" | "runtime" | "pdf" | "c2pa" | "llm" | "other";
+export type StorageGroup = "transcribe" | "speaker" | "faces" | "ocr" | "pii" | "runtime" | "pdf" | "c2pa" | "llm" | "other";
 
 // 畫面上的順序
-export const STORAGE_GROUPS: readonly StorageGroup[] = ["transcribe", "speaker", "faces", "ocr", "runtime", "pdf", "c2pa", "llm", "other"];
+export const STORAGE_GROUPS: readonly StorageGroup[] = ["transcribe", "speaker", "faces", "ocr", "pii", "runtime", "pdf", "c2pa", "llm", "other"];
 
 export interface StorageKey {
   group: StorageGroup;
@@ -29,7 +31,7 @@ const byDir = new Map(Object.entries(whisper).map(([id, m]) => [m.dir, id]));
 
 // 快取裡的一個網址屬於哪一列。base 是工作台的路徑（/gears/，onion 版是 /）
 export function classify(cache: string, url: string, base: string): StorageKey {
-  if (cache === LLM_CACHE) return { group: "llm" };
+  if (cache === LLM_CACHE) return { group: new URL(url, "http://x").pathname.includes(`/${PII_MODEL.dir}/`) ? "pii" : "llm" };
   const path = new URL(url, "http://x").pathname;
   if (!path.startsWith(base)) return { group: "other" };
   const rest = path.slice(base.length);
@@ -54,4 +56,24 @@ export const keyId = (key: StorageKey) => (key.model ? `${key.group}:${key.model
 export function compareKeys(a: StorageKey, b: StorageKey): number {
   const group = STORAGE_GROUPS.indexOf(a.group) - STORAGE_GROUPS.indexOf(b.group);
   return group || MODEL_IDS.indexOf(a.model ?? "") - MODEL_IDS.indexOf(b.model ?? "");
+}
+
+// 遮蔽的自動尋找第一次使用要下載多少（src/ui/RedactEditor.tsx），按下按鈕之前就寫在畫面上，
+// 用行動網路的讀者先知道。onnxruntime 的 WebAssembly 兩者共用，約 14 MB（伺服器有壓縮時約 4 MB），
+// 人臉的模型約 0.2 MB 不計，文字辨識的兩個模型約 21 MB。
+// paths 是 gears-keep 裡的網址，service worker 換版本時已經清掉雜湊對不上的，留下的都能直接用。
+// runtime 是遮蔽用的那一份 WebAssembly 的網址。Transformers.js 另帶一份 onnxruntime（檔名開頭相同、
+// 雜湊不同），用過逐字稿不代表遮蔽的執行環境已經在。數字照沒有壓縮的大小，寧可多寫
+export const RUNTIME_MB = 14;
+export const OCR_MB = 21;
+
+export function redactDownload(paths: readonly string[], base: string, runtimeUrl: string): { faces: number; text: number } {
+  const rest = paths.map((url) => {
+    const path = new URL(url, "http://x").pathname;
+    return path.startsWith(base) ? path.slice(base.length) : "";
+  });
+  const want = new URL(runtimeUrl, "http://x").pathname;
+  const runtime = want.startsWith(base) && rest.includes(want.slice(base.length));
+  const ocr = ["det", "rec"].every((part) => rest.some((p) => p.startsWith("models/ppocr/") && p.includes(`_${part}`)));
+  return { faces: runtime ? 0 : RUNTIME_MB, text: (ocr ? 0 : OCR_MB) + (runtime ? 0 : RUNTIME_MB) };
 }

@@ -30,9 +30,52 @@ concurrency:
   group: deploy
   cancel-in-progress: false
 
+# onnxruntime-node（Transformers.js 帶進來的相依套件）的安裝腳本會從 nuget.org 另外下載 Linux 的
+# CUDA 檔案，GitHub 的機器連不上時 npm ci 整個失敗（2026-11-20 兩次）。網頁只用 onnxruntime-web，
+# Node 裡的單元測試用的 CPU 版已經包在 npm 套件裡，用不到 CUDA，所以略過
+env:
+  ONNXRUNTIME_NODE_INSTALL: skip
+
 jobs:
+  # 好幾個 PR 接連合併時，每一個的 CI 都會觸發一次部署，CI 跑完的順序不一定照合併的順序。
+  # 2026-11-21 合併 #190、#186、#188、#189，#188 的 CI 最晚跑完，它的部署把 #189 的版本蓋回 #188。
+  # CI 觸發的部署只建置 main 最新的那一筆，比較舊的略過，最新那一筆的 CI 通過時自己會觸發部署。
+  # 排程與手動觸發本來就是 main 最新的一筆
+  latest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      ok: ${{ steps.check.outputs.ok }}
+    steps:
+      - id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          if [ -z "$SHA" ]; then
+            echo "ok=true" >>"$GITHUB_OUTPUT"
+            exit 0
+          fi
+          head=$(gh api "repos/${{ github.repository }}/commits/main" --jq .sha)
+          if [ "$head" = "$SHA" ]; then
+            echo "ok=true" >>"$GITHUB_OUTPUT"
+          else
+            echo "::notice::main 已經是 ${head:0:8}，${SHA:0:8} 不部署，等最新那一筆的 CI"
+            echo "ok=false" >>"$GITHUB_OUTPUT"
+          fi
+
   deploy:
-    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    needs: latest
+    # workflow_run 的 branches 比對的是來源分支的名稱，fork 從自己的 main 開 PR 也符合，
+    # 所以另外限定：這個 repo 自己的 push 觸發的 CI 才部署，PR 的 CI 一律不部署
+    if: >-
+      needs.latest.outputs.ok == 'true' && (
+        github.event_name != 'workflow_run' || (
+          github.event.workflow_run.conclusion == 'success' &&
+          github.event.workflow_run.event == 'push' &&
+          github.event.workflow_run.head_repository.full_name == github.repository
+        )
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -73,8 +116,16 @@ jobs:
             echo "::warning::165 清單下載失敗，這一版沒有清單"
           fi
 
-      - run: npm run build
-      - run: GEARS_TARGET=onion npm run build
+      # sitemap 的 lastmod 跟上一版比對每一頁內容的雜湊（vite.config.ts 的 sitemap()），
+      # 上一版從 build 分支取出，build 分支在上一步已經抓下來。取不到時建置不寫 lastmod
+      - name: 上一版的 sitemap 狀態
+        run: |
+          for dir in site onion; do
+            git show "build:$dir/sitemap-state.json" >"$RUNNER_TEMP/sitemap-$dir.json" 2>/dev/null \
+              || rm -f "$RUNNER_TEMP/sitemap-$dir.json"
+          done
+      - run: GEARS_SITEMAP_STATE="$RUNNER_TEMP/sitemap-site.json" npm run build
+      - run: GEARS_TARGET=onion GEARS_SITEMAP_STATE="$RUNNER_TEMP/sitemap-onion.json" npm run build
       - run: npm run build:server && node scripts/check-relay.mjs
       - run: node scripts/fetch-whisper.mjs --manifest deploy/models.txt
 

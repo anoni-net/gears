@@ -39,7 +39,7 @@ test("從桌面的使用者區打開建議與回饋，送出之後顯示收到�
   await page.getByRole("button", { name: "回到桌面" }).click();
 
   await expect(page.getByRole("list", { name: "使用者區" })).toBeVisible();
-  await page.locator(".desktop").getByRole("button", { name: /^建議與回饋/ }).click();
+  await page.locator(".desktop").getByRole("link", { name: /^建議與回饋/ }).click();
   await expect(page).toHaveURL(/\/gears\/feedback\/$/);
   await expect(page.getByRole("heading", { name: "建議與回饋" })).toBeVisible();
   await expect(page.getByTestId("feedback-privacy")).toContainText("暫存區的檔案不會送出");
@@ -86,7 +86,7 @@ test("從工具頁的頁尾打開建議與回饋，帶上那個工具。表單�
 test("手機上從桌面下方點進建議與回饋，畫面從頂端開始", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 660 });
   await page.goto("./");
-  const card = page.locator(".desktop").getByRole("button", { name: /^建議與回饋/ });
+  const card = page.locator(".desktop").getByRole("link", { name: /^建議與回饋/ });
   await card.scrollIntoViewIfNeeded();
   expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(1000);
   await card.click();

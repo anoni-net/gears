@@ -13,7 +13,7 @@ export async function startSender(page: Page): Promise<string> {
     { name: "data.bin", mimeType: "application/octet-stream", buffer: random },
   ]);
   await page.getByRole("button", { name: "回到桌面" }).click();
-  await page.getByRole("button", { name: /^遠端傳送/ }).click();
+  await page.getByRole("link", { name: /^遠端傳送/ }).click();
   await page.getByRole("button", { name: "送出暫存區的檔案" }).click();
   await expect(page.getByTestId("remote-privacy")).toContainText("Cloudflare");
   await page.getByRole("button", { name: "產生連結（2 個檔案）" }).click();

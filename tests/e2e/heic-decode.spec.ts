@@ -45,7 +45,9 @@ test("HEIC 的預覽：瀏覽器不能顯示時用 libheif 解碼，顏色與位
 
 test("從任務把 HEIC 轉成 JPEG，下載的 JPEG 沒有中繼資料", async ({ page }) => {
   await page.goto("./");
-  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.getByRole("button", { name: /打不開的 iPhone 照片/ }).click()]);
+  // 桌面的工具連結只換到工具頁，選檔案由讀者在工具頁按下（不自動打開系統的選檔案視窗）
+  await page.getByRole("link", { name: /打不開的 iPhone 照片/ }).click();
+  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.locator(".intro").getByRole("button", { name: "選擇檔案" }).click()]);
   await chooser.setFiles(heic(PHOTO));
   await page.getByRole("button", { name: "轉成 JPEG", exact: true }).click();
   await expect(page.getByTestId("history-current").getByText("HEIC 轉 JPEG", { exact: true })).toBeVisible({ timeout: 30_000 });

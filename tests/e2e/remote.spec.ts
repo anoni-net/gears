@@ -201,7 +201,7 @@ test("資料通道傳到一半斷掉，改用轉送服務重傳，接收端不�
   const big = Buffer.from(Array.from({ length: 24 * 1024 * 1024 }, (_, i) => (i * 131 + (i >> 10)) & 255));
   await sender.getByTestId("file-input").setInputFiles([{ name: "big.bin", mimeType: "application/octet-stream", buffer: big }]);
   await sender.getByRole("button", { name: "回到桌面" }).click();
-  await sender.getByRole("button", { name: /^遠端傳送/ }).click();
+  await sender.getByRole("link", { name: /^遠端傳送/ }).click();
   await sender.getByRole("button", { name: "送出暫存區的檔案" }).click();
   await sender.getByRole("button", { name: "產生連結（1 個檔案）" }).click();
   await expect(sender.getByTestId("remote-status")).toContainText("等對方打開連結");
@@ -220,7 +220,7 @@ test("資料通道傳到一半斷掉，改用轉送服務重傳，接收端不�
 test("暫存區沒有檔案也能產生連結，連上之後只互傳文字訊息", async ({ browser, baseURL }) => {
   const { sender, receiver, close } = await people(browser, baseURL!);
   await sender.goto("./");
-  await sender.getByRole("button", { name: /^遠端傳送/ }).click();
+  await sender.getByRole("link", { name: /^遠端傳送/ }).click();
   await expect(sender.getByRole("button", { name: "送出暫存區的檔案" })).toBeDisabled();
   await sender.getByRole("button", { name: "只傳文字訊息或視訊通話" }).click();
   await expect(sender.getByTestId("remote-privacy")).toBeVisible();

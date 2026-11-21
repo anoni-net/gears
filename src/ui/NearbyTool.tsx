@@ -3,6 +3,7 @@ import { t } from "../i18n/index.ts";
 import { routeUrl } from "../router.ts";
 import { tray } from "../state.ts";
 import { CodecError, decode, fromText, offerTag } from "../tools/nearby/codec.ts";
+import { agreeNonces } from "../tools/nearby/confirm.ts";
 import { MAX_TOTAL, type FileMeta } from "../tools/nearby/protocol.ts";
 import { type Incoming, TooLargeError, receiveFiles, sendFiles } from "../tools/nearby/transfer.ts";
 import { MARGIN, encodeQr, qrPath } from "../tools/qrcode/index.ts";
@@ -38,7 +39,7 @@ type Phase =
   | { kind: "sent"; ok: boolean[] }
   | { kind: "declined" }
   | { kind: "received"; count: number; failed: number }
-  | { kind: "error"; reason: "timeout" | "closed" | "tooLarge" | "noNetwork" | "failed" };
+  | { kind: "error"; reason: "timeout" | "closed" | "tooLarge" | "noNetwork" | "version" | "failed" };
 
 function QrCode({ text, label }: { text: string; label: string }) {
   const matrix = encodeQr(text, "M");
@@ -160,6 +161,7 @@ export function NearbyTool(_props: CreateToolProps) {
       : error instanceof NoNetworkError ? "noNetwork"
       : error instanceof TooLargeError ? "tooLarge"
       : (error as Error)?.message === "closed" ? "closed"
+      : (error as Error)?.message === "version" ? "version"
       : "failed";
     trackFail("nearby", reason === "timeout" || reason === "noNetwork" ? "network" : reason === "tooLarge" ? "too-large" : "other");
     setPhase({ kind: "error", reason });
@@ -195,7 +197,7 @@ export function NearbyTool(_props: CreateToolProps) {
       await applyAnswer(p, text);
       setPhase({ kind: "connecting" });
       const channel = await opened(p);
-      setConfirm(confirmOf(p));
+      setConfirm(confirmOf(p, await agreeNonces(channel, "offer")));
       setPhase({ kind: "awaiting" });
       const result = await sendFiles(channel, out.outgoing(), (done, total) => setPhase({ kind: "transfer", done, total }));
       if (result.declined) return setPhase({ kind: "declined" });
@@ -215,7 +217,7 @@ export function NearbyTool(_props: CreateToolProps) {
       setPhase({ kind: "answering" });
       setNotCode(false);
       const channel = await opened(p);
-      setConfirm(confirmOf(p));
+      setConfirm(confirmOf(p, await agreeNonces(channel, "answer")));
       setPhase({ kind: "connecting" });
       const incoming = await receiveFiles(channel);
       setPhase({ kind: "review", incoming });

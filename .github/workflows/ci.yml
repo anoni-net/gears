@@ -8,6 +8,12 @@ on:
 permissions:
   contents: read
 
+# onnxruntime-node（Transformers.js 帶進來的相依套件）的安裝腳本會從 nuget.org 另外下載 Linux 的
+# CUDA 檔案，GitHub 的機器連不上時 npm ci 整個失敗（2026-11-20 兩次）。網頁只用 onnxruntime-web，
+# Node 裡的單元測試用的 CPU 版已經包在 npm 套件裡，用不到 CUDA，所以略過
+env:
+  ONNXRUNTIME_NODE_INSTALL: skip
+
 jobs:
   # 依瀏覽器拆成四台機器同時跑。GitHub 的機器是 4 核心，Playwright 只開 2 個 worker，
   # 全部放在一台要 6 分鐘左右。單元測試與型別檢查很快，跟 Chromium 放在同一台。
@@ -15,7 +21,9 @@ jobs:
   test:
     name: test (${{ matrix.name }})
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # 測試本身約 6 分鐘，但 GitHub 機器的 apt 有時很慢，安裝 ffmpeg 與瀏覽器的相依套件
+    # 就花掉 10 分鐘以上（2026-11-19 連續好幾次），15 分鐘的上限會讓還沒執行完的測試被中止
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:

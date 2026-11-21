@@ -59,7 +59,8 @@ test("找人臉：載入模型與尋找時顯示進度，完成後拿掉", async
   });
   await openRedact(page, await screenshot(page, false));
   // 訊息區與進度條都不佔額外的版面，圖片從頭到尾不會移動。從圖片還在解碼時就開始量
-  const canvasTop = () => page.getByTestId("redact-canvas").evaluate((el) => Math.round(el.getBoundingClientRect().top));
+  // 量的是在整頁裡的位置：窄畫面上按鈕不在視窗裡時，點擊會先捲動頁面，相對於視窗的位置跟著變
+  const canvasTop = () => page.getByTestId("redact-canvas").evaluate((el) => Math.round(el.getBoundingClientRect().top + window.scrollY));
   const top = await canvasTop();
   await expect(page.getByRole("button", { name: "找人臉" })).toBeEnabled();
   expect(await canvasTop()).toBe(top);
@@ -81,4 +82,9 @@ test("還沒辨識過文字時按框起所有文字，先辨識再把每一行�
   await page.getByRole("button", { name: "框起所有文字" }).click();
   await expect(page.getByTestId("redact-auto-status")).toHaveText("加了 3 個框，請逐一確認，框錯的點一下就會拿掉。", { timeout: 90_000 });
   await expect(page.getByText("已經框了 3 個範圍")).toBeVisible();
+});
+
+test("按下自動尋找之前寫出第一次要下載多少", async ({ page }) => {
+  await openRedact(page, await screenshot(page, false));
+  await expect(page.getByTestId("redact-download")).toHaveText("第一次使用自動尋找要下載辨識模型，找人臉約 14 MB、辨識文字約 35 MB，之後存在這台裝置的瀏覽器裡。");
 });
