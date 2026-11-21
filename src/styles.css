@@ -48,7 +48,21 @@
   --warn: #a84800;
   --warn-bg: color-mix(in srgb, var(--action) 8%, var(--bg));
   --ok: var(--cat-privacy);
+  /* 級距（AGENTS.md「設計語言」的字級、間距與圓角）：樣式只用這裡的值，tests/unit/design-tokens.spec.ts 檢查 */
+  --fs-xs: 0.8rem;
+  --fs-sm: 0.9rem;
+  --fs-md: 1rem;
+  --fs-lg: 1.15rem;
+  --fs-xl: 1.4rem;
+  --sp-1: 0.25rem;
+  --sp-2: 0.5rem;
+  --sp-3: 0.75rem;
+  --sp-4: 1rem;
+  --sp-5: 1.5rem;
+  --sp-6: 2rem;
+  --radius-sm: 4px;
   --radius: 8px;
+  --radius-pill: 999px;
   font-family: system-ui, -apple-system, "Segoe UI", "Noto Sans TC", "Noto Sans CJK TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
   line-height: 1.6;
   color: var(--text);
@@ -116,10 +130,10 @@ button,
   align-items: center;
   justify-content: center;
   min-height: 2.5rem;
-  padding: 0.4rem 1.1rem;
+  padding: var(--sp-2) var(--sp-4);
   border: 1px solid var(--line);
   /* 小圓角，不用膠囊形，跟 anoni.net 社群首頁的按鈕一致 */
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: var(--surface);
   color: var(--text);
   text-decoration: none;
@@ -135,7 +149,7 @@ button:hover:not(:disabled),
 .buttons {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: var(--sp-2);
   align-items: center;
 }
 
@@ -180,8 +194,8 @@ button.danger {
   width: 100%;
   max-width: 72rem;
   margin: 0 auto;
-  padding-left: 1rem;
-  padding-right: 1rem;
+  padding-left: var(--sp-4);
+  padding-right: var(--sp-4);
 }
 
 /* 頁首：排版跟新聞導讀一致（字標、分隔線、產品名稱，右邊是回到桌面與清空暫存區），
@@ -245,7 +259,7 @@ html:lang(en) .site-header__product {
   margin-left: 0.3rem;
   padding: 0.05rem 0.4rem;
   border: 1px solid var(--link);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   color: var(--link);
   font-size: 0.625rem;
   font-weight: 700;
@@ -295,7 +309,7 @@ html:lang(en) .site-header__product {
 .site-header__actions .site-header__clear.armed {
   min-height: 2.25rem;
   padding: 0 0.6rem;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: var(--danger-text);
   color: var(--bg);
   font-weight: 700;
@@ -367,9 +381,9 @@ html:lang(en) .site-header__product {
 
 /* 列印文件的追蹤點：預設依寬度縮放，放大時用原本的像素、可以左右捲動 */
 .print-dots-canvas {
-  margin: 0.5rem 0 1rem;
+  margin: var(--sp-2) 0 var(--sp-4);
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: #fff;
   overflow: auto;
   max-height: 80vh;
@@ -385,20 +399,13 @@ html:lang(en) .site-header__product {
   max-width: none;
 }
 
-/* 文件開啟前檢查 */
-.doc-check .warn {
-  padding: 0.5rem 0.75rem;
-  border-radius: 4px;
-  background: var(--warn-bg);
-}
-
 .doc-check-items {
   margin: 0;
-  padding-left: 1.2rem;
+  padding-left: var(--sp-4);
 }
 
 .doc-check-items li {
-  margin: 0.4rem 0;
+  margin: var(--sp-2) 0;
 }
 
 .doc-check-host {
@@ -407,7 +414,7 @@ html:lang(en) .site-header__product {
 
 .doc-check-items code {
   display: block;
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
   color: var(--muted);
   word-break: break-all;
 }
@@ -418,8 +425,8 @@ html:lang(en) .site-header__product {
 }
 
 .doc-check-hosts details ul {
-  margin: 0.25rem 0 0;
-  padding-left: 1.2rem;
+  margin: var(--sp-1) 0 0;
+  padding-left: var(--sp-4);
 }
 
 /* 圖示圈：顏色代表類別，跟社群首頁的圖示圈同一種樣式 */
@@ -461,35 +468,35 @@ html:lang(en) .site-header__product {
 .tool-title {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: var(--sp-2);
 }
 
 main {
   flex: 1;
-  padding: 1.25rem 0;
+  padding: var(--sp-5) 0;
 }
 
 /* 工具與頁面的標題是 <h1>（#164），外觀維持原本 <h2> 的大小與邊距，頁首的網站名稱在這些頁面是 <p> */
 h2,
 h1.tool-title {
-  font-size: 1.15rem;
+  font-size: var(--fs-xl);
   margin-block: 0.83em;
 }
 
 h3 {
-  font-size: 1rem;
-  margin: 1.25rem 0 0.5rem;
+  font-size: var(--fs-md);
+  margin: var(--sp-5) 0 var(--sp-2);
 }
 
 h4 {
-  font-size: 0.9rem;
-  margin: 0.75rem 0 0.25rem;
+  font-size: var(--fs-sm);
+  margin: var(--sp-3) 0 var(--sp-1);
   color: var(--muted);
 }
 
 .hint {
   color: var(--muted);
-  font-size: 0.9rem;
+  font-size: var(--fs-sm);
 }
 
 /* 工作台 */
@@ -497,7 +504,7 @@ h4 {
 .workbench {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 1.25rem;
+  gap: var(--sp-5);
 }
 
 @media (min-width: 52rem) {
@@ -524,11 +531,11 @@ h4 {
   overflow-y: auto;
   overscroll-behavior: contain;
   display: grid;
-  gap: 1.5rem;
+  gap: var(--sp-5);
   align-content: start;
-  font-size: 0.9rem;
+  font-size: var(--fs-sm);
   /* 焦點框不被捲動的邊緣切掉 */
-  padding: 2px 0.25rem 2px 2px;
+  padding: 2px var(--sp-1) 2px 2px;
 }
 
 .page-aside ul {
@@ -546,8 +553,8 @@ h4 {
 }
 
 .aside-label {
-  margin: 0 0 0.35rem;
-  font-size: 0.8rem;
+  margin: 0 0 var(--sp-1);
+  font-size: var(--fs-xs);
   font-weight: 600;
   color: var(--muted);
 }
@@ -568,7 +575,7 @@ h4 {
 }
 
 .aside-tray.has-files {
-  padding: 0.6rem 0.75rem;
+  padding: var(--sp-2) var(--sp-3);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--fill);
@@ -577,8 +584,8 @@ h4 {
 .aside-home {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
-  margin-top: 0.3rem;
+  gap: var(--sp-1);
+  margin-top: var(--sp-1);
 }
 
 .aside-home .icon,
@@ -590,15 +597,15 @@ h4 {
 
 .aside-pages > ul:first-child {
   display: grid;
-  gap: 0.1rem;
+  gap: 0;
 }
 
 .aside-pages > ul:first-child a {
   display: flex;
   align-items: center;
-  gap: 0.45rem;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
+  gap: var(--sp-2);
+  padding: var(--sp-1) var(--sp-2);
+  border-radius: var(--radius-sm);
   color: var(--text);
 }
 
@@ -631,10 +638,10 @@ h4 {
 .page-aside .aside-more {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.15rem 1rem;
-  margin-top: 0.5rem;
-  padding: 0 0.5rem;
-  font-size: 0.8rem;
+  gap: var(--sp-1) var(--sp-4);
+  margin-top: var(--sp-2);
+  padding: 0 var(--sp-2);
+  font-size: var(--fs-xs);
 }
 
 .aside-more a {
@@ -653,15 +660,15 @@ h4 {
 .aside-toc a {
   display: block;
   margin-left: -1px;
-  padding: 0.15rem 0.6rem;
+  padding: var(--sp-1) var(--sp-2);
   border-left: 2px solid transparent;
   color: var(--muted);
   line-height: 1.4;
 }
 
 .aside-toc li.sub a {
-  padding-left: 1.3rem;
-  font-size: 0.85rem;
+  padding-left: var(--sp-5);
+  font-size: var(--fs-sm);
 }
 
 .aside-toc a[aria-current="location"] {
@@ -698,12 +705,12 @@ h4 {
   padding: 0;
   margin: 0;
   display: grid;
-  gap: 0.5rem;
+  gap: var(--sp-2);
 }
 
 .item {
   display: flex;
-  gap: 0.25rem;
+  gap: var(--sp-1);
   min-width: 0;
 }
 
@@ -717,8 +724,8 @@ h4 {
   min-width: 0;
   overflow: hidden;
   justify-content: flex-start;
-  gap: 0.6rem;
-  padding: 0.4rem;
+  gap: var(--sp-2);
+  padding: var(--sp-2);
   text-align: left;
 }
 
@@ -732,7 +739,7 @@ h4 {
   width: 3rem;
   height: 3rem;
   object-fit: cover;
-  border-radius: 6px;
+  border-radius: var(--radius);
   background: var(--line);
   flex: none;
 }
@@ -764,7 +771,7 @@ h4 {
 }
 
 .item .status {
-  font-size: 0.8rem;
+  font-size: var(--fs-xs);
   color: var(--ok);
 }
 
@@ -777,7 +784,7 @@ h4 {
 }
 
 .item .remove {
-  padding: 0 0.75rem;
+  padding: 0 var(--sp-3);
 }
 
 /* 檔案畫面（src/ui/FileView.tsx）。檔名與下載同一列，接著是預覽與處理紀錄，最後是找到的資訊與工具。
@@ -788,7 +795,7 @@ h4 {
   min-width: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 1.25rem 1.5rem;
+  gap: var(--sp-5) var(--sp-5);
   align-items: start;
 }
 
@@ -797,7 +804,7 @@ h4 {
   flex-wrap: wrap;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 0.75rem 1.5rem;
+  gap: var(--sp-3) var(--sp-5);
 }
 
 .file-head > div {
@@ -811,7 +818,7 @@ h4 {
 }
 
 .file-head .hint {
-  margin: 0.25rem 0 0;
+  margin: var(--sp-1) 0 0;
 }
 
 /* 下載與分享在檔名的右邊，說明是按鈕下的一行小字 */
@@ -822,7 +829,7 @@ h4 {
 
 .file-head .output .hint {
   max-width: 24rem;
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
 }
 
 /* 窄螢幕上下載與分享排在檔名的右邊、不換行，說明只留給讀螢幕軟體（下載連結的 aria-describedby）。
@@ -864,9 +871,9 @@ h4 {
    不再多加框線。整個檔案畫面只有這一處有色面 */
 .file-main {
   display: grid;
-  gap: 0.75rem;
+  gap: var(--sp-3);
   min-width: 0;
-  padding: 0.75rem;
+  padding: var(--sp-3);
   border-radius: var(--radius);
   background: var(--fill);
 }
@@ -878,7 +885,7 @@ h4 {
 }
 
 .file-main > .steps {
-  padding: 0 0.25rem;
+  padding: 0 var(--sp-1);
 }
 
 /* 手機上預覽約三成畫面高，找到的資訊與工具往下捲一點就看得到 */
@@ -920,8 +927,8 @@ h4 {
 
 /* 處理紀錄：預覽下方一排步驟，選中的那一步在下面顯示做了什麼（Steps） */
 .steps h3 {
-  margin: 0 0 0.4rem;
-  font-size: 0.8rem;
+  margin: 0 0 var(--sp-2);
+  font-size: var(--fs-xs);
   font-weight: 600;
   color: var(--muted);
 }
@@ -933,13 +940,13 @@ h4 {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.4rem;
+  gap: var(--sp-2);
 }
 
 .step-track li {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: var(--sp-2);
 }
 
 /* 分隔號接在前一步後面，換行時留在行尾，不會落到下一行的開頭 */
@@ -951,15 +958,15 @@ h4 {
 .step {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: var(--sp-1);
   min-height: 2rem;
-  padding: 0.1rem 0.7rem;
-  border-radius: 999px;
+  padding: 0 var(--sp-3);
+  border-radius: var(--radius-pill);
   border: 1px solid var(--line);
   background: var(--bg);
   color: var(--text);
   font: inherit;
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
   cursor: pointer;
 }
 
@@ -980,8 +987,8 @@ h4 {
   place-items: center;
   min-width: 1.3rem;
   height: 1.3rem;
-  border-radius: 999px;
-  font-size: 0.75rem;
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-xs);
   background: var(--fill);
   color: var(--text);
 }
@@ -991,8 +998,8 @@ h4 {
 }
 
 .step-detail {
-  margin-top: 0.6rem;
-  font-size: 0.9rem;
+  margin-top: var(--sp-2);
+  font-size: var(--fs-sm);
 }
 
 .step-meta {
@@ -1000,33 +1007,33 @@ h4 {
   flex-wrap: wrap;
   justify-content: space-between;
   align-items: baseline;
-  gap: 0.25rem 1rem;
+  gap: var(--sp-1) var(--sp-4);
   color: var(--muted);
 }
 
 .step-detail .hint {
-  margin: 0.4rem 0 0;
+  margin: var(--sp-2) 0 0;
 }
 
 /* 處理紀錄裡的報告是預覽的說明，不用表格線，三類只留小標籤 */
 .step-detail .report {
-  margin-top: 0.4rem;
+  margin-top: var(--sp-2);
 }
 
 .step-detail .report h4 {
-  margin: 0.5rem 0 0.1rem;
-  font-size: 0.8rem;
+  margin: var(--sp-2) 0 0;
+  font-size: var(--fs-xs);
   color: var(--muted);
 }
 
 .step-detail .report li {
   border: 0;
-  padding: 0.1rem 0;
-  font-size: 0.9rem;
+  padding: 0 0;
+  font-size: var(--fs-sm);
 }
 
 .step-detail .findings {
-  margin-top: 0.4rem;
+  margin-top: var(--sp-2);
 }
 
 .preview {
@@ -1034,7 +1041,7 @@ h4 {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  padding: 0.5rem;
+  padding: var(--sp-2);
   display: flex;
   justify-content: center;
 }
@@ -1067,14 +1074,14 @@ h4 {
   padding: 0;
   margin: 0;
   display: grid;
-  gap: 0.4rem;
+  gap: var(--sp-2);
 }
 
 /* 會透露身分的資訊：白底、左側一條橘色細線，標題用橘字。原本是整片橘底的卡片，四張疊起來
    右欄上半全是橘色，真正要讀者注意的只有標題那幾個字 */
 .findings li {
   border-left: 3px solid var(--warn);
-  padding: 0.2rem 0 0.2rem 0.75rem;
+  padding: var(--sp-1) 0 var(--sp-1) var(--sp-3);
   display: flex;
   flex-direction: column;
 }
@@ -1086,14 +1093,14 @@ h4 {
 
 .findings code {
   color: var(--text);
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
   overflow-wrap: anywhere;
   white-space: pre-line;
 }
 
 /* 文件內容裡要留意的：不是中繼資料，清除之後仍然在，用中性的底色跟上面分開 */
 .content-findings h4 {
-  margin: 1rem 0 0.4rem;
+  margin: var(--sp-4) 0 var(--sp-2);
 }
 
 .content-findings .findings li {
@@ -1105,7 +1112,7 @@ h4 {
 }
 
 .content-choices {
-  margin-top: 0.75rem;
+  margin-top: var(--sp-3);
 }
 
 .ok,
@@ -1120,9 +1127,9 @@ h4 {
 .actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: var(--sp-2);
   align-items: center;
-  margin-top: 1rem;
+  margin-top: var(--sp-4);
 }
 
 .actions .done {
@@ -1139,10 +1146,10 @@ h4 {
 .report li {
   display: flex;
   justify-content: space-between;
-  gap: 1rem;
-  padding: 0.2rem 0;
+  gap: var(--sp-4);
+  padding: var(--sp-1) 0;
   border-bottom: 1px solid var(--line);
-  font-size: 0.9rem;
+  font-size: var(--fs-sm);
 }
 
 .report small {
@@ -1151,16 +1158,16 @@ h4 {
 }
 
 .output {
-  margin-top: 1.5rem;
+  margin-top: var(--sp-5);
 }
 
 .recipient-note {
-  margin-top: 1rem;
+  margin-top: var(--sp-4);
 }
 
 .recipient-note blockquote {
-  margin: 0.5rem 0;
-  padding: 0.75rem 1rem;
+  margin: var(--sp-2) 0;
+  padding: var(--sp-3) var(--sp-4);
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -1169,14 +1176,14 @@ h4 {
 
 footer {
   border-top: 1px solid var(--hair);
-  padding-top: 0.75rem;
-  padding-bottom: 1rem;
+  padding-top: var(--sp-3);
+  padding-bottom: var(--sp-4);
   color: var(--muted);
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
 }
 
 footer p {
-  margin: 0.25rem 0;
+  margin: var(--sp-1) 0;
 }
 
 /* 寬螢幕分左右兩欄：說明在左，連結與語系在右並靠右對齊，寬度照內容，三個連結維持一行。
@@ -1186,7 +1193,7 @@ footer p {
     display: grid;
     grid-template-columns: minmax(0, 1fr) max-content;
     grid-template-areas: "notes links";
-    column-gap: 3rem;
+    column-gap: var(--sp-6);
     align-items: start;
   }
 
@@ -1211,7 +1218,7 @@ footer .footer-item {
 
 /* 版本號：比其他文字小一級，commit 用等寬字 */
 footer .version {
-  font-size: 0.8rem;
+  font-size: var(--fs-xs);
 }
 
 footer .version code {
@@ -1228,15 +1235,15 @@ footer button.link {
 footer .languages {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.25rem 1rem;
-  margin: 0.25rem 0;
+  gap: var(--sp-1) var(--sp-4);
+  margin: var(--sp-1) 0;
 }
 
 footer .languages .icon {
   width: 1rem;
   height: 1rem;
   align-self: center;
-  margin-right: -0.5rem;
+  margin-right: calc(-1 * var(--sp-2));
 }
 
 footer .languages button[aria-current] {
@@ -1251,17 +1258,17 @@ footer .languages button[aria-current] {
   border: 2px dashed var(--line);
   border-radius: var(--radius);
   background: var(--fill);
-  padding: 1.5rem 1rem;
+  padding: var(--sp-5) var(--sp-4);
   text-align: center;
 }
 
 .tray .drop p {
-  margin: 0.25rem 0;
+  margin: var(--sp-1) 0;
 }
 
 /* 選擇檔案：前面有上傳圖示、比一般按鈕高一點的主要按鈕，暫存區與查證的空白畫面共用 */
 button.pick-files {
-  gap: 0.4rem;
+  gap: var(--sp-2);
   min-height: 2.75rem;
 }
 
@@ -1274,11 +1281,11 @@ button.pick-files .icon {
 .tray .drop .pick-files {
   width: 100%;
   max-width: 16rem;
-  margin-bottom: 0.25rem;
+  margin-bottom: var(--sp-1);
 }
 
 .tray .drop .drag-note {
-  font-size: 0.9rem;
+  font-size: var(--fs-sm);
 }
 
 /* 觸控裝置不能把檔案拖進網頁 */
@@ -1295,17 +1302,17 @@ button.pick-files .icon {
 }
 
 .tray .add {
-  margin-top: 0.5rem;
+  margin-top: var(--sp-2);
   width: 100%;
 }
 
 /* 一次處理全部的檔案 */
 .batch {
-  margin-top: 1rem;
-  padding-top: 1rem;
+  margin-top: var(--sp-4);
+  padding-top: var(--sp-4);
   border-top: 1px solid var(--line);
   display: grid;
-  gap: 0.5rem;
+  gap: var(--sp-2);
 }
 
 .batch p {
@@ -1326,9 +1333,9 @@ button.pick-files .icon {
 .desk-intro {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
-  gap: 0.75rem 1.5rem;
-  margin-bottom: 1.75rem;
-  padding: 0.9rem 1rem;
+  gap: var(--sp-3) var(--sp-5);
+  margin-bottom: var(--sp-6);
+  padding: var(--sp-4) var(--sp-4);
   border-radius: var(--radius);
   background: var(--fill);
 }
@@ -1336,9 +1343,9 @@ button.pick-files .icon {
 .desk-intro h2 {
   display: flex;
   align-items: center;
-  gap: 0.45rem;
-  margin: 0 0 0.25rem;
-  font-size: 1rem;
+  gap: var(--sp-2);
+  margin: 0 0 var(--sp-1);
+  font-size: var(--fs-md);
   color: var(--strong);
 }
 
@@ -1352,22 +1359,22 @@ button.pick-files .icon {
 }
 
 .desk-intro .desk-device {
-  margin-top: 0.4rem;
+  margin-top: var(--sp-2);
   color: var(--muted);
-  font-size: 0.875rem;
+  font-size: var(--fs-sm);
 }
 
 .tool-group + .tool-group {
-  margin-top: 1.75rem;
+  margin-top: var(--sp-6);
 }
 
 .tool-group h2 {
   margin: 0;
-  font-size: 1.15rem;
+  font-size: var(--fs-lg);
 }
 
 .tool-group .hint {
-  margin: 0.15rem 0 0.5rem;
+  margin: var(--sp-1) 0 var(--sp-2);
 }
 
 .tool-rows {
@@ -1375,7 +1382,7 @@ button.pick-files .icon {
   padding: 0;
   margin: 0;
   display: grid;
-  column-gap: 1.25rem;
+  column-gap: var(--sp-5);
   border-top: 1px solid var(--hair);
 }
 
@@ -1394,8 +1401,8 @@ button.pick-files .icon {
   width: 100%;
   height: 100%;
   justify-content: flex-start;
-  gap: 0.75rem;
-  padding: 0.45rem 0.4rem;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-2);
   line-height: 1.35;
   border: 0;
   border-radius: 0;
@@ -1420,7 +1427,7 @@ button.pick-files .icon {
 .tool-row-text {
   display: flex;
   flex-direction: column;
-  gap: 0.05rem;
+  gap: 0;
   min-width: 0;
 }
 
@@ -1430,30 +1437,30 @@ button.pick-files .icon {
 
 .tool-row-when {
   color: var(--muted);
-  font-size: 0.875rem;
+  font-size: var(--fs-sm);
 }
 
 /* 最下面一行：範例、建議與回饋，接著是圖示說明 */
 .desk-more {
-  margin-top: 2rem;
-  padding-top: 0.75rem;
+  margin-top: var(--sp-6);
+  padding-top: var(--sp-3);
   border-top: 1px solid var(--line);
-  font-size: 0.9rem;
+  font-size: var(--fs-sm);
 }
 
 .desk-user {
   list-style: none;
   padding: 0;
-  margin: 0 0 0.75rem;
+  margin: 0 0 var(--sp-3);
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem 1.5rem;
+  gap: var(--sp-2) var(--sp-5);
 }
 
 .desk-user a {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: var(--sp-1);
 }
 
 .desk-user .icon {
@@ -1469,7 +1476,7 @@ button.pick-files .icon {
 
 .soon li {
   color: var(--muted);
-  padding: 0.2rem 0;
+  padding: var(--sp-1) 0;
 }
 
 .soon li::before {
@@ -1483,17 +1490,17 @@ button.pick-files .icon {
   padding: 0;
   margin: 0;
   display: grid;
-  gap: 0.5rem;
+  gap: var(--sp-2);
 }
 
 .shelf li {
   display: flex;
-  gap: 0.75rem;
+  gap: var(--sp-3);
   align-items: center;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface);
-  padding: 0.6rem 0.75rem;
+  padding: var(--sp-2) var(--sp-3);
 }
 
 .shelf-name {
@@ -1501,7 +1508,7 @@ button.pick-files .icon {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.25rem 0.5rem;
+  gap: var(--sp-1) var(--sp-2);
   min-width: 0;
 }
 
@@ -1511,9 +1518,9 @@ button.pick-files .icon {
 }
 
 .badge {
-  font-size: 0.75rem;
-  padding: 0 0.4rem;
-  border-radius: 999px;
+  font-size: var(--fs-xs);
+  padding: 0 var(--sp-2);
+  border-radius: var(--radius-pill);
   background: var(--warn-bg);
   color: var(--warn);
 }
@@ -1542,7 +1549,7 @@ button.pick-files .icon {
   border-radius: 0;
   border-bottom: 1px solid var(--hair);
   background: transparent;
-  padding: 0.45rem 0.25rem;
+  padding: var(--sp-2) var(--sp-1);
 }
 
 .shelf li.compact > svg {
@@ -1553,19 +1560,19 @@ button.pick-files .icon {
 }
 
 .shelf li.compact .shelf-name small {
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
 }
 
 .shelf li.compact button {
   min-height: 2.25rem;
-  padding: 0.25rem 0.8rem;
+  padding: var(--sp-1) var(--sp-3);
 }
 
 .shelf .nothing {
   flex: none;
   max-width: 8rem;
   text-align: right;
-  font-size: 0.8rem;
+  font-size: var(--fs-xs);
 }
 
 .shelf .done {
@@ -1577,7 +1584,7 @@ button.pick-files .icon {
 
 .qr {
   display: grid;
-  gap: 1.25rem;
+  gap: var(--sp-5);
 }
 
 /* 手機上：內容欄位、預覽、容錯度。桌機上預覽固定在右欄 */
@@ -1614,8 +1621,8 @@ button.pick-files .icon {
 .field {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-  margin-bottom: 0.75rem;
+  gap: var(--sp-1);
+  margin-bottom: var(--sp-3);
   font-weight: 600;
 }
 
@@ -1624,9 +1631,9 @@ button.pick-files .icon {
 .field textarea {
   font: inherit;
   font-weight: normal;
-  padding: 0.5rem 0.6rem;
+  padding: var(--sp-2) var(--sp-2);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius);
   background: var(--surface);
   color: var(--text);
 }
@@ -1641,10 +1648,10 @@ textarea.cipher {
   box-sizing: border-box;
   width: 100%;
   font-family: ui-monospace, monospace;
-  font-size: 0.9rem;
-  padding: 0.5rem 0.6rem;
+  font-size: var(--fs-sm);
+  padding: var(--sp-2) var(--sp-2);
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius);
   background: var(--surface);
   color: var(--text);
   resize: vertical;
@@ -1652,9 +1659,9 @@ textarea.cipher {
 
 .check {
   display: flex;
-  gap: 0.4rem;
+  gap: var(--sp-2);
   align-items: center;
-  margin-bottom: 0.75rem;
+  margin-bottom: var(--sp-3);
 }
 
 /* 勾選框帶一行說明時，說明換行、對齊文字 */
@@ -1668,31 +1675,31 @@ textarea.cipher {
 }
 
 .check:has(small) input {
-  margin-top: 0.3rem;
+  margin-top: var(--sp-1);
 }
 
 .segmented {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: var(--sp-2);
   border: 0;
   padding: 0;
-  margin: 0 0 0.75rem;
+  margin: 0 0 var(--sp-3);
 }
 
 .segmented legend {
   font-weight: 600;
   padding: 0;
-  margin-bottom: 0.25rem;
+  margin-bottom: var(--sp-1);
 }
 
 .segmented label {
   display: flex;
-  gap: 0.35rem;
+  gap: var(--sp-1);
   align-items: center;
   border: 1px solid var(--line);
-  border-radius: 4px;
-  padding: 0.3rem 0.8rem;
+  border-radius: var(--radius-sm);
+  padding: var(--sp-1) var(--sp-3);
   background: var(--surface);
   cursor: pointer;
 }
@@ -1727,14 +1734,14 @@ textarea.cipher {
 }
 
 .qr-result .buttons {
-  margin-top: 0.75rem;
+  margin-top: var(--sp-3);
 }
 
 .placeholder {
   color: var(--muted);
   border: 2px dashed var(--line);
   border-radius: var(--radius);
-  padding: 2rem 1rem;
+  padding: var(--sp-6) var(--sp-4);
   text-align: center;
   max-width: 20rem;
 }
@@ -1744,65 +1751,80 @@ textarea.cipher {
 .secret {
   display: block;
   font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
-  font-size: 1.35rem;
+  font-size: var(--fs-xl);
   line-height: 1.5;
   overflow-wrap: anywhere;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  padding: 1rem;
-  margin-bottom: 0.75rem;
+  padding: var(--sp-4);
+  margin-bottom: var(--sp-3);
   user-select: all;
 }
 
 .passphrase .buttons {
-  margin-bottom: 0.25rem;
+  margin-bottom: var(--sp-1);
 }
 
 .passphrase fieldset {
-  margin-top: 1rem;
+  margin-top: var(--sp-4);
 }
 
 /* 網址檢查 */
 
 .url-result section {
-  margin-top: 1.5rem;
+  margin-top: var(--sp-5);
 }
 
-/* 提示框（AGENTS.md「設計語言」的提示與狀態）：.alert 與 .notice 是說明（品牌青），
-   .alert.warn 是留意（警示橘），.alert.danger 是危險，.alert.ok 是完成（完成綠）。
-   綠色只留給完成，一般的提醒不用綠色 */
-.alert,
-.notice {
+/* 提示框（AGENTS.md「設計語言」的提示與狀態）：一個元件、四種意思，一個顏色只代表一種，class 由 src/ui/callout.ts 產生。
+   說明（.callout，品牌青的左線）、留意（.warn，警示橘）、危險（.danger，紅色左線與淡紅底）、完成（.ok，完成綠）。
+   說明與留意不塗底色。開頭的 strong 是標題，換行顯示。查證與信件檢查「需要留意的地方」的每一項也是留意 */
+.callout,
+.verify-warnings > li {
+  margin: var(--sp-3) 0;
+  padding: var(--sp-2) var(--sp-3);
   border-left: 4px solid var(--brand-cyan-500);
-  background: var(--surface);
-  padding: 0.6rem 0.8rem;
-  border-radius: 8px;
+  border-radius: var(--radius);
 }
 
-.notice {
-  font-size: 0.9rem;
+.callout > strong:first-child,
+.verify-warnings > li > strong:first-child {
+  display: block;
 }
 
-.alert.warn {
+.callout p,
+.verify-warnings > li p {
+  margin: var(--sp-1) 0 0;
+}
+
+.callout.warn,
+.verify-warnings > li {
   border-left-color: var(--warn);
 }
 
-.alert.ok {
-  border-left-color: var(--ok);
+.callout.warn > strong:first-child,
+.verify-warnings > li > strong:first-child {
+  color: var(--warn);
 }
 
-.alert.danger {
+.callout.danger {
   border-left-color: var(--danger);
-  background: var(--warn-bg);
-  color: var(--danger);
-  font-weight: 600;
+  background: color-mix(in srgb, var(--danger) 10%, var(--bg));
+}
+
+.callout.danger > strong:first-child {
+  color: var(--danger-text);
+}
+
+.callout.ok {
+  border-left-color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 10%, var(--bg));
 }
 
 .host-line {
-  font-size: 1.15rem;
+  font-size: var(--fs-lg);
   overflow-wrap: anywhere;
-  margin: 0.25rem 0;
+  margin: var(--sp-1) 0;
 }
 
 .host-line .sub {
@@ -1812,26 +1834,26 @@ textarea.cipher {
 .params {
   list-style: none;
   padding: 0;
-  margin: 0 0 0.75rem;
+  margin: 0 0 var(--sp-3);
 }
 
 .params li {
   display: flex;
-  gap: 0.75rem;
-  padding: 0.3rem 0;
+  gap: var(--sp-3);
+  padding: var(--sp-1) 0;
   border-bottom: 1px solid var(--line);
-  font-size: 0.9rem;
+  font-size: var(--fs-sm);
 }
 
 .secret.clean-url {
-  font-size: 0.95rem;
+  font-size: var(--fs-sm);
 }
 
 /* QR code 讀取 */
 
 .qr-read .buttons,
 .qr-content .buttons {
-  margin-bottom: 0.75rem;
+  margin-bottom: var(--sp-3);
 }
 
 .camera {
@@ -1840,14 +1862,14 @@ textarea.cipher {
   border-radius: var(--radius);
   background: #000;
   display: block;
-  margin-bottom: 0.75rem;
+  margin-bottom: var(--sp-3);
 }
 
 .qr-fields {
   display: grid;
   grid-template-columns: max-content 1fr;
-  gap: 0.25rem 1rem;
-  margin: 0 0 0.75rem;
+  gap: var(--sp-1) var(--sp-4);
+  margin: 0 0 var(--sp-3);
 }
 
 .qr-fields dt {
@@ -1860,55 +1882,49 @@ textarea.cipher {
   white-space: pre-line;
 }
 
-.qr-content .warn {
-  padding: 0.5rem 0.75rem;
-  border-radius: 4px;
-  background: var(--warn-bg);
-}
-
 /* 產生器：QR code 裡實際放的內容，收起來，要確認時再展開 */
 .qr-raw {
-  margin-top: 0.75rem;
+  margin-top: var(--sp-3);
 }
 
 .qr-raw pre {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  font-size: 0.85rem;
-  margin: 0.5rem 0 0;
+  font-size: var(--fs-sm);
+  margin: var(--sp-2) 0 0;
 }
 
 .qr-found {
-  margin-top: 1.25rem;
+  margin-top: var(--sp-5);
 }
 
 /* 範例頁（src/ui/SamplesPage.tsx） */
 .sample-tool {
-  margin-top: 2rem;
+  margin-top: var(--sp-6);
 }
 
 .sample-tool > h3 {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  margin: 0 0 0.75rem;
+  gap: var(--sp-2);
+  margin: 0 0 var(--sp-3);
 }
 
 .sample-file {
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  padding: 0.9rem 1rem;
+  padding: var(--sp-4) var(--sp-4);
   background: var(--surface);
 }
 
 .sample-file p {
-  margin: 0.35rem 0 0.75rem;
+  margin: var(--sp-1) 0 var(--sp-3);
 }
 
 /* QR code 與條碼的範例：圖片一律放在白底上，深色模式也掃得出來 */
 .qr-samples h4 {
-  font-size: 1rem;
-  margin: 1rem 0 0.5rem;
+  font-size: var(--fs-md);
+  margin: var(--sp-4) 0 var(--sp-2);
 }
 
 .qr-samples ul {
@@ -1917,7 +1933,7 @@ textarea.cipher {
   padding: 0;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
-  gap: 0.75rem;
+  gap: var(--sp-3);
 }
 
 .qr-samples button {
@@ -1926,8 +1942,8 @@ textarea.cipher {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.6rem;
+  gap: var(--sp-2);
+  padding: var(--sp-2);
   font: inherit;
   color: var(--text);
   background: var(--surface);
@@ -1946,8 +1962,8 @@ textarea.cipher {
   object-fit: contain;
   image-rendering: pixelated;
   background: #fff;
-  padding: 0.3rem;
-  border-radius: 4px;
+  padding: var(--sp-1);
+  border-radius: var(--radius-sm);
 }
 
 /* 遮蔽 */
@@ -1962,7 +1978,7 @@ textarea.cipher {
   width: auto;
   height: auto;
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: var(--radius);
   cursor: crosshair;
   touch-action: none;
 }
@@ -1972,19 +1988,19 @@ textarea.cipher {
   position: relative;
   width: fit-content;
   max-width: 100%;
-  margin: 0.5rem 0;
+  margin: var(--sp-2) 0;
 }
 
 /* 手機上按「找人名、地址與單位」時先展開的說明（src/ui/RedactEditor.tsx 的 phoneAsk） */
 .redact-model-ask {
-  margin: 0.5rem 0;
-  padding: 0.75rem 0.9rem;
+  margin: var(--sp-2) 0;
+  padding: var(--sp-3) var(--sp-4);
   border-radius: var(--radius);
   background: var(--fill);
 }
 
 .redact-model-ask p {
-  margin: 0 0 0.5rem;
+  margin: 0 0 var(--sp-2);
 }
 
 .redact-model-ask .buttons {
@@ -2014,23 +2030,23 @@ textarea.cipher {
 .redact-auto {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-2);
 }
 
 /* 選擇 PDF 的頁面：縮圖格，勾選的頁面加上主色的外框 */
 .pdf-pages-toolbar {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-bottom: 0.75rem;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-3);
 }
 
 .page-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
-  gap: 0.75rem;
-  margin: 0 0 1rem;
+  gap: var(--sp-3);
+  margin: 0 0 var(--sp-4);
   padding: 0;
   list-style: none;
 }
@@ -2039,10 +2055,10 @@ textarea.cipher {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 0.25rem;
-  padding: 0.5rem;
+  gap: var(--sp-1);
+  padding: var(--sp-2);
   border: 2px solid var(--line);
-  border-radius: 6px;
+  border-radius: var(--radius);
   background: var(--surface);
 }
 
@@ -2055,7 +2071,7 @@ textarea.cipher {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.4rem;
+  gap: var(--sp-2);
   cursor: pointer;
 }
 
@@ -2069,9 +2085,9 @@ textarea.cipher {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.25rem;
-  padding: 0.2rem 0.5rem;
-  font-size: 0.85rem;
+  gap: var(--sp-1);
+  padding: var(--sp-1) var(--sp-2);
+  font-size: var(--fs-sm);
 }
 
 .page-zoom-open .icon {
@@ -2085,7 +2101,7 @@ textarea.cipher {
   max-height: calc(100% - 1rem);
   padding: 0;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: var(--radius);
   background: var(--bg);
   color: var(--text);
 }
@@ -2101,8 +2117,8 @@ textarea.cipher {
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
-  padding: 0.6rem 0.75rem;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
   background: var(--bg);
 }
 
@@ -2125,7 +2141,7 @@ textarea.cipher {
 }
 
 .page-zoom-stage {
-  padding: 0.75rem;
+  padding: var(--sp-3);
   background: var(--fill);
 }
 
@@ -2153,7 +2169,7 @@ textarea.cipher {
 .page-pick span {
   display: flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: var(--sp-1);
   font-variant-numeric: tabular-nums;
 }
 
@@ -2177,8 +2193,8 @@ textarea.cipher {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.75rem;
-  margin-bottom: 0.5rem;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-2);
 }
 
 .redact-pages span {
@@ -2194,15 +2210,20 @@ textarea.cipher {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  border-radius: 6px;
+  gap: var(--sp-2);
+  border-radius: var(--radius);
   background: color-mix(in srgb, var(--bg) 55%, transparent);
   pointer-events: none;
 }
 
+/* 蓋在圖片上的時候窄一點，旁邊留給百分比 */
+.auto-progress .progress-track {
+  width: min(60%, 20rem);
+}
+
 .auto-progress span {
   min-width: 3em;
-  padding: 0.1rem 0.4rem;
+  padding: 0 var(--sp-2);
   border-radius: var(--radius);
   background: var(--surface);
   color: var(--text);
@@ -2213,24 +2234,26 @@ textarea.cipher {
   visibility: hidden;
 }
 
-.auto-progress-track {
+/* 進度條（src/ui/ProgressBar.tsx），處理中的每個地方都用這一個 */
+.progress-track {
   position: relative;
-  width: min(60%, 20rem);
+  width: 100%;
+  max-width: 24rem;
   height: 0.5rem;
   overflow: hidden;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--surface);
   box-shadow: 0 0 0 1px var(--line);
 }
 
-.auto-progress-bar {
+.progress-bar {
   height: 100%;
   border-radius: inherit;
   background: var(--accent);
   transition: width 0.2s ease-out;
 }
 
-.auto-progress-bar.indeterminate {
+.progress-bar.indeterminate {
   position: absolute;
   width: 35%;
   animation: auto-progress-slide 1.2s ease-in-out infinite;
@@ -2247,11 +2270,11 @@ textarea.cipher {
 
 /* 減少動態效果時不來回移動，改成緩慢明暗變化 */
 @media (prefers-reduced-motion: reduce) {
-  .auto-progress-bar {
+  .progress-bar {
     transition: none;
   }
 
-  .auto-progress-bar.indeterminate {
+  .progress-bar.indeterminate {
     left: 0;
     width: 100%;
     animation: auto-progress-pulse 2s ease-in-out infinite;
@@ -2268,7 +2291,7 @@ textarea.cipher {
 .redact-toolbar-divider {
   align-self: stretch;
   width: 1px;
-  margin: 0.25rem 0.25rem;
+  margin: var(--sp-1) var(--sp-1);
   background: var(--line);
 }
 
@@ -2276,7 +2299,7 @@ textarea.cipher {
 .redact .icon-button {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: var(--sp-1);
 }
 
 .redact .icon-button .icon {
@@ -2304,9 +2327,9 @@ textarea.cipher {
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem 1rem;
-  margin: 0.5rem 0 1rem;
-  padding: 0.75rem 0;
+  gap: var(--sp-2) var(--sp-4);
+  margin: var(--sp-2) 0 var(--sp-4);
+  padding: var(--sp-3) 0;
   border-top: 1px solid var(--line);
   background: var(--bg);
 }
@@ -2333,76 +2356,76 @@ textarea.cipher {
 /* 語言、模型、勾選框、核心數這幾組之間留一樣的距離 */
 .transcribe > fieldset,
 .transcribe > .check {
-  margin-top: 1.25rem;
+  margin-top: var(--sp-5);
 }
 
-/* 模型與勾選框做成整塊可以點的卡片：讀者不必瞄準小圓圈，選到的有底色與加粗的框線 */
-.transcribe .choices .check,
+/* 選項卡片（AGENTS.md「設計語言」的選項）：每個選項附一句說明時用。整塊可以點，讀者不必瞄準小圓圈，
+   選到的有底色與加粗的框線。逐字稿單獨的勾選框也用同一個樣式 */
+.choices .check,
 .transcribe > .check {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface);
-  padding: 0.6rem 0.8rem;
-  margin-bottom: 0.5rem;
+  padding: var(--sp-2) var(--sp-3);
+  margin-bottom: var(--sp-2);
   cursor: pointer;
   transition: border-color 0.15s;
 }
 
-.transcribe .choices .check:hover,
+.choices .check:hover,
 .transcribe > .check:hover {
   border-color: var(--accent);
 }
 
-.transcribe .choices .check:has(input:checked),
+.choices .check:has(input:checked),
 .transcribe > .check:has(input:checked) {
   border-color: var(--accent);
   box-shadow: 0 0 0 1px var(--accent);
   background: color-mix(in srgb, var(--accent) 8%, var(--surface));
 }
 
-.transcribe .choices .check:has(input:focus-visible),
+.choices .check:has(input:focus-visible),
 .transcribe > .check:has(input:focus-visible) {
   outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
 
-.transcribe .choices:disabled .check,
+.choices:disabled .check,
 .transcribe > .check:has(input:disabled) {
   cursor: default;
 }
 
 /* 開始與取消、轉完之後的下載與複製：按鈕之間留距離，窄螢幕時換行 */
 .transcribe .buttons {
-  margin: 1.25rem 0 0.75rem;
+  margin: var(--sp-5) 0 var(--sp-3);
 }
 
 .choices {
   border: 0;
   padding: 0;
-  margin: 0 0 0.25rem;
+  margin: 0 0 var(--sp-1);
 }
 
 .choices legend {
   font-weight: 600;
   padding: 0;
-  margin-bottom: 0.4rem;
+  margin-bottom: var(--sp-2);
 }
 
 .choices .badge {
-  margin-left: 0.4rem;
+  margin-left: var(--sp-2);
   font-style: normal;
 }
 
 .transcribe-progress {
-  margin-bottom: 0.75rem;
+  margin-bottom: var(--sp-3);
 }
 
-/* 說明框（.notice）改成全域的規則，見 .alert 旁邊 */
 
 /* 使用的模型與授權：收起來放在逐字稿畫面的最下面 */
 .transcribe-models {
-  margin-top: 1.5rem;
-  font-size: 0.9rem;
+  margin-top: var(--sp-5);
+  font-size: var(--fs-sm);
 }
 
 .transcribe-models summary {
@@ -2411,12 +2434,12 @@ textarea.cipher {
 }
 
 .transcribe-models ul {
-  margin: 0.5rem 0;
-  padding-left: 1.2rem;
+  margin: var(--sp-2) 0;
+  padding-left: var(--sp-4);
 }
 
 .transcribe-models li {
-  margin: 0.4rem 0;
+  margin: var(--sp-2) 0;
 }
 
 .transcribe-models strong,
@@ -2432,8 +2455,8 @@ textarea.cipher {
   list-style: none;
   max-height: 60vh;
   overflow-y: auto;
-  margin: 0.5rem 0 1rem;
-  padding: 0.5rem 0.75rem;
+  margin: var(--sp-2) 0 var(--sp-4);
+  padding: var(--sp-2) var(--sp-3);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface);
@@ -2441,8 +2464,8 @@ textarea.cipher {
 
 .transcript li {
   display: flex;
-  gap: 0.75rem;
-  padding: 0.3rem 0;
+  gap: var(--sp-3);
+  padding: var(--sp-1) 0;
   border-bottom: 1px solid var(--hair);
 }
 
@@ -2467,60 +2490,53 @@ textarea.cipher {
 }
 
 .transcript .punct-accept {
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
   white-space: nowrap;
 }
 
 .transcribe-punct {
-  margin: 0 0 1rem;
+  margin: 0 0 var(--sp-4);
 }
 
 .transcribe-punct .hint,
 .transcribe-punct .error {
-  margin: 0.25rem 0;
+  margin: var(--sp-1) 0;
 }
 
 /* 換人的地方標出說話者，放在那一段文字的上方 */
 .transcript .speaker {
   display: block;
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
   color: var(--accent);
 }
 
 /* 加密與解密 */
 
 .age .buttons {
-  margin-bottom: 0.75rem;
-}
-
-.note {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 0.75rem 1rem;
+  margin-bottom: var(--sp-3);
 }
 
 /* 金鑰產生器 */
 
 .keygen section {
-  margin-top: 1.5rem;
+  margin-top: var(--sp-5);
 }
 
 .keygen .buttons {
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--sp-2);
 }
 
 .key-qr {
-  margin: 0.5rem 0 1rem;
+  margin: var(--sp-2) 0 var(--sp-4);
 }
 
 .key-qr .qr-preview {
   max-width: 14rem;
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--sp-2);
 }
 
 .secret.key {
-  font-size: 0.95rem;
+  font-size: var(--fs-sm);
 }
 
 /* 看起來像連結的按鈕，用在站內導覽：一般的連結會重新載入頁面，暫存區會被清空 */
@@ -2543,7 +2559,7 @@ button.link {
   justify-content: center;
   background: color-mix(in srgb, var(--accent) 20%, transparent);
   border: 4px dashed var(--accent);
-  font-size: 1.25rem;
+  font-size: var(--fs-xl);
   font-weight: 600;
   pointer-events: none;
 }
@@ -2554,9 +2570,9 @@ button.link {
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
-  margin-top: 1rem;
-  padding: 0.75rem 1rem;
+  gap: var(--sp-2);
+  margin-top: var(--sp-4);
+  padding: var(--sp-3) var(--sp-4);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--fill);
@@ -2565,21 +2581,21 @@ button.link {
 .locale-hint .buttons {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: var(--sp-2);
 }
 
 /* 查證：總覽與需要留意的地方在最上面，每個檔案一張卡片，技術資訊收在「完整資訊」裡 */
 .verify section {
-  margin-top: 1.5rem;
+  margin-top: var(--sp-5);
 }
 
 .verify h3 {
-  margin: 0 0 0.5rem;
+  margin: 0 0 var(--sp-2);
 }
 
 .verify-overview p {
-  margin: 0 0 0.75rem;
-  font-size: 1.05rem;
+  margin: 0 0 var(--sp-3);
+  font-size: var(--fs-md);
 }
 
 .verify-warnings {
@@ -2588,38 +2604,22 @@ button.link {
   list-style: none;
 }
 
-.verify-warnings li {
-  margin-bottom: 0.6rem;
-  padding: 0.6rem 0.75rem;
-  border-left: 4px solid var(--warn);
-  border-radius: 4px;
-  background: var(--warn-bg);
-}
-
-.verify-warnings strong {
-  color: var(--warn);
-}
-
-.verify-warnings p {
-  margin: 0.25rem 0 0;
-}
-
 .verify-warn-files {
-  margin-left: 0.5rem;
+  margin-left: var(--sp-2);
   color: var(--muted);
-  font-size: 0.9rem;
+  font-size: var(--fs-sm);
   overflow-wrap: anywhere;
 }
 
 .verify-cards {
   display: grid;
-  gap: 0.75rem;
+  gap: var(--sp-3);
 }
 
 .verify-card {
-  padding: 0.75rem 1rem;
+  padding: var(--sp-3) var(--sp-4);
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: var(--radius);
   background: var(--surface);
 }
 
@@ -2629,22 +2629,16 @@ button.link {
 }
 
 .verify-type {
-  margin: 0.15rem 0 0.5rem;
+  margin: var(--sp-1) 0 var(--sp-2);
   color: var(--muted);
-  font-size: 0.9rem;
-}
-
-.verify-card-warn {
-  margin: 0 0 0.5rem;
-  color: var(--warn);
-  font-size: 0.95rem;
+  font-size: var(--fs-sm);
 }
 
 /* 「標籤 內容」兩欄，窄螢幕改成上下 */
 .verify-facts {
   display: grid;
   grid-template-columns: max-content 1fr;
-  gap: 0.3rem 1rem;
+  gap: var(--sp-1) var(--sp-4);
   margin: 0;
 }
 
@@ -2659,20 +2653,20 @@ button.link {
 
 .verify-facts ul {
   margin: 0;
-  padding-left: 1.1rem;
+  padding-left: var(--sp-4);
 }
 
 .verify-facts code {
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
 }
 
 .verify-facts dd .hint {
-  margin: 0.3rem 0 0;
+  margin: var(--sp-1) 0 0;
 }
 
 /* 完整的提示詞保留原本的換行 */
 .verify-prompt {
-  margin: 0 0 0.4rem;
+  margin: 0 0 var(--sp-2);
   white-space: pre-wrap;
 }
 
@@ -2683,20 +2677,20 @@ button.link {
   }
 
   .verify-facts dd {
-    margin-bottom: 0.4rem;
+    margin-bottom: var(--sp-2);
   }
 }
 
 .verify-block {
-  margin-top: 0.75rem;
+  margin-top: var(--sp-3);
 }
 
 .verify-block p {
-  margin: 0 0 0.4rem;
+  margin: 0 0 var(--sp-2);
 }
 
 .verify-details {
-  margin-top: 0.75rem;
+  margin-top: var(--sp-3);
 }
 
 .verify-details summary {
@@ -2705,31 +2699,31 @@ button.link {
 }
 
 .verify-details[open] summary {
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--sp-2);
 }
 
 .verify-relations {
   margin: 0;
-  padding-left: 1.25rem;
+  padding-left: var(--sp-5);
 }
 
 .verify-relations li {
-  margin-bottom: 0.35rem;
+  margin-bottom: var(--sp-1);
 }
 
 .verify-timeline {
   margin: 0;
-  padding-left: 1.25rem;
+  padding-left: var(--sp-5);
 }
 
 .verify-timeline li {
-  margin-bottom: 0.35rem;
+  margin-bottom: var(--sp-1);
 }
 
 .verify-timeline time {
   display: inline-block;
   min-width: 16em;
-  margin-right: 0.5rem;
+  margin-right: var(--sp-2);
   font-variant-numeric: tabular-nums;
 }
 
@@ -2743,7 +2737,7 @@ button.link {
 .verify-thumbs {
   display: flex;
   flex-wrap: wrap;
-  gap: 1rem;
+  gap: var(--sp-4);
 }
 
 .verify-thumbs figure {
@@ -2758,59 +2752,59 @@ button.link {
 }
 
 .verify-thumbs figcaption {
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
   color: var(--muted);
 }
 
 /* PDF 的版本紀錄與兩個版本的比對 */
 .verify-versions {
-  margin: 0.5rem 0 0;
-  padding-left: 1.25rem;
+  margin: var(--sp-2) 0 0;
+  padding-left: var(--sp-5);
 }
 
 .verify-versions li {
-  margin-bottom: 0.6rem;
+  margin-bottom: var(--sp-2);
 }
 
 .verify-versions .verify-type {
   display: block;
-  margin: 0.1rem 0 0.3rem;
+  margin: 0 0 var(--sp-1);
 }
 
 .verify-compare {
-  margin-top: 0.75rem;
-  padding: 0.75rem;
+  margin-top: var(--sp-3);
+  padding: var(--sp-3);
   border: 1px solid var(--hair);
-  border-radius: 6px;
+  border-radius: var(--radius);
   background: var(--fill);
 }
 
 .verify-compare h5 {
-  margin: 0 0 0.5rem;
-  font-size: 1rem;
+  margin: 0 0 var(--sp-2);
+  font-size: var(--fs-md);
 }
 
 .verify-compare h6 {
-  margin: 0.75rem 0 0.3rem;
-  font-size: 0.95rem;
+  margin: var(--sp-3) 0 var(--sp-1);
+  font-size: var(--fs-sm);
 }
 
 .verify-meta {
-  margin: 0 0 0.5rem;
-  padding-left: 1.1rem;
+  margin: 0 0 var(--sp-2);
+  padding-left: var(--sp-4);
 }
 
 .verify-text-diff {
-  margin: 0 0 0.5rem;
+  margin: 0 0 var(--sp-2);
   padding: 0;
   list-style: none;
-  font-size: 0.9rem;
+  font-size: var(--fs-sm);
   overflow-wrap: anywhere;
 }
 
 .verify-text-diff li {
-  padding: 0.1rem 0.4rem;
-  border-radius: 3px;
+  padding: 0 var(--sp-2);
+  border-radius: var(--radius-sm);
 }
 
 .verify-text-diff .removed {
@@ -2848,42 +2842,15 @@ button.link {
 .email-check .field textarea {
   width: 100%;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
 }
 
 .email-result section {
-  margin-top: 1.25rem;
+  margin-top: var(--sp-5);
 }
 
 .email-result h3 {
-  margin: 0 0 0.5rem;
-}
-
-.email-verdict {
-  margin-top: 1rem;
-  padding: 0.75rem 1rem;
-  border-left: 4px solid var(--muted);
-  border-radius: 4px;
-  background: var(--fill);
-}
-
-.email-verdict p {
-  margin: 0.3rem 0 0;
-}
-
-.email-verdict.pass {
-  border-left-color: var(--ok);
-  background: color-mix(in srgb, var(--ok) 10%, var(--bg));
-}
-
-.email-verdict.fail {
-  border-left-color: var(--danger);
-  background: color-mix(in srgb, var(--danger) 10%, var(--bg));
-}
-
-.email-verdict.unclear {
-  border-left-color: var(--warn);
-  background: var(--warn-bg);
+  margin: 0 0 var(--sp-2);
 }
 
 .email-links,
@@ -2897,15 +2864,15 @@ button.link {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 0.25rem;
-  margin-bottom: 0.6rem;
-  padding: 0.5rem 0.75rem;
+  gap: var(--sp-1);
+  margin-bottom: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: var(--radius);
 }
 
 .email-links code {
-  font-size: 0.8rem;
+  font-size: var(--fs-xs);
   overflow-wrap: anywhere;
   color: var(--muted);
 }
@@ -2914,14 +2881,14 @@ button.link {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--sp-2);
   overflow-wrap: anywhere;
 }
 
 .email-badge {
-  padding: 0 0.4rem;
-  border-radius: 3px;
-  font-size: 0.8rem;
+  padding: 0 var(--sp-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-xs);
   color: var(--warn);
   background: var(--warn-bg);
 }
@@ -2932,14 +2899,14 @@ button.link {
 }
 
 .email-attachments li {
-  margin-bottom: 0.4rem;
+  margin-bottom: var(--sp-2);
 }
 
 .email-headers {
   max-height: 20rem;
   overflow: auto;
-  padding: 0.5rem;
-  font-size: 0.8rem;
+  padding: var(--sp-2);
+  font-size: var(--fs-xs);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   background: var(--fill);
@@ -2954,17 +2921,17 @@ button.link {
 }
 
 .licenses h2 {
-  margin: 1.75rem 0 0;
+  margin: var(--sp-6) 0 0;
 }
 
 /* 每一項的名稱是 <h3>（左欄的本頁目錄用到），外觀維持原本粗體的一行 */
 .licenses h3 {
   margin: 0;
-  font-size: 1rem;
+  font-size: var(--fs-md);
 }
 
 .licenses li {
-  padding: 0.75rem 0;
+  padding: var(--sp-3) 0;
   border-bottom: 1px solid var(--hair);
 }
 
@@ -2973,12 +2940,12 @@ button.link {
 }
 
 .licenses li p {
-  margin: 0.25rem 0;
+  margin: var(--sp-1) 0;
 }
 
 .licenses pre {
   white-space: pre-wrap;
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
 }
 
 /* 已下載的模型：一列一個用途，名稱、大小、刪除。窄螢幕上名稱占滿一行，大小與按鈕並排在下一行 */
@@ -2991,8 +2958,8 @@ button.link {
   display: grid;
   grid-template-columns: 1fr auto auto;
   align-items: center;
-  gap: 0.5rem 1rem;
-  padding: 0.75rem 0;
+  gap: var(--sp-2) var(--sp-4);
+  padding: var(--sp-3) 0;
   border-bottom: 1px solid var(--hair);
 }
 
@@ -3022,17 +2989,17 @@ button.link {
 
 /* 這個網站的儲存空間（src/ui/StorageQuota.tsx）：手機放在頁面最下面，用細線跟模型的清單隔開，寬螢幕放在左欄 */
 .storage-quota:not(.in-aside) {
-  margin-top: 1.5rem;
-  padding-top: 0.5rem;
+  margin-top: var(--sp-5);
+  padding-top: var(--sp-2);
   border-top: 1px solid var(--line);
 }
 
 .storage-quota.in-aside p {
-  margin: 0 0 0.5rem;
+  margin: 0 0 var(--sp-2);
 }
 
 .storage-quota.in-aside .buttons {
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--sp-2);
 }
 
 /* 結果的訊息是 role="status"，空的時候也留在頁面上，讀螢幕軟體才唸得到之後放進去的文字 */
@@ -3045,12 +3012,12 @@ button.link {
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem 1rem;
+  gap: var(--sp-2) var(--sp-4);
 }
 
 /* 寫作習慣檢查：可以直接修正的用淡綠，要讀者自己改的用淡橘，個資用淡紅 */
 .writing-style .buttons {
-  margin: 0.75rem 0;
+  margin: var(--sp-3) 0;
 }
 
 .style-preview {
@@ -3059,7 +3026,7 @@ button.link {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface);
-  padding: 0.75rem 1rem;
+  padding: var(--sp-3) var(--sp-4);
   line-height: 1.9;
 }
 
@@ -3067,7 +3034,7 @@ button.link {
   color: inherit;
   background: color-mix(in srgb, var(--warn) 18%, transparent);
   border-bottom: 2px solid var(--warn);
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   padding: 0 1px;
 }
 
@@ -3089,41 +3056,41 @@ button.link {
 
 .style-groups > li {
   border-top: 1px solid var(--line);
-  padding: 0.75rem 0;
+  padding: var(--sp-3) 0;
 }
 
 .style-groups strong .badge {
-  margin-left: 0.4rem;
+  margin-left: var(--sp-2);
 }
 
 .style-groups .hint {
-  margin: 0.25rem 0;
+  margin: var(--sp-1) 0;
 }
 
 .style-examples {
   list-style: none;
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem 1rem;
+  gap: var(--sp-2) var(--sp-4);
   padding: 0;
-  margin: 0.25rem 0 0;
+  margin: var(--sp-1) 0 0;
 }
 
 .style-examples li {
   display: flex;
-  gap: 0.4rem;
+  gap: var(--sp-2);
   align-items: baseline;
 }
 
-.writing-style .alert {
-  margin-top: 1.25rem;
+.writing-style .callout {
+  margin-top: var(--sp-5);
 }
 
 /* 自己指定要換掉的字：跟上下的區塊用分隔線隔開 */
 .style-alias {
   border-top: 1px solid var(--line);
-  padding-top: 0.75rem;
-  margin-bottom: 1rem;
+  padding-top: var(--sp-3);
+  margin-bottom: var(--sp-4);
 }
 
 .style-alias .field input {
@@ -3133,33 +3100,33 @@ button.link {
 /* 線索清單的項目常換行，勾選框對齊第一行 */
 .style-clues .check {
   align-items: flex-start;
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--sp-2);
 }
 
 .style-clues .check input {
-  margin-top: 0.3rem;
+  margin-top: var(--sp-1);
 }
 
 /* 清單裡逐項套用的按鈕，比一般按鈕小 */
 .writing-style button.small {
-  font-size: 0.85rem;
-  padding: 0.15rem 0.7rem;
+  font-size: var(--fs-sm);
+  padding: var(--sp-1) var(--sp-3);
 }
 
 .style-groups > li > button.small {
-  margin-top: 0.5rem;
+  margin-top: var(--sp-2);
 }
 
 /* 下載的軟體驗證 */
 .software-picks {
   display: grid;
-  gap: 0.75rem;
+  gap: var(--sp-3);
   grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
-  margin: 1rem 0;
+  margin: var(--sp-4) 0;
 }
 
 .software-picks .hint {
-  margin: 0.4rem 0 0;
+  margin: var(--sp-2) 0 0;
   overflow-wrap: anywhere;
 }
 
@@ -3180,8 +3147,8 @@ button.link {
 .software-keys li {
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
-  padding: 0.6rem 0;
+  gap: var(--sp-1);
+  padding: var(--sp-2) 0;
   border-bottom: 1px solid var(--line);
 }
 
@@ -3191,41 +3158,21 @@ button.link {
 
 /* 裝置量測（實驗頁）：每種模型一個區塊，選項沿用逐字稿的卡片樣式 */
 .bench-section {
-  margin-top: 2rem;
-  padding-top: 1.25rem;
+  margin-top: var(--sp-6);
+  padding-top: var(--sp-5);
   border-top: 1px solid var(--line);
 }
 
 .bench-section h3 {
-  margin: 0 0 0.5rem;
+  margin: 0 0 var(--sp-2);
 }
 
 .bench-section > fieldset {
-  margin-top: 1.25rem;
-}
-
-.bench-section .choices .check {
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--surface);
-  padding: 0.6rem 0.8rem;
-  margin-bottom: 0.5rem;
-  cursor: pointer;
-}
-
-.bench-section .choices .check:has(input:checked) {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent);
-  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
-}
-
-.bench-section .choices .check small {
-  display: block;
-  color: var(--muted);
+  margin-top: var(--sp-5);
 }
 
 .bench-section .buttons {
-  margin: 1.25rem 0 0.75rem;
+  margin: var(--sp-5) 0 var(--sp-3);
 }
 
 .bench-results {
@@ -3235,14 +3182,14 @@ button.link {
 .bench-results table {
   border-collapse: collapse;
   width: 100%;
-  margin: 0.5rem 0 1rem;
-  font-size: 0.9rem;
+  margin: var(--sp-2) 0 var(--sp-4);
+  font-size: var(--fs-sm);
 }
 
 .bench-results th,
 .bench-results td {
   border-bottom: 1px solid var(--line);
-  padding: 0.35rem 0.5rem;
+  padding: var(--sp-1) var(--sp-2);
   text-align: left;
   vertical-align: top;
 }
@@ -3253,7 +3200,7 @@ button.link {
 }
 
 .bench-results details {
-  margin: 0.5rem 0;
+  margin: var(--sp-2) 0;
 }
 
 .bench-text {
@@ -3261,17 +3208,17 @@ button.link {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface);
-  padding: 0.6rem 0.8rem;
+  padding: var(--sp-2) var(--sp-3);
 }
 
 /* 檔案畫面的工具列表照桌面的三組排列（src/ui/shelf.ts） */
 .shelf-group + .shelf-group {
-  margin-top: 1rem;
+  margin-top: var(--sp-4);
 }
 
 .shelf-group h4 {
-  margin: 0 0 0.4rem;
-  font-size: 0.9rem;
+  margin: 0 0 var(--sp-2);
+  font-size: var(--fs-sm);
   color: var(--muted);
 }
 
@@ -3289,7 +3236,7 @@ button.link {
   display: block;
   width: 100%;
   height: auto;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   background: var(--line);
 }
 
@@ -3308,7 +3255,7 @@ button.link {
 .nearby-pair {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 1rem;
+  gap: var(--sp-4);
 }
 
 @media (min-width: 48rem) {
@@ -3326,8 +3273,8 @@ button.link {
   display: block;
   box-sizing: border-box;
   width: 100%;
-  margin: 0.5rem 0;
-  padding: 0.5rem 0.6rem;
+  margin: var(--sp-2) 0;
+  padding: var(--sp-2) var(--sp-2);
   font: inherit;
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -3341,23 +3288,23 @@ button.link {
 .nearby-paste textarea,
 .remote-link textarea {
   font-family: var(--mono, monospace);
-  font-size: 0.85rem;
+  font-size: var(--fs-sm);
   word-break: break-all;
 }
 
 .nearby-paste {
-  margin-top: 0.75rem;
+  margin-top: var(--sp-3);
 }
 
 /* 按鈕列跟上面的內容、按鈕列之間都要隔開（.buttons 本身沒有上下間距） */
 .nearby-actions {
-  margin-top: 1.25rem;
+  margin-top: var(--sp-5);
 }
 
 .nearby-code details,
 .nearby-paste .buttons,
 .nearby-code .buttons {
-  margin-top: 0.5rem;
+  margin-top: var(--sp-2);
 }
 
 .nearby-paste label {
@@ -3370,8 +3317,8 @@ button.link {
 }
 
 .nearby-review ul {
-  margin: 0.5rem 0;
-  padding-left: 1.25rem;
+  margin: var(--sp-2) 0;
+  padding-left: var(--sp-5);
 }
 
 /* 遠端傳送：分享連結與經過伺服器的說明（src/ui/RemoteTool.tsx） */
@@ -3380,32 +3327,32 @@ button.link {
 }
 
 .remote-link + details {
-  margin-top: 0.75rem;
+  margin-top: var(--sp-3);
 }
 
 .remote-chat {
-  margin-top: 1.5rem;
-  padding-top: 1rem;
+  margin-top: var(--sp-5);
+  padding-top: var(--sp-4);
   border-top: 1px solid var(--line);
 }
 
 .remote-chat h3 {
-  margin: 0 0 0.25rem;
-  font-size: 1rem;
+  margin: 0 0 var(--sp-1);
+  font-size: var(--fs-md);
 }
 
 .remote-messages {
   list-style: none;
-  margin: 0.75rem 0;
+  margin: var(--sp-3) 0;
   padding: 0;
   display: grid;
-  gap: 0.5rem;
+  gap: var(--sp-2);
 }
 
 .remote-messages li {
   max-width: 36rem;
-  padding: 0.5rem 0.75rem;
-  border-radius: 0.5rem;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--radius);
   border: 1px solid var(--line);
   background: var(--surface);
   white-space: pre-wrap;
@@ -3420,7 +3367,7 @@ button.link {
 
 .remote-messages .who {
   display: block;
-  font-size: 0.8rem;
+  font-size: var(--fs-xs);
   color: var(--muted);
 }
 
@@ -3434,59 +3381,59 @@ button.link {
 }
 
 .remote-end-ask {
-  padding: 0.75rem 1rem;
+  padding: var(--sp-3) var(--sp-4);
   border-left: 3px solid var(--danger);
   background: var(--surface);
 }
 
 .remote-end-ask p {
-  margin: 0 0 0.5rem;
+  margin: 0 0 var(--sp-2);
 }
 
 .remote-pending {
-  margin-bottom: 1rem;
-  padding: 0.75rem 1rem;
+  margin-bottom: var(--sp-4);
+  padding: var(--sp-3) var(--sp-4);
   border-left: 3px solid var(--link);
   background: var(--surface);
 }
 
 .remote-pending p {
-  margin: 0 0 0.5rem;
+  margin: 0 0 var(--sp-2);
 }
 
 /* 收到連結時要做的事放在最前面的卡片：標題、一句說明、加入的按鈕 */
 .remote-invite {
-  margin-top: 0.5rem;
-  padding: 1rem 1.25rem;
+  margin-top: var(--sp-2);
+  padding: var(--sp-4) var(--sp-5);
   border: 2px solid var(--link);
   border-radius: var(--radius);
   background: color-mix(in srgb, var(--link) 8%, var(--surface));
 }
 
 .remote-invite h3 {
-  margin: 0 0 0.5rem;
-  font-size: 1.15rem;
+  margin: 0 0 var(--sp-2);
+  font-size: var(--fs-lg);
   color: var(--strong);
 }
 
 .remote-invite p {
-  margin: 0 0 1rem;
+  margin: 0 0 var(--sp-4);
 }
 
 .remote-invite .primary {
   min-width: 8rem;
-  font-size: 1.1rem;
+  font-size: var(--fs-lg);
 }
 
 .remote-privacy {
-  margin-top: 1rem;
-  padding: 0.75rem 1rem;
+  margin-top: var(--sp-4);
+  padding: var(--sp-3) var(--sp-4);
   border-left: 3px solid var(--cat-secure);
   background: var(--surface);
 }
 
 .remote-privacy p {
-  margin: 0 0 0.5rem;
+  margin: 0 0 var(--sp-2);
 }
 
 /* 傳送的路線：一排方塊加上箭頭，兩端是你與對方，中繼伺服器用類別色標出來 */
@@ -3494,11 +3441,11 @@ button.link {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.3rem 0;
-  margin: 0.5rem 0 0.25rem;
+  gap: var(--sp-1) 0;
+  margin: var(--sp-2) 0 var(--sp-1);
   padding: 0;
   list-style: none;
-  font-size: 0.9rem;
+  font-size: var(--fs-sm);
 }
 
 .remote-route li {
@@ -3507,14 +3454,14 @@ button.link {
 }
 
 .remote-route .arrow {
-  padding: 0 0.3rem;
+  padding: 0 var(--sp-1);
   color: var(--muted);
 }
 
 .remote-route .node {
-  padding: 0.2rem 0.5rem;
+  padding: var(--sp-1) var(--sp-2);
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--bg);
   white-space: nowrap;
 }
@@ -3531,34 +3478,34 @@ button.link {
 /* 手機上縮小間距，路線盡量排成一行 */
 @media (max-width: 419px) {
   .remote-route {
-    font-size: 0.85rem;
+    font-size: var(--fs-sm);
   }
 
   .remote-route .arrow {
-    padding: 0 0.15rem;
+    padding: 0 var(--sp-1);
   }
 
   .remote-route .node {
-    padding: 0.15rem 0.4rem;
+    padding: var(--sp-1) var(--sp-2);
   }
 }
 
 .remote-route-note {
-  margin: 0 0 0.5rem;
-  font-size: 0.85rem;
+  margin: 0 0 var(--sp-2);
+  font-size: var(--fs-sm);
 }
 
 /* 誰看得到什麼的對照表。手機上四欄也放得下，看不到的格子加粗，一眼看出哪裡保護得到 */
 .remote-who {
   width: 100%;
-  margin: 0.25rem 0 0.75rem;
+  margin: var(--sp-1) 0 var(--sp-3);
   border-collapse: collapse;
-  font-size: 0.9rem;
+  font-size: var(--fs-sm);
 }
 
 .remote-who th,
 .remote-who td {
-  padding: 0.35rem 0.3rem;
+  padding: var(--sp-1) var(--sp-1);
   border-bottom: 1px solid var(--line);
   text-align: center;
 }
@@ -3590,8 +3537,8 @@ button.link {
 }
 
 .remote-privacy ul {
-  margin: 0.5rem 0 0;
-  padding-left: 1.25rem;
+  margin: var(--sp-2) 0 0;
+  padding-left: var(--sp-5);
 }
 
 /* 桌面工具名稱後面的圖示標籤（src/ui/tool-tags.ts），顏色用 --link：淺色與深色模式都有足夠的對比 */
@@ -3599,12 +3546,12 @@ button.link {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.2rem 0.45rem;
+  gap: var(--sp-1) var(--sp-2);
 }
 
 .tool-tags {
   display: inline-flex;
-  gap: 0.25rem;
+  gap: var(--sp-1);
 }
 
 /* 每個標籤一個代表色，卡片與圖示說明用同一個樣式：淡底色、外框與同色的圖示 */
@@ -3615,9 +3562,9 @@ button.link {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.18rem;
+  padding: var(--sp-1);
   border: 1px solid color-mix(in srgb, var(--tag-color) 45%, transparent);
-  border-radius: 6px;
+  border-radius: var(--radius);
   background: color-mix(in srgb, var(--tag-color) 14%, var(--surface));
   color: var(--tag-color);
 }
@@ -3627,9 +3574,10 @@ button.link {
   color: var(--tag-color);
 }
 
+/* 內距是 --sp-1，圖示 1rem，整個標籤約 1.5rem，跟一行文字差不多高（圖示說明的名稱要跟說明的第一行對齊） */
 .tool-tag .icon {
-  width: 1.1rem;
-  height: 1.1rem;
+  width: 1rem;
+  height: 1rem;
 }
 
 /* 桌面最下面的圖示說明，跟範例、建議與回饋放在同一區，一個標籤一行 */
@@ -3638,8 +3586,8 @@ button.link {
 }
 
 .tag-legend h2 {
-  margin: 0 0 0.25rem;
-  font-size: 0.9rem;
+  margin: 0 0 var(--sp-1);
+  font-size: var(--fs-sm);
   color: var(--muted);
 }
 
@@ -3650,7 +3598,7 @@ button.link {
   margin: 0;
   display: grid;
   grid-template-columns: max-content 1fr;
-  gap: 0.35rem 0.75rem;
+  gap: var(--sp-1) var(--sp-3);
   align-items: start;
 }
 
@@ -3661,7 +3609,7 @@ button.link {
 .tag-legend dt {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: var(--sp-2);
   font-weight: 600;
   color: var(--strong);
 }
@@ -3681,30 +3629,30 @@ button.link {
 }
 
 .feedback .buttons {
-  margin-top: 0.5rem;
+  margin-top: var(--sp-2);
 }
 
 .remote-call {
-  margin-top: 1.5rem;
-  padding-top: 1rem;
+  margin-top: var(--sp-5);
+  padding-top: var(--sp-4);
   border-top: 1px solid var(--line);
 }
 
 .remote-call h3 {
-  margin: 0 0 0.25rem;
-  font-size: 1rem;
+  margin: 0 0 var(--sp-1);
+  font-size: var(--fs-md);
 }
 
 /* 對方的畫面放大，自己的畫面縮小疊在右下角 */
 .remote-videos {
   position: relative;
-  margin: 0.75rem 0;
+  margin: var(--sp-3) 0;
 }
 
 .remote-videos video {
   display: block;
   background: #000;
-  border-radius: 0.5rem;
+  border-radius: var(--radius);
 }
 
 .remote-videos video.peer {
@@ -3744,16 +3692,16 @@ button.link {
   margin: 0;
   padding: 0;
   list-style: none;
-  font-size: 0.75rem;
+  font-size: var(--fs-xs);
 }
 
 .remote-call-off li {
   display: flex;
   align-items: center;
-  gap: 0.2rem;
-  margin-top: 0.15rem;
-  padding: 0.1rem 0.35rem;
-  border-radius: 4px;
+  gap: var(--sp-1);
+  margin-top: var(--sp-1);
+  padding: 0 var(--sp-1);
+  border-radius: var(--radius-sm);
   background: rgb(0 0 0 / 75%);
   color: #fff;
 }
@@ -3766,7 +3714,7 @@ button.link {
 .remote-call-controls button {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: var(--sp-1);
 }
 
 /* 關掉的麥克風與鏡頭整顆紅底，掛斷放在最右邊、紅字 */
@@ -3804,24 +3752,24 @@ button.link {
 
 .remote-server h3,
 .privacy h3 {
-  margin: 1.5rem 0 0.25rem;
-  font-size: 1rem;
+  margin: var(--sp-5) 0 var(--sp-1);
+  font-size: var(--fs-md);
 }
 
 .remote-server ul,
 .privacy ul {
-  margin: 0.25rem 0;
-  padding-left: 1.25rem;
+  margin: var(--sp-1) 0;
+  padding-left: var(--sp-5);
 }
 
 .remote-server li + li,
 .privacy li + li {
-  margin-top: 0.35rem;
+  margin-top: var(--sp-1);
 }
 
 .remote-server .buttons,
 .privacy .buttons {
-  margin-top: 1.5rem;
+  margin-top: var(--sp-5);
 }
 
 /* 協助測試（src/ui/TestingPage.tsx）：每一項測試一個區塊，跟隱私說明一樣的寬度與清單 */
@@ -3830,33 +3778,33 @@ button.link {
 }
 
 .testing-request {
-  margin-top: 1.75rem;
-  padding-top: 1rem;
+  margin-top: var(--sp-6);
+  padding-top: var(--sp-4);
   border-top: 1px solid var(--line);
 }
 
 .testing-request h2 {
-  margin: 0 0 0.35rem;
-  font-size: 1.15rem;
+  margin: 0 0 var(--sp-1);
+  font-size: var(--fs-lg);
 }
 
 .testing-request h3 {
-  margin: 1.25rem 0 0.25rem;
-  font-size: 1rem;
+  margin: var(--sp-5) 0 var(--sp-1);
+  font-size: var(--fs-md);
 }
 
 .testing-request ul,
 .testing-request ol {
-  margin: 0.25rem 0;
-  padding-left: 1.25rem;
+  margin: var(--sp-1) 0;
+  padding-left: var(--sp-5);
 }
 
 .testing-request li + li {
-  margin-top: 0.35rem;
+  margin-top: var(--sp-1);
 }
 
 .testing-request .buttons {
-  margin: 1rem 0 0.5rem;
+  margin: var(--sp-4) 0 var(--sp-2);
 }
 
 /* 設計原則（src/ui/AboutPage.tsx）：跟隱私說明一樣的寬度，h2 分大段、h3 是段落裡的小節，
@@ -3866,19 +3814,19 @@ button.link {
 }
 
 .about > section {
-  margin-top: 2rem;
-  padding-top: 1rem;
+  margin-top: var(--sp-6);
+  padding-top: var(--sp-4);
   border-top: 1px solid var(--line);
 }
 
 .about h2 {
-  margin: 0 0 0.5rem;
-  font-size: 1.2rem;
+  margin: 0 0 var(--sp-2);
+  font-size: var(--fs-lg);
 }
 
 .about h3 {
-  margin: 1.4rem 0 0.25rem;
-  font-size: 1rem;
+  margin: var(--sp-5) 0 var(--sp-1);
+  font-size: var(--fs-md);
 }
 
 .about p,
@@ -3887,12 +3835,12 @@ button.link {
 }
 
 .about ul {
-  margin: 0.25rem 0;
-  padding-left: 1.25rem;
+  margin: var(--sp-1) 0;
+  padding-left: var(--sp-5);
 }
 
 .about li + li {
-  margin-top: 0.35rem;
+  margin-top: var(--sp-1);
 }
 
 .about h2,
@@ -3902,26 +3850,26 @@ button.link {
 
 .about-table {
   overflow-x: auto;
-  margin: 0.75rem 0 0.5rem;
+  margin: var(--sp-3) 0 var(--sp-2);
 }
 
 .about-table table {
   border-collapse: collapse;
   width: 100%;
-  font-size: 0.9rem;
+  font-size: var(--fs-sm);
 }
 
 .about-table caption {
   text-align: left;
   color: var(--muted);
-  font-size: 0.85rem;
-  padding-bottom: 0.35rem;
+  font-size: var(--fs-sm);
+  padding-bottom: var(--sp-1);
 }
 
 .about-table th,
 .about-table td {
   border-bottom: 1px solid var(--line);
-  padding: 0.4rem 0.5rem;
+  padding: var(--sp-2) var(--sp-2);
   text-align: left;
   vertical-align: top;
 }
@@ -3948,7 +3896,7 @@ button.link {
 }
 
 .about-status {
-  margin: 0.75rem 0 0;
+  margin: var(--sp-3) 0 0;
   border: 1px solid var(--line);
   border-radius: var(--radius);
 }
@@ -3956,8 +3904,8 @@ button.link {
 .about-status > div {
   display: grid;
   grid-template-columns: minmax(7rem, 11rem) 1fr;
-  gap: 0.25rem 1rem;
-  padding: 0.7rem 0.9rem;
+  gap: var(--sp-1) var(--sp-4);
+  padding: var(--sp-3) var(--sp-4);
 }
 
 .about-status > div + div {
@@ -3979,12 +3927,12 @@ button.link {
 
 .about-status-note {
   display: block;
-  margin-top: 0.15rem;
+  margin-top: var(--sp-1);
   line-height: 1.55;
 }
 
 .about-status-note ul {
-  margin: 0.25rem 0 0.35rem;
+  margin: var(--sp-1) 0 var(--sp-1);
 }
 
 @media (max-width: 36rem) {
@@ -4007,8 +3955,8 @@ button.link {
 .transfer-file {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  padding: 0.6rem 0.75rem;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
   cursor: pointer;
 }
 
@@ -4025,74 +3973,86 @@ button.link {
   margin-left: auto;
   flex-shrink: 0;
   color: var(--muted);
-  font-size: 0.9rem;
+  font-size: var(--fs-sm);
 }
 
 /* 傳送的設定跟檔案清單隔開，字小一點 */
 .transfer-option {
-  margin-top: 1rem;
-  font-size: 0.95rem;
+  margin-top: var(--sp-4);
+  font-size: var(--fs-sm);
 }
 
 /* 320px 這類最窄的手機：對照表的字與間距縮小，最左邊的項目才不會一行只剩兩個字 */
 @media (max-width: 359px) {
   .remote-privacy {
-    padding: 0.75rem;
+    padding: var(--sp-3);
   }
 
   .remote-who,
   .remote-route {
-    font-size: 0.8rem;
+    font-size: var(--fs-xs);
   }
 
   .remote-route .arrow {
-    padding: 0 0.15rem;
+    padding: 0 var(--sp-1);
   }
 
   .remote-route .node {
-    padding: 0.2rem 0.35rem;
+    padding: var(--sp-1) var(--sp-1);
   }
 
   .remote-who th,
   .remote-who td {
-    padding: 0.3rem 0.15rem;
+    padding: var(--sp-1) var(--sp-1);
   }
 }
 
 /* ProofMode 的每一份證明 */
 .verify-proof {
   border-top: 1px solid var(--line);
-  margin-top: 0.5rem;
-  padding-top: 0.5rem;
+  margin-top: var(--sp-2);
+  padding-top: var(--sp-2);
 }
 
 .verify-proof ul {
-  margin: 0 0 0.4rem;
-  padding-left: 1.1rem;
+  margin: 0 0 var(--sp-2);
+  padding-left: var(--sp-4);
 }
 
 /* 建置時寫進 HTML 的說明（src/static-content.ts），JavaScript 載入之前與不執行 JavaScript 時看得到 */
 .static-page {
-  padding-block: 1.25rem;
+  padding-block: var(--sp-5);
 }
 
 .static-page h1 {
-  font-size: 1.5rem;
+  font-size: var(--fs-xl);
 }
 
 /* 關掉 JavaScript 時接在說明下面，左右留白跟說明對齊 */
 body > noscript {
   display: block;
   max-width: 72rem;
-  margin: 0 auto 1.25rem;
-  padding: 0 1rem;
+  margin: 0 auto var(--sp-5);
+  padding: 0 var(--sp-4);
 }
 
 /* 太舊的瀏覽器（iOS 16.4 以前）的提示，public/legacy-check.js 偵測到時才拿掉 hidden。
    不設 display，否則會蓋過 hidden 屬性 */
 .legacy-browser {
-  margin: 1rem;
-  padding: 0.75rem 1rem;
+  margin: var(--sp-4);
+  padding: var(--sp-3) var(--sp-4);
   border-left: 4px solid var(--warn);
   font-weight: 600;
+}
+
+/* 動作列（AGENTS.md「設計語言」的動作）：編輯畫面完成時按的那一列，主要動作在左、取消在右，接在選項之後。
+   放在檔案最後，蓋過各工具對 .buttons 的邊距。遮蔽與 PDF 頁面選取的動作列另外固定在畫面底部（.redact-actions） */
+.buttons.action-bar {
+  margin: var(--sp-4) 0 0;
+}
+
+
+/* 固定在底部的完成列裡，間距由完成列本身的 gap 決定 */
+.redact-actions .buttons.action-bar {
+  margin: 0;
 }

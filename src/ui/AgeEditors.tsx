@@ -44,7 +44,7 @@ export function EncryptEditor({ blob, onDone, onCancel }: FileEditorProps) {
         {t("age.armor")}
       </label>
 
-      <div class="buttons">
+      <div class="buttons action-bar">
         <button type="button" class="primary" disabled={!key || status === "working"} onClick={apply}>
           {status === "working" ? t("age.working") : t("age.encrypt")}
         </button>
@@ -87,8 +87,8 @@ export function DecryptEditor({ blob, onDone, onCancel }: FileEditorProps) {
         <textarea rows={3} value={key} spellcheck={false} autocomplete="off" onInput={(e) => setKey(e.currentTarget.value)} />
       </label>
       <p class="hint">{t("age.keyNote")}</p>
-      {blocked ? <p class="alert danger">{t("age.needsHttps")}</p> : null}
-      <div class="buttons">
+      {blocked ? <p class="callout danger">{t("age.needsHttps")}</p> : null}
+      <div class="buttons action-bar">
         <button type="button" class="primary" disabled={!key.trim() || blocked || status === "working"} onClick={apply}>
           {status === "working" ? t("age.working") : t("age.decrypt")}
         </button>

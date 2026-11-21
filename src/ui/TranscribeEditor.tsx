@@ -25,6 +25,7 @@ import type { FileEditorProps } from "./types.ts";
 import { Icon } from "./Icon.tsx";
 import { track, trackFail } from "./analytics.ts";
 import { useWorking } from "./working.ts";
+import { ProgressBar } from "./ProgressBar.tsx";
 
 // 逐字稿：把錄音或影片的聲音轉成帶時間的段落。解碼在這裡（Web Audio 只能在主執行緒用），
 // 每次約 10 分鐘（src/ui/audio-stream.ts），辨識在 Web Worker（src/ui/transcribe.worker.ts），
@@ -444,7 +445,7 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
         </p>
       )}
       {punctCrashed ? (
-        <p class="notice" data-testid="punct-crashed">
+        <p class="callout" data-testid="punct-crashed">
           {t("transcribe.punct.crashed")}
         </p>
       ) : null}
@@ -477,7 +478,7 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
         ))}
       </fieldset>
       {remote ? (
-        <p class="notice" data-testid="transcribe-remote">
+        <p class="callout" data-testid="transcribe-remote">
           {t("transcribe.remote.note")}
         </p>
       ) : !downloaded[model] ? (
@@ -526,7 +527,7 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
           {t("wasm.transcribe")}
         </p>
       ) : null}
-      <div class="buttons">
+      <div class="buttons action-bar">
         {busy ? (
           <button type="button" onClick={stop}>
             {t("transcribe.stop")}
@@ -550,15 +551,13 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
         </p>
       ) : null}
       {silero === false && !sherpa && (busy || phase.kind === "done") ? (
-        <p class="notice" data-testid="transcribe-vad">
+        <p class="callout" data-testid="transcribe-vad">
           {t("transcribe.vad.fallback")}
         </p>
       ) : null}
       {busy ? (
         <div class="transcribe-progress">
-          <div class="auto-progress-track" role="progressbar" aria-label={t("tool.transcribe")} aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress === null ? undefined : Math.round(progress * 100)}>
-            <div class={progress === null ? "auto-progress-bar indeterminate" : "auto-progress-bar"} style={progress === null ? undefined : { width: `${Math.round(progress * 100)}%` }} />
-          </div>
+          <ProgressBar label={t("tool.transcribe")} value={progress} />
         </div>
       ) : null}
 
@@ -637,9 +636,7 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
               {punctBusy ? (
                 <>
                   <div class="transcribe-progress">
-                    <div class="auto-progress-track" role="progressbar" aria-label={t("transcribe.punct.button")} aria-valuemin={0} aria-valuemax={100} aria-valuenow={punctProgress === null ? undefined : Math.round(punctProgress * 100)}>
-                      <div class={punctProgress === null ? "auto-progress-bar indeterminate" : "auto-progress-bar"} style={punctProgress === null ? undefined : { width: `${Math.round(punctProgress * 100)}%` }} />
-                    </div>
+                    <ProgressBar label={t("transcribe.punct.button")} value={punctProgress} />
                   </div>
                   <div class="buttons">
                     <button type="button" onClick={stopPunct}>

@@ -605,7 +605,7 @@ export function FileView({ file, others, index, busy, preferred, onOpenTool }: P
               />
             </>
           ) : (
-            <p class="note">{t(noInspectMessage(current, !!signals.signature))}</p>
+            <p class="callout">{t(noInspectMessage(current, !!signals.signature))}</p>
           )}
 
           {/* 中繼資料之外，畫面上看得到的人臉與個資。按下檢查才載入模型，結果跟著版本走 */}

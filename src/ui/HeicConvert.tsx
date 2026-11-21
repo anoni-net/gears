@@ -50,7 +50,7 @@ export function HeicConvert({ blob, onDone, onCancel }: FileEditorProps) {
   return (
     <div class="convert">
       <p class="hint">{t("heic.note")}</p>
-      <div class="buttons">
+      <div class="buttons action-bar">
         <button type="button" class="primary" disabled={status === "working"} onClick={apply}>
           {status === "working" ? t("heic.working") : t("heic.convert")}
         </button>

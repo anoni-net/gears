@@ -139,7 +139,7 @@ export function OcrBench({ env, runs, setRuns, busy, setBusy }: Props) {
       <h3 id="bench-ocr-title">{t("bench.ocr.title")}</h3>
       <p class="hint">{t("bench.ocr.intro")}</p>
       {env && !env.canvas ? (
-        <p class="notice" data-testid="bench-ocr-canvas">
+        <p class="callout" data-testid="bench-ocr-canvas">
           {t("bench.ocr.canvasBlocked")}
         </p>
       ) : null}

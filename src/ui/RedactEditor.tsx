@@ -19,6 +19,7 @@ import { exifFindings, parseExif } from "../tools/strip-metadata/exif.ts";
 import type { FileEditorProps } from "./types.ts";
 import type { PdfPages } from "./pdf-pages.ts";
 import { useWorking } from "./working.ts";
+import { ProgressBar } from "./ProgressBar.tsx";
 
 // 編輯時畫面上的圖最多 1600 像素寬，框的座標一律存成原圖的像素
 const PREVIEW_MAX = 1600;
@@ -539,7 +540,7 @@ export function RedactEditor({ blob, format, found, onDone, onCancel }: FileEdit
         </p>
       ) : null}
       {crashed && !isPdf ? (
-        <p class="notice" data-testid="redact-model-crashed">
+        <p class="callout" data-testid="redact-model-crashed">
           {t("redact.model.crashed")}
         </p>
       ) : null}
@@ -676,7 +677,7 @@ export function RedactEditor({ blob, format, found, onDone, onCancel }: FileEdit
               ? t("redact.countPages", { n: total, page: boxes.length })
               : t("redact.count", { n: total })}
         </p>
-        <div class="buttons">
+        <div class="buttons action-bar">
           <button type="button" class="primary" disabled={!total || status === "working"} onClick={apply}>
             {building ? t("common.workingPage", { n: Math.min(building[0] + 1, building[1]), total: building[1] }) : status === "working" ? t("common.working") : t("redact.apply")}
           </button>
@@ -725,16 +726,7 @@ function AutoProgress({ label, value }: { label: string; value: number | null })
   const percent = value === null ? null : Math.round(value * 100);
   return (
     <div class="auto-progress" data-testid="redact-auto-progress">
-      <div
-        class="auto-progress-track"
-        role="progressbar"
-        aria-label={label}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={percent ?? undefined}
-      >
-        <div class={percent === null ? "auto-progress-bar indeterminate" : "auto-progress-bar"} style={percent === null ? undefined : { width: `${percent}%` }} />
-      </div>
+      <ProgressBar label={label} value={value} />
       <span aria-hidden="true">{percent === null ? "" : `${percent}%`}</span>
     </div>
   );

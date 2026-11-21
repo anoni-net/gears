@@ -135,7 +135,7 @@ export function PrintDotsEditor({ blob, format, onDone, onCancel }: FileEditorPr
         <p class="error" role="alert">
           {t(isPdf ? "redact.pdfFailed" : "redact.decodeFailed")}
         </p>
-        <div class="buttons">
+        <div class="buttons action-bar">
           <button type="button" onClick={onCancel}>
             {t("common.cancel")}
           </button>
@@ -200,7 +200,7 @@ export function PrintDotsEditor({ blob, format, onDone, onCancel }: FileEditorPr
         ))}
       </fieldset>
       <p class="hint">{t("printDots.limits")}</p>
-      <div class="buttons">
+      <div class="buttons action-bar">
         <button type="button" class="primary" disabled={!bitmap || status === "working"} onClick={apply}>
           {building ? t("common.workingPage", { n: Math.min(building[0] + 1, building[1]), total: building[1] }) : status === "working" ? t("common.working") : t("printDots.apply")}
         </button>

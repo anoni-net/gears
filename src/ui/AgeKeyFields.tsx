@@ -54,7 +54,7 @@ export function useAgeKey() {
             {t("age.recipients")}
             <textarea rows={4} value={recipients} spellcheck={false} autocomplete="off" placeholder="age1…" onInput={(e) => setRecipients(e.currentTarget.value)} />
           </label>
-          {!available ? <p class="alert danger">{t("age.needsHttps")}</p> : null}
+          {!available ? <p class="callout danger">{t("age.needsHttps")}</p> : null}
           {parsed.invalid.length ? <p class="error">{t("age.invalidRecipients", { list: list(parsed.invalid) })}</p> : null}
           <p class="hint">
             {t("age.recipientsNote")}{" "}

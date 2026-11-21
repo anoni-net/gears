@@ -12,6 +12,7 @@ import { trayFileFromPreset } from "./tray-preset.ts";
 import { useScamList } from "./scam-list-loader.ts";
 import { checkAttachment, checkableData } from "./doc-check-link.ts";
 import { formatSize, timeText } from "./verify-report.ts";
+import { verdictCallout } from "./callout.ts";
 
 // 信件檢查：貼上原始郵件或開啟 .eml 檔，用白話說明寄件人是誰、實際從哪裡寄出、
 // 寄件驗證有沒有通過、回覆地址有沒有被換掉。只讀信裡已經記下的結果，不連網，
@@ -57,7 +58,7 @@ function Result({ msg, onOpenTool }: { msg: Message; onOpenTool: CreateToolProps
 
   return (
     <div class="email-result">
-      <div class={`email-verdict ${a.verdict}`} role="status" data-testid="email-verdict">
+      <div class={verdictCallout(a.verdict)} role="status" data-testid="email-verdict">
         <strong>{verdictTitle(a)}</strong>
         <p>{verdictDetail(a)}</p>
       </div>
