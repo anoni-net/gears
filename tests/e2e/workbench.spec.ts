@@ -96,6 +96,18 @@ test("工具頁的暫存區仍寫「檔案在你的瀏覽器裡處理」", async
   await expect(page.locator(".tray .hint")).toContainText("檔案在你的瀏覽器裡處理");
 });
 
+test("桌面點處理檔案的工具只換到工具頁，不自動打開選檔案的視窗，讀者按下選擇檔案才打開", async ({ page }) => {
+  let opened = 0;
+  page.on("filechooser", () => opened++);
+  await page.getByRole("link", { name: /照片的拍攝位置/ }).click();
+  await expect(page).toHaveURL(/\/strip-metadata\/$/);
+  await expect(page.getByRole("heading", { level: 1, name: "清除中繼資料" })).toBeVisible();
+  await page.waitForTimeout(500);
+  expect(opened).toBe(0);
+  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.locator(".intro").getByRole("button", { name: "選擇檔案" }).click()]);
+  expect(chooser.isMultiple()).toBe(true);
+});
+
 test("桌面的圖示標籤：卡片上的圖示帶著補充說明，最下方的圖示說明列出用到的標籤", async ({ page }) => {
   // 圖示的名稱是連結名稱的一部分，讀螢幕軟體唸得到
   await expect(page.getByRole("link", { name: /^逐字稿 開源本機模型：語音辨識用到/ })).toBeVisible();

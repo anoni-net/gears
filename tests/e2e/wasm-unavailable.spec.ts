@@ -44,7 +44,9 @@ test("遮蔽：自動尋找說明原因，請讀者手動框選", async ({ page 
     const b = await new Promise<Blob>((r) => c.toBlob((x) => r(x!), "image/png"));
     return Array.from(new Uint8Array(await b.arrayBuffer()));
   });
-  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.getByRole("link", { name: /截圖上的名字與電話/ }).click()]);
+  // 桌面的工具連結只換到工具頁，選檔案由讀者在工具頁按下（不自動打開系統的選檔案視窗）
+  await page.getByRole("link", { name: /截圖上的名字與電話/ }).click();
+  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.locator(".intro").getByRole("button", { name: "選擇檔案" }).click()]);
   await chooser.setFiles({ name: "chat.png", mimeType: "image/png", buffer: Buffer.from(png) });
   await expect(page.getByTestId("redact-canvas")).toBeVisible();
   await page.getByRole("button", { name: "找人臉" }).click();
@@ -64,7 +66,9 @@ test("遮蔽：找人名、地址與單位也說明原因，不下載模型", as
     const b = await new Promise<Blob>((r) => c.toBlob((x) => r(x!), "image/png"));
     return Array.from(new Uint8Array(await b.arrayBuffer()));
   });
-  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.getByRole("link", { name: /截圖上的名字與電話/ }).click()]);
+  // 桌面的工具連結只換到工具頁，選檔案由讀者在工具頁按下（不自動打開系統的選檔案視窗）
+  await page.getByRole("link", { name: /截圖上的名字與電話/ }).click();
+  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.locator(".intro").getByRole("button", { name: "選擇檔案" }).click()]);
   await chooser.setFiles({ name: "chat.png", mimeType: "image/png", buffer: Buffer.from(png) });
   await expect(page.getByTestId("redact-canvas")).toBeVisible();
   await page.getByRole("button", { name: "找人名、地址與單位" }).click();

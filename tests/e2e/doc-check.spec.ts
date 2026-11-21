@@ -5,7 +5,9 @@ import { downloadFrom, expect, test } from "./guard.ts";
 
 test("從任務選有巨集的 Word：列出打開時會連到的位址、網路芳鄰、巨集與連結", async ({ page }) => {
   await page.goto("./");
-  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.getByRole("link", { name: /來路不明的文件/ }).click()]);
+  // 桌面的工具連結只換到工具頁，選檔案由讀者在工具頁按下（不自動打開系統的選檔案視窗）
+  await page.getByRole("link", { name: /來路不明的文件/ }).click();
+  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.locator(".intro").getByRole("button", { name: "選擇檔案" }).click()]);
   await chooser.setFiles({ name: "invite.docm", mimeType: "application/octet-stream", buffer: Buffer.from(await trackedDocx()) });
 
   const verdict = page.getByTestId("doc-check-verdict");

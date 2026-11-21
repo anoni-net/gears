@@ -74,7 +74,9 @@ test("找人名、地址與單位：上一次做到一半頁面重新載入了�
   await page.goto("./");
   await page.evaluate(() => sessionStorage.setItem("gears-pii-redact", "1"));
   await page.reload();
-  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.getByRole("link", { name: /截圖上的名字與電話/ }).click()]);
+  // 桌面的工具連結只換到工具頁，選檔案由讀者在工具頁按下（不自動打開系統的選檔案視窗）
+  await page.getByRole("link", { name: /截圖上的名字與電話/ }).click();
+  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.locator(".intro").getByRole("button", { name: "選擇檔案" }).click()]);
   await chooser.setFiles({ name: "chat.png", mimeType: "image/png", buffer: await screenshot(page) });
   await expect(page.getByTestId("redact-canvas")).toBeVisible();
   await expect(page.getByTestId("redact-model-crashed")).toContainText("記憶體不夠");

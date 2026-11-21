@@ -270,9 +270,8 @@ export function App() {
     track("task", { task: task.id });
     tray.select(null);
     setPreset(task.preset);
+    // 只換到工具頁，選檔案由讀者在工具頁按下（src/ui/tasks.ts）
     navigate(task.tool);
-    // 選檔案的對話框要在點擊的當下打開，瀏覽器才允許
-    if (task.pick) pick();
   };
 
   const selectedIndex = state.files.findIndex((f) => f.id === state.selected);
