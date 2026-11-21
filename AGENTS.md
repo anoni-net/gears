@@ -729,6 +729,7 @@ ProofMode（Guardian Project 給人權紀錄者的 Android App）拍照時不改
 網址是 `https://anoni.net/gears/`，做法跟新聞導讀一樣：GitHub Actions 建置、推到 `build` 分支，m6 每 5 分鐘拉一次。
 
 - `.github/workflows/deploy.yml`：main 的 CI 通過之後執行（`workflow_run`），每週一另外重建一次更新 165 清單，也可以手動觸發。產物沒變時不推
+- CI 觸發的部署建置的是那一次 CI 的 commit，只有它是 main 最新的一筆時才部署（`latest` job），比較舊的略過，等最新那一筆的 CI。好幾個 PR 接連合併時，CI 完成的順序不一定照合併的順序，2026-11-21 合併四個 PR，倒數第二個的 CI 最晚完成，它的部署把最後一個的版本蓋了回去，靠手動觸發才換回最新版。手動觸發（`gh workflow run deploy.yml --ref main`）一律部署 main 最新的一筆
 - `build` 分支的 `site/` 是網站，`deploy/models.txt` 是逐字稿的模型清單（`node scripts/fetch-whisper.mjs --manifest`），`deploy/nginx-headers.conf` 是 nginx 送的標頭（`vite.config.ts` 的 `nginxHeaders`，跟預覽伺服器送的同一組 CSP 與 cross-origin isolation）
 - Whisper small、base 與 CAM++ 不進 `build` 分支（單一檔案超過 GitHub 的 100 MB）。m6 照清單下載到 `/srv/anoni-net-gears/models/`，比對 SHA-256，nginx 的 `/gears/models/whisper/`、`/gears/models/speaker/` 讀那裡。路徑帶著模型的版本，換版本時舊的目錄不會自動刪除
 - `assets/` 的檔名帶雜湊，上一版的檔案多留一輪：已經開著舊頁面的讀者，之後才載入的工具還會要舊的檔案
