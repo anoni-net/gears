@@ -193,7 +193,7 @@ CI（`.github/workflows/ci.yml`）依瀏覽器拆成四台機器同時執行：C
 - 流程（`src/ui/pii-detect.ts`）：文字辨識讀出的每一行（`findText` 的 `texts`，`pii.ts` 的 `lineTexts`）留著，再按一次不必重新辨識。`chunkLines` 依行分塊（每塊不超過 3,000 字，模型一次最多讀 8,192 個詞元，超過的部分會被截掉、不會報錯），`joinLines` 接成一段、行與行之間放換行，字與字之間補上的空白只在兩邊都是英數時留著，跟評測的做法相同。Worker（`src/ui/pii.worker.ts`）找到的範圍由 `spanBoxes` 換回字框，往外多留 15%，跟規則的框一樣
 - Worker 在編輯畫面打開時第一次用到才建立，之後留著，關掉編輯畫面時結束。模型的載入與辨識在 `src/ui/pii-runtime.ts`，裝置量測的 Worker 也用它：只用單執行緒的 WebAssembly，模型存在 `transformers-cache`，量測頁下載過的遮蔽直接用。service worker 換版本時只清 `gears-` 開頭的快取，不會清掉它
 - 按下按鈕之前寫出要下載約 200 MB（`PII_MB`，經過 Cloudflare 的實際傳輸量，量測頁與協助測試頁也用這個數字），以及手機上可能因為記憶體不夠讓頁面重新載入、暫存區會跟著清空，請先下載需要的檔案（`redact.model.note`）。下載量跟找人臉、辨識文字的下載量在同一次查詢裡算出來（`detect-download.ts` 的 `pii`），說明一起出現，圖片只會跳一次。模型已經在快取時不寫
-- 記憶體不夠：開始之前在 sessionStorage 記下（`gears-pii-redact`），做完、失敗或取消（關掉編輯畫面時 `dispose`）時清掉。打開遮蔽時記號還在，代表上一次做到一半分頁被重新載入，畫面說明原因（`redact.model.crashed`），同一個分頁不再出現按鈕。不用量測頁的 `history.state`：它是每一筆歷史紀錄各一份，回到桌面再點進遮蔽就讀不到。sessionStorage 關掉分頁就清掉，私密瀏覽存不進去時只是記不住。沒有讀到文字的圖不下載模型，直接說沒有找到。手機與平板上（`pii-detect.ts` 的 `onPhone`，iPadOS 回報的是 Mac，靠觸控點數分出來）第一次按下時先展開說明（`redact.model.phone`）：功能在手機上還在測試、要下載約 200 MB、記憶體不夠時暫存區會清空，下面是「仍要使用」與「先幫忙量測」（連到協助測試頁）。手機上的下載量與記憶體提醒寫在這段說明裡，上方的模型說明只給電腦，同一件事不寫兩次。2026-11-21 決定：手機上直接拿掉按鈕的話，之後會忘記這裡還有功能要做，多一步確認讓功能一直看得到，也把讀者導去量測。協助測試頁收到 iPhone 的數字之後，再決定拿掉這一步或依機型調整
+- 記憶體不夠：開始之前在 sessionStorage 記下（`gears-pii-redact`），做完、失敗或取消（關掉編輯畫面時 `dispose`）時清掉。打開遮蔽時記號還在，代表上一次做到一半分頁被重新載入，畫面說明原因（`redact.model.crashed`），同一個分頁不再出現按鈕。不用量測頁的 `history.state`：它是每一筆歷史紀錄各一份，回到桌面再點進遮蔽就讀不到。sessionStorage 關掉分頁就清掉，私密瀏覽存不進去時只是記不住。沒有讀到文字的圖不下載模型，直接說沒有找到。手機與平板上（`src/ui/phone.ts` 的 `onPhone`，iPadOS 回報的是 Mac，靠觸控點數分出來）第一次按下時先展開說明（`redact.model.phone`）：功能在手機上還在測試、要下載約 200 MB、記憶體不夠時暫存區會清空，下面是「仍要使用」與「先幫忙量測」（連到協助測試頁）。手機上的下載量與記憶體提醒寫在這段說明裡，上方的模型說明只給電腦，同一件事不寫兩次。2026-11-21 決定：手機上直接拿掉按鈕的話，之後會忘記這裡還有功能要做，多一步確認讓功能一直看得到，也把讀者導去量測。協助測試頁收到 iPhone 的數字之後，再決定拿掉這一步或依機型調整
 - 關掉 WebAssembly 時說明原因、不下載模型，讀不到 canvas 時照其他自動尋找的做法
 - 「已下載的模型」把它列成獨立的一列（`storage.item.pii`，`classify` 依網址裡的模型目錄分出來），刪語言模型時不會一起刪掉
 - 授權與來源寫在 `licenses/redact-detect.txt`
@@ -570,6 +570,8 @@ ProofMode（Guardian Project 給人權紀錄者的 Android App）拍照時不改
 - 不是安全的連線（`isSecureContext`，例如用區網或 Tailscale 的 IP 開 `vite preview`）時，瀏覽器不提供 WebGPU、cross-origin isolation 與剪貼簿，顯示卡與多執行緒的選項都是灰的。頁面上另外說明要用 HTTPS 打開（`bench.insecure`）。遠端預覽要量這兩項時，用 `tailscale serve` 開 HTTPS，`vite preview` 只接受 `localhost` 與 `anoni.net` 的主機名稱（`preview.allowedHosts`），中間要有一層把 Host 換成 `localhost` 的轉送
 - 結果的 JSON 帶 `schema`（格式有變時加一）、Gears 的版本與 commit、裝置資訊、`userAgent` 與各區塊的數字，畫面上可以展開看複製的內容。讀者在語言模型區塊自己輸入的文字，連同它的改寫與從裡面取出的數字、引述，都不放進去（`llmReport`）
 - 一次只執行一個區塊（`BenchPage` 的 `busy`），量測中不出現換版本的提示（`useWorking`）
+- 記憶體不夠時 iOS 的 Safari 會直接重新載入分頁，量測的結果一筆都不剩（2026-10-24 在 iPhone 15 Pro、iOS 26 的 Safari 下載 Gemma 4 E2B 時遇到）。語言模型開始量測時把模型、裝置與精度記在 `history.state`（`gears-bench-running`，做法同 `src/ui/offline.ts`，不寫進 localStorage），結束、失敗或按停止時清掉。重新載入之後還讀得到，就記成一筆 `error: "reloaded"` 的結果，畫面上說明可能是記憶體不夠，讀者可以照樣送出。只記一次
+- 手機與平板（`src/ui/phone.ts` 的 `onPhone`，遮蔽的「找人名、地址與單位」也用它）選了下載量超過 1 GB 的模型時，開始之前先提醒可能會重新載入（`bench.mobileHint`）
 - 送給社群（`src/ui/BenchSubmit.tsx`，送出的內容在 `src/bench-submit.ts`）：讀者選裝置類型（必填），可以補上大約的年份、記憶體與備註，按下送出才送，不會自動送出。送到 Formbricks 的「Gears 裝置量測」問卷，跟建議與回饋同一個送出網址與 `sendFeedback`，CSP 不必另外開，onion 版一樣送到 onion 的表單伺服器。三個語系共用一份問卷，選擇題一律送正體中文的選項（`BENCH_DEVICES`、`BENCH_MEMORIES`），要跟社群工作區的 `formbricks/gears_bench_survey.py` 一字不差。量測結果的 JSON 放在 `report`，問卷的上限是 5 萬字（只量文字辨識約 3 KB，2026-10-23 實測 2 萬字的內容完整存進去）。同一份結果送過之後按鈕停用，換一種設定再量才能再送。整理在社群工作區（`formbricks/gears_bench.py`），不記錄提交的人是誰
 
 ### 文字辨識
@@ -604,7 +606,7 @@ ProofMode（Guardian Project 給人權紀錄者的 Android App）拍照時不改
 - 瀏覽器裡用 CPU 只有 Qwen3 0.6B 能用（改寫品質不夠，只當 CPU 速度的參考，沒有顯示卡時預設選它）。Qwen3 1.7B 的 4 位元版是單一個 2.15 GB 的檔案，超過瀏覽器能建立的 ArrayBuffer 上限，8 位元版建立推論環境時記憶體不夠（`std::bad_alloc`，WebAssembly 最多 4 GB，還要複製一份模型）。Qwen3.5 的每一種量化版本都用到 WebAssembly 沒有實作的 `GatherBlockQuantized`（Node 的 onnxruntime 有）。Qwen3 4B 只有顯示卡版。顯示卡版的 Qwen3.5 0.8B 在 Chromium 的軟體模擬顯示卡上可以建立並完成改寫
 - 有顯示卡時預設選 Qwen3 1.7B（社群轉檔的版本，見上方）。2026-10-18 在 Apple M5 Pro 實測，每秒的詞元數 Chromium 約 93、Safari 約 67，Qwen3 4B 是 50 與 37，下載量也是 1.7B 小一半。社群轉檔上線之前曾暫時預設選 4B（#93）。實測數字見社群工作區的 `research/gears-llm/02-browser-gpu.md`
 - 提示（`prompt.ts`）只給 Worker 用，範例文字（`samples.ts`）只給頁面用，兩邊不共用模組。提示與研究的 `eval/run.mjs` 相同，數字可以跟研究報告對照：Qwen 在使用者的訊息後面加 `/no_think`，Gemma 不用 system，規則併進使用者的訊息（`messages` 依模型的 repo 切換）
-- Gemma 4 E2B（Google，Apache-2.0，#158）只有顯示卡版，從 Hugging Face 下載，文字的部分（decoder 與詞嵌入表）約 3.1 GB，`text-generation` 的 pipeline 不會下載影像與聲音的編碼器。2026-10-23 在 Apple M5 Pro 實測，已在快取時 Chromium 3.6 秒載入、每秒約 65 個詞元，Safari 4.2 秒、約 33 個。研究的評測裡它是第一個品質達到門檻的模型，放進量測頁收集手機與記憶體小的裝置能不能執行
+- Gemma 4 E2B（Google，Apache-2.0，#158）只有顯示卡版，從 Hugging Face 下載，文字的部分（decoder 與詞嵌入表）約 3.1 GB，`text-generation` 的 pipeline 不會下載影像與聲音的編碼器。2026-10-23 在 Apple M5 Pro 實測，已在快取時 Chromium 3.6 秒載入、每秒約 65 個詞元，Safari 4.2 秒、約 33 個。研究的評測裡它是第一個品質達到門檻的模型，放進量測頁收集手機與記憶體小的裝置能不能執行。2026-10-24 在 iPhone 15 Pro（8 GB）的 Safari 下載到一半頁面就重新載入，記憶體不夠：Transformers.js 把每個檔案整個讀進記憶體，存快取時再複製一份，單一檔案約 1.5 GB
 - 「數字與引述的變化」一欄列出改寫後少掉（`missingFacts`）與多出（`addedNumbers`）的數字與引述
 - 「複製結果」放進每一段的時間與改寫結果，讀者自己輸入的文字只放時間（見上方）
 
