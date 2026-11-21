@@ -300,6 +300,7 @@ export function App() {
   // 用頁首的網站名稱，找不到的頁面也是。原本每一頁的 <h1> 都是網站名稱，搜尋引擎分不出各頁在講什麼
   let view;
   let titled = true;
+  let fileOpen = false;
   if (isCreateTool(route)) {
     view = (
       <section class="create" aria-labelledby="create-title">
@@ -336,7 +337,8 @@ export function App() {
   } else if (route === "samples") {
     view = <SamplesPage focus={preset} onOpenFile={openSample} onOpenQr={(id) => openTool("qr-read", `sample:${id}`)} />;
   } else if (selected) {
-    titled = false;
+    // 檔案畫面的 <h1> 是檔名（AGENTS.md「設計語言」的標題層級），頁首的網站名稱改用 <p>
+    fileOpen = true;
     view = <FileView key={selected.id} file={selected} others={state.files} index={selectedIndex} busy={state.busy} preferred={route} onOpenTool={openTool} />;
   } else if (isFileTool(route)) {
     view = <ToolIntro id={route} onPick={pick} onSamples={showSamples} />;
@@ -345,6 +347,23 @@ export function App() {
     view = <Desktop onTask={onTask} />;
   }
   const SiteTitle = titled ? "p" : "h1";
+  // 手機上打開了一個檔案（檔案畫面、編輯畫面）時，暫存區排在檔案之後（AGENTS.md「設計語言」的骨架）：
+  // 要處理的檔案與圖片在第一個畫面裡。原本暫存區排在檔名之前，佔掉約 220 px。寬螢幕的暫存區在左欄，不受影響
+  const trayAfter = !wide && fileOpen;
+  const trayList = (
+    <TrayList
+      files={state.files}
+      selected={state.selected}
+      onSelect={selectFile}
+      onPick={pick}
+      busy={state.busy}
+      failed={state.failed}
+      compact={!atHome && !state.files.length}
+      home={atHome}
+      keep={groupOf(route) === "check" || state.files.every((f) => f.intent === "check")}
+      accepts={!createTools.some((tool) => tool.id === route && tool.noFiles)}
+    />
+  );
 
   return (
     <div class={dragging ? "app dragging" : "app"}>
@@ -411,24 +430,14 @@ export function App() {
           wide ? (
             <PageAside route={route} files={state.files.length} onHome={() => home()} />
           ) : null
-        ) : (
-          <TrayList
-            files={state.files}
-            selected={state.selected}
-            onSelect={selectFile}
-            onPick={pick}
-            busy={state.busy}
-            failed={state.failed}
-            compact={!atHome && !state.files.length}
-            home={atHome}
-            keep={groupOf(route) === "check" || state.files.every((f) => f.intent === "check")}
-            accepts={!createTools.some((tool) => tool.id === route && tool.noFiles)}
-          />
+        ) : trayAfter ? null : (
+          trayList
         )}
         {/* 左欄的「跳到主內容」以這裡為目標，工具以外的頁面加上 tabindex 讓它接得住焦點 */}
         <div class="view" id={CONTENT_ID} tabIndex={isPage(route) ? -1 : undefined}>
           {view}
         </div>
+        {trayAfter ? trayList : null}
       </main>
 
       {/* 寬螢幕分左右兩欄，說明在左，連結與語系在右並靠右對齊。手機上照原本的順序排下來 */}

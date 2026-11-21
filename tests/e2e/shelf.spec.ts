@@ -19,7 +19,7 @@ async function photo(page: Page): Promise<Buffer> {
   return Buffer.from(insertIntoJpeg(new Uint8Array(data), exifSegment(sampleTiff())));
 }
 
-const groupTitles = (page: Page) => page.locator(".shelf-group h4");
+const groupTitles = (page: Page) => page.locator(".shelf-group h3");
 const item = (page: Page, name: string) => page.locator(".shelf li", { has: page.getByText(name, { exact: true }) });
 
 test("從桌面加入照片：交出去之前在前面，建議附上理由，加密在安全地傳送", async ({ page }) => {
@@ -41,7 +41,7 @@ test("從「收到的照片與文件」加入：檢查收到的在前面，建�
   await expect(groupTitles(page).first()).toHaveText("檢查收到的");
   await expect(item(page, "查證檔案")).toContainText("可以查證的線索");
   await expect(item(page, "清除中繼資料")).not.toContainText("建議");
-  await item(page, "查證檔案").getByRole("button", { name: "開啟" }).click();
+  await item(page, "查證檔案").getByRole("button", { name: "打開查證檔案" }).click();
   await expect(page).toHaveURL(/\/verify\/$/);
 });
 
@@ -57,7 +57,7 @@ test("信件：從暫存區打開信件檢查，帶著這封信", async ({ page 
   await page.goto("./");
   await page.getByTestId("file-input").setInputFiles({ name: "mail.eml", mimeType: "message/rfc822", buffer: Buffer.from(LEGIT_EML) });
   await expect(item(page, "信件檢查")).toContainText("看這封信實際從哪裡寄來");
-  await item(page, "信件檢查").getByRole("button", { name: "開啟" }).click();
+  await item(page, "信件檢查").getByRole("button", { name: "打開信件檢查" }).click();
   await expect(page).toHaveURL(/\/email-check\/$/);
   await expect(page.getByTestId("email-verdict")).toBeVisible();
 });
@@ -73,6 +73,6 @@ test("下載的檔案與簽章檔：從暫存區打開下載的軟體驗證，�
   await page.locator(".tray .item", { hasText: `${name}.asc` }).click();
   await expect(page.getByText("這是 OpenPGP 簽章檔", { exact: false })).toBeVisible();
   await expect(item(page, "下載的軟體驗證")).toContainText("這是簽章檔");
-  await item(page, "下載的軟體驗證").getByRole("button", { name: "開啟" }).click();
+  await item(page, "下載的軟體驗證").getByRole("button", { name: "打開下載的軟體驗證" }).click();
   await expect(page.getByTestId("software-verdict")).toContainText("簽章正確");
 });

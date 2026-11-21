@@ -482,8 +482,13 @@ main {
   padding: var(--sp-5) 0;
 }
 
-/* 工具與頁面的標題是 <h1>（#164），外觀維持原本 <h2> 的大小與邊距，頁首的網站名稱在這些頁面是 <p> */
-h2,
+/* 區塊標題（h2）是 --fs-lg，工具與頁面的標題（h1.tool-title，#164）是 --fs-xl，頁首的網站名稱在這些頁面是 <p>。
+   第二階段放大工具名稱時兩者原本共用一條規則，h2 也跟著變成 --fs-xl，第四階段分開 */
+h2 {
+  font-size: var(--fs-lg);
+  margin-block: 0.83em;
+}
+
 h1.tool-title {
   font-size: var(--fs-xl);
   margin-block: 0.83em;
@@ -517,6 +522,23 @@ h3 {
 }
 
 h4 {
+  font-size: var(--fs-sm);
+  margin: var(--sp-3) 0 var(--sp-1);
+  color: var(--muted);
+}
+
+/* 檔案畫面的標題層級：檔名 h1，各區 h2，區內 h3（AGENTS.md「設計語言」）。2026-11-22 以前檔名是 h2、各區 h3、區內 h4，
+   層級往上移一層，外觀維持原本的大小：各區跟一般的 h3 一樣，區內跟一般的 h4 一樣。編輯畫面裡的 h3 不受影響 */
+.panel h2,
+.steps h2,
+.qr-found h2 {
+  font-size: var(--fs-md);
+  margin: var(--sp-5) 0 var(--sp-2);
+}
+
+.panel h3,
+.step-detail h3,
+.recipient-note h3 {
   font-size: var(--fs-sm);
   margin: var(--sp-3) 0 var(--sp-1);
   color: var(--muted);
@@ -840,8 +862,10 @@ h4 {
   min-width: 0;
 }
 
-.file-head h2 {
+/* 檔名是檔案畫面的 <h1>，跟工具名稱一樣用 --fs-xl */
+.file-head h1 {
   margin: 0;
+  font-size: var(--fs-xl);
   overflow-wrap: anywhere;
 }
 
@@ -954,7 +978,7 @@ h4 {
 }
 
 /* 處理紀錄：預覽下方一排步驟，選中的那一步在下面顯示做了什麼（Steps） */
-.steps h3 {
+.steps h2 {
   margin: 0 0 var(--sp-2);
   font-size: var(--fs-xs);
   font-weight: 600;
@@ -1048,7 +1072,7 @@ h4 {
   margin-top: var(--sp-2);
 }
 
-.step-detail .report h4 {
+.step-detail .report h3 {
   margin: var(--sp-2) 0 0;
   font-size: var(--fs-xs);
   color: var(--muted);
@@ -1093,7 +1117,7 @@ h4 {
   align-items: center;
 }
 
-.panel h3:first-child {
+.panel h2:first-child {
   margin-top: 0;
 }
 
@@ -1127,7 +1151,7 @@ h4 {
 }
 
 /* 文件內容裡要留意的：不是中繼資料，清除之後仍然在，用中性的底色跟上面分開 */
-.content-findings h4 {
+.content-findings h3 {
   margin: var(--sp-4) 0 var(--sp-2);
 }
 
@@ -3244,7 +3268,7 @@ button.link {
   margin-top: var(--sp-4);
 }
 
-.shelf-group h4 {
+.shelf-group h3 {
   margin: 0 0 var(--sp-2);
   font-size: var(--fs-sm);
   color: var(--muted);
@@ -4080,7 +4104,34 @@ body > noscript {
 }
 
 
+/* 編輯畫面的動作列一律固定在畫面底部（AGENTS.md「設計語言」的骨架，2026-11-22 起，原本只有遮蔽與 PDF 頁面選取）：
+   選項或圖片比畫面長時，套用與取消一直看得到。遮蔽與 PDF 頁面選取的完成列（.redact-actions）本身已經固定 */
+.editor .buttons.action-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  padding: var(--sp-3) 0;
+  border-top: 1px solid var(--line);
+  background: var(--bg);
+}
+
 /* 固定在底部的完成列裡，間距由完成列本身的 gap 決定 */
 .redact-actions .buttons.action-bar {
+  position: static;
   margin: 0;
+  padding: 0;
+  border-top: 0;
+  background: none;
 }
+
+/* 編輯畫面收起來的說明（src/ui/EditorHelp.tsx），只在手機上出現 */
+.editor-help {
+  margin: var(--sp-2) 0;
+  font-size: var(--fs-sm);
+}
+
+.editor-help summary {
+  color: var(--link);
+  cursor: pointer;
+}
+

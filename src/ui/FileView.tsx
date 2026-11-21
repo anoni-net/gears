@@ -163,7 +163,7 @@ function Findings({ version, busy, onApply }: { version: Version; busy?: boolean
       )}
       {content.length ? (
         <div class="content-findings" data-testid="content-findings">
-          <h4>{t("findings.content")}</h4>
+          <h3>{t("findings.content")}</h3>
           <FindingList findings={content} />
           <p class="hint">{t("findings.contentNote")}</p>
           <ContentChoices version={version} busy={!!busy} onApply={onApply} key={version.id} />
@@ -208,19 +208,19 @@ function ReportView({ report }: { report: Report }) {
     <div class="report">
       {done.length ? (
         <div>
-          <h4>{t("report.done")}</h4>
+          <h3>{t("report.done")}</h3>
           <ul>{rows(done)}</ul>
         </div>
       ) : null}
       {removed.length ? (
         <div>
-          <h4>{t("report.removed")}</h4>
+          <h3>{t("report.removed")}</h3>
           <ul>{rows(removed)}</ul>
         </div>
       ) : null}
       {report.kept.length ? (
         <div>
-          <h4>{t("report.kept")}</h4>
+          <h3>{t("report.kept")}</h3>
           <ul>{rows(report.kept)}</ul>
         </div>
       ) : null}
@@ -290,7 +290,7 @@ function Steps({ file, busy }: { file: TrayFile; busy: boolean }) {
     );
   return (
     <section class="steps" aria-labelledby="steps-title" data-testid="history">
-      <h3 id="steps-title">{t("history.title")}</h3>
+      <h2 id="steps-title">{t("history.title")}</h2>
       <ol class="step-track">
         {versions.map((x, i) => (
           <li key={x.id} aria-current={i === last ? "step" : undefined} data-testid={i === last && i > 0 ? "history-current" : undefined}>
@@ -331,7 +331,7 @@ function RecipientNote({ version }: { version: Version }) {
   const text = t(passphrase ? "output.recipient.passphrase" : "output.recipient.key", { url: `${location.origin}${routeUrl("decrypt")}` });
   return (
     <div class="recipient-note" data-testid="recipient-note">
-      <h4>{t("output.recipient.title")}</h4>
+      <h3>{t("output.recipient.title")}</h3>
       <p class="hint">{t(passphrase ? "output.recipient.hintPassphrase" : "output.recipient.hintKey")}</p>
       <blockquote>{text}</blockquote>
       <CopyButton text={text} label={t("output.recipient.copy")} primary={false} />
@@ -393,11 +393,14 @@ function noInspectMessage(version: Version, signature: boolean) {
 // 已處理、清空暫存區的顏色混在一起。整個檔案畫面只有一顆實心按鈕（primary），還沒處理時是第一個建議的工具
 function ShelfItem({ entry, busy, primary, onAct }: { entry: ShelfEntry; busy: boolean; primary: boolean; onAct(): void }) {
   const { id, kind, actionable, applied, reason } = entry;
-  const label = kind === "create" ? t("tools.open") : tDynamic(`tool.${id}.${applied && kind === "editor" ? "again" : "action"}`);
+  // 按鈕只寫動詞（AGENTS.md「設計語言」的動作）：直接處理的寫動作本身（清除），會打開編輯畫面或另一個工具的一律寫「打開」，
+  // 同一列已經有工具名稱。讀螢幕軟體唸的名稱帶上工具名稱，一整列的「打開」才分得出來
+  const label = kind === "file" ? tDynamic(`tool.${id}.action`) : applied && kind === "editor" ? tDynamic(`tool.${id}.again`) : t("tools.open");
+  const named = kind === "file" || (applied && kind === "editor") ? undefined : t("tools.openNamed", { tool: tDynamic(`tool.${id}`) });
   const action = !actionable ? (
     applied ? null : <span class="hint nothing">{t("tools.nothing")}</span>
   ) : (
-    <button type="button" class={primary ? "primary" : ""} disabled={busy} onClick={onAct}>
+    <button type="button" class={primary ? "primary" : ""} disabled={busy} onClick={onAct} aria-label={named}>
       {busy && kind === "file" ? t("tools.busy") : label}
     </button>
   );
@@ -456,7 +459,7 @@ function QrInImage({ blob, onOpenTool }: { blob: Blob; onOpenTool: Props["onOpen
   if (found === null) return null;
   return (
     <section class="qr-found" aria-labelledby="qr-found-title">
-      <h3 id="qr-found-title">{t(found.format === "QRCode" ? "qrread.inImage" : "qrread.inImageBarcode")}</h3>
+      <h2 id="qr-found-title">{t(found.format === "QRCode" ? "qrread.inImage" : "qrread.inImageBarcode")}</h2>
       <p class="hint">{t("qrread.inImageNote")}</p>
       <QrContentView text={found.text} format={found.format} onOpenTool={onOpenTool} />
     </section>
@@ -536,7 +539,7 @@ export function FileView({ file, others, index, busy, preferred, onOpenTool }: P
     >
       <div class="file-head">
         <div>
-          <h2 id="file-title">{file.name}</h2>
+          <h1 id="file-title">{file.name}</h1>
           {file.sample ? (
             <p class="hint" data-testid="sample-note">
               {t("file.sample")}
@@ -558,10 +561,10 @@ export function FileView({ file, others, index, busy, preferred, onOpenTool }: P
       ) : null}
       {editing ? (
         <section class={wide ? "editor wide" : "editor"} aria-labelledby="editor-title" ref={editorRef}>
-          <h3 id="editor-title" class="tool-title">
+          <h2 id="editor-title" class="tool-title">
             <IconCircle name={TOOL_META[editing]!.icon} cat={TOOL_META[editing]!.cat} />
             {tDynamic(`tool.${editing}`)}
-          </h3>
+          </h2>
           <FileEditorView
             id={editing}
             blob={base.current.blob}
@@ -597,7 +600,7 @@ export function FileView({ file, others, index, busy, preferred, onOpenTool }: P
           {current.tool === "encrypt" ? <RecipientNote version={current} /> : null}
           {canInspect ? (
             <>
-              <h3>{t("findings.title")}</h3>
+              <h2>{t("findings.title")}</h2>
               <Findings
                 version={current}
                 busy={busy}
@@ -608,7 +611,22 @@ export function FileView({ file, others, index, busy, preferred, onOpenTool }: P
             <p class="callout">{t(noInspectMessage(current, !!signals.signature))}</p>
           )}
 
-          {/* 中繼資料之外，畫面上看得到的人臉與個資。按下檢查才載入模型，結果跟著版本走 */}
+
+          {isImage && file.versions[0]!.tool === null ? <QrInImage blob={current.blob} onOpenTool={onOpenTool} /> : null}
+
+          <h2>{t("tools.title")}</h2>
+          {groups.map((group) => (
+            <div class="shelf-group" key={group.id}>
+              <h3>{tDynamic(`desk.group.${group.id}`)}</h3>
+              <ul class="shelf">
+                {group.entries.map((entry) => (
+                  <ShelfItem key={entry.id} entry={entry} busy={busy} primary={entry.id === primaryId} onAct={() => act(entry)} />
+                ))}
+              </ul>
+            </div>
+          ))}
+          {/* 中繼資料之外，畫面上看得到的人臉與個資。按下檢查才載入模型，結果跟著版本走。
+              放在工具之後（AGENTS.md「設計語言」的骨架）：讀者讀完檔案裡有什麼，下一步的工具緊接在後，這一區是另一件事 */}
           {isImage && !current.large ? (
             <ScreenCheck
               key={current.id}
@@ -621,20 +639,6 @@ export function FileView({ file, others, index, busy, preferred, onOpenTool }: P
               }}
             />
           ) : null}
-
-          {isImage && file.versions[0]!.tool === null ? <QrInImage blob={current.blob} onOpenTool={onOpenTool} /> : null}
-
-          <h3>{t("tools.title")}</h3>
-          {groups.map((group) => (
-            <div class="shelf-group" key={group.id}>
-              <h4>{tDynamic(`desk.group.${group.id}`)}</h4>
-              <ul class="shelf">
-                {group.entries.map((entry) => (
-                  <ShelfItem key={entry.id} entry={entry} busy={busy} primary={entry.id === primaryId} onAct={() => act(entry)} />
-                ))}
-              </ul>
-            </div>
-          ))}
           {error ? (
             <p class="error" role="alert">
               {error}
