@@ -222,13 +222,15 @@ test.describe("已下載的模型：這個網站的儲存空間", () => {
     await expect(page.getByTestId("storage-persist")).toBeEnabled();
   });
 
-  test("等待瀏覽器回覆時按鈕停用，申請出錯時說明", async ({ page }) => {
+  test("等待瀏覽器回覆時說明，按鈕仍然可以再按（詢問被關掉時的出口），申請出錯時說明", async ({ page }) => {
     await mockStorage(page, "pending");
     await page.goto("./storage/");
     await page.getByTestId("storage-persist").click();
-    await expect(page.getByTestId("storage-persist")).toBeDisabled();
-    await expect(page.getByTestId("storage-persist")).toHaveText("等待瀏覽器回覆…");
-    await expect(page.getByTestId("storage-quota")).toContainText("Firefox 會在網址列下方跳出詢問");
+    await expect(page.getByTestId("storage-quota")).toContainText("等待瀏覽器回覆…Firefox 會在網址列下方跳出詢問");
+    await expect(page.getByTestId("storage-quota")).toContainText("可以再按一次");
+    await expect(page.getByTestId("storage-persist")).toBeEnabled();
+    await page.getByTestId("storage-persist").click();
+    await expect(page.getByTestId("storage-quota")).toContainText("等待瀏覽器回覆…");
 
     await mockStorage(page, "failed");
     await page.reload();

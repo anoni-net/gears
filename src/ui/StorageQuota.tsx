@@ -85,8 +85,9 @@ export function StorageQuota({ inAside }: { inAside: boolean }) {
         <>
           <p class={inAside ? "hint" : undefined}>{t("storage.persist.why", { punct: PUNCT_MB, pii: PII_MB })}</p>
           <div class="buttons">
-            <button type="button" onClick={() => void request()} disabled={result === "pending"} data-testid="storage-persist">
-              {t(result === "pending" ? "storage.persist.pending" : "storage.persist.button")}
+            {/* 等待回覆時按鈕照樣可以按：Firefox 的詢問被讀者關掉時不會有回覆，停用按鈕的話只能重新整理頁面 */}
+            <button type="button" onClick={() => void request()} data-testid="storage-persist">
+              {t("storage.persist.button")}
             </button>
           </div>
           {/* 申請之前說明各家瀏覽器的做法。等待回覆時多半是 Firefox 跳出了詢問，改成請讀者在那裡選擇 */}
