@@ -10,5 +10,6 @@ public/samples/
 public/models/whisper/
 public/models/speaker/
 public/models/ppocr/
+public/models/vad/
 deploy/
 dist-server/

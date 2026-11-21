@@ -1,0 +1,11 @@
+{
+  "source": "https://github.com/snakers4/silero-vad",
+  "license": "MIT",
+  "version": "v6.2.3",
+  "revision": "5cd7945676eb32225748052e2e6a0580e4686a08",
+  "url": "https://raw.githubusercontent.com/snakers4/silero-vad/5cd7945676eb32225748052e2e6a0580e4686a08/src/silero_vad/data/silero_vad_16k_sequence.onnx",
+  "dir": "silero-vad-5cd7945",
+  "file": "silero_vad_16k_sequence.onnx",
+  "sha256": "9ccdacc4719d8aa7e45a77536bfabec45a03ba1f2fad5e241ab4060b24238a85",
+  "bytes": 1246165
+}

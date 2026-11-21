@@ -11,7 +11,13 @@ import type { Reply, Request } from "./transcribe.worker.ts";
 // 同一個快取，再寫進 Emscripten 的檔案系統建立辨識器。只能用 1 個核心，不能用顯示卡。
 //
 // 訊息的格式跟 src/ui/transcribe.worker.ts 相同，畫面依模型的 engine 決定開哪一個 Worker。
-// 語音偵測、長錄音分段與接縫的處理也一樣。
+// 長錄音分段與接縫的處理也一樣。
+//
+// 語音偵測維持音量判斷，沒有換成 Silero VAD（transcribe.worker.ts 的 findPieces）。這個 Worker 沒有
+// onnxruntime-web，要另外載入 Transformers.js 帶的那一份（約 14 MB 的 WebAssembly，讀者第一次使用時
+// 又多一份下載），sherpa-onnx 自己的語音偵測輸出的是範圍、不是每窗的機率，判斷的規則跟評測過的
+// get_speech_timestamps 不同，v6 的模型能不能用也沒有確認。瀏覽器測試也只走到模型下載失敗，換了之後
+// 沒有測試涵蓋整個流程，所以等有評測與測試再換（見 AGENTS.md「逐字稿」的語音偵測）
 
 const post = (reply: Reply) => (self as unknown as DedicatedWorkerGlobalScope).postMessage(reply);
 
@@ -123,7 +129,7 @@ function recognize(chunk: Float32Array, at: number, last: boolean) {
     raw.push({ text, timestamp: [offset + piece.start / SAMPLE_RATE, offset + piece.end / SAMPLE_RATE] });
     post({ type: "progress", at: offset + piece.end / SAMPLE_RATE });
   }
-  post({ type: "segments", segments: cleanSegments(raw, audio, offset, false) });
+  post({ type: "segments", segments: cleanSegments(raw, audio, offset, false), pieces: pieces.length });
   post({ type: "progress", at: carry ? carry.offset : offset + audio.length / SAMPLE_RATE });
 }
 

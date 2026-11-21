@@ -17,10 +17,10 @@ export const KEEP_CACHE = "gears-keep";
 export const LLM_CACHE = "transformers-cache";
 export const STORAGE_CACHES = [MODEL_CACHE, KEEP_CACHE, LLM_CACHE];
 
-export type StorageGroup = "transcribe" | "speaker" | "faces" | "ocr" | "pii" | "runtime" | "pdf" | "c2pa" | "llm" | "other";
+export type StorageGroup = "transcribe" | "speaker" | "vad" | "faces" | "ocr" | "pii" | "runtime" | "pdf" | "c2pa" | "llm" | "other";
 
 // 畫面上的順序
-export const STORAGE_GROUPS: readonly StorageGroup[] = ["transcribe", "speaker", "faces", "ocr", "pii", "runtime", "pdf", "c2pa", "llm", "other"];
+export const STORAGE_GROUPS: readonly StorageGroup[] = ["transcribe", "speaker", "vad", "faces", "ocr", "pii", "runtime", "pdf", "c2pa", "llm", "other"];
 
 export interface StorageKey {
   group: StorageGroup;
@@ -42,6 +42,9 @@ export function classify(cache: string, url: string, base: string): StorageKey {
     return model ? { group: "transcribe", model } : { group: "other" };
   }
   if (rest.startsWith("models/speaker/")) return { group: "speaker" };
+  // 逐字稿的語音偵測（Silero VAD，存在 gears-keep）另外一列：每次轉逐字稿都會用到，跟勾選才下載的
+  // 分辨說話者不同，也不屬於某一個逐字稿的模型，刪掉某個模型時不會一起刪掉
+  if (rest.startsWith("models/vad/")) return { group: "vad" };
   if (rest.startsWith("models/yunet")) return { group: "faces" };
   // 裝置量測的範例截圖（src/tools/bench/ocr.ts）跟辨識模型放在同一列
   if (rest.startsWith("models/ppocr/") || rest.startsWith("models/bench/ocr-")) return { group: "ocr" };

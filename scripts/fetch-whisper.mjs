@@ -6,6 +6,7 @@
 //   node scripts/fetch-whisper.mjs speaker  只下載 CAM++
 //   node scripts/fetch-whisper.mjs sherpa   只下載 sherpa-onnx 的 WebAssembly（Omnilingual 用）
 //   node scripts/fetch-whisper.mjs ppocr    只下載遮蔽的文字辨識模型（PP-OCRv5 mobile 偵測、PP-OCRv6 small 辨識）
+//   node scripts/fetch-whisper.mjs vad      只下載逐字稿的語音偵測模型（Silero VAD）
 //   --no-webgpu                             不下載 WebGPU 用的 4 位元版（瀏覽器測試用，CI 沒有 GPU）
 //   node scripts/fetch-whisper.mjs --hash turbo
 //                                           只印出每個檔案的 SHA-256，不存檔（更新 models.json 用）
@@ -23,6 +24,8 @@
 // src/tools/transcribe/speaker-model.json，放在 public/models/speaker/。
 // 遮蔽的文字辨識用 PaddleOCR 的 PP-OCRv5 mobile 偵測與 PP-OCRv6 small 辨識（Apache-2.0），取自 Hugging Face 的 PaddlePaddle，
 // 鎖定 commit，來源與 SHA-256 寫在 src/tools/redact/ppocr-models.json，放在 public/models/ppocr/。
+// 逐字稿的語音偵測用 Silero VAD（MIT），取自 GitHub 的 snakers4/silero-vad，鎖定 commit，來源與 SHA-256
+// 寫在 src/tools/transcribe/vad-model.json，放在 public/models/vad/。
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
@@ -38,6 +41,7 @@ const speaker = JSON.parse(readFileSync(join(root, "src/tools/transcribe/speaker
 // README.txt。下載到 public/vendor/sherpa/，網頁從自己的網域載入
 const sherpa = JSON.parse(readFileSync(join(root, "src/tools/transcribe/sherpa-runtime.json"), "utf8"));
 const ppocr = JSON.parse(readFileSync(join(root, "src/tools/redact/ppocr-models.json"), "utf8"));
+const vad = JSON.parse(readFileSync(join(root, "src/tools/transcribe/vad-model.json"), "utf8"));
 
 const manifest = process.argv.includes("--manifest") ? process.argv[process.argv.indexOf("--manifest") + 1] : null;
 const entries = [];
@@ -79,6 +83,12 @@ if (!manifest && (!wanted.length || wanted.includes("ppocr"))) {
   for (const m of [ppocr.det, ppocr.rec]) {
     await download(`https://huggingface.co/${m.repo}/resolve/${m.revision}/inference.onnx`, m.sha256, join(root, "public/models/ppocr", m.name), `ppocr ${m.name}`);
   }
+}
+
+// Silero VAD 只有 1.2 MB，跟 PP-OCRv5 一樣放在 public/ 跟著網站一起部署，不列進模型清單：
+// m6 的 nginx 只把 models/whisper/ 與 models/speaker/ 指到另外下載的目錄，放進清單的話要另外改設定
+if (!manifest && (!wanted.length || wanted.includes("vad"))) {
+  await download(vad.url, vad.sha256, join(root, "public/models/vad", vad.dir, vad.file), `vad ${vad.file}`);
 }
 
 if (!wanted.length || wanted.includes("speaker")) {

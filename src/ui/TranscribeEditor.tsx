@@ -9,6 +9,7 @@ import { LANGUAGES, type Language, modelsFor, preferredModel } from "../tools/tr
 import { ASSETS_MODELS, type Part, REMOTE_ERROR, isCached, partName, removeCached } from "../core/models.ts";
 import { IS_ONION } from "../site.ts";
 import speakerModel from "../tools/transcribe/speaker-model.json" with { type: "json" };
+import vadModel from "../tools/transcribe/vad-model.json" with { type: "json" };
 import { navigate } from "../router.ts";
 import { THREAD_OPTIONS, defaultThreads } from "../tools/transcribe/threads.ts";
 import { type AudioStream, TooLargeError, openAudio } from "./audio-stream.ts";
@@ -111,6 +112,10 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
   const [aliasNote, setAliasNote] = useState("");
   const [downloaded, setDownloaded] = useState<Partial<Record<ModelId, boolean>>>({});
   const [note, setNote] = useState<string>("");
+  // 語音偵測用 Silero（true）或退回音量判斷（false），還沒載入時是 null。sherpa-onnx 的模型一律用音量判斷
+  const [silero, setSilero] = useState<boolean | null>(null);
+  // 這次送進模型的片段數，放在狀態那一行的 data-pieces，瀏覽器測試用來確認語音偵測的結果
+  const [pieces, setPieces] = useState(0);
   const worker = useRef<{ instance: Worker; threads: number; device: Device; engine: Engine } | null>(null);
   // 每次開始轉換加一，按下停止之後，舊的那一次收到的回覆不再處理
   const run = useRef(0);
@@ -147,6 +152,8 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
     setAliasHistory([]);
     setAliasNote("");
     setNote("");
+    setSilero(null);
+    setPieces(0);
     setPhase({ kind: "decoding" });
     let stream: AudioStream;
     let chunk: Float32Array | null;
@@ -186,7 +193,11 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
       } else if (reply.type === "download") setPhase({ kind: "download", loaded: reply.loaded, total: reply.total });
       else if (reply.type === "progress")
         setPhase((p) => ({ kind: "recognize", at: reply.at, duration: stream.duration, since: p.kind === "recognize" ? p.since : Date.now() }));
-      else if (reply.type === "segments") setSegments((list) => mergeSegments([...list, ...reply.segments]));
+      else if (reply.type === "vad") setSilero(reply.silero);
+      else if (reply.type === "segments") {
+        setSegments((list) => mergeSegments([...list, ...reply.segments]));
+        setPieces((n) => n + reply.pieces);
+      }
       else if (reply.type === "speakers") {
         // 接縫上合併的段落留著第一段的開始時間，用它對回去
         const byStart = new Map(reply.speakers.map((s) => [s.start, s.speaker]));
@@ -317,6 +328,13 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
   return (
     <div class="transcribe">
       <p class="hint">{t("transcribe.note")}</p>
+      {/* 歌聲與背景音樂不會轉成文字：Silero VAD 把它們當成不是說話（src/tools/transcribe/segments.ts）。
+          sherpa-onnx 的模型仍用音量判斷，不寫這一句 */}
+      {sherpa ? null : (
+        <p class="hint" data-testid="transcribe-vad-note">
+          {t("transcribe.vad.note")}
+        </p>
+      )}
       <fieldset class="segmented" disabled={busy}>
         <legend>{t("transcribe.language")}</legend>
         {LANGUAGES.map((id) => (
@@ -410,12 +428,17 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
         </button>
       </div>
 
-      <p class={error ? "error" : "hint"} role="status" data-testid="transcribe-status">
+      <p class={error ? "error" : "hint"} role="status" data-testid="transcribe-status" data-pieces={pieces}>
         {status}
       </p>
       {running?.requested === "webgpu" && (busy || phase.kind === "done") ? (
         <p class="hint" data-testid="transcribe-device">
           {running.actual === "webgpu" ? t("transcribe.device.gpu") : t("transcribe.device.fallback")}
+        </p>
+      ) : null}
+      {silero === false && !sherpa && (busy || phase.kind === "done") ? (
+        <p class="notice" data-testid="transcribe-vad">
+          {t("transcribe.vad.fallback")}
         </p>
       ) : null}
       {busy ? (
@@ -547,6 +570,16 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
               license: speakerModel.license,
               host: "self",
               convert: { url: "https://github.com/k2-fsa/sherpa-onnx/releases/tag/speaker-recongition-models", label: "sherpa-onnx" },
+            },
+            {
+              id: "vad",
+              name: t("transcribe.vad.name"),
+              source: vadModel.source,
+              label: `Silero VAD ${vadModel.version}`,
+              license: vadModel.license,
+              host: "self",
+              // 官方 repo 本身就附 ONNX 檔，原封不動使用
+              convert: { url: `${vadModel.source}/tree/${vadModel.version}/src/silero_vad/data`, label: "snakers4/silero-vad" },
             },
           ].map((m) => (
             <li key={m.id}>
