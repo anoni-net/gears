@@ -558,6 +558,7 @@ ProofMode（Guardian Project 給人權紀錄者的 Android App）拍照時不改
 - 步驟照畫面上的按鈕名稱寫（`bench.ocr.start`、`bench.send.button` 這類），改了按鈕的字串時一起改
 - 測試結束就把那一筆與字串拿掉，頁面最下面的更新日期（`testing.updated`）跟著改。頁面一律留著「使用時遇到的問題」，連到建議與回饋，請讀者不要附上真實的照片或文件
 - 第一項是手機上的模型量測（#144）：個資辨識（#187 上線前要知道手機能不能載入）與文字辨識，機型照 #144 的記憶體分級。Safari 的 `userAgent` 不一定帶著真實的 iOS 版本，所以請讀者在備註寫機型與系統版本
+- 第二項是逐字稿的語音偵測（#196，2026-11-21 起）：Silero VAD 上線時只在 Playwright 的模擬環境執行過，要知道真的 Safari、Android 與電腦的瀏覽器能不能載入、約 1 分鐘的錄音模型下載之後要幾秒，以及有背景音樂時有沒有漏句。逐字稿沒有量測頁，請讀者用自己的聲音錄音、用碼錶計時，從建議與回饋回報，不附錄音檔，這一項不會自動送出任何資料。步驟裡的按鈕名稱是 `transcribe.start`、`tool.transcribe.again`、`transcribe.model.base`，說明的開頭是 `transcribe.vad.fallback`
 - 入口在桌面的使用者區（`USER_PAGES`，圖示 `cellphone-check`）。不是實驗頁，搜尋引擎可以收錄，對外徵求測試時連到這一頁，不直接連裝置量測
 
 ## 裝置量測（實驗頁）

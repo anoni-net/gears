@@ -10,7 +10,10 @@ import { PAGE_META } from "./tool-meta.ts";
 // 新增一項：在 REQUESTS 加一筆，三個語系加上 testing.<id>.title、why、who.<n>、step.<n>、sent，
 // 需要時加上 whoNote。page 是做法裡要打開的頁面，issue 是 anoni-net/gears 上討論與整理結果的票。
 // 測試結束就把那一筆拿掉，字串一起刪
-const REQUESTS = [{ id: "phone", who: 5, steps: 5, page: "bench", issue: 144 }] as const;
+const REQUESTS = [
+  { id: "phone", who: 5, steps: 5, page: "bench", issue: 144 },
+  { id: "vad", who: 3, steps: 5, page: "transcribe", issue: 196 },
+] as const;
 
 const ISSUES = "https://github.com/anoni-net/gears/issues/";
 

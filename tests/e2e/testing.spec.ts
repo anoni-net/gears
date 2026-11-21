@@ -21,6 +21,19 @@ test("協助測試：從桌面打開，列出需要的裝置與步驟，按鈕�
   await expect(page.getByRole("heading", { level: 1, name: "裝置量測" })).toBeVisible();
 });
 
+test("協助測試：逐字稿的語音偵測，步驟照畫面上的按鈕名稱，按鈕打開逐字稿", async ({ page }) => {
+  await page.goto("./testing/");
+  const vad = page.getByTestId("testing-vad");
+  await expect(vad.getByRole("heading", { name: "逐字稿的語音偵測" })).toBeVisible();
+  await expect(vad.locator("ul li")).toHaveCount(3);
+  await expect(vad.locator("ol li")).toHaveCount(5);
+  await expect(vad.locator("ol")).toContainText("「開始轉逐字稿」");
+  await expect(vad.locator("ol")).toContainText("「再轉一次」");
+  await expect(vad.getByRole("link", { name: "討論與整理的結果：anoni-net/gears#196" })).toHaveAttribute("href", "https://github.com/anoni-net/gears/issues/196");
+  await vad.getByRole("link", { name: "打開逐字稿" }).click();
+  await expect(page).toHaveURL(/\/transcribe\/$/);
+});
+
 test("協助測試：問題回報連到建議與回饋", async ({ page }) => {
   await page.goto("./testing/");
   await page.getByRole("link", { name: "建議與回饋" }).first().click();
