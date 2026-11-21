@@ -524,7 +524,6 @@ export function VerifyTool(_: CreateToolProps) {
   if (!files.length) {
     return (
       <div class="verify">
-        <p class="hint">{t("verify.intro")}</p>
         <p class="hint">{t("verify.caveat")}</p>
         <div class="buttons">{picker}</div>
       </div>

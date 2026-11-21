@@ -259,7 +259,6 @@ export function EmailTool({ preset, onOpenTool }: CreateToolProps) {
 
   return (
     <div class="email-check">
-      <p class="hint">{t("email.intro")}</p>
       {file ? (
         <p class="email-file">
           {t("email.opened", { name: file.name })}{" "}

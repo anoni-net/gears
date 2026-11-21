@@ -67,5 +67,7 @@ export function useAgeKey() {
     </>
   );
 
-  return { key, fields };
+  // 還沒填好時，停用的加密按鈕旁邊寫出缺的是哪一欄
+  const missing = ready ? null : t(mode === "passphrase" ? "age.passphrase" : "age.recipientsShort");
+  return { key, fields, missing };
 }

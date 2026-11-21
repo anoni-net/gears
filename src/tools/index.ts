@@ -38,15 +38,15 @@ export const editorTools: EditorTool[] = [
 
 // 從空白開始的工具
 export const createTools: CreateTool[] = [
-  { id: "qrcode", output: "file" },
-  { id: "url-check", output: "text" },
+  { id: "qrcode", output: "file", noFiles: true },
+  { id: "url-check", output: "text", noFiles: true },
   { id: "qr-read", output: "text" },
-  { id: "passphrase", output: "text" },
-  { id: "age-keygen", output: "text" },
-  { id: "text-crypt", output: "text" },
+  { id: "passphrase", output: "text", noFiles: true },
+  { id: "age-keygen", output: "text", noFiles: true },
+  { id: "text-crypt", output: "text", noFiles: true },
   { id: "verify", output: "file", tray: true },
   { id: "email-check", output: "text" },
-  { id: "writing-style", output: "text" },
+  { id: "writing-style", output: "text", noFiles: true },
   { id: "software-verify", output: "text" },
   // 面對面傳送：兩台裝置在同一個網路裡用 WebRTC 直接傳暫存區的檔案，收到的檔案放進暫存區
   { id: "nearby", output: "file", tray: true },

@@ -53,7 +53,7 @@ export function staticContent(id: string, { messages, home }: Options): string {
   } else if (pageIds.includes(id)) {
     parts = [`<h1>${m(`${id}.title`)}</h1>`, `<p>${m(`meta.${id}.description`)}</p>`, back];
   } else {
-    // 工具：名稱、說明、處理檔案的工具另有三步的使用方式（howto.<id>.<n>），接著是同一組的其他工具
+    // 工具：名稱、說明、三步的使用方式（howto.<id>.<n>），接著是同一組的其他工具
     const steps = [1, 2, 3].map((n) => messages[`howto.${id}.${n}`]).filter((step): step is string => !!step);
     const own = TOOL_GROUPS.find((g) => (g.tools as readonly string[]).includes(id));
     parts = [

@@ -5,6 +5,7 @@ import { useAgeKey } from "./AgeKeyFields.tsx";
 import { track } from "./analytics.ts";
 import { CopyButton } from "./CopyButton.tsx";
 import type { CreateToolProps } from "./types.ts";
+import { Missing } from "./Missing.tsx";
 
 // 加密或解開一段文字，例如要透過不加密的管道傳一組密碼、地址或聯絡方式。輸出是 age 的
 // 文字格式，可以貼進任何訊息，對方用工作台或 age 命令列工具解開。
@@ -17,7 +18,7 @@ const enc = new TextEncoder();
 const dec = new TextDecoder("utf-8", { fatal: true });
 
 function Encrypt({ onOpenTool }: CreateToolProps) {
-  const { key, fields } = useAgeKey();
+  const { key, fields, missing } = useAgeKey();
   const [plain, setPlain] = useState("");
   const [out, setOut] = useState("");
   const [status, setStatus] = useState<"idle" | "working" | "failed">("idle");
@@ -50,6 +51,7 @@ function Encrypt({ onOpenTool }: CreateToolProps) {
           {status === "working" ? t("age.working") : t("textcrypt.encrypt")}
         </button>
       </div>
+      <Missing items={[!plain && t("textcrypt.plain"), missing]} />
       {status === "failed" ? (
         <p class="error" role="alert">
           {t("age.encryptFailed")}
@@ -116,6 +118,7 @@ function Decrypt({ preset }: { preset?: string }) {
           {status === "working" ? t("age.working") : t("textcrypt.decrypt")}
         </button>
       </div>
+      <Missing items={[!cipher.trim() && t("textcrypt.cipherIn"), !secret.trim() && t("age.key")]} />
       {status === "failed" ? (
         <p class="error" role="alert">
           {t("textcrypt.decryptFailed")}

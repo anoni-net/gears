@@ -153,9 +153,9 @@ button:hover:not(:disabled),
   align-items: center;
 }
 
-/* 停用的按鈕用灰底灰字。原本把主色調淡，淺青色看起來像另一種還能按的按鈕 */
-button:disabled,
-button.primary:disabled {
+/* 停用的次要按鈕用灰底灰字。停用的主要按鈕保留主色的外框與文字、底色改淡（AGENTS.md「設計語言」的動作）：
+   原本兩種都是灰底灰字，讀者看不出哪一顆是流程最後要按的。旁邊另外用一行提示寫出還缺什麼 */
+button:disabled {
   background: var(--fill);
   border-color: var(--line);
   color: var(--muted);
@@ -167,6 +167,12 @@ button.primary,
   background: var(--accent);
   border-color: var(--accent);
   color: var(--accent-text);
+}
+
+button.primary:disabled {
+  background: color-mix(in srgb, var(--accent) 6%, var(--surface));
+  border-color: var(--accent);
+  color: var(--link);
 }
 
 button.primary:hover:not(:disabled),
@@ -481,6 +487,28 @@ h2,
 h1.tool-title {
   font-size: var(--fs-xl);
   margin-block: 0.83em;
+}
+
+/* 工具頁的開頭（src/ui/ToolIntro.tsx 的 ToolHeader）：一句說明、範例連結、三步的使用方式 */
+.tool-desc {
+  margin: 0 0 var(--sp-2);
+}
+
+.tool-howto h2 {
+  margin: var(--sp-4) 0 var(--sp-1);
+  font-size: var(--fs-md);
+}
+
+.tool-howto ol {
+  margin: 0 0 var(--sp-4);
+  padding-left: var(--sp-5);
+}
+
+/* 還缺什麼：停用的主要按鈕旁邊的一行提示 */
+.missing {
+  margin: var(--sp-1) 0 0;
+  color: var(--muted);
+  font-size: var(--fs-sm);
 }
 
 h3 {
