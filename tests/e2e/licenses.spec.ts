@@ -6,7 +6,8 @@ import { expect, test } from "./guard.ts";
 
 // 授權與來源（src/ui/Licenses.tsx）：從頁尾進入、直接用網址打開，授權全文跟著建置一起輸出
 
-const licenses = ["transcribe", "redact-detect", "pdfjs", "pdf-lib", "libheif", "openpgp", "c2pa", "pkijs", "zxing", "material-design-icons"];
+// 頁面上的順序：依用途分組（src/ui/Licenses.tsx 的 GROUPS）
+const licenses = ["transcribe", "redact-detect", "pdfjs", "pdf-lib", "libheif", "zxing", "openpgp", "c2pa", "pkijs", "material-design-icons"];
 
 test("從頁尾打開授權與來源，每份授權全文都下載得到、內容跟 licenses/ 相同", async ({ page }) => {
   await page.goto("./");

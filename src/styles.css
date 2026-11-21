@@ -506,12 +506,183 @@ h4 {
     align-items: start;
   }
 
-  /* 工具以外的頁面沒有暫存區（src/app.tsx），左邊那一欄照樣留著、空著，內容放在右邊那一欄，位置與寬度跟首頁相同，
+  /* 工具以外的頁面沒有暫存區（src/app.tsx），左邊那一欄照樣留著，內容放在右邊那一欄，位置與寬度跟首頁相同，
      從桌面點進範例、協助測試這些頁面時內容不會左右移動。2026-10-20 以前撐滿整個版面，從桌面點進範例時內容突然變寬
-     三百多 px。之後改成單欄靠左對齊頁首的 logo，寬度雖然相同，內容卻往左挪了一個暫存區的寬度（2026-11-21 的回饋） */
+     三百多 px。之後改成單欄靠左對齊頁首的 logo，寬度雖然相同，內容卻往左挪了一個暫存區的寬度（2026-11-21 的回饋）。
+     左欄放暫存區的摘要、使用者區的頁面與本頁目錄（.page-aside） */
   .workbench.solo > .view {
     grid-column: 2;
   }
+}
+
+/* 工具以外的頁面的左欄（src/ui/PageAside.tsx），只在寬螢幕出現。捲動時固定在畫面上，比視窗長時本身可以捲動。
+   字小一號、不用框線與色塊堆疊，視覺份量比右欄輕，只有暫存區的摘要用首頁暫存區的淡底接續 */
+.page-aside {
+  position: sticky;
+  top: 1rem;
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: grid;
+  gap: 1.5rem;
+  align-content: start;
+  font-size: 0.9rem;
+  /* 焦點框不被捲動的邊緣切掉 */
+  padding: 2px 0.25rem 2px 2px;
+}
+
+.page-aside ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.page-aside a {
+  text-decoration: none;
+}
+
+.page-aside a:hover {
+  text-decoration: underline;
+}
+
+.aside-label {
+  margin: 0 0 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+/* 跳到主內容：平常看不到，鍵盤移到這裡時才出現 */
+.skip-link:not(:focus) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* 暫存區的摘要：有檔案時用首頁暫存區的淡底與細框，沒有檔案時只留一行淡色的說明 */
+.aside-tray p {
+  margin: 0;
+}
+
+.aside-tray.has-files {
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--fill);
+}
+
+.aside-home {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.3rem;
+}
+
+.aside-home .icon,
+.aside-pages .icon {
+  width: 1rem;
+  height: 1rem;
+  flex: none;
+}
+
+.aside-pages > ul:first-child {
+  display: grid;
+  gap: 0.1rem;
+}
+
+.aside-pages > ul:first-child a {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  color: var(--text);
+}
+
+.aside-pages > ul:first-child a .icon {
+  color: var(--icon);
+}
+
+.aside-pages a[aria-current="page"] {
+  color: var(--strong);
+  font-weight: 600;
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.aside-pages > ul:first-child a[aria-current="page"] .icon {
+  color: var(--accent);
+}
+
+/* 深色模式的主色太暗，底色與圖示改用連結色 */
+@media (prefers-color-scheme: dark) {
+  .aside-pages a[aria-current="page"] {
+    background: color-mix(in srgb, var(--link) 14%, transparent);
+  }
+
+  .aside-pages > ul:first-child a[aria-current="page"] .icon {
+    color: var(--link);
+  }
+}
+
+/* 授權與來源、隱私說明：比使用者區再小一號，排成一行 */
+.page-aside .aside-more {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 1rem;
+  margin-top: 0.5rem;
+  padding: 0 0.5rem;
+  font-size: 0.8rem;
+}
+
+.aside-more a {
+  color: var(--muted);
+}
+
+.aside-more a[aria-current="page"] {
+  background: none;
+}
+
+/* 本頁目錄：左邊一條細線，讀到的那一段用主色標出 */
+.aside-toc ul {
+  border-left: 1px solid var(--line);
+}
+
+.aside-toc a {
+  display: block;
+  margin-left: -1px;
+  padding: 0.15rem 0.6rem;
+  border-left: 2px solid transparent;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.aside-toc li.sub a {
+  padding-left: 1.3rem;
+  font-size: 0.85rem;
+}
+
+.aside-toc a[aria-current="location"] {
+  color: var(--strong);
+  border-left-color: var(--accent);
+}
+
+@media (prefers-color-scheme: dark) {
+  .aside-toc a[aria-current="location"] {
+    border-left-color: var(--link);
+  }
+}
+
+/* 目錄點過去時小標題離畫面頂端留一點距離。跳到主內容與目錄移過去的焦點，滑鼠點的時候不畫焦點框 */
+.workbench.solo .view :is(h2, h3)[id] {
+  scroll-margin-top: 1rem;
+}
+
+.workbench.solo .view:focus,
+.workbench.solo .view [tabindex="-1"]:focus:not(:focus-visible) {
+  outline: none;
 }
 
 .tray {
@@ -2751,6 +2922,17 @@ button.link {
 .licenses ul {
   list-style: none;
   padding: 0;
+  margin: 0;
+}
+
+.licenses h2 {
+  margin: 1.75rem 0 0;
+}
+
+/* 每一項的名稱是 <h3>（左欄的本頁目錄用到），外觀維持原本粗體的一行 */
+.licenses h3 {
+  margin: 0;
+  font-size: 1rem;
 }
 
 .licenses li {
@@ -2808,6 +2990,26 @@ button.link {
 .storage-size {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+
+/* 這個網站的儲存空間（src/ui/StorageQuota.tsx）：手機放在頁面最下面，用細線跟模型的清單隔開，寬螢幕放在左欄 */
+.storage-quota:not(.in-aside) {
+  margin-top: 1.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--line);
+}
+
+.storage-quota.in-aside p {
+  margin: 0 0 0.5rem;
+}
+
+.storage-quota.in-aside .buttons {
+  margin-bottom: 0.5rem;
+}
+
+/* 結果的訊息是 role="status"，空的時候也留在頁面上，讀螢幕軟體才唸得到之後放進去的文字 */
+.storage-persist-result:empty {
+  margin: 0;
 }
 
 .storage-total {

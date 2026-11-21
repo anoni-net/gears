@@ -1,11 +1,14 @@
 import { useEffect, useState } from "preact/hooks";
 import { STORAGE_CACHES, type StorageKey, classify, compareKeys, keyId } from "../core/storage.ts";
 import { t, tDynamic } from "../i18n/index.ts";
+import { WIDE, useMedia } from "./hooks.ts";
 import { IconCircle } from "./Icon.tsx";
+import { STORAGE_CHANGED, StorageQuota } from "./StorageQuota.tsx";
 import { PAGE_META } from "./tool-meta.ts";
 
 // 已下載的模型：Gears 存在這個瀏覽器裡的模型與程式，一列一個用途，可以逐列刪除（#142，
-// 分類在 src/core/storage.ts）。刪除之後下次用到時再下載。
+// 分類在 src/core/storage.ts）。刪除之後下次用到時再下載。這個網站的儲存空間與持久儲存（StorageQuota）
+// 寬螢幕放在左欄，手機放在這一頁的最下面
 
 const BASE = import.meta.env.BASE_URL;
 
@@ -53,6 +56,7 @@ export function StoragePage() {
   const [rows, setRows] = useState<Row[] | null | undefined>(undefined);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const wide = useMedia(WIDE);
   const load = () => scan().then(setRows, () => setRows(null));
   useEffect(() => void load(), []);
 
@@ -66,6 +70,7 @@ export function StoragePage() {
     }
     setBusy(false);
     await load();
+    window.dispatchEvent(new Event(STORAGE_CHANGED));
   };
 
   const total = rows?.reduce((n, r) => n + r.bytes, 0) ?? 0;
@@ -118,6 +123,7 @@ export function StoragePage() {
       <p class="hint" role="status" data-testid="storage-status">
         {message}
       </p>
+      {wide ? null : <StorageQuota inAside={false} />}
     </section>
   );
 }
