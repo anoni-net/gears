@@ -1,15 +1,9 @@
 // 個資辨識模型（nym-pii，src/tools/redact/pii-model.ts）在 Worker 裡的載入與辨識，裝置量測（pii-bench.worker.ts）
 // 與遮蔽（pii.worker.ts）共用。只能在 Worker 裡匯入。
 //
-// 模型從 assets.anoni.net 下載（onion 版是同一個網站的 /models/assets/），Transformers.js 的設定照
-// llm-bench.worker.ts 的社群轉檔模型：只下載清單上的檔案、逐一比對 SHA-256，模型目錄以外的請求一律不送，
-// WebAssembly 用 ?url 從自己的網域載入。下載的檔案由 Transformers.js 存在 transformers-cache，量測頁與遮蔽
-// 用同一份，service worker 換版本時不會清掉（只清 gears- 開頭的快取）
-import asyncifyMjs from "../../node_modules/@huggingface/transformers/node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.asyncify.mjs?url";
-import asyncifyWasm from "../../node_modules/@huggingface/transformers/node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.asyncify.wasm?url";
-import plainMjs from "../../node_modules/@huggingface/transformers/node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.mjs?url";
-import plainWasm from "../../node_modules/@huggingface/transformers/node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.wasm?url";
-import { ASSETS_MODELS, assetsUrl, downloadVerified } from "../core/models.ts";
+// 模型從 assets.anoni.net 下載（onion 版是同一個網站的 /models/assets/），Transformers.js 的設定在 assets-env.ts，
+// 逐字稿的標點建議也用它。下載的檔案存在 transformers-cache，量測頁與遮蔽用同一份
+import { useAssetsModel } from "./assets-env.ts";
 import { type Decoder, PII_MODEL, type PiiSpan, align, argmax, groupSpans, labelKind } from "../tools/redact/pii-model.ts";
 
 export interface PiiLoadOptions {
@@ -28,43 +22,7 @@ export interface PiiRuntime {
 
 export async function loadPii({ device, threads, onDownload }: PiiLoadOptions): Promise<PiiRuntime> {
   const { AutoModelForTokenClassification, AutoTokenizer, env } = await import("@huggingface/transformers");
-  env.allowLocalModels = false;
-  env.allowRemoteModels = true;
-  env.useBrowserCache = true;
-  // WebAssembly 的載入程式不存快取：存了之後改用 blob: 網址載入，CSP 的 script-src 不允許
-  env.useWasmCache = false;
-  // assets.anoni.net 上的目錄當模型名稱，目錄名稱帶著 commit，內容不會變
-  env.remoteHost = ASSETS_MODELS;
-  env.remotePathTemplate = "{model}/";
-
-  const progress: Record<string, [number, number]> = {};
-  let downloaded = 0;
-  // 清單外的檔案（Transformers.js 會試著讀一些選用的設定檔）當成不存在。對不上 SHA-256 時丟出錯誤，不存進快取
-  const fromAssets = async (file: string): Promise<Response> => {
-    const sha256 = PII_MODEL.files[file];
-    if (!sha256) return new Response(null, { status: 404 });
-    let last = 0;
-    const data = await downloadVerified({ url: (name) => assetsUrl(PII_MODEL.dir, name), file, sha256 }, (n, total) => {
-      downloaded += n - last;
-      last = n;
-      progress[file] = [n, total];
-      const sum = Object.values(progress).reduce((a, [l, t]) => [a[0]! + l, a[1]! + t], [0, 0]);
-      onDownload?.(sum[0]!, sum[1]!);
-    });
-    return new Response(data, { headers: { "content-type": "application/octet-stream", "content-length": String(data.length) } });
-  };
-  const dir = new URL(assetsUrl(PII_MODEL.dir, ""), self.location.href).href;
-  env.fetch = (input: RequestInfo | URL) => {
-    const url = new URL(input instanceof Request ? input.url : String(input), self.location.href).href;
-    if (!url.startsWith(dir)) return Promise.resolve(new Response(null, { status: 404 }));
-    return fromAssets(url.slice(dir.length).split("?")[0]!).catch((error: Error) => {
-      throw new Error(`${error.message}（${url}）`);
-    });
-  };
-  const wasm = env.backends.onnx.wasm!;
-  const asyncify = JSON.stringify(wasm.wasmPaths ?? "").includes(".asyncify");
-  wasm.wasmPaths = asyncify ? { mjs: asyncifyMjs, wasm: asyncifyWasm } : { mjs: plainMjs, wasm: plainWasm };
-  wasm.numThreads = self.crossOriginIsolated ? threads : 1;
+  const download = useAssetsModel(env, PII_MODEL, threads, onDownload);
 
   const tokenizer = await AutoTokenizer.from_pretrained(PII_MODEL.dir);
   const net = await AutoModelForTokenClassification.from_pretrained(PII_MODEL.dir, { device, dtype: PII_MODEL.dtype });
@@ -72,7 +30,7 @@ export async function loadPii({ device, threads, onDownload }: PiiLoadOptions): 
 
   return {
     get downloaded() {
-      return downloaded;
+      return download.downloaded;
     },
     async detect(text: string) {
       const inputs = tokenizer(text, { truncation: true });

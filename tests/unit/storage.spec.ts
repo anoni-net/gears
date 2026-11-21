@@ -14,6 +14,9 @@ test("依快取與網址分成一列一列", () => {
   // 個資辨識模型存在 transformers-cache，另外列一列，clearnet 與 onion 的網址都認得
   expect(classify(LLM_CACHE, "https://assets.anoni.net/gears/models/nym-pii-7ce7f1a/onnx/model_q4.onnx_data", "/gears/")).toEqual({ group: "pii" });
   expect(classify(LLM_CACHE, "http://gears.example.onion/models/assets/nym-pii-7ce7f1a/tokenizer.json", "/")).toEqual({ group: "pii" });
+  // 逐字稿的標點模型也存在 transformers-cache，另外一列
+  expect(classify(LLM_CACHE, "https://assets.anoni.net/gears/models/horizon-punct-a527b62/onnx/model_quantized.onnx", "/gears/")).toEqual({ group: "punct" });
+  expect(classify(LLM_CACHE, "http://gears.example.onion/models/assets/horizon-punct-a527b62/tokenizer.json", "/")).toEqual({ group: "punct" });
   expect(classify(LLM_CACHE, "https://assets.anoni.net/gears/models/qwen3-1.7b-3231b52/config.json", "/gears/")).toEqual({ group: "llm" });
   expect(classify(KEEP_CACHE, at("models/ppocr/PP-OCRv6_small_rec.onnx"), "/gears/")).toEqual({ group: "ocr" });
   expect(classify(KEEP_CACHE, at("models/bench/ocr-phone.png"), "/gears/")).toEqual({ group: "ocr" });

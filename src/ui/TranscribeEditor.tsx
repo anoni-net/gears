@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "preact/hooks";
+import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { t, tDynamic } from "../i18n/index.ts";
 import { tray } from "../state.ts";
 import { MODELS, MODEL_IDS, type ModelId, SAMPLE_RATE, type Segment, clock, mergeSegments, toSrt, toTxt } from "../tools/transcribe/segments.ts";
@@ -6,19 +6,23 @@ import { replaceInParts } from "../tools/writing-style/index.ts";
 import { AliasForm, aliasMessage, allAliases } from "./AliasForm.tsx";
 import { type Device, type GpuInfo, gpuUsable } from "../tools/transcribe/device.ts";
 import { LANGUAGES, type Language, modelsFor, preferredModel } from "../tools/transcribe/languages.ts";
+import { type Insert, PUNCT_MB, PUNCT_MODEL, applyInserts, punctAvailable, splitForDisplay } from "../tools/transcribe/punct.ts";
 import { ASSETS_MODELS, type Part, REMOTE_ERROR, isCached, partName, removeCached } from "../core/models.ts";
 import { IS_ONION } from "../site.ts";
 import speakerModel from "../tools/transcribe/speaker-model.json" with { type: "json" };
 import vadModel from "../tools/transcribe/vad-model.json" with { type: "json" };
-import { navigate } from "../router.ts";
+import { navigate, onRouteClick, routeUrl } from "../router.ts";
 import { THREAD_OPTIONS, defaultThreads } from "../tools/transcribe/threads.ts";
 import { type AudioStream, TooLargeError, openAudio } from "./audio-stream.ts";
 import { detectGpu } from "./gpu.ts";
 import { wasmAvailable } from "./wasm.ts";
+import { onPhone } from "./phone.ts";
+import { CANCELLED, PunctDownloadError, type PunctProgress, punctCrashedBefore, punctRunner, punctStored } from "./punct-detect.ts";
 import type { Reply, Request } from "./transcribe.worker.ts";
 import sherpaWorkerUrl from "./sherpa.worker.ts?worker&url";
 import workerUrl from "./transcribe.worker.ts?worker&url";
 import type { FileEditorProps } from "./types.ts";
+import { Icon } from "./Icon.tsx";
 import { track, trackFail } from "./analytics.ts";
 import { useWorking } from "./working.ts";
 
@@ -85,6 +89,11 @@ type Phase =
   | { kind: "done" }
   | { kind: "failed" | "remoteFailed" | "stalled" | "decodeFailed" | "tooLong" };
 
+// 標點建議（src/ui/punct-detect.ts）：asking 是手機上按下之後先展開的確認說明，ready 是建議已經算好
+type Punct =
+  | { kind: "idle" | "asking" | "ready" | "none" | "discarded" | "failed" | "remoteFailed" }
+  | { kind: "running"; progress: PunctProgress | null };
+
 function download(text: string, name: string) {
   track("save", { how: "download" });
   const url = URL.createObjectURL(new Blob([text], { type: "text/plain;charset=utf-8" }));
@@ -107,8 +116,8 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
   const [threads, setThreads] = useState(DEFAULT_THREADS);
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
   const [segments, setSegments] = useState<Segment[]>([]);
-  // 自己指定要換掉的字：每次換之前的逐字稿，復原時一步一步退回。重新轉一次時清空
-  const [aliasHistory, setAliasHistory] = useState<Segment[][]>([]);
+  // 自己指定要換掉的字與接受建議的標點：每次改之前的逐字稿，復原時一步一步退回。重新轉一次時清空
+  const [history, setHistory] = useState<Segment[][]>([]);
   const [aliasNote, setAliasNote] = useState("");
   const [downloaded, setDownloaded] = useState<Partial<Record<ModelId, boolean>>>({});
   const [note, setNote] = useState<string>("");
@@ -117,6 +126,25 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
   // 這次送進模型的片段數，放在狀態那一行的 data-pieces，瀏覽器測試用來確認語音偵測的結果
   const [pieces, setPieces] = useState(0);
   const worker = useRef<{ instance: Worker; threads: number; device: Device; engine: Engine } | null>(null);
+  // 這份逐字稿轉的時候用的語言與模型。轉完之後讀者還能改選項，標點建議看的是轉的時候
+  const [doneWith, setDoneWith] = useState<{ language: Language; model: ModelId } | null>(null);
+  // 標點建議：每一段的建議綁著算出它的那份文字，段落的文字換過（換掉的字、復原、接受）就不顯示，
+  // 復原回同一份文字時建議又出現
+  const [punct, setPunct] = useState<Punct>({ kind: "idle" });
+  const [suggestions, setSuggestions] = useState<{ base: string; inserts: Insert[] }[] | null>(null);
+  const runner = useMemo(() => punctRunner(), []);
+  // 關掉逐字稿時停下進行中的那一次，sessionStorage 的記號跟著清掉，不會被當成記憶體不夠
+  useEffect(() => () => runner.cancel(), [runner]);
+  // 上一次補標點時頁面被重新載入了（多半是記憶體不夠），這個分頁不再提供
+  const [punctCrashed] = useState(punctCrashedBefore);
+  // 手機與平板上第一次按下時先展開說明（照遮蔽的 phoneAsk），手機上的下載量寫在說明裡
+  const [phone] = useState(onPhone);
+  const [phoneOk, setPhoneOk] = useState(() => !phone);
+  // 標點模型還要下載多少 MB，已經在快取裡是 0，還在查是 null
+  const [punctMb, setPunctMb] = useState<number | null>(null);
+  useEffect(() => {
+    void punctStored().then((stored) => setPunctMb(stored ? 0 : PUNCT_MB));
+  }, []);
   // 每次開始轉換加一，按下停止之後，舊的那一次收到的回覆不再處理
   const run = useRef(0);
 
@@ -136,7 +164,8 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
   useEffect(refresh, [gpu, useGpu]);
 
   const busy = phase.kind === "decoding" || phase.kind === "download" || phase.kind === "recognize";
-  useWorking(busy);
+  const punctBusy = punct.kind === "running";
+  useWorking(busy || punctBusy);
 
   const stop = () => {
     run.current++;
@@ -149,8 +178,12 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
     const id = ++run.current;
     setRunning(null);
     setSegments([]);
-    setAliasHistory([]);
+    setHistory([]);
     setAliasNote("");
+    runner.cancel();
+    setPunct({ kind: "idle" });
+    setSuggestions(null);
+    setDoneWith({ language, model });
     setNote("");
     setSilero(null);
     setPieces(0);
@@ -280,6 +313,50 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
     }
   };
 
+  // 標點建議：整份逐字稿交給標點模型，建議分回各段，讀者接受之後才換上
+  const runPunct = async (confirmed = phoneOk) => {
+    if (!confirmed) {
+      setPunct({ kind: "asking" });
+      return;
+    }
+    setPhoneOk(true);
+    // 辨識用的 Worker 先結束，Whisper 與標點模型不同時佔著記憶體（Breeze 的模型超過 1 GB）。下次轉逐字稿時再從快取載入
+    worker.current?.instance.terminate();
+    worker.current = null;
+    const texts = segments.map((seg) => seg.text);
+    setPunct({ kind: "running", progress: null });
+    try {
+      const inserts = await runner.run(texts, (progress) => setPunct({ kind: "running", progress }));
+      const found = inserts.map((list, i) => ({ base: texts[i]!, inserts: list }));
+      setSuggestions(found);
+      setPunct({ kind: found.some((s) => s.inserts.length) ? "ready" : "none" });
+      // 下次打開逐字稿時不再寫下載量
+      setPunctMb(0);
+    } catch (error) {
+      if ((error as Error).message === CANCELLED) return;
+      setPunct({ kind: error instanceof PunctDownloadError ? "remoteFailed" : "failed" });
+    }
+  };
+  const stopPunct = () => {
+    runner.cancel();
+    setPunct({ kind: "idle" });
+  };
+  // 第 i 段還沒處理的建議：建議是從現在這份文字算出來的才算
+  const pendingAt = (i: number) => {
+    const s = suggestions?.[i];
+    return s && s.inserts.length && s.base === segments[i]?.text ? s.inserts : null;
+  };
+  const pendingCount = segments.reduce((n, _, i) => n + (pendingAt(i) ? 1 : 0), 0);
+  // 接受建議：跟換掉的字一樣記進復原的紀錄，只插入標點，時間與說話者不動
+  const acceptPunct = (only?: number) => {
+    setHistory([...history, segments]);
+    setSegments(segments.map((seg, i) => {
+      const inserts = (only === undefined || only === i) && pendingAt(i);
+      return inserts ? { ...seg, text: applyInserts(seg.text, inserts) } : seg;
+    }));
+    setAliasNote("");
+  };
+
   const status = (() => {
     // 複製、刪除模型這類操作的結果優先顯示
     if (note && !busy) return note;
@@ -312,6 +389,36 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
         return "";
     }
   })();
+  // 標點建議的訊息
+  const punctStatus = (() => {
+    if (punct.kind === "running") {
+      const p = punct.progress;
+      if (!p) return t("transcribe.punct.loading");
+      if (p.kind === "download") return t("transcribe.punct.downloading", { loaded: mb(p.loaded), total: mb(p.total) });
+      if (p.kind === "loading") return t("transcribe.punct.loading");
+      return t("transcribe.punct.running", { percent: Math.round((p.done / p.total) * 100) });
+    }
+    if (pendingCount) return t("transcribe.punct.ready", { n: pendingCount });
+    switch (punct.kind) {
+      case "ready":
+        return t("transcribe.punct.settled");
+      case "none":
+        return t("transcribe.punct.none");
+      case "discarded":
+        return t("transcribe.punct.discarded");
+      case "failed":
+        return t("transcribe.punct.failed");
+      case "remoteFailed":
+        return t("transcribe.punct.remoteFailed");
+      default:
+        return "";
+    }
+  })();
+  const punctProgress = punct.kind === "running" && punct.progress && punct.progress.kind !== "loading" ? (punct.progress.kind === "download" ? punct.progress.loaded / punct.progress.total : punct.progress.done / punct.progress.total) : null;
+  // 華語的逐字稿轉完之後才提供（範圍見 src/tools/transcribe/punct.ts 的 punctAvailable）
+  const punctUsable = phase.kind === "done" && !busy && segments.length > 0 && !!doneWith && punctAvailable(doneWith.language, doneWith.model) && !punctCrashed;
+  const punctCanStart = punct.kind === "idle" || punct.kind === "discarded" || punct.kind === "failed" || punct.kind === "remoteFailed";
+
   const progress = phase.kind === "download" ? phase.loaded / phase.total : phase.kind === "recognize" ? Math.min(1, phase.at / phase.duration) : null;
   const speakerName = (n: number) => t("transcribe.speakerPrefix", { n: n + 1 });
   const error = phase.kind === "failed" || phase.kind === "remoteFailed" || phase.kind === "stalled" || phase.kind === "decodeFailed" || phase.kind === "tooLong";
@@ -335,7 +442,12 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
           {t("transcribe.vad.note")}
         </p>
       )}
-      <fieldset class="segmented" disabled={busy}>
+      {punctCrashed ? (
+        <p class="notice" data-testid="punct-crashed">
+          {t("transcribe.punct.crashed")}
+        </p>
+      ) : null}
+      <fieldset class="segmented" disabled={busy || punctBusy}>
         <legend>{t("transcribe.language")}</legend>
         {LANGUAGES.map((id) => (
           <label key={id}>
@@ -419,7 +531,7 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
             {t("transcribe.stop")}
           </button>
         ) : (
-          <button type="button" class="primary" disabled={NO_WASM} onClick={start}>
+          <button type="button" class="primary" disabled={NO_WASM || punctBusy} onClick={start}>
             {remote ? t("transcribe.remote.start") : phase.kind === "done" ? t("tool.transcribe.again") : t("transcribe.start")}
           </button>
         )}
@@ -458,11 +570,101 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
                 <span>
                   {/* 換人的地方才標出說話者 */}
                   {seg.speaker !== undefined && seg.speaker !== segments[i - 1]?.speaker ? <strong class="speaker">{t("transcribe.speaker", { n: seg.speaker + 1 })}</strong> : null}
-                  {seg.text}
+                  {(() => {
+                    // 建議的標點用另一種顏色加底線，讀螢幕軟體唸得到 title。接受之前下載與複製的都是原文
+                    const inserts = pendingAt(i);
+                    if (!inserts) return seg.text;
+                    return (
+                      <>
+                        {splitForDisplay(seg.text, inserts).map((part, k) =>
+                          part.suggested ? (
+                            <ins key={k} class="punct-suggest" title={t("transcribe.punct.mark")}>
+                              {part.text}
+                            </ins>
+                          ) : (
+                            part.text
+                          ),
+                        )}{" "}
+                        {busy ? null : (
+                          <button type="button" class="link punct-accept" aria-label={t("transcribe.punct.acceptAt", { time: clock(seg.start) })} onClick={() => acceptPunct(i)}>
+                            {t("transcribe.punct.acceptOne")}
+                          </button>
+                        )}
+                      </>
+                    );
+                  })()}
                 </span>
               </li>
             ))}
           </ol>
+          {punctUsable ? (
+            <div class="transcribe-punct" data-testid="punct">
+              {punctCanStart ? (
+                <>
+                  {/* 手機上的下載量寫在按下之後的說明裡，同一件事不寫兩次 */}
+                  <p class="hint" data-testid="punct-note">
+                    {!phone && punctMb ? t("transcribe.punct.note", { mb: punctMb }) : t("transcribe.punct.noteStored")}
+                  </p>
+                  <div class="buttons">
+                    <button type="button" onClick={() => runPunct()}>
+                      <span class="tool-tag tag-model" aria-hidden="true">
+                        <Icon name="brain" />
+                      </span>
+                      {t("transcribe.punct.button")}
+                    </button>
+                  </div>
+                </>
+              ) : null}
+              {punct.kind === "asking" ? (
+                <div class="redact-model-ask" data-testid="punct-ask" role="group" aria-label={t("transcribe.punct.button")}>
+                  <p>{t("transcribe.punct.phone", { mb: punctMb || PUNCT_MB })}</p>
+                  <div class="buttons">
+                    <button type="button" class="primary" onClick={() => runPunct(true)}>
+                      {t("redact.model.phoneGo")}
+                    </button>
+                    <a class="button" href={routeUrl("testing")} onClick={(e) => onRouteClick(e, () => navigate("testing"))}>
+                      {t("redact.model.phoneTest")}
+                    </a>
+                  </div>
+                </div>
+              ) : null}
+              {punctStatus ? (
+                <p class={punct.kind === "failed" || punct.kind === "remoteFailed" ? "error" : "hint"} role="status" data-testid="punct-status">
+                  {punctStatus}
+                </p>
+              ) : null}
+              {punctBusy ? (
+                <>
+                  <div class="transcribe-progress">
+                    <div class="auto-progress-track" role="progressbar" aria-label={t("transcribe.punct.button")} aria-valuemin={0} aria-valuemax={100} aria-valuenow={punctProgress === null ? undefined : Math.round(punctProgress * 100)}>
+                      <div class={punctProgress === null ? "auto-progress-bar indeterminate" : "auto-progress-bar"} style={punctProgress === null ? undefined : { width: `${Math.round(punctProgress * 100)}%` }} />
+                    </div>
+                  </div>
+                  <div class="buttons">
+                    <button type="button" onClick={stopPunct}>
+                      {t("transcribe.stop")}
+                    </button>
+                  </div>
+                </>
+              ) : null}
+              {pendingCount ? (
+                <div class="buttons">
+                  <button type="button" class="primary" onClick={() => acceptPunct()}>
+                    {t("transcribe.punct.acceptAll")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSuggestions(null);
+                      setPunct({ kind: "discarded" });
+                    }}
+                  >
+                    {t("transcribe.punct.discard")}
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
           {!busy ? (
             <AliasForm
               id="transcribe-alias"
@@ -472,20 +674,20 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
               onReplace={(word, alias) => {
                 const result = replaceInParts(segments, word, alias, allAliases());
                 if (result.count) {
-                  setAliasHistory([...aliasHistory, segments]);
+                  setHistory([...history, segments]);
                   setSegments(result.parts);
                 }
                 setAliasNote(aliasMessage(word, alias, result.count));
               }}
             />
           ) : null}
-          {aliasHistory.length && !busy ? (
+          {history.length && !busy ? (
             <div class="buttons">
               <button
                 type="button"
                 onClick={() => {
-                  setSegments(aliasHistory.at(-1)!);
-                  setAliasHistory(aliasHistory.slice(0, -1));
+                  setSegments(history.at(-1)!);
+                  setHistory(history.slice(0, -1));
                   setAliasNote(t("style.undone"));
                 }}
               >
@@ -572,6 +774,16 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
               convert: { url: "https://github.com/k2-fsa/sherpa-onnx/releases/tag/speaker-recongition-models", label: "sherpa-onnx" },
             },
             {
+              id: "punct",
+              name: t("transcribe.punct.button"),
+              source: PUNCT_MODEL.source,
+              label: PUNCT_MODEL.repo,
+              license: PUNCT_MODEL.license,
+              host: "assets",
+              // 社群把原始模型附的 ONNX 檔重新量化，轉檔紀錄是 assets.anoni.net 那個目錄的 README.txt
+              convert: { notes: `${ASSETS_MODELS}${PUNCT_MODEL.dir}/README.txt`, ours: t("transcribe.models.convertPunct") },
+            },
+            {
               id: "vad",
               name: t("transcribe.vad.name"),
               source: vadModel.source,
@@ -602,7 +814,7 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
                   </>
                 ) : (
                   <>
-                    {t("transcribe.models.convertOurs")}
+                    {"ours" in m.convert && m.convert.ours ? m.convert.ours : t("transcribe.models.convertOurs")}
                     <a href={m.convert.notes} target="_blank" rel="noopener">
                       {t("transcribe.models.convertNotes")}
                     </a>
