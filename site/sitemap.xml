@@ -633,4 +633,28 @@
     <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/privacy/" />
     <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/privacy/" />
   </url>
+  <url>
+    <loc>https://anoni.net/gears/testing/</loc>
+    <lastmod>2026-11-21</lastmod>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/testing/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/testing/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/testing/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/testing/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/zh-cn/testing/</loc>
+    <lastmod>2026-11-21</lastmod>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/testing/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/testing/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/testing/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/testing/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/en/testing/</loc>
+    <lastmod>2026-11-21</lastmod>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/testing/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/testing/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/testing/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/testing/" />
+  </url>
 </urlset>

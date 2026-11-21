@@ -1,14 +1,14 @@
 {
  "": {
-  "sha": "689fcf84a6653f60",
+  "sha": "172136ecdd55e979",
   "lastmod": "2026-11-21"
  },
  "zh-cn/": {
-  "sha": "d4d44b44ba8a57ba",
+  "sha": "2f514c52e26b54ee",
   "lastmod": "2026-11-21"
  },
  "en/": {
-  "sha": "11116c3fd9698bcc",
+  "sha": "cb3356af391832fb",
   "lastmod": "2026-11-21"
  },
  "strip-metadata": {
@@ -358,5 +358,17 @@
  "en/privacy": {
   "sha": "5c84801e339c3526",
   "lastmod": ""
+ },
+ "testing": {
+  "sha": "e9604cb6c99e9946",
+  "lastmod": "2026-11-21"
+ },
+ "zh-cn/testing": {
+  "sha": "bc08c4302e00a651",
+  "lastmod": "2026-11-21"
+ },
+ "en/testing": {
+  "sha": "b85fde75ea913322",
+  "lastmod": "2026-11-21"
  }
 }
