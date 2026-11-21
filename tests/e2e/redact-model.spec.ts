@@ -84,7 +84,7 @@ test("找人名、地址與單位：上一次做到一半頁面重新載入了�
   await expect(page.getByRole("button", { name: "找電話、Email 等個資" })).toBeVisible();
 });
 
-test("找人名、地址與單位：下載途中按取消，不會被當成記憶體不夠，沒有文字的圖不下載模型", async ({ page, guard }) => {
+test("找人名、地址與單位：下載途中按取消，不會被當成記憶體不夠", async ({ page, guard }) => {
   test.setTimeout(120_000);
   const asked: string[] = [];
   // 模型的請求一直不回應，停在下載中
@@ -96,9 +96,14 @@ test("找人名、地址與單位：下載途中按取消，不會被當成記�
   await expect(page.getByTestId("redact-auto-status")).toHaveText(/開源本機模型中/, { timeout: 90_000 });
   await page.getByRole("button", { name: "取消" }).click();
   await expect.poll(() => page.evaluate(() => sessionStorage.getItem("gears-pii-redact"))).toBeNull();
+  forgetRouted(guard);
+});
 
-  // 白紙一張：辨識不出文字，直接說沒有找到，不碰模型
-  asked.length = 0;
+// 分成另一項：同一個測試裡換頁時，WebKit 會在主控台留下暫存區縮圖的 blob: 被擋下的錯誤（2026-11-21 CI 的 iPhone）
+test("找人名、地址與單位：沒有文字的圖不下載模型", async ({ page }) => {
+  test.setTimeout(120_000);
+  const asked: string[] = [];
+  page.on("request", (r) => r.url().startsWith(DIR) && asked.push(r.url()));
   await page.goto("./redact/");
   const blank = await page.evaluate(async () => {
     const c = document.createElement("canvas");
@@ -114,7 +119,6 @@ test("找人名、地址與單位：下載途中按取消，不會被當成記�
   await startModel(page);
   await expect(page.getByTestId("redact-auto-status")).toHaveText("沒有找到。自動尋找會漏掉，請自己再看一次整張圖。", { timeout: 90_000 });
   expect(asked).toEqual([]);
-  forgetRouted(guard);
 });
 
 test("找人名、地址與單位：辨識文字之後交給模型，人名與公司另外加上框，已下載的模型多一列", async ({ page, guard, browserName }) => {
