@@ -13,6 +13,7 @@ import { PAGE_META } from "./tool-meta.ts";
 const REQUESTS = [
   { id: "phone", who: 5, steps: 5, page: "bench", issue: 144 },
   { id: "vad", who: 3, steps: 5, page: "transcribe", issue: 196 },
+  { id: "punct", who: 3, steps: 5, page: "transcribe", issue: 199 },
 ] as const;
 
 const ISSUES = "https://github.com/anoni-net/gears/issues/";
