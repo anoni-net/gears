@@ -1,5 +1,6 @@
 import { t, tDynamic } from "../i18n/index.ts";
 import { navigate, onRouteClick, routeUrl } from "../router.ts";
+import { DeskIntro } from "./DeskIntro.tsx";
 import { Icon, IconCircle } from "./Icon.tsx";
 import { PAGE_META, TOOL_GROUPS, TOOL_META, USER_PAGES } from "./tool-meta.ts";
 import { TAGS, TAG_ORDER, type TagId } from "./tool-tags.ts";
@@ -67,6 +68,7 @@ export function Desktop({ onTask }: Props) {
   const used = TAG_ORDER.filter((tag) => Object.values(TOOL_META).some((meta) => meta.tags?.includes(tag)));
   return (
     <div class="desktop">
+      <DeskIntro />
       {TOOL_GROUPS.map((group) => (
         <section class="tool-group" key={group.id} aria-labelledby={`group-${group.id}`}>
           <h2 id={`group-${group.id}`}>{tDynamic(`desk.group.${group.id}`)}</h2>

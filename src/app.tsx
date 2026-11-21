@@ -405,6 +405,7 @@ export function App() {
             busy={state.busy}
             failed={state.failed}
             compact={!atHome && !state.files.length}
+            home={atHome}
             keep={groupOf(route) === "check" || state.files.every((f) => f.intent === "check")}
           />
         )}

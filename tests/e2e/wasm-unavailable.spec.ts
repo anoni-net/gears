@@ -17,6 +17,13 @@ test.beforeEach(async ({ page }) => {
   await noWasm(page);
 });
 
+test("桌面：裝置狀況那一行說明關掉了 WebAssembly，標著大腦圖示的工具不能用模型", async ({ page }) => {
+  await page.goto("./");
+  const device = page.getByTestId("desk-device");
+  await expect(device).toContainText("鎖定模式");
+  await expect(device).toContainText("其他功能照常使用");
+});
+
 test("逐字稿：一打開就說明這個瀏覽器關掉了 WebAssembly，開始的按鈕不能按", async ({ page }) => {
   const models: string[] = [];
   page.on("request", (r) => r.url().includes("/models/") && models.push(r.url()));

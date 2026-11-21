@@ -72,17 +72,41 @@ test("桌面有暫存區與三組工具，工具名稱下面寫著情況，沒�
   await expect(page.getByRole("button", { name: "回到桌面" })).toHaveCount(0);
 });
 
+test("桌面最上方說明 Gears 的兩層功能，下面一行寫這台裝置的支援狀況", async ({ page }) => {
+  const intro = page.getByRole("region", { name: "Gears 的兩層功能" });
+  await expect(intro.getByRole("heading", { name: "瀏覽器裡就能完成" })).toBeVisible();
+  await expect(intro.getByRole("heading", { name: "用開源本機模型加強" })).toBeVisible();
+  // 「檔案在你的瀏覽器裡處理」在桌面上只寫一次，暫存區的說明不重複
+  await expect(page.getByText(/在你的瀏覽器裡處理/)).toHaveCount(1);
+  await expect(page.locator(".tray .hint")).toHaveText("可以一次選多個，選好之後會列出能用的工具，任何檔案都可以加密。");
+  // 測試的瀏覽器不一定拿得到顯示卡，兩種結果都算，重點是查完之後換成結果並連到裝置量測
+  const device = page.getByTestId("desk-device");
+  await expect(device).toHaveText(/可以用顯示卡加速|沒有提供顯示卡加速/);
+  await expect(device.getByRole("link", { name: "這台裝置的詳細狀況" })).toHaveAttribute("href", /\/bench\/$/);
+});
+
+test("桌面的裝置狀況：顯示卡可以用時寫可以加速", async ({ page }) => {
+  // ?gpu=force 讓 detectGpu 當成顯示卡可以用（src/ui/gpu.ts）
+  await page.goto("./?gpu=force");
+  await expect(page.getByTestId("desk-device")).toContainText("這台裝置可以用顯示卡加速模型");
+});
+
+test("工具頁的暫存區仍寫「檔案在你的瀏覽器裡處理」", async ({ page }) => {
+  await page.goto("./strip-metadata/");
+  await expect(page.locator(".tray .hint")).toContainText("檔案在你的瀏覽器裡處理");
+});
+
 test("桌面的圖示標籤：卡片上的圖示帶著補充說明，最下方的圖示說明列出用到的標籤", async ({ page }) => {
   // 圖示的名稱是連結名稱的一部分，讀螢幕軟體唸得到
-  await expect(page.getByRole("link", { name: /^逐字稿 本機模型：辨識用本機模型/ })).toBeVisible();
-  await expect(page.getByRole("link", { name: /^遮蔽 本機模型：自動尋找人臉與個資時用到/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /^逐字稿 開源本機模型：語音辨識用到/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /^遮蔽 開源本機模型：自動尋找人臉與個資時用到/ })).toBeVisible();
   await expect(page.getByRole("link", { name: /^QR code 與條碼讀取 相機：用相機掃描 QR code 與條碼/ })).toBeVisible();
   await expect(page.getByRole("img", { name: "相機：用相機掃描對方螢幕上的 QR code" })).toHaveAttribute("title", "相機：用相機掃描對方螢幕上的 QR code");
   await expect(page.getByRole("img", { name: "相機：視訊通話時用相機與麥克風" })).toBeVisible();
   await expect(page.locator(".tool-rows .tool-tag")).toHaveCount(5);
 
   const legend = page.getByTestId("tag-legend");
-  await expect(legend.locator("dt")).toHaveText(["本機模型", "相機"]);
+  await expect(legend.locator("dt")).toHaveText(["開源本機模型", "相機"]);
   await expect(legend).toContainText("模型第一次使用時才下載");
   await expect(legend).toContainText("瀏覽器會先詢問是否允許");
   // 標籤名稱跟說明的第一行對齊，說明折成好幾行時也一樣

@@ -13,6 +13,9 @@ const h1 = (html: string) => [...html.matchAll(/<h1>([^<]*)<\/h1>/g)].map((m) =>
 test("桌面列出每個工具與工具以外的頁面，實驗頁除外", () => {
   const html = staticContent("", zhTW);
   expect(h1(html)).toEqual(["anoni.net Gears 檔案工作台"]);
+  // 跟畫面一樣先寫兩段定位說明（src/ui/DeskIntro.tsx）
+  expect(html).toContain("<h2>瀏覽器裡就能完成</h2>");
+  expect(html).toContain("<h2>用開源本機模型加強</h2>");
   const links = hrefs(html);
   for (const id of toolIds) expect(links, id).toContain(`/gears/${id}/`);
   for (const id of pageIds) {

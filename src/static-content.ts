@@ -35,10 +35,15 @@ export function staticContent(id: string, { messages, home }: Options): string {
 
   let parts: string[];
   if (!id) {
-    // 桌面：三組工具全部列出，接著是工具以外的頁面（實驗頁除外）
+    // 桌面：跟畫面一樣先寫兩段定位說明（src/ui/DeskIntro.tsx，裝置的支援狀況要執行 JavaScript 才查得到，
+    // 這裡不寫），接著三組工具全部列出，最後是工具以外的頁面（實驗頁除外）
     parts = [
       `<h1>${m("meta.home.title")}</h1>`,
       `<p>${m("meta.home.description")}</p>`,
+      `<h2>${m("desk.intro.browser.title")}</h2>`,
+      `<p>${m("desk.intro.browser.body")}</p>`,
+      `<h2>${m("desk.intro.model.title")}</h2>`,
+      `<p>${m("desk.intro.model.body")}</p>`,
       ...TOOL_GROUPS.map((g) => group(g)),
       `<ul>${pageIds
         .filter((page) => !labIds.includes(page))
