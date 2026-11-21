@@ -508,6 +508,30 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/remote/" />
   </url>
   <url>
+    <loc>https://anoni.net/gears/about/</loc>
+    <lastmod>2026-11-21</lastmod>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/about/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/about/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/about/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/about/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/zh-cn/about/</loc>
+    <lastmod>2026-11-21</lastmod>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/about/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/about/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/about/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/about/" />
+  </url>
+  <url>
+    <loc>https://anoni.net/gears/en/about/</loc>
+    <lastmod>2026-11-21</lastmod>
+    <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/about/" />
+    <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/about/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/about/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://anoni.net/gears/about/" />
+  </url>
+  <url>
     <loc>https://anoni.net/gears/licenses/</loc>
     <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/licenses/" />
     <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/licenses/" />
