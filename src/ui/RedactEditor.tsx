@@ -10,7 +10,9 @@ import { assertCanvasReadable, isCanvasBlocked } from "./canvas-access.ts";
 import { decodeImage } from "./image-decode.ts";
 import { wasmAvailable } from "./wasm.ts";
 import { type LineText, overlaps } from "../tools/redact/pii.ts";
-import { crashedBefore, piiDetector } from "./pii-detect.ts";
+import { PII_MB } from "../tools/redact/pii-model.ts";
+import { crashedBefore, onPhone, piiDetector } from "./pii-detect.ts";
+import { navigate, onRouteClick, routeUrl } from "../router.ts";
 import { extractExif, insertExifJpeg, insertExifPng, rebuildExif } from "../tools/redact/keep-exif.ts";
 import { exifFindings, parseExif } from "../tools/strip-metadata/exif.ts";
 import type { FileEditorProps } from "./types.ts";
@@ -141,6 +143,10 @@ export function RedactEditor({ blob, format, found, onDone, onCancel }: FileEdit
   const detector = useMemo(() => piiDetector(), []);
   useEffect(() => () => detector.dispose(), [detector]);
   const [crashed] = useState(crashedBefore);
+  // 手機與平板上第一次按下時先展開說明，讀者按「仍要使用」才開始，也可以先去協助測試頁量測（#144）
+  // 手機上的下載量與記憶體提醒寫在這段說明裡，上方的模型說明（redact.model.note）只給電腦
+  const [phone] = useState(onPhone);
+  const [phoneAsk, setPhoneAsk] = useState<"no" | "asking" | "ok">(() => (phone ? "no" : "ok"));
   useWorking(status === "working" || auto?.state === "running" || !!building);
   // 找人臉時「可能是臉」的範圍，畫成虛線，讀者點一下才變成遮蔽框
   const [maybe, setMaybe] = useState<Box[]>(() => preset?.maybe ?? []);
@@ -413,13 +419,18 @@ export function RedactEditor({ blob, format, found, onDone, onCancel }: FileEdit
 
   // 用開源本機模型找人名、地址與單位。還沒辨識過文字時先辨識，規則找到的電話、Email 一起加上。
   // 框一次加上（addFound 讀的是上一次畫面更新時的框，連續呼叫兩次會漏算）
-  const runModel = async () => {
+  const runModel = async (confirmed = phoneAsk === "ok") => {
     if (!bitmap || pdf) return;
     if (!wasmAvailable()) {
       trackFail("redact", "wasm-unavailable");
       setAuto({ kind: "model", state: "noWasm", n: 0 });
       return;
     }
+    if (!confirmed) {
+      setPhoneAsk("asking");
+      return;
+    }
+    setPhoneAsk("ok");
     // 還沒辨識過文字時，先顯示辨識文字的訊息與進度，辨識完才換成模型的
     const progressOf = (kind: "text" | "model") => (progress: number | null) =>
       setAuto((a) => (a?.kind === kind && a.state === "running" ? { ...a, progress } : a));
@@ -521,7 +532,7 @@ export function RedactEditor({ blob, format, found, onDone, onCancel }: FileEdit
           {downloadNote}
         </p>
       ) : null}
-      {modelAvailable && download?.pii ? (
+      {modelAvailable && !phone && download?.pii ? (
         <p class="hint" data-testid="redact-model-note">
           {t("redact.model.note", { mb: download.pii })}
         </p>
@@ -548,7 +559,7 @@ export function RedactEditor({ blob, format, found, onDone, onCancel }: FileEdit
           {t("redact.findLines")}
         </button>
         {modelAvailable ? (
-          <button type="button" disabled={!bitmap || running} onClick={runModel}>
+          <button type="button" disabled={!bitmap || running} onClick={() => runModel()}>
             <span class="tool-tag tag-model" aria-hidden="true">
               <Icon name="brain" />
             </span>
@@ -566,6 +577,19 @@ export function RedactEditor({ blob, format, found, onDone, onCancel }: FileEdit
           <span class="label">{t(pdf ? "redact.clearPage" : "redact.clear")}</span>
         </button>
       </div>
+      {modelAvailable && phoneAsk === "asking" ? (
+        <div class="redact-model-ask" data-testid="redact-model-ask" role="group" aria-label={t("redact.findModel")}>
+          <p>{t("redact.model.phone", { mb: download?.pii || PII_MB })}</p>
+          <div class="buttons">
+            <button type="button" class="primary" onClick={() => runModel(true)}>
+              {t("redact.model.phoneGo")}
+            </button>
+            <a class="button" href={routeUrl("testing")} onClick={(e) => onRouteClick(e, () => navigate("testing"))}>
+              {t("redact.model.phoneTest")}
+            </a>
+          </div>
+        </div>
+      ) : null}
       {/* 訊息區的高度固定：所有可能出現的訊息疊在同一格，用最長的那一則撐開，
           換訊息時下面的圖片不會跳動。看得到、唸得出來的只有目前那一則 */}
       <div class="redact-auto-message">

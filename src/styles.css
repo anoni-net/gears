@@ -1768,6 +1768,22 @@ button.pick-files .icon {
   margin: 0.5rem 0;
 }
 
+/* 手機上按「找人名、地址與單位」時先展開的說明（src/ui/RedactEditor.tsx 的 phoneAsk） */
+.redact-model-ask {
+  margin: 0.5rem 0;
+  padding: 0.75rem 0.9rem;
+  border-radius: var(--radius);
+  background: var(--fill);
+}
+
+.redact-model-ask p {
+  margin: 0 0 0.5rem;
+}
+
+.redact-model-ask .buttons {
+  margin: 0;
+}
+
 /* 自動尋找的訊息區：所有訊息疊在同一格，高度由最長的那一則決定 */
 .redact-auto-message {
   display: grid;

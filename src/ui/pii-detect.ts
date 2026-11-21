@@ -34,6 +34,15 @@ export const crashedBefore = () => {
   }
 };
 
+// 手機與平板：模型在這類裝置上還沒有實測的數字（協助測試頁收集中），按下按鈕時先多一步確認
+// （src/ui/RedactEditor.tsx）。iPadOS 的 Safari 回報的是 Mac，靠觸控點數分出來
+export function onPhone(): boolean {
+  const data = (navigator as Navigator & { userAgentData?: { mobile?: boolean } }).userAgentData;
+  if (data?.mobile) return true;
+  const ua = navigator.userAgent;
+  return /iPhone|iPad|iPod|Android/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+}
+
 // 模型已經在快取裡（量測頁或上一次遮蔽下載過），不必再寫下載量
 export async function piiStored(): Promise<boolean> {
   try {

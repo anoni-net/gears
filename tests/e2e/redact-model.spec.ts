@@ -36,11 +36,18 @@ async function openRedact(page: Page) {
   await expect(page.getByTestId("redact-canvas")).toBeVisible();
 }
 
+// 按下「找人名、地址與單位」。手機與平板（iPhone 那個 project）先展開說明，按「仍要使用」才開始
+async function startModel(page: Page) {
+  await page.getByRole("button", { name: "找人名、地址與單位" }).click();
+  const ask = page.getByTestId("redact-model-ask");
+  if (await ask.isVisible()) await ask.getByRole("button", { name: "仍要使用" }).click();
+}
+
 const forgetRouted = (guard: Guard) => {
   guard.requests = guard.requests.filter((url) => !url.startsWith(DIR));
 };
 
-test("找人名、地址與單位：還沒下載時寫出大小與手機記憶體的提醒，模型的內容對不上時停下來", async ({ page, guard }) => {
+test("找人名、地址與單位：還沒下載時寫出大小與手機記憶體的提醒，模型的內容對不上時停下來", async ({ page, guard }, testInfo) => {
   test.setTimeout(120_000);
   const asked: string[] = [];
   await page.context().route(`${DIR}**`, (route) => {
@@ -48,9 +55,13 @@ test("找人名、地址與單位：還沒下載時寫出大小與手機記憶�
     return route.fulfill({ status: 200, body: "not the model" });
   });
   await openRedact(page);
-  await expect(page.getByTestId("redact-model-note")).toContainText("約 200 MB");
-  await expect(page.getByTestId("redact-model-note")).toContainText("暫存區會跟著清空");
-  await page.getByRole("button", { name: "找人名、地址與單位" }).click();
+  // 手機上的提醒寫在按下之後的說明裡（見最後一項測試），上方的說明只給電腦
+  if (testInfo.project.name === "iphone") await expect(page.getByTestId("redact-model-note")).toHaveCount(0);
+  else {
+    await expect(page.getByTestId("redact-model-note")).toContainText("約 200 MB");
+    await expect(page.getByTestId("redact-model-note")).toContainText("暫存區會跟著清空");
+  }
+  await startModel(page);
   await expect(page.getByTestId("redact-auto-status")).toHaveText("沒有辦法執行自動尋找，請手動框選。", { timeout: 90_000 });
   // 只連到模型的目錄
   expect(asked.length).toBeGreaterThan(0);
@@ -79,7 +90,7 @@ test("找人名、地址與單位：下載途中按取消，不會被當成記�
     asked.push(route.request().url());
   });
   await openRedact(page);
-  await page.getByRole("button", { name: "找人名、地址與單位" }).click();
+  await startModel(page);
   await expect(page.getByTestId("redact-auto-status")).toHaveText(/開源本機模型中/, { timeout: 90_000 });
   await page.getByRole("button", { name: "取消" }).click();
   await expect.poll(() => page.evaluate(() => sessionStorage.getItem("gears-pii-redact"))).toBeNull();
@@ -98,7 +109,7 @@ test("找人名、地址與單位：下載途中按取消，不會被當成記�
     return Array.from(new Uint8Array(await b.arrayBuffer()));
   });
   await page.getByTestId("file-input").setInputFiles({ name: "blank.png", mimeType: "image/png", buffer: Buffer.from(blank) });
-  await page.getByRole("button", { name: "找人名、地址與單位" }).click();
+  await startModel(page);
   await expect(page.getByTestId("redact-auto-status")).toHaveText("沒有找到。自動尋找會漏掉，請自己再看一次整張圖。", { timeout: 90_000 });
   expect(asked).toEqual([]);
   forgetRouted(guard);
@@ -109,7 +120,7 @@ test("找人名、地址與單位：辨識文字之後交給模型，人名與�
   test.skip(process.env.GEARS_PII_MODEL !== "1", "真的下載模型（約 200 MB）要設 GEARS_PII_MODEL=1");
   test.setTimeout(240_000);
   await openRedact(page);
-  await page.getByRole("button", { name: "找人名、地址與單位" }).click();
+  await startModel(page);
   const status = page.getByTestId("redact-auto-status");
   await expect(status).toHaveText(/^加了 \d+ 個框/, { timeout: 200_000 });
   // 規則找到電話，模型另外找到人名與公司
@@ -119,5 +130,27 @@ test("找人名、地址與單位：辨識文字之後交給模型，人名與�
   await page.getByRole("button", { name: "取消" }).click();
   await page.goto("./storage/");
   await expect(page.getByText("找人名、地址與單位的模型")).toBeVisible();
+  forgetRouted(guard);
+});
+
+test("找人名、地址與單位：手機上先說明還在測試，可以先去協助測試頁量測，電腦上直接開始", async ({ page, guard }, testInfo) => {
+  test.setTimeout(120_000);
+  await page.context().route(`${DIR}**`, (route) => route.fulfill({ status: 200, body: "not the model" }));
+  await openRedact(page);
+  await page.getByRole("button", { name: "找人名、地址與單位" }).click();
+  const ask = page.getByTestId("redact-model-ask");
+  if (testInfo.project.name !== "iphone") {
+    await expect(ask).toHaveCount(0);
+    await expect(page.getByTestId("redact-auto-status")).toHaveText("沒有辦法執行自動尋找，請手動框選。", { timeout: 90_000 });
+    forgetRouted(guard);
+    return;
+  }
+  await expect(ask).toContainText("在手機與平板上還在測試");
+  await expect(ask).toContainText("約 200 MB");
+  // 還沒開始：沒有進度，也沒有下載
+  await expect(page.getByTestId("redact-auto-progress")).toHaveCount(0);
+  await ask.getByRole("link", { name: "先幫忙量測" }).click();
+  await expect(page).toHaveURL(/\/testing\/$/);
+  await expect(page.getByTestId("testing-phone")).toBeVisible();
   forgetRouted(guard);
 });
