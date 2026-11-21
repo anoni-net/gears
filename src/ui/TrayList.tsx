@@ -69,10 +69,11 @@ interface Props {
   compact: boolean; // 在工具裡、暫存區又是空的，手機上收起來，不擋在工具前面
   home: boolean; // 在桌面上：「檔案在你的瀏覽器裡處理」寫在桌面的說明（DeskIntro），這裡不重複
   keep: boolean; // 檢查收到的檔案，不放一次清除的按鈕（BatchActions）
+  accepts: boolean; // 目前的工具收不收檔案。不收的工具（密語產生器這類），空的暫存區只留一行摘要
 }
 
 // 暫存區一直放在桌面上。空的時候就是拖放區。
-export function TrayList({ files, selected, onSelect, onPick, busy, failed, compact, home, keep }: Props) {
+export function TrayList({ files, selected, onSelect, onPick, busy, failed, compact, home, keep, accepts }: Props) {
   return (
     <section class={compact ? "tray compact" : "tray"} aria-labelledby="tray-title">
       <h2 id="tray-title">{t("tray.title")}</h2>
@@ -94,10 +95,16 @@ export function TrayList({ files, selected, onSelect, onPick, busy, failed, comp
           </button>
           <BatchActions files={files} busy={busy} keep={keep} />
         </>
+      ) : compact && !accepts ? (
+        // 不收檔案的工具：暫存區只留摘要，畫面上最顯眼的按鈕不會是跟這個工具無關的選擇檔案
+        <p class="hint" data-testid="tray-summary">
+          {t("tray.emptySummary")}
+        </p>
       ) : (
-        // 選擇檔案是主要的動作，獨立一行。拖放的說明放在按鈕下方，觸控裝置不能拖放檔案，不顯示
+        // 選擇檔案是主要的動作，獨立一行。拖放的說明放在按鈕下方，觸控裝置不能拖放檔案，不顯示。
+        // 在工具頁（compact）時工具本身有實心的入口，這裡改用次要樣式，一個畫面只有一顆實心的選擇檔案
         <div class="drop">
-          <button type="button" class="primary pick-files" onClick={onPick}>
+          <button type="button" class={compact ? "pick-files" : "primary pick-files"} onClick={onPick}>
             <Icon name="file-upload-outline" />
             {t("tray.pick")}
           </button>

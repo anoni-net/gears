@@ -33,8 +33,8 @@ test("工具頁的 h1 是工具名稱，附上使用方式與同一組的其他�
   expect(hrefs(html)).toContain("/gears/redact/");
   expect(hrefs(html)).not.toContain("/gears/strip-metadata/");
   expect(hrefs(html)).toContain("/gears/");
-  // 從空白開始的工具沒有使用方式
-  expect(staticContent("qrcode", zhTW)).not.toContain("使用方式");
+  // 從空白開始的工具也有使用方式（2026-11-22 起，AGENTS.md「設計語言」的骨架）
+  expect(staticContent("qrcode", zhTW)).toContain("<h2>使用方式</h2><ol><li>");
 });
 
 test("每一頁都有一個 h1，網址跟著語系，找不到的頁面不寫內容", () => {

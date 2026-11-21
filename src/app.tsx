@@ -9,7 +9,7 @@ import { Desktop, type Task } from "./ui/Desktop.tsx";
 import { FileView } from "./ui/FileView.tsx";
 import { Licenses } from "./ui/Licenses.tsx";
 import { NOT_FOUND, pageIds } from "./pages.ts";
-import { ToolIntro } from "./ui/ToolIntro.tsx";
+import { ToolHeader, ToolIntro } from "./ui/ToolIntro.tsx";
 import { LocaleHint } from "./ui/LocaleHint.tsx";
 import { TrayList } from "./ui/TrayList.tsx";
 import { isReloading, useOffline } from "./ui/offline.ts";
@@ -17,15 +17,15 @@ import { useAnyWorking } from "./ui/working.ts";
 import { WIDE, useMedia, useTray } from "./ui/hooks.ts";
 import { CONTENT_ID, PageAside } from "./ui/PageAside.tsx";
 import { CreateToolView } from "./ui/registry.tsx";
-import { Icon, IconCircle } from "./ui/Icon.tsx";
-import { TOOL_META, groupOf } from "./ui/tool-meta.ts";
+import { Icon } from "./ui/Icon.tsx";
+import { groupOf } from "./ui/tool-meta.ts";
 import { browserDeclines, optedOut, setOptedOut, track, trackView } from "./ui/analytics.ts";
 import { COMMIT, COMMIT_URL, VERSION } from "./version.ts";
 import { FeedbackPage } from "./ui/FeedbackPage.tsx";
 import { NotFoundPage } from "./ui/NotFoundPage.tsx";
 import { PrivacyPage } from "./ui/PrivacyPage.tsx";
 import { RemoteServerPage } from "./ui/RemoteServerPage.tsx";
-import { SampleLink, SamplesPage } from "./ui/SamplesPage.tsx";
+import { SamplesPage } from "./ui/SamplesPage.tsx";
 import { StoragePage } from "./ui/StoragePage.tsx";
 import { AboutPage } from "./ui/AboutPage.tsx";
 import { TestingPage } from "./ui/TestingPage.tsx";
@@ -303,12 +303,7 @@ export function App() {
   if (isCreateTool(route)) {
     view = (
       <section class="create" aria-labelledby="create-title">
-        <h1 id="create-title" class="tool-title">
-          <IconCircle name={TOOL_META[route]!.icon} cat={TOOL_META[route]!.cat} />
-          {tDynamic(`tool.${route}`)}
-        </h1>
-        <p class="hint">{tDynamic(`tool.${route}.desc`)}</p>
-        <SampleLink tool={route} onOpen={showSamples} />
+        <ToolHeader id={route} titleId="create-title" onSamples={showSamples} />
         <CreateToolView
           key={`${route}-${preset ?? ""}`}
           id={route}
@@ -427,6 +422,7 @@ export function App() {
             compact={!atHome && !state.files.length}
             home={atHome}
             keep={groupOf(route) === "check" || state.files.every((f) => f.intent === "check")}
+            accepts={!createTools.some((tool) => tool.id === route && tool.noFiles)}
           />
         )}
         {/* 左欄的「跳到主內容」以這裡為目標，工具以外的頁面加上 tabindex 讓它接得住焦點 */}

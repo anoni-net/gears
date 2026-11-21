@@ -105,7 +105,6 @@ export function SoftwareVerifyTool({ preset }: CreateToolProps) {
   const created = result?.outcome.kind === "good" ? result.outcome.created.toLocaleString(getLocale(), { dateStyle: "long", timeStyle: "short" }) : undefined;
   return (
     <div class="software-verify">
-      <p class="hint">{t("software.intro")}</p>
       <div class="software-picks">
         <div>
           <input ref={fileInput} type="file" multiple hidden onChange={(e) => pick(e, "file")} data-testid="software-file" />

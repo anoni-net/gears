@@ -6,10 +6,11 @@ import { useAgeKey } from "./AgeKeyFields.tsx";
 import { trackFail } from "./analytics.ts";
 import type { FileEditorProps } from "./types.ts";
 import { useWorking } from "./working.ts";
+import { Missing } from "./Missing.tsx";
 
 // 加密任何檔案。用密語加密時，完成後用同一組密語解密一次，確認解得回來才交出去。
 export function EncryptEditor({ blob, onDone, onCancel }: FileEditorProps) {
-  const { key, fields } = useAgeKey();
+  const { key, fields, missing } = useAgeKey();
   const [armored, setArmored] = useState(false);
   const [status, setStatus] = useState<"idle" | "working" | "failed">("idle");
   useWorking(status === "working");
@@ -52,6 +53,7 @@ export function EncryptEditor({ blob, onDone, onCancel }: FileEditorProps) {
           {t("common.cancel")}
         </button>
       </div>
+      <Missing items={[missing]} />
       {status === "failed" ? (
         <p class="error" role="alert">
           {t("age.encryptFailed")}
@@ -96,6 +98,7 @@ export function DecryptEditor({ blob, onDone, onCancel }: FileEditorProps) {
           {t("common.cancel")}
         </button>
       </div>
+      <Missing items={[!key.trim() && t("age.key")]} />
       {status === "failed" ? (
         <p class="error" role="alert">
           {t("age.decryptFailed")}
