@@ -144,148 +144,148 @@
   "lastmod": ""
  },
  "qrcode": {
-  "sha": "a3b48d11d02700d6",
-  "lastmod": ""
+  "sha": "92c108584625fc05",
+  "lastmod": "2026-11-21"
  },
  "zh-cn/qrcode": {
-  "sha": "1384cdbbf5604c85",
-  "lastmod": ""
+  "sha": "8550ebf596b1be3d",
+  "lastmod": "2026-11-21"
  },
  "en/qrcode": {
-  "sha": "89d9af2e9298e178",
-  "lastmod": ""
+  "sha": "53208a6bb3d8626d",
+  "lastmod": "2026-11-21"
  },
  "url-check": {
-  "sha": "741cc4c05b901c86",
-  "lastmod": ""
+  "sha": "d287de48e49cb9ae",
+  "lastmod": "2026-11-21"
  },
  "zh-cn/url-check": {
-  "sha": "5566120ff443dae2",
-  "lastmod": ""
+  "sha": "a9175d86176a66e4",
+  "lastmod": "2026-11-21"
  },
  "en/url-check": {
-  "sha": "08eb55b2fdbc8536",
-  "lastmod": ""
+  "sha": "0c670976f987bb78",
+  "lastmod": "2026-11-21"
  },
  "qr-read": {
-  "sha": "c6c901a7d0024b84",
-  "lastmod": ""
+  "sha": "f32632871b17dd24",
+  "lastmod": "2026-11-21"
  },
  "zh-cn/qr-read": {
-  "sha": "f0bb86ab23007216",
-  "lastmod": ""
+  "sha": "ed44cc341138a7dd",
+  "lastmod": "2026-11-21"
  },
  "en/qr-read": {
-  "sha": "5a58e720161ac952",
-  "lastmod": ""
+  "sha": "2fcbc99c88db4666",
+  "lastmod": "2026-11-21"
  },
  "passphrase": {
-  "sha": "d4deb718df250ad3",
-  "lastmod": ""
+  "sha": "7d7799e2274a5e8d",
+  "lastmod": "2026-11-21"
  },
  "zh-cn/passphrase": {
-  "sha": "6b1ee86a16469d5d",
-  "lastmod": ""
+  "sha": "365bc214261b4812",
+  "lastmod": "2026-11-21"
  },
  "en/passphrase": {
-  "sha": "4842994ca30fcd25",
-  "lastmod": ""
+  "sha": "362fe35eb4691141",
+  "lastmod": "2026-11-21"
  },
  "age-keygen": {
-  "sha": "cda52bf57b52cf21",
-  "lastmod": ""
+  "sha": "d5eac16081a93d99",
+  "lastmod": "2026-11-21"
  },
  "zh-cn/age-keygen": {
-  "sha": "9306bbda21219c43",
-  "lastmod": ""
+  "sha": "ae3bcb8dec72be00",
+  "lastmod": "2026-11-21"
  },
  "en/age-keygen": {
-  "sha": "901b7482ccb33831",
-  "lastmod": ""
+  "sha": "835d4862079723ab",
+  "lastmod": "2026-11-21"
  },
  "text-crypt": {
-  "sha": "856a7322b04ca108",
-  "lastmod": ""
+  "sha": "76e1194a9cd94c9f",
+  "lastmod": "2026-11-21"
  },
  "zh-cn/text-crypt": {
-  "sha": "ed2977e211510e6b",
-  "lastmod": ""
+  "sha": "28906265414056c0",
+  "lastmod": "2026-11-21"
  },
  "en/text-crypt": {
-  "sha": "02ccbc73f9ddcc6f",
-  "lastmod": ""
+  "sha": "1759e08de1deb3df",
+  "lastmod": "2026-11-21"
  },
  "verify": {
-  "sha": "56951b81b5de6dd0",
-  "lastmod": ""
+  "sha": "6cc6ce783b43f31e",
+  "lastmod": "2026-11-21"
  },
  "zh-cn/verify": {
-  "sha": "08cfc6ec81661acf",
-  "lastmod": ""
+  "sha": "7060c3299699a58f",
+  "lastmod": "2026-11-21"
  },
  "en/verify": {
-  "sha": "3385d1aca1c02661",
-  "lastmod": ""
+  "sha": "9e10f6e5f7841cdb",
+  "lastmod": "2026-11-21"
  },
  "email-check": {
-  "sha": "ab733aad398b51d4",
-  "lastmod": ""
+  "sha": "8b8754dec477cf2a",
+  "lastmod": "2026-11-21"
  },
  "zh-cn/email-check": {
-  "sha": "1bc19eb5c9a53f17",
-  "lastmod": ""
+  "sha": "8fe0c0c82abb5bf3",
+  "lastmod": "2026-11-21"
  },
  "en/email-check": {
-  "sha": "3a97f6441d0b9b81",
-  "lastmod": ""
+  "sha": "e164f08d0923f88b",
+  "lastmod": "2026-11-21"
  },
  "writing-style": {
-  "sha": "212fe253ecca2dc2",
-  "lastmod": ""
+  "sha": "1c9ce05063dd3c98",
+  "lastmod": "2026-11-21"
  },
  "zh-cn/writing-style": {
-  "sha": "410c01efc19fe8aa",
-  "lastmod": ""
+  "sha": "5f1e2a9a6e425582",
+  "lastmod": "2026-11-21"
  },
  "en/writing-style": {
-  "sha": "4c4011af0a652d74",
-  "lastmod": ""
+  "sha": "4f7c1c5e822c68e7",
+  "lastmod": "2026-11-21"
  },
  "software-verify": {
-  "sha": "a517d653ba5fd9b4",
-  "lastmod": ""
+  "sha": "48b9127fa6cb2d01",
+  "lastmod": "2026-11-21"
  },
  "zh-cn/software-verify": {
-  "sha": "59e3e64efafaf128",
-  "lastmod": ""
+  "sha": "0a3e9a8d5878a7c9",
+  "lastmod": "2026-11-21"
  },
  "en/software-verify": {
-  "sha": "620e937079d90934",
-  "lastmod": ""
+  "sha": "f9f67f4d575bf082",
+  "lastmod": "2026-11-21"
  },
  "nearby": {
-  "sha": "83d166f298e6e0b2",
-  "lastmod": ""
+  "sha": "8cedc9caebc5cb78",
+  "lastmod": "2026-11-21"
  },
  "zh-cn/nearby": {
-  "sha": "84ebb41cf61ff241",
-  "lastmod": ""
+  "sha": "9ba9b70f8d49d468",
+  "lastmod": "2026-11-21"
  },
  "en/nearby": {
-  "sha": "b997ae67aac60d40",
-  "lastmod": ""
+  "sha": "b54c401668ecbcbc",
+  "lastmod": "2026-11-21"
  },
  "remote": {
-  "sha": "dcc3e381c72ef351",
-  "lastmod": ""
+  "sha": "b088a849fbebd85b",
+  "lastmod": "2026-11-21"
  },
  "zh-cn/remote": {
-  "sha": "f332be713cc0608a",
-  "lastmod": ""
+  "sha": "6a96112fd75a0bb6",
+  "lastmod": "2026-11-21"
  },
  "en/remote": {
-  "sha": "c8dbc3347a55dd18",
-  "lastmod": ""
+  "sha": "e9c2131eaa230c37",
+  "lastmod": "2026-11-21"
  },
  "about": {
   "sha": "0e7ac1ebeb8e5886",
