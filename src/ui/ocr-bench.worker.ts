@@ -1,4 +1,4 @@
-// 裝置量測的文字辨識（src/ui/OcrBench.tsx）的 Worker：用遮蔽同一份 PP-OCRv5（src/ui/ppocr.ts）辨識
+// 裝置量測的文字辨識（src/ui/OcrBench.tsx）的 Worker：用遮蔽同一份 PP-OCR（src/ui/ppocr.ts）辨識
 // 三張範例截圖，回報載入時間、每張的偵測與辨識時間，以及辨識出的文字。
 //
 // onnxruntime 第一次建立推論環境時就決定了執行緒數，頁面每量一種設定就換一個 Worker。

@@ -6,7 +6,7 @@ import { type OcrLine, keepLine, words } from "../tools/redact/ppocr.ts";
 import { assertCanvasReadable } from "./canvas-access.ts";
 import type { PdfPages } from "./pdf-pages.ts";
 
-// 遮蔽的自動尋找：人臉用 OpenCV 的 YuNet 模型，文字用 PaddleOCR 的 PP-OCRv5 mobile（都用 onnxruntime-web 執行）
+// 遮蔽的自動尋找：人臉用 OpenCV 的 YuNet 模型，文字用 PaddleOCR 的 PP-OCRv5 mobile 偵測與 PP-OCRv6 small 辨識（都用 onnxruntime-web 執行）
 // 辨識之後找出個資，PDF 有文字層時直接讀文字層（findPdfText）。兩者都在瀏覽器裡執行，圖片不離開裝置。模型與 WebAssembly
 // 都從自己的網域載入，按下按鈕時才下載。
 //

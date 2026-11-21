@@ -15,7 +15,7 @@ const MODEL_DIRS = __MODEL_DIRS__.map((dir) => `${BASE}${dir}`);
 // 用到時才存的大檔案：人臉與文字辨識的模型、onnxruntime 與 c2pa 的 WebAssembly、
 // pdf.js 的 CMap 與字型。檔名對內容的雜湊，建置時算好（vite.config.ts 的 serviceWorker()）。
 // 存在不隨版本清掉的快取，存的時候在回應加上 HASH_HEADER，換版本時內容變了或不在清單上的才刪掉，
-// 一天部署好幾次也不必每次重新下載約 23 MB（#142）
+// 一天部署好幾次也不必每次重新下載約 28 MB（#142）
 const LAZY = __LAZY__;
 const KEEP = "gears-keep"; // 跟 src/core/storage.ts 的 KEEP_CACHE 一致
 const HASH_HEADER = "x-gears-hash";

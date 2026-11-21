@@ -5,7 +5,7 @@
 //   node scripts/fetch-whisper.mjs base     只下載 base（瀏覽器測試用）
 //   node scripts/fetch-whisper.mjs speaker  只下載 CAM++
 //   node scripts/fetch-whisper.mjs sherpa   只下載 sherpa-onnx 的 WebAssembly（Omnilingual 用）
-//   node scripts/fetch-whisper.mjs ppocr    只下載遮蔽的文字辨識模型（PP-OCRv5 mobile）
+//   node scripts/fetch-whisper.mjs ppocr    只下載遮蔽的文字辨識模型（PP-OCRv5 mobile 偵測、PP-OCRv6 small 辨識）
 //   --no-webgpu                             不下載 WebGPU 用的 4 位元版（瀏覽器測試用，CI 沒有 GPU）
 //   node scripts/fetch-whisper.mjs --hash turbo
 //                                           只印出每個檔案的 SHA-256，不存檔（更新 models.json 用）
@@ -21,7 +21,7 @@
 // 模型（src/core/models.ts，上傳方式見 AGENTS.md）。
 // 分辨說話者的 CAM++（3D-Speaker，Apache-2.0）取自 sherpa-onnx 的 release，來源與 SHA-256 寫在
 // src/tools/transcribe/speaker-model.json，放在 public/models/speaker/。
-// 遮蔽的文字辨識用 PaddleOCR 的 PP-OCRv5 mobile（Apache-2.0），取自 Hugging Face 的 PaddlePaddle，
+// 遮蔽的文字辨識用 PaddleOCR 的 PP-OCRv5 mobile 偵測與 PP-OCRv6 small 辨識（Apache-2.0），取自 Hugging Face 的 PaddlePaddle，
 // 鎖定 commit，來源與 SHA-256 寫在 src/tools/redact/ppocr-models.json，放在 public/models/ppocr/。
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -73,7 +73,7 @@ if (!manifest && (!wanted.length || wanted.includes("sherpa"))) {
   }
 }
 
-// PP-OCRv5 的兩個模型合計約 21 MB，單一檔案遠小於 GitHub 的 100 MB，跟 sherpa 一樣放在 public/
+// PP-OCR 的兩個模型合計約 26 MB，單一檔案遠小於 GitHub 的 100 MB，跟 sherpa 一樣放在 public/
 // 跟著網站一起部署，不必由 m6 另外下載，不列進模型清單
 if (!manifest && (!wanted.length || wanted.includes("ppocr"))) {
   for (const m of [ppocr.det, ppocr.rec]) {
@@ -82,7 +82,10 @@ if (!manifest && (!wanted.length || wanted.includes("ppocr"))) {
 }
 
 if (!wanted.length || wanted.includes("speaker")) {
-  await download(speaker.url, speaker.sha256, join(root, "public/models/speaker", speaker.dir, speaker.file), `speaker ${speaker.file}`);
+  // 從 assets.anoni.net 下載社群保存的那一份（speaker-model.json 的 upstream 是上游原本的位置，
+  // 2026-11-19 被重新上傳、SHA-256 變了）。網址在這裡組出來，不寫進 JSON：JSON 會被打包進網頁，
+  // onion 版的產物不能出現 clearnet 的 anoni.net（scripts/check-site.mjs）
+  await download(`https://assets.anoni.net/gears/models/${speaker.dir}/${speaker.file}`, speaker.sha256, join(root, "public/models/speaker", speaker.dir, speaker.file), `speaker ${speaker.file}`);
 }
 
 for (const [id, model] of Object.entries(models)) {

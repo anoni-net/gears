@@ -5,7 +5,7 @@ import { type BenchEnv, hasGpu } from "./bench-env.ts";
 import type { OcrBenchReply, OcrBenchRequest } from "./ocr-bench.worker.ts";
 import workerUrl from "./ocr-bench.worker.ts?worker&url";
 
-// 裝置量測的文字辨識：遮蔽找個資用的 PP-OCRv5（src/ui/ppocr.ts）在這台裝置上要多久。
+// 裝置量測的文字辨識：遮蔽找個資用的 PP-OCR（src/ui/ppocr.ts）在這台裝置上要多久。
 // 工具本身只用單執行緒的 WebAssembly，這裡另外量多執行緒與顯示卡，決定值不值得開（#140、#157）。
 // 每種設定換一個 Worker，每張截圖辨識 REPEAT 次取中位數，第一次常包含編譯與暖機的時間
 
