@@ -59,14 +59,49 @@ test("找人名、地址與單位：還沒下載時寫出大小與手機記憶�
 });
 
 test("找人名、地址與單位：上一次做到一半頁面重新載入了，說明原因，這個分頁不再提供按鈕", async ({ page }) => {
-  await page.goto("./redact/");
-  await page.evaluate(() => history.replaceState({ ...(history.state ?? {}), gearsPiiRedact: true }, ""));
+  // 記號在首頁設下、重新載入之後從桌面點進遮蔽也讀得到（同一個分頁）
+  await page.goto("./");
+  await page.evaluate(() => sessionStorage.setItem("gears-pii-redact", "1"));
   await page.reload();
-  await page.getByTestId("file-input").setInputFiles({ name: "chat.png", mimeType: "image/png", buffer: await screenshot(page) });
+  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.getByRole("link", { name: /截圖上的名字與電話/ }).click()]);
+  await chooser.setFiles({ name: "chat.png", mimeType: "image/png", buffer: await screenshot(page) });
   await expect(page.getByTestId("redact-canvas")).toBeVisible();
   await expect(page.getByTestId("redact-model-crashed")).toContainText("記憶體不夠");
   await expect(page.getByRole("button", { name: "找人名、地址與單位" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "找電話、Email 等個資" })).toBeVisible();
+});
+
+test("找人名、地址與單位：下載途中按取消，不會被當成記憶體不夠，沒有文字的圖不下載模型", async ({ page, guard }) => {
+  test.setTimeout(120_000);
+  const asked: string[] = [];
+  // 模型的請求一直不回應，停在下載中
+  await page.context().route(`${DIR}**`, (route) => {
+    asked.push(route.request().url());
+  });
+  await openRedact(page);
+  await page.getByRole("button", { name: "找人名、地址與單位" }).click();
+  await expect(page.getByTestId("redact-auto-status")).toHaveText(/開源本機模型中/, { timeout: 90_000 });
+  await page.getByRole("button", { name: "取消" }).click();
+  await expect.poll(() => page.evaluate(() => sessionStorage.getItem("gears-pii-redact"))).toBeNull();
+
+  // 白紙一張：辨識不出文字，直接說沒有找到，不碰模型
+  asked.length = 0;
+  await page.goto("./redact/");
+  const blank = await page.evaluate(async () => {
+    const c = document.createElement("canvas");
+    c.width = 400;
+    c.height = 200;
+    const g = c.getContext("2d")!;
+    g.fillStyle = "#fff";
+    g.fillRect(0, 0, 400, 200);
+    const b = await new Promise<Blob>((r) => c.toBlob((x) => r(x!), "image/png"));
+    return Array.from(new Uint8Array(await b.arrayBuffer()));
+  });
+  await page.getByTestId("file-input").setInputFiles({ name: "blank.png", mimeType: "image/png", buffer: Buffer.from(blank) });
+  await page.getByRole("button", { name: "找人名、地址與單位" }).click();
+  await expect(page.getByTestId("redact-auto-status")).toHaveText("沒有找到。自動尋找會漏掉，請自己再看一次整張圖。", { timeout: 90_000 });
+  expect(asked).toEqual([]);
+  forgetRouted(guard);
 });
 
 test("找人名、地址與單位：辨識文字之後交給模型，人名與公司另外加上框，已下載的模型多一列", async ({ page, guard, browserName }) => {

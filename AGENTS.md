@@ -193,7 +193,7 @@ CI（`.github/workflows/ci.yml`）依瀏覽器拆成四台機器同時執行：C
 - 流程（`src/ui/pii-detect.ts`）：文字辨識讀出的每一行（`findText` 的 `texts`，`pii.ts` 的 `lineTexts`）留著，再按一次不必重新辨識。`chunkLines` 依行分塊（每塊不超過 3,000 字，模型一次最多讀 8,192 個詞元，超過的部分會被截掉、不會報錯），`joinLines` 接成一段、行與行之間放換行，字與字之間補上的空白只在兩邊都是英數時留著，跟評測的做法相同。Worker（`src/ui/pii.worker.ts`）找到的範圍由 `spanBoxes` 換回字框，往外多留 15%，跟規則的框一樣
 - Worker 在編輯畫面打開時第一次用到才建立，之後留著，關掉編輯畫面時結束。模型的載入與辨識在 `src/ui/pii-runtime.ts`，裝置量測的 Worker 也用它：只用單執行緒的 WebAssembly，模型存在 `transformers-cache`，量測頁下載過的遮蔽直接用。service worker 換版本時只清 `gears-` 開頭的快取，不會清掉它
 - 按下按鈕之前寫出要下載約 200 MB（`PII_MB`，經過 Cloudflare 的實際傳輸量，量測頁與協助測試頁也用這個數字），以及手機上可能因為記憶體不夠讓頁面重新載入、暫存區會跟著清空，請先下載需要的檔案（`redact.model.note`）。下載量跟找人臉、辨識文字的下載量在同一次查詢裡算出來（`detect-download.ts` 的 `pii`），說明一起出現，圖片只會跳一次。模型已經在快取時不寫
-- 記憶體不夠：開始之前在 `history.state` 記下（`gearsPiiRedact`），做完或失敗時清掉，照量測頁的 `crashed`。打開遮蔽時記號還在，代表上一次做到一半分頁被重新載入，畫面說明原因（`redact.model.crashed`），同一個分頁不再出現按鈕。手機要不要預設不提供，等協助測試頁收到 iPhone 的數字再決定
+- 記憶體不夠：開始之前在 sessionStorage 記下（`gears-pii-redact`），做完、失敗或取消（關掉編輯畫面時 `dispose`）時清掉。打開遮蔽時記號還在，代表上一次做到一半分頁被重新載入，畫面說明原因（`redact.model.crashed`），同一個分頁不再出現按鈕。不用量測頁的 `history.state`：它是每一筆歷史紀錄各一份，回到桌面再點進遮蔽就讀不到。sessionStorage 關掉分頁就清掉，私密瀏覽存不進去時只是記不住。沒有讀到文字的圖不下載模型，直接說沒有找到。手機要不要預設不提供，等協助測試頁收到 iPhone 的數字再決定
 - 關掉 WebAssembly 時說明原因、不下載模型，讀不到 canvas 時照其他自動尋找的做法
 - 「已下載的模型」把它列成獨立的一列（`storage.item.pii`，`classify` 依網址裡的模型目錄分出來），刪語言模型時不會一起刪掉
 - 授權與來源寫在 `licenses/redact-detect.txt`
@@ -584,7 +584,7 @@ ProofMode（Guardian Project 給人權紀錄者的 Android App）拍照時不改
 
 ### 個資辨識
 
-找人名、地址、機構用的個資辨識模型（#139）在這台裝置上要多久、記憶體夠不夠（`src/ui/PiiBench.tsx`，Worker 是 `src/ui/pii-bench.worker.ts`，2026-11-19 起）。社群工作區的評測（`research/gears-pii/01-models.md`）選出 nym-pii 的 q4 版，跟規則合併之後找到約八成五的個資，但模型約 211 MB，上線之前要先知道手機能不能用。
+找人名、地址、機構用的個資辨識模型（#139）在這台裝置上要多久、記憶體夠不夠（`src/ui/PiiBench.tsx`，Worker 是 `src/ui/pii-bench.worker.ts`，2026-11-19 起）。社群工作區的評測（`research/gears-pii/01-models.md`）選出 nym-pii 的 q4 版，跟規則合併之後找到約八成五的個資，但模型約 200 MB（經過 Cloudflare 的實際傳輸量），上線之前要先知道手機能不能用。
 
 - 模型是 `onnx-community/nym-pii-multilingual-ONNX`（MIT）的 q4 版，照原樣放在 assets.anoni.net 的 `nym-pii-7ce7f1a/`（附 `README.txt` 與授權全文，onion 版由同一個網站的 `/models/assets/` 提供），2026-11-20 以前從 Hugging Face 下載。Hugging Face 送的是原始大小 210.7 MB，超過 #139 的 200 MB 門檻，從自己的網域經過 Cloudflare 時 tokenizer 會壓縮，實際傳輸約 200 MB（權重檔是 `application/octet-stream`，Cloudflare 不壓縮，#187）。模型、檔案清單與每個檔案的 SHA-256 在 `src/tools/redact/pii-model.ts` 的 `PII_MODEL`，遮蔽也用同一份（見上方「個資辨識模型」）。載入與辨識在 `src/ui/pii-runtime.ts`，照語言模型的社群轉檔版：`env.remoteHost` 換成 `ASSETS_MODELS`，`env.fetch` 只下載清單上的檔案、用 `downloadVerified` 比對 SHA-256，模型目錄以外的請求一律不送，CSP 不必另外開。WebAssembly 用 `?url` 從自己的網域載入，檔案存在 `transformers-cache`，「已下載的模型」另外列成一列。2026-11-21 起每段的時間包含詞元對回原文（遮蔽實際用的流程），之前只量模型本身，兩者差幾毫秒
 - 設定：CPU 1 個執行緒、4 個執行緒（要 cross-origin isolation）與顯示卡。每種設定換一個 Worker，三段虛構的範例文字（聊天訊息、通知單、中英夾雜，`PII_SAMPLES`）各辨識 3 次取中位數，另外記下載入時間與這次實際下載的位元組

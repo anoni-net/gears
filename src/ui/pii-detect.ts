@@ -9,22 +9,30 @@ import workerUrl from "./pii.worker.ts?worker&url";
 // 遮蔽的「用開源本機模型找人名、地址與單位」（#187）：文字辨識讀出的每一行交給個資辨識模型（Worker 是 pii.worker.ts），
 // 找到的範圍換回圖片上的框。模型約 200 MB，第一次用到時下載，存在 transformers-cache，量測頁用同一份。
 //
-// 手機的記憶體不夠時，系統會把分頁重新載入，暫存區與畫到一半的框都會不見。開始之前在 history.state 記下
-// （照量測頁的 crashed），做完時清掉。打開遮蔽時記號還在，代表上一次做到一半被重新載入，畫面說明原因，
-// 這個分頁不再提供這個按鈕。history.state 只在這個分頁裡，不寫進 localStorage
+// 手機的記憶體不夠時，系統會把分頁重新載入，暫存區與畫到一半的框都會不見。開始之前在 sessionStorage 記下，
+// 做完、失敗或取消時清掉。打開遮蔽時記號還在，代表上一次做到一半被重新載入，畫面說明原因，同一個分頁
+// 不再出現按鈕。不用量測頁的 history.state：它是每一筆歷史紀錄各一份，回到桌面再點進遮蔽就讀不到。
+// sessionStorage 只在這個分頁裡，關掉分頁就清掉，不寫進 localStorage。私密瀏覽存不進去時照樣可以用，只是記不住
 
-const MARK = "gearsPiiRedact";
+const MARK = "gears-pii-redact";
 
-const state = () => (history.state && typeof history.state === "object" ? (history.state as Record<string, unknown>) : {});
 const mark = (on: boolean) => {
-  const next = { ...state() };
-  if (on) next[MARK] = true;
-  else delete next[MARK];
-  history.replaceState(next, "");
+  try {
+    if (on) sessionStorage.setItem(MARK, "1");
+    else sessionStorage.removeItem(MARK);
+  } catch {
+    // 存不進去就算了
+  }
 };
 
 // 上一次用模型時頁面被重新載入了
-export const crashedBefore = () => state()[MARK] === true;
+export const crashedBefore = () => {
+  try {
+    return sessionStorage.getItem(MARK) === "1";
+  } catch {
+    return false;
+  }
+};
 
 // 模型已經在快取裡（量測頁或上一次遮蔽下載過），不必再寫下載量
 export async function piiStored(): Promise<boolean> {
@@ -50,15 +58,21 @@ export interface PiiDetector {
 // 會被 Cross-Origin-Embedder-Policy 擋下（同逐字稿）
 export function piiDetector(): PiiDetector {
   let worker: Worker | null = null;
+  // 進行中的那一次，關掉編輯畫面時讓它結束，記號跟著清掉（不然下次打開會被當成記憶體不夠）
+  let stop: ((error: Error) => void) | null = null;
   return {
     async find(lines, width, height, onProgress) {
+      // 沒有讀到文字就不必下載模型
+      if (!lines.some((line) => line.text.trim())) return [];
       worker ??= new Worker(`${workerUrl}?n=${++workers}`, { type: "module" });
       const chunks = chunkLines(lines).map((chunk) => ({ chunk, ...joinLines(chunk) }));
       mark(true);
       try {
         const spans = await new Promise<PiiReply & { type: "result" }>((resolve, reject) => {
+          stop = reject;
           worker!.onmessage = ({ data }: MessageEvent<PiiReply>) => {
-            if (data.type === "download") onProgress?.(data.total ? data.loaded / data.total : null);
+            // 經過壓縮的檔案收到的位元組可能比標示的大小多，進度夾在 1 以內
+            if (data.type === "download") onProgress?.(data.total ? Math.min(1, data.loaded / data.total) : null);
             else if (data.type === "loaded") onProgress?.(null);
             else if (data.type === "result") resolve(data);
             else reject(new Error(data.message));
@@ -70,12 +84,15 @@ export function piiDetector(): PiiDetector {
           spanBoxes(chunk, at, spans.spans[i] ?? []).map((m) => ({ ...m, box: pad(m.box, 0.15, width, height) as Box })),
         );
       } finally {
+        stop = null;
         mark(false);
       }
     },
     dispose() {
       worker?.terminate();
       worker = null;
+      stop?.(new Error("disposed"));
+      mark(false);
     },
   };
 }

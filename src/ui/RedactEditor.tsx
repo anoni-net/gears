@@ -420,25 +420,28 @@ export function RedactEditor({ blob, format, found, onDone, onCancel }: FileEdit
       setAuto({ kind: "model", state: "noWasm", n: 0 });
       return;
     }
-    setAuto({ kind: "model", state: "running", n: 0, progress: null });
-    const onProgress = (progress: number | null) =>
-      setAuto((a) => (a?.kind === "model" && a.state === "running" ? { ...a, progress } : a));
+    // 還沒辨識過文字時，先顯示辨識文字的訊息與進度，辨識完才換成模型的
+    const progressOf = (kind: "text" | "model") => (progress: number | null) =>
+      setAuto((a) => (a?.kind === kind && a.state === "running" ? { ...a, progress } : a));
     try {
       let lines = texts.current;
       let rules: Box[] = [];
       if (!lines) {
+        setAuto({ kind: "text", state: "running", n: 0, progress: null });
         assertCanvasReadable();
         const { findText } = await import("./redact-detect.ts");
-        const read = await findText(bitmap, onProgress);
+        const read = await findText(bitmap, progressOf("text"));
         setTextLines(read.lines);
         texts.current = lines = read.texts;
         rules = read.pii.map((m) => m.box);
       }
-      onProgress(null);
-      const found = await detector.find(lines, bitmap.width, bitmap.height, onProgress);
+      setAuto({ kind: "model", state: "running", n: 0, progress: null });
+      const found = await detector.find(lines, bitmap.width, bitmap.height, progressOf("model"));
       const all = [...rules, ...found.map((m) => m.box)];
       setAuto({ kind: "model", state: "done", n: addFound(all) || all.length });
     } catch (error) {
+      // 關掉編輯畫面時（dispose）元件已經不在，不必更新
+      if ((error as Error).message === "disposed") return;
       setAuto({ kind: "model", state: isCanvasBlocked(error) ? "blocked" : "failed", n: 0 });
     }
   };
