@@ -123,7 +123,7 @@ export function DocCheckEditor({ blob, format, onDone, onCancel }: FileEditorPro
   const office = ["docx", "xlsx", "pptx", "docm", "xlsm", "pptm", "odt", "ods", "odp", "odg"].includes(format);
 
   return (
-    <div class="doc-check">
+    <div>
       <p class="hint">{t("docCheck.intro")}</p>
       <div class={callout(verdict === "clean" ? "info" : verdict === "connect" ? "danger" : "warn")} role="status" data-testid="doc-check-verdict">
         <strong>{tDynamic(`docCheck.verdict.${verdict}`)}</strong>

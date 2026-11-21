@@ -45,7 +45,7 @@ export function StoragePage() {
   const total = rows?.reduce((n, r) => n + r.bytes, 0) ?? 0;
 
   return (
-    <section class="storage" aria-labelledby="storage-title">
+    <section aria-labelledby="storage-title">
       <h1 id="storage-title" class="tool-title">
         <IconCircle name={PAGE_META.storage.icon} cat={PAGE_META.storage.cat} />
         {t("storage.title")}

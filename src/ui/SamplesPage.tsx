@@ -85,7 +85,7 @@ export function SamplesPage({ focus, onOpenFile, onOpenQr }: Props) {
   if (focus) sections.sort(([a], [b]) => Number(b === focus) - Number(a === focus));
 
   return (
-    <section class="samples" aria-labelledby="samples-title">
+    <section aria-labelledby="samples-title">
       <h1 id="samples-title" class="tool-title">
         <IconCircle name={PAGE_META.samples.icon} cat={PAGE_META.samples.cat} />
         {t("samples.title")}

@@ -477,7 +477,7 @@ export function RedactEditor({ blob, format, found, onDone, onCancel }: FileEdit
 
   const autoMessage = (a: typeof auto): string => {
     // 圖片還在解碼時也顯示在這裡，不另佔一行，解碼完圖片不會往上跳
-    if (status === "loading") return t(isPdf ? "redact.loadingPage" : "redact.loading");
+    if (status === "loading") return t(isPdf ? "common.loadingPage" : "redact.loading");
     if (!a) return t("redact.autoNote");
     if (a.state === "failed") return t("redact.findFailed");
     if (a.state === "blocked") return t("canvas.blocked");
@@ -549,7 +549,7 @@ export function RedactEditor({ blob, format, found, onDone, onCancel }: FileEdit
       ) : null}
       {status === "decodeFailed" ? (
         <p class="error" role="alert">
-          {t(isPdf ? "redact.pdfFailed" : "redact.decodeFailed")}
+          {t(isPdf ? "common.pdfFailed" : "common.decodeFailed")}
         </p>
       ) : null}
       {/* 會改變框的動作都在圖片上方，套用與取消固定在底部的完成列 */}
@@ -565,7 +565,7 @@ export function RedactEditor({ blob, format, found, onDone, onCancel }: FileEdit
         </button>
         {modelAvailable ? (
           <button type="button" disabled={!bitmap || running} onClick={() => runModel()}>
-            <span class="tool-tag tag-model" aria-hidden="true">
+            <span class="tool-tag" aria-hidden="true">
               <Icon name="brain" />
             </span>
             {t("redact.findModel")}
@@ -587,10 +587,10 @@ export function RedactEditor({ blob, format, found, onDone, onCancel }: FileEdit
           <p>{t("redact.model.phone", { mb: download?.pii || PII_MB })}</p>
           <div class="buttons">
             <button type="button" class="primary" onClick={() => runModel(true)}>
-              {t("redact.model.phoneGo")}
+              {t("common.phoneGo")}
             </button>
             <a class="button" href={routeUrl("testing")} onClick={(e) => onRouteClick(e, () => navigate("testing"))}>
-              {t("redact.model.phoneTest")}
+              {t("common.phoneTest")}
             </a>
           </div>
         </div>
@@ -624,11 +624,11 @@ export function RedactEditor({ blob, format, found, onDone, onCancel }: FileEdit
       {pdf ? (
         <div class="redact-pages">
           <button type="button" disabled={pageIndex === 0 || running || status === "working"} onClick={() => turnPage(-1)}>
-            {t("redact.prevPage")}
+            {t("common.prevPage")}
           </button>
-          <span aria-live="polite">{t("redact.page", { n: pageIndex + 1, total: pdf.count })}</span>
+          <span aria-live="polite">{t("common.page", { n: pageIndex + 1, total: pdf.count })}</span>
           <button type="button" disabled={pageIndex === pdf.count - 1 || running || status === "working"} onClick={() => turnPage(1)}>
-            {t("redact.nextPage")}
+            {t("common.nextPage")}
           </button>
         </div>
       ) : null}

@@ -304,7 +304,7 @@ export function NearbyTool(_props: CreateToolProps) {
       <label for="nearby-paste">{label}</label>
       <textarea id="nearby-paste" rows={2} value={pasted} onInput={(e) => setPasted(e.currentTarget.value)} spellcheck={false} autocomplete="off" data-testid="nearby-paste" />
       <div class="buttons">
-        <button type="submit">{t("nearby.pasteApply")}</button>
+        <button type="submit">{t("transfer.pasteApply")}</button>
       </div>
     </form>
   );
@@ -344,17 +344,17 @@ export function NearbyTool(_props: CreateToolProps) {
       case "answering":
         return t("nearby.answering");
       case "connecting":
-        return t("nearby.connecting");
+        return t("transfer.connecting");
       case "awaiting":
-        return t("nearby.awaiting");
+        return t("transfer.awaiting");
       case "transfer":
-        return t("nearby.transfer", { done: size(phase.done), total: size(phase.total), n: Math.round((phase.done / Math.max(1, phase.total)) * 100) });
+        return t("transfer.transfer", { done: size(phase.done), total: size(phase.total), n: Math.round((phase.done / Math.max(1, phase.total)) * 100) });
       case "sent":
-        return phase.ok.every(Boolean) ? t("nearby.sent", { n: phase.ok.length }) : t("nearby.sentPartly", { n: phase.ok.filter((ok) => !ok).length });
+        return phase.ok.every(Boolean) ? t("transfer.sent", { n: phase.ok.length }) : t("transfer.sentPartly", { n: phase.ok.filter((ok) => !ok).length });
       case "declined":
-        return t("nearby.declined");
+        return t("transfer.declined");
       case "received":
-        return phase.failed ? t("nearby.receivedPartly", { n: phase.count, m: phase.failed }) : t("nearby.received", { n: phase.count });
+        return phase.failed ? t("transfer.receivedPartly", { n: phase.count, m: phase.failed }) : t("transfer.received", { n: phase.count });
       case "error":
         return t(`nearby.error.${phase.reason}`);
       default:
@@ -365,7 +365,7 @@ export function NearbyTool(_props: CreateToolProps) {
   // 每個畫面最下面只有一列按鈕：主要的動作在前，取消或重新開始在後
   const cancel = (
     <button type="button" onClick={restart}>
-      {["sent", "received", "declined", "error"].includes(phase.kind) ? t("nearby.again") : t("common.cancel")}
+      {["sent", "received", "declined", "error"].includes(phase.kind) ? t("transfer.again") : t("common.cancel")}
     </button>
   );
 
@@ -428,7 +428,7 @@ export function NearbyTool(_props: CreateToolProps) {
     const total = phase.incoming.files.reduce((sum, f: FileMeta) => sum + f.size, 0);
     body = (
       <div class="nearby-review">
-        <p>{t("nearby.incoming", { n: phase.incoming.files.length, total: size(total) })}</p>
+        <p>{t("transfer.incoming", { n: phase.incoming.files.length, total: size(total) })}</p>
         <ul data-testid="nearby-incoming">
           {phase.incoming.files.map((f, i) => (
             <li key={i}>
@@ -436,7 +436,7 @@ export function NearbyTool(_props: CreateToolProps) {
             </li>
           ))}
         </ul>
-        {total > MAX_TOTAL ? <p class="error">{t("nearby.error.tooLarge")}</p> : null}
+        {total > MAX_TOTAL ? <p class="error">{t("transfer.error.tooLarge")}</p> : null}
         <p class="hint">{t("nearby.confirmNote")}</p>
       </div>
     );
@@ -452,7 +452,7 @@ export function NearbyTool(_props: CreateToolProps) {
             setPhase({ kind: "declined" });
           }}
         >
-          {t("nearby.decline")}
+          {t("transfer.decline")}
         </button>
       </>
     );
@@ -471,7 +471,7 @@ export function NearbyTool(_props: CreateToolProps) {
       ) : null}
       {confirm && phase.kind !== "error" ? (
         <p data-testid="nearby-confirm">
-          {t("nearby.confirm")} <strong>{confirm}</strong>
+          {t("transfer.confirm")} <strong>{confirm}</strong>
         </p>
       ) : null}
       {body}

@@ -172,7 +172,7 @@ function CompareView({ from, to, before, after }: { from: number; to: number; be
           {result.visualSkipped ? <p class="hint">{t(result.visualBlocked ? "canvas.blockedCompare" : "verify.visualSkipped")}</p> : null}
           {result.pages.length ? null : <p>{t("verify.noDiff")}</p>}
           {result.pages.map((p) => (
-            <div class="verify-page-diff" key={p.index}>
+            <div key={p.index}>
               <h6>
                 {t("verify.page", { n: p.index + 1 })}：{tDynamic(`verify.pageStatus.${p.status}`)}
               </h6>

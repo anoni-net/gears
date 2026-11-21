@@ -48,7 +48,7 @@ export function HeicConvert({ blob, onDone, onCancel }: FileEditorProps) {
     }
   };
   return (
-    <div class="convert">
+    <div>
       <p class="hint">{t("heic.note")}</p>
       <div class="buttons action-bar">
         <button type="button" class="primary" disabled={status === "working"} onClick={apply}>

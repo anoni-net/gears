@@ -169,7 +169,7 @@ export function AboutPage({ offlineReady }: { offlineReady: boolean }) {
         <IconCircle name={PAGE_META.about.icon} cat={PAGE_META.about.cat} />
         {t("about.title")}
       </h1>
-      <p class="about-lead">{t("about.intro")}</p>
+      <p>{t("about.intro")}</p>
 
       <section aria-labelledby="browser">
         <h2 id="browser">{t("about.browser.title")}</h2>

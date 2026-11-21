@@ -389,7 +389,7 @@ export function App() {
           </SiteTitle>
           <div class="site-header__actions">
             {!atHome ? (
-              <button type="button" class="site-header__home-button" onClick={home}>
+              <button type="button" onClick={home}>
                 <Icon name="home-outline" />
                 {t("app.home")}
               </button>

@@ -50,28 +50,28 @@ function rows(c: QrContent): [string, string][] {
     switch (c.kind) {
       case "wifi":
         return [
-          [t("qr.ssid"), c.ssid],
-          [t("qr.password"), c.password],
-          [t("qr.security"), c.security],
-          [t("qr.hidden"), c.hidden ? t("qrread.yes") : ""],
+          [t("qrfield.ssid"), c.ssid],
+          [t("qrfield.password"), c.password],
+          [t("qrfield.security"), c.security],
+          [t("qrfield.hidden"), c.hidden ? t("qrread.yes") : ""],
         ];
       case "contact":
         return [
-          [t("qr.contact.name"), c.name],
-          [t("qr.contact.org"), c.org],
+          [t("qrfield.contact.name"), c.name],
+          [t("qrfield.contact.org"), c.org],
           [t("qrread.jobTitle"), c.title],
-          [t("qr.phone"), c.phones],
-          [t("qr.email"), c.emails],
-          [t("qr.contact.url"), c.urls],
+          [t("qrfield.phone"), c.phones],
+          [t("qrfield.email"), c.emails],
+          [t("qrfield.contact.url"), c.urls],
           [t("qrread.address"), c.address],
           [t("qrread.note"), c.note],
         ];
       case "event":
         return [
-          [t("qr.event.title"), c.title],
-          [t("qr.event.start"), c.start],
+          [t("qrfield.event.title"), c.title],
+          [t("qrfield.event.start"), c.start],
           [t("qrread.end"), c.end],
-          [t("qr.event.location"), c.location],
+          [t("qrfield.event.location"), c.location],
           [t("qrread.description"), c.description],
         ];
       case "geo":
@@ -81,16 +81,16 @@ function rows(c: QrContent): [string, string][] {
         ];
       case "email":
         return [
-          [t("qr.email.to"), c.to],
-          [t("qr.email.subject"), c.subject],
-          [t("qr.email.body"), c.body],
+          [t("qrfield.email.to"), c.to],
+          [t("qrfield.email.subject"), c.subject],
+          [t("qrfield.email.body"), c.body],
         ];
       case "phone":
-        return [[t("qr.phone"), c.number]];
+        return [[t("qrfield.phone"), c.number]];
       case "sms":
         return [
-          [t("qr.phone"), c.number],
-          [t("qr.sms.message"), c.message],
+          [t("qrfield.phone"), c.number],
+          [t("qrfield.sms.message"), c.message],
         ];
       case "otp":
         return [
@@ -133,7 +133,7 @@ function rows(c: QrContent): [string, string][] {
       case "invite":
         return [
           [t("qrread.invite.target"), t(`qrread.invite.${c.target}`)],
-          [t("qr.phone"), c.phone],
+          [t("qrfield.phone"), c.phone],
         ];
       case "twpay":
         return [
@@ -192,7 +192,7 @@ function kindLabel(c: QrContent): string | null {
     case "email":
     case "phone":
     case "sms":
-      return t(`qr.mode.${c.kind}`);
+      return t(`qrfield.mode.${c.kind}`);
     case "otp":
       return t("qrread.kind.otp");
     case "payment":

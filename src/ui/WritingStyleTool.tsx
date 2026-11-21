@@ -146,7 +146,7 @@ export function WritingStyleTool(_: CreateToolProps) {
     if (!history.length) return;
     setText(history.at(-1)!);
     setHistory(history.slice(0, -1));
-    setNote(t("style.undone"));
+    setNote(t("common.undone"));
   };
 
   return (
@@ -179,13 +179,13 @@ export function WritingStyleTool(_: CreateToolProps) {
             </button>
             {history.length ? (
               <button type="button" onClick={undo}>
-                {t("style.undo")}
+                {t("common.undo")}
               </button>
             ) : null}
             <CopyButton text={text} label={t("style.copy")} primary={false} />
           </div>
 
-          <AliasForm id="style-alias" text={text} hint={t("style.alias.hint")} onReplace={replace} />
+          <AliasForm id="style-alias" text={text} hint={t("alias.hint")} onReplace={replace} />
 
           {habits.length ? (
             <>

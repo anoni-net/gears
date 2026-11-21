@@ -76,9 +76,9 @@ export function BlendEditor({ blob, onDone, onCancel }: FileEditorProps) {
 
   if (status === "openFailed") {
     return (
-      <div class="blend">
+      <div>
         <p class="error" role="alert">
-          {t("redact.decodeFailed")}
+          {t("common.decodeFailed")}
         </p>
         <div class="buttons action-bar">
           <button type="button" onClick={onCancel}>
@@ -91,12 +91,12 @@ export function BlendEditor({ blob, onDone, onCancel }: FileEditorProps) {
 
   const smallest = !!bitmap && LONG_EDGES.every((edge) => targetSize(bitmap.width, bitmap.height, edge).width === bitmap.width);
   return (
-    <div class="blend">
+    <div>
       <p class="hint">{t("blend.intro")}</p>
       {bitmap ? (
         <p data-testid="blend-original">{t("blend.original", { w: bitmap.width, h: bitmap.height })}</p>
       ) : (
-        <p class="hint">{t("printDots.loading")}</p>
+        <p class="hint">{t("app.loading")}</p>
       )}
       {/* 原圖比每一個選項都小時，「不放大，只重新壓縮」寫一次，不在每個選項下面重複 */}
       {smallest ? <p class="hint">{t("blend.noResize")}</p> : null}

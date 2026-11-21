@@ -607,7 +607,7 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
                   </p>
                   <div class="buttons">
                     <button type="button" onClick={() => runPunct()}>
-                      <span class="tool-tag tag-model" aria-hidden="true">
+                      <span class="tool-tag" aria-hidden="true">
                         <Icon name="brain" />
                       </span>
                       {t("transcribe.punct.button")}
@@ -620,10 +620,10 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
                   <p>{t("transcribe.punct.phone", { mb: punctMb || PUNCT_MB })}</p>
                   <div class="buttons">
                     <button type="button" class="primary" onClick={() => runPunct(true)}>
-                      {t("redact.model.phoneGo")}
+                      {t("common.phoneGo")}
                     </button>
                     <a class="button" href={routeUrl("testing")} onClick={(e) => onRouteClick(e, () => navigate("testing"))}>
-                      {t("redact.model.phoneTest")}
+                      {t("common.phoneTest")}
                     </a>
                   </div>
                 </div>
@@ -686,10 +686,10 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
                 onClick={() => {
                   setSegments(history.at(-1)!);
                   setHistory(history.slice(0, -1));
-                  setAliasNote(t("style.undone"));
+                  setAliasNote(t("common.undone"));
                 }}
               >
-                {t("style.undo")}
+                {t("common.undo")}
               </button>
             </div>
           ) : null}

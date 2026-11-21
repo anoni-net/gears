@@ -96,15 +96,15 @@ function ZoomDialog(props: { pdf: PdfPages; index: number; checked: boolean; onT
     <dialog ref={dialog} class="page-zoom" aria-label={t("pdfPages.page", { n: index + 1 })} onClose={props.onClose} onKeyDown={keyDown}>
       <div class="page-zoom-bar">
         <button type="button" disabled={index === 0} onClick={() => props.onTurn(index - 1)}>
-          {t("redact.prevPage")}
+          {t("common.prevPage")}
         </button>
-        <span aria-live="polite">{t("redact.page", { n: index + 1, total: pdf.count })}</span>
+        <span aria-live="polite">{t("common.page", { n: index + 1, total: pdf.count })}</span>
         <button type="button" disabled={index === pdf.count - 1} onClick={() => props.onTurn(index + 1)}>
-          {t("redact.nextPage")}
+          {t("common.nextPage")}
         </button>
       </div>
       <div class={enlarged ? "page-zoom-stage enlarged" : "page-zoom-stage"}>
-        {drawn ? null : <p class="hint">{t("redact.loadingPage")}</p>}
+        {drawn ? null : <p class="hint">{t("common.loadingPage")}</p>}
         <canvas
           ref={canvas}
           class={drawn ? "" : "waiting"}
@@ -198,9 +198,9 @@ export function PdfPagesEditor({ blob, onDone, onCancel }: FileEditorProps) {
 
   if (status === "openFailed") {
     return (
-      <div class="pdf-pages">
+      <div>
         <p class="error" role="alert">
-          {t("redact.pdfFailed")}
+          {t("common.pdfFailed")}
         </p>
         <div class="buttons action-bar">
           <button type="button" onClick={onCancel}>
@@ -213,7 +213,7 @@ export function PdfPagesEditor({ blob, onDone, onCancel }: FileEditorProps) {
 
   const usable = selected.size > 0 && selected.size < total;
   return (
-    <div class="pdf-pages">
+    <div>
       <p class="hint">{t("pdfPages.help")}</p>
       {pdf && total === 1 ? <p class="hint">{t("pdfPages.single")}</p> : null}
       <div class="pdf-pages-toolbar">
@@ -252,7 +252,7 @@ export function PdfPagesEditor({ blob, onDone, onCancel }: FileEditorProps) {
         </ul>
       ) : (
         <p class="hint" role="status">
-          {t("redact.loadingPage")}
+          {t("common.loadingPage")}
         </p>
       )}
       {pdf && zoom !== null ? (
