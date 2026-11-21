@@ -1,4 +1,6 @@
 {
+  "source": "https://github.com/PaddlePaddle/PaddleOCR",
+  "license": "Apache-2.0",
   "det": {
     "repo": "PaddlePaddle/PP-OCRv5_mobile_det_onnx",
     "revision": "e6f4fa85f00e168c862bc462aebca69eef9b3d3d",

@@ -3,6 +3,7 @@ import { type Detection, type FaceSelection, MAYBE_SCORE, type Outputs, SCALES, 
 import { findPiiInLines, lineBoxes, textLayerQuality, textLines } from "../tools/redact/pdf-text.ts";
 import { type LineText, type PiiMatch, findPiiInLineTexts, lineTexts, overlaps, pad } from "../tools/redact/pii.ts";
 import { type OcrLine, keepLine, words } from "../tools/redact/ppocr.ts";
+import yunet from "../tools/redact/yunet-model.json" with { type: "json" };
 import { assertCanvasReadable } from "./canvas-access.ts";
 import type { PdfPages } from "./pdf-pages.ts";
 
@@ -48,7 +49,7 @@ export async function findFaces(bitmap: ImageBitmap, onProgress?: OnProgress): P
   // 只用單執行緒的 WebAssembly：多執行緒要伺服器另外送 cross-origin isolation 的標頭。
   // WebAssembly 檔由 Vite 打包到 assets/（檔名帶雜湊），離線快取用到時才存（vite.config.ts）
   ort.env.wasm.numThreads = 1;
-  const session = await ort.InferenceSession.create(`${BASE}models/yunet-2023mar-dynamic.onnx`, { executionProviders: ["wasm"] });
+  const session = await ort.InferenceSession.create(`${BASE}models/${yunet.file}`, { executionProviders: ["wasm"] });
   try {
     const found: Detection[] = [];
     for (const [i, long] of SCALES.entries()) {

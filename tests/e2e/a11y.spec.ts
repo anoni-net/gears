@@ -17,7 +17,7 @@ async function audit(page: Page) {
   return result.violations.map((v) => `${v.id}: ${v.help} (${v.nodes.map((n) => n.target.join(" ")).slice(0, 3).join(" | ")})`);
 }
 
-for (const path of ["./", "./en/", "./qrcode/", "./url-check/", "./passphrase/", "./age-keygen/", "./text-crypt/", "./qr-read/", "./redact/", "./pdf-pages/", "./strip-metadata/", "./verify/", "./email-check/", "./writing-style/", "./video-frames/", "./nearby/", "./remote/", "./licenses/", "./bench/", "./feedback/", "./samples/", "./remote-server/", "./storage/", "./privacy/", "./testing/"]) {
+for (const path of ["./", "./en/", "./qrcode/", "./url-check/", "./passphrase/", "./age-keygen/", "./text-crypt/", "./qr-read/", "./redact/", "./pdf-pages/", "./strip-metadata/", "./verify/", "./email-check/", "./writing-style/", "./video-frames/", "./nearby/", "./remote/", "./licenses/", "./bench/", "./feedback/", "./samples/", "./remote-server/", "./storage/", "./privacy/", "./testing/", "./about/", "./en/about/"]) {
   test(`${path} 沒有無障礙問題`, async ({ page }) => {
     await page.goto(path);
     await page.waitForLoadState("networkidle");
@@ -147,7 +147,7 @@ test("工具以外的頁面的左欄，暫存區有檔案時深淺色都沒有�
   await page.goto("./");
   await page.getByTestId("file-input").setInputFiles({ name: "a.txt", mimeType: "text/plain", buffer: Buffer.from("x") });
   await expect(page.locator(".tray .item")).toHaveCount(1);
-  for (const id of ["licenses", "bench", "feedback", "samples", "remote-server", "storage", "privacy", "testing"]) {
+  for (const id of ["licenses", "bench", "feedback", "samples", "remote-server", "storage", "privacy", "testing", "about"]) {
     await page.evaluate((id) => {
       history.pushState(null, "", `/gears/${id}/`);
       dispatchEvent(new Event("gears:navigate"));
@@ -156,6 +156,19 @@ test("工具以外的頁面的左欄，暫存區有檔案時深淺色都沒有�
     for (const colorScheme of ["light", "dark"] as const) {
       await page.emulateMedia({ colorScheme });
       expect(await audit(page), `${id} ${colorScheme}`).toEqual([]);
+    }
+  }
+});
+
+// 設計原則（src/ui/AboutPage.tsx）：模型表與即時檢查，寬螢幕與窄螢幕、深淺色都檢查
+test("設計原則頁的模型表與即時檢查，深淺色都沒有無障礙問題", async ({ page }) => {
+  for (const width of [1280, 600]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("./about/");
+    await expect(page.getByTestId("about-status-gpu")).not.toHaveAttribute("data-state", "checking");
+    for (const colorScheme of ["light", "dark"] as const) {
+      await page.emulateMedia({ colorScheme });
+      expect(await audit(page), `${width} ${colorScheme}`).toEqual([]);
     }
   }
 });

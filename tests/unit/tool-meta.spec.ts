@@ -3,7 +3,8 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { toolIds } from "../../src/tools/index.ts";
 import { ICON_PATHS } from "../../src/ui/icon-paths.ts";
-import { GROUP_CAT, TOOL_GROUPS, TOOL_META } from "../../src/ui/tool-meta.ts";
+import { GROUP_CAT, PAGE_META, TOOL_GROUPS, TOOL_META, USER_PAGES } from "../../src/ui/tool-meta.ts";
+import { labIds, pageIds } from "../../src/pages.ts";
 
 test("每個工具都有圖示，圖示圈的顏色跟著桌面的分組", () => {
   for (const group of TOOL_GROUPS)
@@ -15,6 +16,16 @@ test("每個工具都有圖示，圖示圈的顏色跟著桌面的分組", () =>
     }
   // 三組三個顏色
   expect(new Set(Object.values(GROUP_CAT)).size).toBe(TOOL_GROUPS.length);
+});
+
+test("使用者區的頁面都有圖示，也都是工具以外的頁面", () => {
+  for (const id of USER_PAGES) {
+    expect(Object.hasOwn(ICON_PATHS, PAGE_META[id].icon), id).toBe(true);
+    expect(pageIds, id).toContain(id);
+  }
+  // 設計原則頁是理解 Gears 的入口，排在使用者區最前面，搜尋引擎可以收錄
+  expect(USER_PAGES[0]).toBe("about");
+  expect(labIds).not.toContain("about");
 });
 
 test("每個工具剛好出現在桌面的一組", () => {
