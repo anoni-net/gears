@@ -157,23 +157,26 @@ export function findPiiInLineTexts(lines: LineText[], normalize = (text: string)
     });
 }
 
-// 辨識的結果：字與字之間補一個空白接成一行，字裡的每個位置都用那個字的框
-export function findPii(lines: Word[][]): PiiMatch[] {
-  return findPiiInLineTexts(
-    lines.map((words) => {
-      let text = "";
-      const boxes: (Box | null)[] = [];
-      for (const word of words) {
-        if (text) {
-          text += " ";
-          boxes.push(null);
-        }
-        text += word.text;
-        for (let i = 0; i < word.text.length; i++) boxes.push(word.box);
+// 辨識的結果：字與字之間補一個空白接成一行，字裡的每個位置都用那個字的框。
+// 個資辨識模型（pii-model.ts 的 joinLines）也讀這一份
+export function lineTexts(lines: Word[][]): LineText[] {
+  return lines.map((words) => {
+    let text = "";
+    const boxes: (Box | null)[] = [];
+    for (const word of words) {
+      if (text) {
+        text += " ";
+        boxes.push(null);
       }
-      return { text, boxes };
-    }),
-  );
+      text += word.text;
+      for (let i = 0; i < word.text.length; i++) boxes.push(word.box);
+    }
+    return { text, boxes };
+  });
+}
+
+export function findPii(lines: Word[][]): PiiMatch[] {
+  return findPiiInLineTexts(lineTexts(lines));
 }
 
 // 框往外多留一點，辨識出來的範圍常常剛好貼著字

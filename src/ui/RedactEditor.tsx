@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "preact/hooks";
+import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { Icon } from "./Icon.tsx";
 import { pdfFailReason, trackFail } from "./analytics.ts";
 import type { Format } from "../core/bytes.ts";
@@ -9,7 +9,10 @@ import { type Box, boxFromPoints, isDark, isUsable, samplePoints } from "../tool
 import { assertCanvasReadable, isCanvasBlocked } from "./canvas-access.ts";
 import { decodeImage } from "./image-decode.ts";
 import { wasmAvailable } from "./wasm.ts";
-import { overlaps } from "../tools/redact/pii.ts";
+import { type LineText, overlaps } from "../tools/redact/pii.ts";
+import { PII_MB } from "../tools/redact/pii-model.ts";
+import { crashedBefore, onPhone, piiDetector } from "./pii-detect.ts";
+import { navigate, onRouteClick, routeUrl } from "../router.ts";
 import { extractExif, insertExifJpeg, insertExifPng, rebuildExif } from "../tools/redact/keep-exif.ts";
 import { exifFindings, parseExif } from "../tools/strip-metadata/exif.ts";
 import type { FileEditorProps } from "./types.ts";
@@ -128,12 +131,22 @@ export function RedactEditor({ blob, format, found, onDone, onCancel }: FileEdit
   // progress 是 0 到 1，null 表示還在載入模型
   // check 是檢查畫面內容已經找到、打開時放好的框
   const [auto, setAuto] = useState<{
-    kind: "faces" | "text" | "lines" | "check";
+    kind: "faces" | "text" | "lines" | "check" | "model";
     state: "running" | "done" | "failed" | "blocked" | "noWasm";
     n: number;
     progress?: number | null;
   } | null>(() => (preset ? { kind: "check", state: "done", n: preset.boxes.length } : null));
   const [textLines, setTextLines] = useState<Box[]>([]);
+  // 個資辨識模型（#187，src/ui/pii-detect.ts）：文字辨識讀出的每一行留著，按「找人名、地址與單位」時不必重新辨識。
+  // 只做圖片，PDF 之後接上。上一次用模型時頁面被重新載入（多半是記憶體不夠）的話，這個分頁不再提供
+  const texts = useRef<LineText[] | null>(null);
+  const detector = useMemo(() => piiDetector(), []);
+  useEffect(() => () => detector.dispose(), [detector]);
+  const [crashed] = useState(crashedBefore);
+  // 手機與平板上第一次按下時先展開說明，讀者按「仍要使用」才開始，也可以先去協助測試頁量測（#144）
+  // 手機上的下載量與記憶體提醒寫在這段說明裡，上方的模型說明（redact.model.note）只給電腦
+  const [phone] = useState(onPhone);
+  const [phoneAsk, setPhoneAsk] = useState<"no" | "asking" | "ok">(() => (phone ? "no" : "ok"));
   useWorking(status === "working" || auto?.state === "running" || !!building);
   // 找人臉時「可能是臉」的範圍，畫成虛線，讀者點一下才變成遮蔽框
   const [maybe, setMaybe] = useState<Box[]>(() => preset?.maybe ?? []);
@@ -388,8 +401,9 @@ export function RedactEditor({ blob, format, found, onDone, onCancel }: FileEdit
         setAuto({ kind, state: "done", n: addFound(faces) || faces.length });
         setMaybe(possible.filter((m) => !latest.current.some((b) => overlaps(b, m))));
       } else {
-        const { pii, lines } = pdf ? await findPdfText(pdf, pageIndex, bitmap, onProgress, wasm) : await findText(bitmap, onProgress);
+        const { pii, lines, texts: read } = pdf ? await findPdfText(pdf, pageIndex, bitmap, onProgress, wasm) : await findText(bitmap, onProgress);
         setTextLines(lines);
+        if (!pdf) texts.current = read;
         const found = kind === "lines" ? lines : pii.map((m) => m.box);
         setAuto({ kind, state: "done", n: addFound(found) || found.length });
       }
@@ -400,6 +414,46 @@ export function RedactEditor({ blob, format, found, onDone, onCancel }: FileEdit
         return;
       }
       setAuto({ kind, state: isCanvasBlocked(error) ? "blocked" : "failed", n: 0 });
+    }
+  };
+
+  // 用開源本機模型找人名、地址與單位。還沒辨識過文字時先辨識，規則找到的電話、Email 一起加上。
+  // 框一次加上（addFound 讀的是上一次畫面更新時的框，連續呼叫兩次會漏算）
+  const runModel = async (confirmed = phoneAsk === "ok") => {
+    if (!bitmap || pdf) return;
+    if (!wasmAvailable()) {
+      trackFail("redact", "wasm-unavailable");
+      setAuto({ kind: "model", state: "noWasm", n: 0 });
+      return;
+    }
+    if (!confirmed) {
+      setPhoneAsk("asking");
+      return;
+    }
+    setPhoneAsk("ok");
+    // 還沒辨識過文字時，先顯示辨識文字的訊息與進度，辨識完才換成模型的
+    const progressOf = (kind: "text" | "model") => (progress: number | null) =>
+      setAuto((a) => (a?.kind === kind && a.state === "running" ? { ...a, progress } : a));
+    try {
+      let lines = texts.current;
+      let rules: Box[] = [];
+      if (!lines) {
+        setAuto({ kind: "text", state: "running", n: 0, progress: null });
+        assertCanvasReadable();
+        const { findText } = await import("./redact-detect.ts");
+        const read = await findText(bitmap, progressOf("text"));
+        setTextLines(read.lines);
+        texts.current = lines = read.texts;
+        rules = read.pii.map((m) => m.box);
+      }
+      setAuto({ kind: "model", state: "running", n: 0, progress: null });
+      const found = await detector.find(lines, bitmap.width, bitmap.height, progressOf("model"));
+      const all = [...rules, ...found.map((m) => m.box)];
+      setAuto({ kind: "model", state: "done", n: addFound(all) || all.length });
+    } catch (error) {
+      // 關掉編輯畫面時（dispose）元件已經不在，不必更新
+      if ((error as Error).message === "disposed") return;
+      setAuto({ kind: "model", state: isCanvasBlocked(error) ? "blocked" : "failed", n: 0 });
     }
   };
 
@@ -415,6 +469,8 @@ export function RedactEditor({ blob, format, found, onDone, onCancel }: FileEdit
     if (!parts.length) return "";
     return t(download.stored ? "redact.download.first" : "redact.download.always", { list: list(parts) });
   })();
+  // 找人名、地址與單位只做圖片。模型還沒下載時寫下載量與手機記憶體的提醒
+  const modelAvailable = !isPdf && !crashed;
 
   const autoMessage = (a: typeof auto): string => {
     // 圖片還在解碼時也顯示在這裡，不另佔一行，解碼完圖片不會往上跳
@@ -425,6 +481,7 @@ export function RedactEditor({ blob, format, found, onDone, onCancel }: FileEdit
     if (a.state === "noWasm") return t("wasm.find");
     if (a.state === "running") {
       if (a.kind === "faces") return t(a.progress == null ? "redact.loadingFaces" : "redact.findingFaces");
+      if (a.kind === "model") return t(a.progress == null ? "redact.loadingModel" : "redact.downloadingModel");
       return t(a.progress == null ? "redact.loadingText" : "redact.findingText");
     }
     if (a.kind === "check") return maybe.length ? t("redact.fromCheckMaybe", { n: a.n, m: maybe.length }) : t("redact.fromCheck", { n: a.n });
@@ -475,6 +532,16 @@ export function RedactEditor({ blob, format, found, onDone, onCancel }: FileEdit
           {downloadNote}
         </p>
       ) : null}
+      {modelAvailable && !phone && download?.pii ? (
+        <p class="hint" data-testid="redact-model-note">
+          {t("redact.model.note", { mb: download.pii })}
+        </p>
+      ) : null}
+      {crashed && !isPdf ? (
+        <p class="notice" data-testid="redact-model-crashed">
+          {t("redact.model.crashed")}
+        </p>
+      ) : null}
       {status === "decodeFailed" ? (
         <p class="error" role="alert">
           {t(isPdf ? "redact.pdfFailed" : "redact.decodeFailed")}
@@ -491,6 +558,14 @@ export function RedactEditor({ blob, format, found, onDone, onCancel }: FileEdit
         <button type="button" disabled={!bitmap || running} onClick={() => runAuto("lines")}>
           {t("redact.findLines")}
         </button>
+        {modelAvailable ? (
+          <button type="button" disabled={!bitmap || running} onClick={() => runModel()}>
+            <span class="tool-tag tag-model" aria-hidden="true">
+              <Icon name="brain" />
+            </span>
+            {t("redact.findModel")}
+          </button>
+        ) : null}
         <span class="redact-toolbar-divider" aria-hidden="true" />
         {/* 窄螢幕只顯示圖示，文字仍在按鈕裡給讀螢幕軟體，滑鼠移上去也看得到 */}
         <button type="button" class="icon-button" title={t("redact.undo")} disabled={!boxes.length} onClick={() => setBoxes((list) => list.slice(0, -1))}>
@@ -502,6 +577,19 @@ export function RedactEditor({ blob, format, found, onDone, onCancel }: FileEdit
           <span class="label">{t(pdf ? "redact.clearPage" : "redact.clear")}</span>
         </button>
       </div>
+      {modelAvailable && phoneAsk === "asking" ? (
+        <div class="redact-model-ask" data-testid="redact-model-ask" role="group" aria-label={t("redact.findModel")}>
+          <p>{t("redact.model.phone", { mb: download?.pii || PII_MB })}</p>
+          <div class="buttons">
+            <button type="button" class="primary" onClick={() => runModel(true)}>
+              {t("redact.model.phoneGo")}
+            </button>
+            <a class="button" href={routeUrl("testing")} onClick={(e) => onRouteClick(e, () => navigate("testing"))}>
+              {t("redact.model.phoneTest")}
+            </a>
+          </div>
+        </div>
+      ) : null}
       {/* 訊息區的高度固定：所有可能出現的訊息疊在同一格，用最長的那一則撐開，
           換訊息時下面的圖片不會跳動。看得到、唸得出來的只有目前那一則 */}
       <div class="redact-auto-message">
@@ -562,7 +650,12 @@ export function RedactEditor({ blob, format, found, onDone, onCancel }: FileEdit
           }}
         />
         {/* 處理中蓋在圖片上，不佔版面 */}
-        {running ? <AutoProgress label={t(auto!.kind === "faces" ? "redact.findFaces" : auto!.kind === "lines" ? "redact.findLines" : "redact.findText")} value={auto!.progress ?? null} /> : null}
+        {running ? (
+          <AutoProgress
+            label={t(auto!.kind === "faces" ? "redact.findFaces" : auto!.kind === "lines" ? "redact.findLines" : auto!.kind === "model" ? "redact.findModel" : "redact.findText")}
+            value={auto!.progress ?? null}
+          />
+        ) : null}
       </div>
       {/* 保留拍攝資訊是套用前的選項，放在固定於底部的完成列裡，按下套用之前一定看得到 */}
       <div class="redact-actions">
@@ -619,6 +712,8 @@ const AUTO_MESSAGES = [
   "redact.findingFaces",
   "redact.loadingText",
   "redact.findingText",
+  "redact.loadingModel",
+  "redact.downloadingModel",
   "redact.found",
   "redact.foundNone",
   "redact.fromCheck",

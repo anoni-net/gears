@@ -1,4 +1,5 @@
 import whisper from "../tools/transcribe/models.json" with { type: "json" };
+import { PII_MODEL } from "../tools/redact/pii-model.ts";
 import { MODEL_CACHE } from "./models.ts";
 
 // 已下載的模型（src/ui/StoragePage.tsx）：Gears 存在這個瀏覽器裡的模型與程式，依用途分成一列一列，
@@ -8,16 +9,17 @@ import { MODEL_CACHE } from "./models.ts";
 // 三個快取：
 // - gears-models：逐字稿的模型（src/core/models.ts、service worker 的 MODEL_DIRS）
 // - gears-keep：用到時才存的辨識模型與 WebAssembly（service worker 的 LAZY）
-// - transformers-cache：裝置量測的語言模型，由 Transformers.js 自己存
+// - transformers-cache：Transformers.js 自己存的模型：裝置量測的語言模型，以及遮蔽與量測頁共用的個資辨識模型
+//   （src/ui/pii-runtime.ts，另外列成一列，刪語言模型時不會一起刪掉）
 
 export const KEEP_CACHE = "gears-keep";
 export const LLM_CACHE = "transformers-cache";
 export const STORAGE_CACHES = [MODEL_CACHE, KEEP_CACHE, LLM_CACHE];
 
-export type StorageGroup = "transcribe" | "speaker" | "faces" | "ocr" | "runtime" | "pdf" | "c2pa" | "llm" | "other";
+export type StorageGroup = "transcribe" | "speaker" | "faces" | "ocr" | "pii" | "runtime" | "pdf" | "c2pa" | "llm" | "other";
 
 // 畫面上的順序
-export const STORAGE_GROUPS: readonly StorageGroup[] = ["transcribe", "speaker", "faces", "ocr", "runtime", "pdf", "c2pa", "llm", "other"];
+export const STORAGE_GROUPS: readonly StorageGroup[] = ["transcribe", "speaker", "faces", "ocr", "pii", "runtime", "pdf", "c2pa", "llm", "other"];
 
 export interface StorageKey {
   group: StorageGroup;
@@ -29,7 +31,7 @@ const byDir = new Map(Object.entries(whisper).map(([id, m]) => [m.dir, id]));
 
 // 快取裡的一個網址屬於哪一列。base 是工作台的路徑（/gears/，onion 版是 /）
 export function classify(cache: string, url: string, base: string): StorageKey {
-  if (cache === LLM_CACHE) return { group: "llm" };
+  if (cache === LLM_CACHE) return { group: new URL(url, "http://x").pathname.includes(`/${PII_MODEL.dir}/`) ? "pii" : "llm" };
   const path = new URL(url, "http://x").pathname;
   if (!path.startsWith(base)) return { group: "other" };
   const rest = path.slice(base.length);
