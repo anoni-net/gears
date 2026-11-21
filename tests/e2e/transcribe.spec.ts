@@ -4,6 +4,7 @@ import { join } from "node:path";
 import type { Page } from "@playwright/test";
 import models from "../../src/tools/transcribe/models.json" with { type: "json" };
 import speakerModel from "../../src/tools/transcribe/speaker-model.json" with { type: "json" };
+import vadModel from "../../src/tools/transcribe/vad-model.json" with { type: "json" };
 import { wav } from "../helpers/audio.ts";
 import { syntheticMp4 } from "../helpers/media.ts";
 import { expect, test } from "./guard.ts";
@@ -13,6 +14,19 @@ const BASE_MODEL = join(import.meta.dirname, "../../public/models/whisper", mode
 const hasModel = existsSync(BASE_MODEL);
 const hasSherpa = existsSync(join(import.meta.dirname, "../../public/vendor/sherpa/sherpa-onnx-wasm-web.wasm"));
 const hasSpeakerModel = existsSync(join(import.meta.dirname, "../../public/models/speaker", speakerModel.dir, speakerModel.file));
+// 語音偵測的 Silero VAD（node scripts/fetch-whisper.mjs vad），沒有時 Worker 退回音量判斷
+const hasVad = existsSync(join(import.meta.dirname, "../../public/models/vad", vadModel.dir, vadModel.file));
+// Whisper base 在 CPU 上的兩個模型檔，加上語音偵測的模型
+const BASE_ONNX = ["decoder_model_merged_quantized.onnx", "encoder_model_quantized.onnx", ...(hasVad ? [vadModel.file] : [])];
+
+// 白噪音（固定的亂數種子），音量判斷會把整段當成有人說話
+function noise(seconds: number) {
+  let seed = 7;
+  return wav(seconds, 16000, () => {
+    seed = (seed * 1103515245 + 12345) % 2 ** 31;
+    return (seed / 2 ** 31 - 0.5) * 0.3;
+  });
+}
 
 async function open(page: Page, name: string, data: Uint8Array) {
   await page.goto("./transcribe/");
@@ -161,7 +175,42 @@ test("靜音的錄音不送進模型，說明沒有辨識到說話的內容", as
   await expect(page.getByTestId("transcribe-status")).toHaveText("沒有辨識到說話的內容。", { timeout: 200_000 });
   // 每個模型檔只請求一次。Transformers.js 有 progress_callback 時會先發一次不讀內容的 GET 查大小，
   // 這些連線佔住瀏覽器的連線數，Firefox 會慢到兩分鐘、偶發整個停住（src/ui/transcribe.worker.ts）
-  expect(onnx.sort()).toEqual(["decoder_model_merged_quantized.onnx", "encoder_model_quantized.onnx"]);
+  expect(onnx.sort()).toEqual(BASE_ONNX);
+});
+
+test("背景噪音：Silero VAD 判斷沒有人說話，一段都不送進 Whisper", async ({ page }) => {
+  test.skip(!hasModel || !hasVad, "沒有下載 base 或 Silero VAD 模型");
+  test.setTimeout(240_000);
+  await open(page, "noise.wav", noise(12));
+  await expect(page.getByTestId("transcribe-vad-note")).toHaveText("只轉換有人說話的部分，歌聲與背景音樂不會轉成文字。");
+  await page.getByLabel(/^base：比較快/).check();
+  await page.getByLabel("1", { exact: true }).check();
+  await page.getByRole("button", { name: "開始轉逐字稿" }).click();
+  await expect(page.getByTestId("transcribe-status")).toHaveText("沒有辨識到說話的內容。", { timeout: 200_000 });
+  await expect(page.getByTestId("transcribe-status")).toHaveAttribute("data-pieces", "0");
+  await expect(page.getByTestId("transcribe-vad")).toHaveCount(0);
+  await expect(page.getByTestId("transcript")).toHaveCount(0);
+});
+
+test("Silero VAD 載入失敗時退回音量判斷，畫面說明，噪音照樣送進 Whisper", async ({ page }) => {
+  test.skip(!hasModel, "沒有下載 base 模型");
+  test.setTimeout(240_000);
+  await page.context().route("**/models/vad/**", (route) => route.fulfill({ status: 404, body: "" }));
+  await open(page, "noise.wav", noise(12));
+  await page.getByLabel(/^base：比較快/).check();
+  await page.getByLabel("1", { exact: true }).check();
+  await page.getByRole("button", { name: "開始轉逐字稿" }).click();
+  await expect(page.getByTestId("transcribe-vad")).toHaveText(/^語音偵測的模型無法載入，這次改用音量判斷/, { timeout: 200_000 });
+  await expect(page.getByTestId("transcribe-status")).toHaveText(/^(沒有辨識到說話的內容。|完成，共 \d+ 段)/, { timeout: 200_000 });
+  // 音量判斷把整段噪音當成說話，送進 Whisper
+  expect(Number(await page.getByTestId("transcribe-status").getAttribute("data-pieces"))).toBeGreaterThan(0);
+});
+
+test("緬甸語這類 sherpa-onnx 的模型不寫歌聲與背景音樂的說明（仍用音量判斷）", async ({ page }) => {
+  await open(page, "talk.wav", wav(2));
+  await expect(page.getByTestId("transcribe-vad-note")).toBeVisible();
+  await page.getByLabel("緬甸語", { exact: true }).check();
+  await expect(page.getByTestId("transcribe-vad-note")).toHaveCount(0);
 });
 
 test("顯示卡無法使用時改用 CPU，畫面上說明", async ({ page }) => {
@@ -181,7 +230,7 @@ test("顯示卡無法使用時改用 CPU，畫面上說明", async ({ page }) =>
   await expect(page.getByTestId("transcribe-status")).toHaveText("沒有辨識到說話的內容。", { timeout: 200_000 });
   await expect(page.getByTestId("transcribe-device")).toHaveText("顯示卡無法使用，這次改用 CPU，另外下載 CPU 用的模型。");
   // Worker 先確認拿不到 adapter，沒有下載 4 位元的模型
-  expect(onnx.sort()).toEqual(["decoder_model_merged_quantized.onnx", "encoder_model_quantized.onnx"]);
+  expect(onnx.sort()).toEqual(BASE_ONNX);
 });
 
 test("換核心數再轉一次，換新的 Worker", async ({ page, browserName }) => {

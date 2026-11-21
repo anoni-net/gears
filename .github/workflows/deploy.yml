@@ -95,7 +95,7 @@ jobs:
             public/vendor/sherpa
             public/models/ppocr
           key: sherpa-ppocr-${{ hashFiles('src/tools/transcribe/sherpa-runtime.json', 'src/tools/redact/ppocr-models.json') }}
-      - run: node scripts/fetch-whisper.mjs sherpa ppocr
+      - run: node scripts/fetch-whisper.mjs sherpa ppocr vad
 
       - name: 165 反詐騙清單
         run: |

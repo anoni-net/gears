@@ -9,6 +9,7 @@ test("依快取與網址分成一列一列", () => {
   expect(classify(MODEL_CACHE, at(`models/whisper/${whisper.base.dir}/onnx/encoder_model_quantized.onnx`), "/gears/")).toEqual({ group: "transcribe", model: "base" });
   expect(classify(MODEL_CACHE, at("models/whisper/whisper-base-0000000/config.json"), "/gears/")).toEqual({ group: "other" });
   expect(classify(MODEL_CACHE, at("models/speaker/campplus-x/model.onnx"), "/gears/")).toEqual({ group: "speaker" });
+  expect(classify(KEEP_CACHE, at("models/vad/silero-vad-5cd7945/silero_vad_16k_sequence.onnx"), "/gears/")).toEqual({ group: "vad" });
   expect(classify(KEEP_CACHE, at("models/yunet-2023mar-dynamic.onnx"), "/gears/")).toEqual({ group: "faces" });
   // 個資辨識模型存在 transformers-cache，另外列一列，clearnet 與 onion 的網址都認得
   expect(classify(LLM_CACHE, "https://assets.anoni.net/gears/models/nym-pii-7ce7f1a/onnx/model_q4.onnx_data", "/gears/")).toEqual({ group: "pii" });

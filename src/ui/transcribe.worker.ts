@@ -7,12 +7,14 @@ import asyncifyWasm from "../../node_modules/@huggingface/transformers/node_modu
 import plainMjs from "../../node_modules/@huggingface/transformers/node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.mjs?url";
 import plainWasm from "../../node_modules/@huggingface/transformers/node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.wasm?url";
 import { type Part, assetsUrl, cachedModel, downloadVerified, forgetDownloads, hfUrl, joinParts, partName } from "../core/models.ts";
-import { MODELS, type ModelId, type RawChunk, SAMPLE_RATE, type Segment, cleanSegments, maxTokens, speechPieces } from "../tools/transcribe/segments.ts";
+import { MODELS, type ModelId, type RawChunk, SAMPLE_RATE, type Segment, cleanSegments, maxTokens, sileroPieces, speechPieces } from "../tools/transcribe/segments.ts";
 import { MIN_EMBED_SECONDS, assignSpeakers, normalize } from "../tools/transcribe/speakers.ts";
 import type { Device } from "../tools/transcribe/device.ts";
 import { type Language, chineseVariant, isChinese, whisperLanguage } from "../tools/transcribe/languages.ts";
 import speakerModel from "../tools/transcribe/speaker-model.json" with { type: "json" };
+import vadModel from "../tools/transcribe/vad-model.json" with { type: "json" };
 import type { Embedder } from "./speaker-embed.ts";
+import type { VadProbs } from "./silero-vad.ts";
 
 // 逐字稿的辨識在這個 Web Worker 裡執行，畫面不會卡住。用 Transformers.js 跑 Whisper，
 // 模型與 WebAssembly 都從自己的網域載入：關掉 Transformers.js 內建的 Hugging Face 下載，
@@ -34,7 +36,8 @@ export type Reply =
   | { type: "ready" }
   | { type: "device"; device: Device } // 拿不到顯示卡，在這個 Worker 裡改用 CPU
   | { type: "progress"; at: number } // 處理到第幾秒
-  | { type: "segments"; segments: Segment[] }
+  | { type: "vad"; silero: boolean } // 語音偵測用 Silero（true），或模型無法使用、退回音量判斷（false）
+  | { type: "segments"; segments: Segment[]; pieces: number } // pieces：這一段送進模型的片段數
   | { type: "speakers"; speakers: { start: number; speaker: number }[] } // 每段的說話者，最後一段處理完才送
   | { type: "done" }
   | { type: "error"; message: string };
@@ -162,6 +165,38 @@ let embedder: Embedder | null = null;
 // 每段的聲紋，最後一段處理完一起分群。太短的段落是 null
 let voices: { start: number; seconds: number; embedding: Float32Array | null }[] = [];
 
+// 語音偵測的模型（src/ui/silero-vad.ts），Whisper 載入之後載入一次就留著。載入或執行失敗時是 null，
+// 這個 Worker 之後都用音量判斷，畫面另外說明（vadFailed 記下試過了，不再重試）
+let vad: VadProbs | null = null;
+let vadFailed = false;
+
+async function loadVad(base: string) {
+  if (vad || vadFailed) return;
+  try {
+    const { sileroVad } = await import("./silero-vad.ts");
+    vad = await sileroVad(`${base}models/vad/${vadModel.dir}/${vadModel.file}`, vadModel.bytes);
+  } catch (error) {
+    // 不往外丟：用顯示卡時畫面會把錯誤當成顯示卡失敗、換 Worker 改用 CPU
+    console.warn("[gears] 語音偵測的模型無法使用，改用音量判斷：", message(error));
+    vadFailed = true;
+  }
+}
+
+// 找出說話的片段：先用 Silero，失敗時退回音量判斷（src/tools/transcribe/segments.ts）
+async function findPieces(audio: Float32Array) {
+  if (vad && audio.length) {
+    try {
+      return sileroPieces(audio, await vad(audio));
+    } catch (error) {
+      console.warn("[gears] 語音偵測失敗，改用音量判斷：", message(error));
+      vad = null;
+      vadFailed = true;
+      post({ type: "vad", silero: false });
+    }
+  }
+  return speechPieces(audio);
+}
+
 let job: { asr: Pipeline; language: Language; speakers: boolean; model: ModelId } | null = null;
 
 const message = (error: unknown) => (error instanceof Error ? error.message : String(error));
@@ -178,7 +213,7 @@ async function recognize(chunk: Float32Array, at: number, last: boolean) {
   const offset = carry ? carry.offset : at;
   carry = null;
   // 只辨識有人說話的片段（語音偵測見 src/tools/transcribe/segments.ts），每段不超過 30 秒
-  let pieces = speechPieces(audio);
+  let pieces = await findPieces(audio);
   const tail = pieces.at(-1);
   if (!last && tail && tail.end >= audio.length - 0.3 * SAMPLE_RATE) {
     carry = { audio: audio.slice(tail.start), offset: offset + tail.start / SAMPLE_RATE };
@@ -202,7 +237,7 @@ async function recognize(chunk: Float32Array, at: number, last: boolean) {
     post({ type: "progress", at: offset + piece.end / SAMPLE_RATE });
   }
   const segments = cleanSegments(raw, audio, offset, isChinese(language));
-  post({ type: "segments", segments });
+  post({ type: "segments", segments, pieces: pieces.length });
   if (job!.speakers) {
     for (const seg of segments) {
       const seconds = seg.end - seg.start;
@@ -249,6 +284,9 @@ self.onmessage = async (event: MessageEvent<Request>) => {
         post({ type: "device", device });
       }
       const asr = await load(request.model, request.base, request.threads, device);
+      // 語音偵測的模型在 Whisper 之後載入，onnxruntime 的設定（WebAssembly 的位置、執行緒數）已經就緒
+      await loadVad(request.base);
+      post({ type: "vad", silero: !!vad });
       // 聲紋模型在 Whisper 之後載入，onnxruntime 的設定（WebAssembly 的位置、執行緒數）已經就緒
       if (request.speakers && !embedder) {
         const { speakerEmbedder } = await import("./speaker-embed.ts");

@@ -1,5 +1,5 @@
-逐字稿：語音辨識模型、Transformers.js、sherpa-onnx 與 OpenCC
-==========================================================
+逐字稿：語音辨識模型、語音偵測、Transformers.js、sherpa-onnx 與 OpenCC
+====================================================================
 
 逐字稿在讀者按下「開始轉逐字稿」時，才從本站載入以下檔案，在瀏覽器的 Web Worker 裡
 執行，錄音不會上傳。程式與模型原封不動使用，沒有修改，只有社群轉檔的模型做過量化（見下方）。
@@ -31,6 +31,13 @@ SHA-256 寫在 src/tools/transcribe/speaker-model.json）
   模型卡：https://modelscope.cn/models/iic/speech_campplus_sv_zh-cn_16k-common
   3D-Speaker：https://github.com/modelscope/3D-Speaker（Apache-2.0）
   ONNX 檔：https://github.com/k2-fsa/sherpa-onnx/releases/tag/speaker-recongition-models（sherpa-onnx 本身 Apache-2.0）
+
+語音偵測的模型（每次轉逐字稿時載入，找出有人說話的部分，scripts/fetch-whisper.mjs 下載，來源與
+SHA-256 寫在 src/tools/transcribe/vad-model.json）
+- Silero VAD v6.2.3 的 silero_vad_16k_sequence.onnx（MIT，Copyright (c) 2020-present Silero Team），
+  官方 repo 附的 ONNX 檔，沒有修改
+  來源：https://github.com/snakers4/silero-vad（tag v6.2.3，commit 5cd7945676eb32225748052e2e6a0580e4686a08）
+  get_speech_timestamps 照 src/silero_vad/utils_vad.py 改寫成 TypeScript（src/tools/transcribe/segments.ts）
 
 緬甸語、高棉語、寮語、孟加拉語、尼泊爾語、蒙古語的模型（從 https://assets.anoni.net/gears/models/ 載入）
 - Meta Omnilingual ASR CTC 300M（Apache-2.0，Copyright Meta Platforms, Inc. and affiliates）的 sherpa-onnx 轉檔版
@@ -64,6 +71,31 @@ SHA-256 寫在 src/tools/transcribe/speaker-model.json）
 MIT License
 
 Copyright (c) 2020-2021 The nk2028 Project
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+---- MIT License（Silero VAD）----
+
+MIT License
+
+Copyright (c) 2020-present Silero Team
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
