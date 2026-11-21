@@ -172,7 +172,7 @@ CI（`.github/workflows/ci.yml`）依瀏覽器拆成四台機器同時執行：C
 
 ## 遮蔽的自動尋找
 
-遮蔽畫面有「找人臉」與「找電話、Email 等個資」兩個按鈕，找到的範圍直接加成框，讀者逐一確認、點一下刪掉框錯的。自動尋找一定會漏，畫面上寫明，不自動套用（`src/ui/redact-detect.ts`）。
+遮蔽畫面有「找人臉」、「找電話、Email 等個資」與「找人名、地址與單位」（見下方「個資辨識模型」）三個按鈕，找到的範圍直接加成框，讀者逐一確認、點一下刪掉框錯的。自動尋找一定會漏，畫面上寫明，不自動套用（`src/ui/redact-detect.ts`）。
 
 - 人臉：OpenCV 的 YuNet 模型（`public/models/yunet-2023mar-dynamic.onnx`，進版控，約 225 KB），用 onnxruntime-web 的 WebAssembly 執行，不需要 WebGL。官方模型的輸入固定 640×640，`scripts/make-yunet.py` 從官方檔案改成可變的輸入尺寸（權重不動，比對過 sha256）。整張圖縮到長邊 960 與 320 各偵測一次：960 抓合照裡的小臉，320 抓佔滿畫面的大臉（模型適合約 10 到 300 像素的臉）。縮小時每次最多縮一半，原始解析度的照片一口氣縮小會產生鋸齒，分數會掉。0.7 以上直接加成框，0.6 到 0.7 列為「可能是臉」，畫成黃色虛線，讀者點一下才變成遮蔽框，訊息區也有「全部加上」的按鈕。同一張臉在兩種尺寸都找到時只留分數最高的。解碼與合併在 `src/tools/redact/faces.ts`，有單元測試。實測 14 張照片，Chromium、WebKit、Firefox、Brave 都是 71 張臉全找到、零誤判，真臉最低 0.81，不是臉最高 0.55
 - 個資：PP-OCRv5 辨識文字（見下一項），`src/tools/redact/pii.ts` 把同一行的字接起來比對電話（含帶國碼的與部分遮住的手機號碼）、Email、台灣的身分證與居留證、香港身分證、卡號、IP 位址、車牌（台灣的 `ABC-1234`、`1234-AB`，中國以省份簡稱開頭的 `粵B·D12345`，`ISO-8601` 這類標準編號除外，2026-11-19 起）、長串數字、網址與 @帳號，再把對到的字合成一個框。換行把一段個資拆成兩行時（聊天紀錄的對話框窄，Email 與電話常被拆開），上一行的結尾與下一行的開頭都是英數或 `@ . - _ + *`、下一行在正下方而且左邊大致對齊，就接起來再比對一次，跨過換行的在兩行各給一個框，上一行只對到半截的（`02-2963-01` 接 `88`）由接起來的取代（`findPiiInLineTexts`，有單元測試）。清單裡相鄰的兩項（一行電話、下一行 Email）版面也是這樣，所以上一行的那一半已經是別種個資，或本身就是完整的 Email、網址與帳號時不接。下一行的那一半完整時照樣接，`r119` 接 `21047@example.edu.tw` 的前半段一樣認得出人。2026-10-22 用 196 張合成截圖量過，規則找得到的個資，Tesseract 蓋住的從 64% 變成 69%，PP-OCRv5 從 85% 變成 93%（#140），多出的框只有 Tesseract 的一處雜訊碎片（上一行結尾的 `@` 接下一行的英文字）。「框起所有文字」把每一行文字都框起來，還沒辨識過時先辨識。照片、頭像與標點的碎片常被認成一個字，分數都很低，所以只有一個字、辨識的分數又低於 0.6 的行不框（`keepLine`），分數低但字多的行是縮小、壓縮過的小字，裡面可能有個資，照樣框
@@ -185,13 +185,19 @@ CI（`.github/workflows/ci.yml`）依瀏覽器拆成四台機器同時執行：C
 - 授權與來源寫在 `licenses/redact-detect.txt`
 - 網址帶 `?debug-faces`（例如 `/gears/redact/?debug-faces`）時，找人臉會在主控台印出建置的 commit 與每次偵測的尺寸、分數、位置與有沒有採用，讀者回報漏判、誤判時請對方整段貼回來。只有數字與座標，不含圖片的內容。不同的瀏覽器與照片的原始解析度會讓分數略有不同，本機重現不出來時靠它
 
-### 個資辨識模型（#187，進行中）
+### 個資辨識模型
 
-規則找不到的人名、地址與單位，用個資辨識模型 nym-pii 補上（模型與下載見下方「裝置量測」的「個資辨識」）。共用的程式在 `src/tools/redact/pii-model.ts`：
+規則找不到的人名、地址與單位，用個資辨識模型 nym-pii 補上（#187，2026-11-21 起，模型與下載見下方「裝置量測」的「個資辨識」）。第一版只做圖片，PDF 與檢查畫面內容之後接上。社群工作區的評測（`research/gears-ocr/` 的 `pipeline.mjs`）在 196 張合成截圖上，規則加上模型蓋住 74% 的個資，規則本身 15%，每張多框 0.10 處。
 
-- `joinLines`：文字辨識或 PDF 文字層的每一行接成一段交給模型，行與行之間放換行，記下每個位置來自哪一行的第幾個字。社群工作區的研究（`research/gears-ocr/` 的 `pipeline.mjs`）用這個做法，被換行拆開的個資也找得到
-- `spanBoxes`：模型找到的範圍換回字框，跨行的範圍每一行各給一個框，只有空白或換行的那一段不給框。字框合成一個框沿用 `pii.ts` 的 `boxOf`
-- 遮蔽的按鈕、跟規則的框合併、記憶體不夠時的處理與檢查畫面內容、寫作習慣檢查、逐字稿的接法，照 #187 的順序做
+- 按鈕「找人名、地址與單位」前面帶著大腦圖示（開源本機模型的標籤）。還沒辨識過文字時先辨識，規則找到的電話、Email 一起加上，模型找到的框跟規則的框一次加上，重疊的只留一個（`addFound` 讀的是上一次畫面更新時的框，連續呼叫兩次會漏算）。框直接加上、讀者逐一確認，評測裡每張只多框 0.10 處，不另外畫「可能是」的虛線
+- 流程（`src/ui/pii-detect.ts`）：文字辨識讀出的每一行（`findText` 的 `texts`，`pii.ts` 的 `lineTexts`）留著，再按一次不必重新辨識。`chunkLines` 依行分塊（每塊不超過 3,000 字，模型一次最多讀 8,192 個詞元，超過的部分會被截掉、不會報錯），`joinLines` 接成一段、行與行之間放換行，字與字之間補上的空白只在兩邊都是英數時留著，跟評測的做法相同。Worker（`src/ui/pii.worker.ts`）找到的範圍由 `spanBoxes` 換回字框，往外多留 15%，跟規則的框一樣
+- Worker 在編輯畫面打開時第一次用到才建立，之後留著，關掉編輯畫面時結束。模型的載入與辨識在 `src/ui/pii-runtime.ts`，裝置量測的 Worker 也用它：只用單執行緒的 WebAssembly，模型存在 `transformers-cache`，量測頁下載過的遮蔽直接用。service worker 換版本時只清 `gears-` 開頭的快取，不會清掉它
+- 按下按鈕之前寫出要下載約 200 MB（`PII_MB`，經過 Cloudflare 的實際傳輸量，量測頁與協助測試頁也用這個數字），以及手機上可能因為記憶體不夠讓頁面重新載入、暫存區會跟著清空，請先下載需要的檔案（`redact.model.note`）。下載量跟找人臉、辨識文字的下載量在同一次查詢裡算出來（`detect-download.ts` 的 `pii`），說明一起出現，圖片只會跳一次。模型已經在快取時不寫
+- 記憶體不夠：開始之前在 `history.state` 記下（`gearsPiiRedact`），做完或失敗時清掉，照量測頁的 `crashed`。打開遮蔽時記號還在，代表上一次做到一半分頁被重新載入，畫面說明原因（`redact.model.crashed`），同一個分頁不再出現按鈕。手機要不要預設不提供，等協助測試頁收到 iPhone 的數字再決定
+- 關掉 WebAssembly 時說明原因、不下載模型，讀不到 canvas 時照其他自動尋找的做法
+- 「已下載的模型」把它列成獨立的一列（`storage.item.pii`，`classify` 依網址裡的模型目錄分出來），刪語言模型時不會一起刪掉
+- 授權與來源寫在 `licenses/redact-detect.txt`
+- 瀏覽器測試在 `tests/e2e/redact-model.spec.ts`：攔下模型的請求、回內容不對的檔案時停下來，記號還在時不提供按鈕，關掉 WebAssembly 的情況在 `wasm-unavailable.spec.ts`。真的下載與載入只在設了 `GEARS_PII_MODEL=1` 時執行（CI 的 Chromium 那台），請求直接經過 Cloudflare 的快取到 assets.anoni.net：從測試裡攔下再回 194 MB 的檔案太慢，200 秒還在下載。2026-11-21 在 M5 Pro 的 Chromium（正式建置、還沒有快取）下載加辨識約 12 秒，英文的截圖裡人名、公司與電話都框到
 
 ## 檢查畫面內容
 
@@ -580,7 +586,7 @@ ProofMode（Guardian Project 給人權紀錄者的 Android App）拍照時不改
 
 找人名、地址、機構用的個資辨識模型（#139）在這台裝置上要多久、記憶體夠不夠（`src/ui/PiiBench.tsx`，Worker 是 `src/ui/pii-bench.worker.ts`，2026-11-19 起）。社群工作區的評測（`research/gears-pii/01-models.md`）選出 nym-pii 的 q4 版，跟規則合併之後找到約八成五的個資，但模型約 211 MB，上線之前要先知道手機能不能用。
 
-- 模型是 `onnx-community/nym-pii-multilingual-ONNX`（MIT）的 q4 版，照原樣放在 assets.anoni.net 的 `nym-pii-7ce7f1a/`（附 `README.txt` 與授權全文，onion 版由同一個網站的 `/models/assets/` 提供），2026-11-20 以前從 Hugging Face 下載。Hugging Face 送的是原始大小 210.7 MB，超過 #139 的 200 MB 門檻，從自己的網域經過 Cloudflare 時 tokenizer 會壓縮，實際傳輸約 200 MB（權重檔是 `application/octet-stream`，Cloudflare 不壓縮，#187）。模型、檔案清單與每個檔案的 SHA-256 在 `src/tools/redact/pii-model.ts` 的 `PII_MODEL`，遮蔽與其他工具之後共用同一份。Worker 照語言模型的社群轉檔版：`env.remoteHost` 換成 `ASSETS_MODELS`，`env.fetch` 只下載清單上的檔案、用 `downloadVerified` 比對 SHA-256，模型目錄以外的請求一律不送，CSP 不必另外開。WebAssembly 用 `?url` 從自己的網域載入，檔案存在 `transformers-cache`，「已下載的模型」算在語言模型那一列
+- 模型是 `onnx-community/nym-pii-multilingual-ONNX`（MIT）的 q4 版，照原樣放在 assets.anoni.net 的 `nym-pii-7ce7f1a/`（附 `README.txt` 與授權全文，onion 版由同一個網站的 `/models/assets/` 提供），2026-11-20 以前從 Hugging Face 下載。Hugging Face 送的是原始大小 210.7 MB，超過 #139 的 200 MB 門檻，從自己的網域經過 Cloudflare 時 tokenizer 會壓縮，實際傳輸約 200 MB（權重檔是 `application/octet-stream`，Cloudflare 不壓縮，#187）。模型、檔案清單與每個檔案的 SHA-256 在 `src/tools/redact/pii-model.ts` 的 `PII_MODEL`，遮蔽也用同一份（見上方「個資辨識模型」）。載入與辨識在 `src/ui/pii-runtime.ts`，照語言模型的社群轉檔版：`env.remoteHost` 換成 `ASSETS_MODELS`，`env.fetch` 只下載清單上的檔案、用 `downloadVerified` 比對 SHA-256，模型目錄以外的請求一律不送，CSP 不必另外開。WebAssembly 用 `?url` 從自己的網域載入，檔案存在 `transformers-cache`，「已下載的模型」另外列成一列。2026-11-21 起每段的時間包含詞元對回原文（遮蔽實際用的流程），之前只量模型本身，兩者差幾毫秒
 - 設定：CPU 1 個執行緒、4 個執行緒（要 cross-origin isolation）與顯示卡。每種設定換一個 Worker，三段虛構的範例文字（聊天訊息、通知單、中英夾雜，`PII_SAMPLES`）各辨識 3 次取中位數，另外記下載入時間與這次實際下載的位元組
 - Transformers.js 4.3 的 `token-classification` 不回傳字元位置，詞元對回原文的做法照研究的 `eval/pii-model.mjs` 移植成 `align`、`groupSpans`（`src/tools/redact/pii-model.ts`，單元測試在 `tests/unit/pii-model.spec.ts`）。範例文字與 `foundCount` 留在 `src/tools/bench/pii.ts`。「找到」是範例文字裡應該找到的人名、地址、單位、電話與 Email 找到幾個（`foundCount`，一半以上的字被蓋住才算），用來確認每種設定的結果一樣，評測在社群工作區
 - 手機記憶體不夠時，系統會把分頁重新載入，量測的結果跟著不見（2026-10-24 Gemma 4 E2B 在 iPhone 15 Pro 上就是這樣）。開始每一種設定之前在 `history.state` 記下設定（`gearsPiiBench`），做完或停止時清掉。打開頁面時記號還在，代表上一次量到一半被重新載入，結果多一筆 `crashed: true`，讀者照樣可以送出。`history.state` 只在這個分頁裡，不寫進 localStorage
@@ -711,7 +717,7 @@ ProofMode（Guardian Project 給人權紀錄者的 Android App）拍照時不改
 - 用到時才存的這些檔案放在不隨版本清掉的快取（`gears-keep`，#142）。工作台一天常部署好幾次，原本放在隨版本清掉的快取，每次換版本之後第一次找人臉或個資都要重新下載約 23 MB。網址不變，建置時 `vite.config.ts` 的 `serviceWorker()` 替每個檔案算內容的雜湊，寫進 `sw.js` 的 `LAZY`，service worker 存的時候在回應加上 `x-gears-hash`。讀的時候雜湊對不上就重新下載，新版本接手時刪掉內容變了或不在清單上的。存進去的內容已經解壓縮，原本的 `content-encoding` 與 `content-length` 拿掉。這份清單也算進 service worker 的版本，只換了用到時才存的檔案時一樣會換一版
 - 逐字稿的 Whisper 模型存在另一個不隨版本清掉的快取（`gears-models`），換新版本時不必重新下載 80 到 250 MB。網址帶著模型的版本，清單以外的在新版本接手時刪掉。畫面上標出已下載的模型，可以刪除
 - 模型檔的下載、比對 SHA-256、切段與這個快取共用 `src/core/models.ts`（#142）：`downloadVerified` 下載並比對，`cachedModel` 先找快取、同一個檔案同時有好幾個請求時共用一次下載、存不進去時這次照樣使用，`isCached`、`removeCached` 給畫面判斷「已下載」與刪除。逐字稿、sherpa-onnx 與裝置量測的語言模型的 Worker 都用它，量測頁只用下載與比對，快取留給 Transformers.js。分辨說話者的 `speaker-embed.ts` 只能匯入 Transformers.js 與 onnxruntime（見上方「逐字稿」），不用這裡，靠 service worker 快取
-- 已下載的模型（`/gears/storage/`，畫面在 `src/ui/StoragePage.tsx`，分類在 `src/core/storage.ts`，#142）：讀 `gears-models`、`gears-keep` 與量測頁的 `transformers-cache`，逐字稿的模型一個一列，其他依用途分列（分辨說話者、找人臉、辨識文字、執行模型的程式、pdf.js 的資料、驗證內容憑證），列出大小，可以逐列刪除或全部刪除，刪除之後下次用到時再下載。工作台本身的頁面與程式（`gears-<版本>`）是離線使用要用的，不列進來。大小用快取裡每個回應的 `blob().size` 加總，快取的內容在磁碟上，不會整個讀進記憶體。不能用 Cache API 時（私密瀏覽、Tor Browser）說明每次都要重新下載。入口在桌面的使用者區，逐字稿畫面原本的「刪除模型」保留
+- 已下載的模型（`/gears/storage/`，畫面在 `src/ui/StoragePage.tsx`，分類在 `src/core/storage.ts`，#142）：讀 `gears-models`、`gears-keep` 與 `transformers-cache`，逐字稿的模型一個一列，其他依用途分列（分辨說話者、找人臉、辨識文字、找人名與地址、執行模型的程式、pdf.js 的資料、驗證內容憑證、裝置量測的語言模型），列出大小，可以逐列刪除或全部刪除，刪除之後下次用到時再下載。工作台本身的頁面與程式（`gears-<版本>`）是離線使用要用的，不列進來。大小用快取裡每個回應的 `blob().size` 加總，快取的內容在磁碟上，不會整個讀進記憶體。不能用 Cache API 時（私密瀏覽、Tor Browser）說明每次都要重新下載。入口在桌面的使用者區，逐字稿畫面原本的「刪除模型」保留
 - 只存工作台自己的檔案。讀者放進暫存區的檔案只在記憶體裡，不寫進快取，只有換版本的那一刻經過 service worker（見下一項）
 - 換版本要重新載入頁面，暫存區只在記憶體裡，重新載入就沒了（`src/ui/offline.ts`）。暫存區是空的、畫面上也沒有填到一半的東西時（桌面、授權頁、還沒選檔案的工具說明，從空白開始的工具不算），不出現提示：讀者還沒在這個頁面按過或打過字，新版本裝好就直接換。已經在操作的，出現一行較輕的提示（`app.updateIdle`，不提暫存區），讀者按重新載入或分頁切到背景（`visibilitychange`）時換。換上之後一律顯示「已換上新版本」。新版本要先下載約 7 MB 才裝得好，這段時間讀者多半已經點過畫面，原本這時不出現提示、只等切到背景，桌面上永遠看不到提示，要切到從空白開始的工具或放進檔案才看得到（2026-10-22 的使用回饋）。2026-10-22 以前一律等切到背景、換上之後也不說，讀者重新整理之後看到的仍然是舊版（瀏覽器這時才下載新版本），切出去再回來才換好，不知道中間發生了什麼。暫存區有檔案時，畫面上方提示，讀者按「重新載入」才換上，避免同一個分頁混用新舊程式
 - 帶著暫存區換版本：新版本接手之後，頁面把暫存區（`tray.snapshot()`，檔案的每個版本、檢查結果與選取的檔案）用 `postMessage` 交給它，service worker 只放在自己的記憶體裡，用 `waitUntil` 撐到重新載入的頁面拿走（`tray.restore()`），最多 60 秒就放掉，不寫進快取或任何儲存空間。Blob 是參照，大檔案不會多複製一份。交給的對象是重新載入之後會接手的那一個：等新版本接手完成（`activated`）再交給它，不用固定的等待時間，電腦忙的時候新版本比較晚接手，交給舊版本的話它在重新載入的途中就被換掉了。新版本被更新的一版取代，或 8 秒內沒有接手，就交給目前的版本，重新載入不會讓等著的版本接手。5 秒內沒有回應就不重新載入，提示讀者先下載需要的檔案，再按一次才清空暫存區重新載入。2026-10-17 在 Chromium、WebKit、Firefox 實測過（含 50 MB 的檔案），測試也在這三種核心與 iPhone 尺寸執行。這個流程由舊頁面的程式交出、新版本的 service worker 收下，之後的版本都要保留 `sw-template.js` 的 `hold` 與 `take`

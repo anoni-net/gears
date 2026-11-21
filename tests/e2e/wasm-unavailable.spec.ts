@@ -52,6 +52,26 @@ test("遮蔽：自動尋找說明原因，請讀者手動框選", async ({ page 
   await expect(page.getByTestId("redact-auto-status")).toContainText("請手動框選");
 });
 
+test("遮蔽：找人名、地址與單位也說明原因，不下載模型", async ({ page }) => {
+  const asked: string[] = [];
+  page.on("request", (r) => r.url().includes("nym-pii") && asked.push(r.url()));
+  await page.goto("./");
+  const png = await page.evaluate(async () => {
+    const c = document.createElement("canvas");
+    c.width = 400;
+    c.height = 200;
+    c.getContext("2d")!.fillRect(40, 40, 120, 60);
+    const b = await new Promise<Blob>((r) => c.toBlob((x) => r(x!), "image/png"));
+    return Array.from(new Uint8Array(await b.arrayBuffer()));
+  });
+  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.getByRole("link", { name: /截圖上的名字與電話/ }).click()]);
+  await chooser.setFiles({ name: "chat.png", mimeType: "image/png", buffer: Buffer.from(png) });
+  await expect(page.getByTestId("redact-canvas")).toBeVisible();
+  await page.getByRole("button", { name: "找人名、地址與單位" }).click();
+  await expect(page.getByTestId("redact-auto-status")).toContainText("關掉了 WebAssembly");
+  expect(asked).toEqual([]);
+});
+
 test("HEIC：瀏覽器不能直接顯示又沒有 WebAssembly 時，說明載入不了解碼器", async ({ page, browserName }) => {
   // Safari（WebKit）本來就能解 HEIC，用不到 libheif
   test.skip(browserName === "webkit", "WebKit 內建 HEIC 解碼");

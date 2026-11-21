@@ -46,7 +46,7 @@ async function remove(rows: Row[]) {
 
 // 這一列的名稱與用在哪裡
 const nameOf = ({ group, model }: StorageKey) => (model ? tDynamic(`transcribe.model.${model}`) : tDynamic(`storage.item.${group}`));
-const usedBy = ({ group }: StorageKey) => (group === "transcribe" || group === "speaker" ? t("tool.transcribe") : group === "faces" || group === "ocr" ? t("tool.redact") : group === "c2pa" ? t("tool.verify") : group === "other" ? "" : tDynamic(`storage.used.${group}`));
+const usedBy = ({ group }: StorageKey) => (group === "transcribe" || group === "speaker" ? t("tool.transcribe") : group === "faces" || group === "ocr" || group === "pii" ? t("tool.redact") : group === "c2pa" ? t("tool.verify") : group === "other" ? "" : tDynamic(`storage.used.${group}`));
 
 export function StoragePage() {
   // undefined 是還在計算

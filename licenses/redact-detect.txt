@@ -1,8 +1,8 @@
-遮蔽的自動尋找：YuNet、PP-OCRv5 與 onnxruntime-web
-====================================================
+遮蔽的自動尋找：YuNet、PP-OCRv5、nym-pii 與 onnxruntime-web
+==============================================================
 
-遮蔽畫面的「找人臉」與「找電話、Email 等個資」在讀者按下按鈕時，才從本站載入以下檔案，
-在瀏覽器裡執行，圖片不會上傳。
+遮蔽畫面的「找人臉」、「找電話、Email 等個資」與「找人名、地址與單位」在讀者按下按鈕時，
+才載入以下檔案，在瀏覽器裡執行，圖片不會上傳。
 
 人臉偵測
 - YuNet 人臉偵測模型 face_detection_yunet_2023mar.onnx（MIT，Copyright (c) 2020 Shiqi Yu）
@@ -33,6 +33,18 @@
   WebAssembly 裡編譯進去的第三方元件與授權列在
   https://github.com/microsoft/onnxruntime/blob/main/ThirdPartyNotices.txt
 
+人名、地址與單位（原封不動使用）
+- nym-pii-multilingual 的 q4 版（MIT，nym-pii-multilingual 的作者），底層模型 jhu-clsp/mmBERT-base（MIT）
+  原始模型：https://huggingface.co/Wismut/nym-pii-multilingual
+    commit 0ed0242d67a30ca6a83e5f118506ff1e1daf83ca
+  ONNX 版：https://huggingface.co/onnx-community/nym-pii-multilingual-ONNX
+    commit 7ce7f1a4dfc55a8037c3ae539b538fee2d44e5f0 的 onnx/model_q4.onnx 與 onnx/model_q4.onnx_data，
+    SHA-256：6302a673dcf5a4782abc8e7a339bacb1215e5b7b2cf280f749d1d82b3598a9ec
+             e98dc55d9f40d0a53e35b6ff05481af509bdf3c0961671116dd032252349ac07
+  從社群的 https://assets.anoni.net/gears/models/nym-pii-7ce7f1a/ 下載（onion 版由同一個網站提供），
+  目錄裡另有 README.txt 與授權全文
+- 用 Transformers.js 4.3.2（Apache-2.0）執行，授權全文見「逐字稿」那一份（transcribe.txt）
+
 以下是授權全文。
 
 
@@ -41,6 +53,31 @@
 MIT License
 
 Copyright (c) 2020 Shiqi Yu <shiqi.yu@gmail.com>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+---- MIT License（nym-pii-multilingual、mmBERT-base）----
+
+MIT License
+
+Copyright (c) the nym-pii-multilingual authors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

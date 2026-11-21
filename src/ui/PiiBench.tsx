@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import { t, tDynamic } from "../i18n/index.ts";
 import { median } from "../tools/bench/ocr.ts";
 import { PII_SAMPLES, type PiiSampleId, foundCount } from "../tools/bench/pii.ts";
-import { PII_MODEL } from "../tools/redact/pii-model.ts";
+import { PII_MB, PII_MODEL } from "../tools/redact/pii-model.ts";
 import { type BenchEnv, hasGpu } from "./bench-env.ts";
 import type { PiiBenchReply, PiiBenchRequest } from "./pii-bench.worker.ts";
 import workerUrl from "./pii-bench.worker.ts?worker&url";
@@ -163,7 +163,7 @@ export function PiiBench({ env, runs, setRuns, busy, setBusy }: Props) {
       <h3 id="bench-pii-title">{t("bench.pii.title")}</h3>
       <p class="hint">{t("bench.pii.intro")}</p>
       <p class="notice" data-testid="bench-pii-remote">
-        {t("bench.pii.remote", { mb: mb(PII_MODEL.bytes) })}
+        {t("bench.pii.remote", { mb: PII_MB })}
       </p>
 
       <fieldset class="choices" disabled={busy}>
@@ -194,7 +194,7 @@ export function PiiBench({ env, runs, setRuns, busy, setBusy }: Props) {
           </button>
         ) : (
           <button type="button" class="primary" disabled={!env || busy || !chosen.length} onClick={() => void start()}>
-            {t("bench.pii.start", { mb: mb(PII_MODEL.bytes) })}
+            {t("bench.pii.start", { mb: PII_MB })}
           </button>
         )}
       </div>

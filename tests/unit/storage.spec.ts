@@ -10,6 +10,10 @@ test("依快取與網址分成一列一列", () => {
   expect(classify(MODEL_CACHE, at("models/whisper/whisper-base-0000000/config.json"), "/gears/")).toEqual({ group: "other" });
   expect(classify(MODEL_CACHE, at("models/speaker/campplus-x/model.onnx"), "/gears/")).toEqual({ group: "speaker" });
   expect(classify(KEEP_CACHE, at("models/yunet-2023mar-dynamic.onnx"), "/gears/")).toEqual({ group: "faces" });
+  // 個資辨識模型存在 transformers-cache，另外列一列，clearnet 與 onion 的網址都認得
+  expect(classify(LLM_CACHE, "https://assets.anoni.net/gears/models/nym-pii-7ce7f1a/onnx/model_q4.onnx_data", "/gears/")).toEqual({ group: "pii" });
+  expect(classify(LLM_CACHE, "http://gears.example.onion/models/assets/nym-pii-7ce7f1a/tokenizer.json", "/")).toEqual({ group: "pii" });
+  expect(classify(LLM_CACHE, "https://assets.anoni.net/gears/models/qwen3-1.7b-3231b52/config.json", "/gears/")).toEqual({ group: "llm" });
   expect(classify(KEEP_CACHE, at("models/ppocr/PP-OCRv5_mobile_rec.onnx"), "/gears/")).toEqual({ group: "ocr" });
   expect(classify(KEEP_CACHE, at("models/bench/ocr-phone.png"), "/gears/")).toEqual({ group: "ocr" });
   expect(classify(KEEP_CACHE, at("vendor/pdfjs/cmaps/UniCNS-UCS2-H.bcmap"), "/gears/")).toEqual({ group: "pdf" });

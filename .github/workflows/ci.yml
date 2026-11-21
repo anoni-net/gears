@@ -70,6 +70,10 @@ jobs:
       # GitHub 的 ubuntu 機器沒有預裝
       - run: sudo apt-get install -y --no-install-recommends ffmpeg
       - run: npx playwright test ${{ matrix.projects }}
+        # 遮蔽的個資辨識模型（約 200 MB）只在 Chromium 那台真的從 assets.anoni.net 下載、載入一次
+        # （tests/e2e/redact-model.spec.ts），其他瀏覽器測按鈕、說明與退回的路徑
+        env:
+          GEARS_PII_MODEL: ${{ matrix.name == 'chromium' && '1' || '' }}
       # onion 版（GEARS_TARGET=onion）建得起來、沒有連到 clearnet，網站放在根目錄也打得開
       - if: matrix.name == 'chromium'
         run: npm run test:onion

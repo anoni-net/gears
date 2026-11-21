@@ -26,7 +26,12 @@ export const PII_MODEL = {
   } as Record<string, string>,
   // 沒有壓縮的大小：模型 0.7 MB 加外部權重 194.6 MB，tokenizer 15.4 MB
   bytes: 701534 + 194565120 + 15395262 + 5984 + 574,
+  // 經過 Cloudflare 的實際傳輸量（tokenizer 有壓縮，2026-11-20 量），畫面上寫的「約 200 MB」都用這個數字
+  transfer: 200311798,
 } as const;
+
+// 畫面上寫的下載量（MB），遮蔽、量測頁與協助測試頁都用這一個
+export const PII_MB = Math.round(PII_MODEL.transfer / 1e6);
 
 // 模型的標籤對應到人看得懂的幾類。日期、時間、年齡、職稱這類不算個資，對不到的不列
 export type PiiModelKind = "person" | "address" | "org" | "phone" | "email" | "id" | "other";
@@ -167,8 +172,11 @@ export function argmax(row: ArrayLike<number>): number {
 // --- 文字行與字框 ---
 
 // 文字辨識或 PDF 文字層的每一行接成一段交給模型，行與行之間放換行。模型讀到完整的句子，
-// 被換行拆開的人名與地址也找得到（社群工作區 research/gears-ocr 的 pipeline.mjs）。
-// at 是每個位置來自哪一行的第幾個字，換行是 null
+// 被換行拆開的人名與地址也找得到。做法照社群工作區 research/gears-ocr 的 pipeline.mjs（評測的 74% 就是這樣量的）：
+// 字與字之間補上的空白（沒有字框）只在兩邊都是英數時留著，中文字之間不留，模型讀到的才不會是「電 話 0912」。
+// at 是每個位置來自哪一行的第幾個字，換行與補上的空白是 null
+const ASCII = /[\x21-\x7e]/;
+
 export function joinLines(lines: LineText[]): { text: string; at: ([number, number] | null)[] } {
   let text = "";
   const at: ([number, number] | null)[] = [];
@@ -177,10 +185,40 @@ export function joinLines(lines: LineText[]): { text: string; at: ([number, numb
       text += "\n";
       at.push(null);
     }
-    text += line.text;
-    for (let k = 0; k < line.text.length; k++) at.push([i, k]);
+    for (let k = 0; k < line.text.length; k++) {
+      const c = line.text[k]!;
+      if (c === " " && !line.boxes[k]) {
+        const before = text.at(-1) ?? "";
+        const after = line.text.slice(k + 1).trimStart()[0] ?? "";
+        if (!ASCII.test(before) || !ASCII.test(after) || before === " ") continue;
+      }
+      text += c;
+      at.push(line.boxes[k] ? [i, k] : null);
+    }
   });
   return { text, at };
+}
+
+// 模型一次最多讀 8192 個詞元（tokenizer_config.json 的 model_max_length），超過的部分會被截掉、不會報錯。
+// 一張截圖遠低於這個量，長的 PDF 頁面與掃描檔依行分塊，每塊不超過 max 個字，不在一行的中間切開。
+// 手機上記憶體與時間都隨長度成長，所以上限比模型能讀的少很多
+export const CHUNK_CHARS = 3000;
+
+export function chunkLines(lines: LineText[], max = CHUNK_CHARS): LineText[][] {
+  const out: LineText[][] = [];
+  let chunk: LineText[] = [];
+  let size = 0;
+  for (const line of lines) {
+    if (chunk.length && size + line.text.length + 1 > max) {
+      out.push(chunk);
+      chunk = [];
+      size = 0;
+    }
+    chunk.push(line);
+    size += line.text.length + 1;
+  }
+  if (chunk.length) out.push(chunk);
+  return out;
 }
 
 export interface ModelMatch {
