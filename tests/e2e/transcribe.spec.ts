@@ -192,7 +192,7 @@ test("背景噪音：Silero VAD 判斷沒有人說話，一段都不送進 Whisp
   await expect(page.getByTestId("transcript")).toHaveCount(0);
 });
 
-test("Silero VAD 載入失敗時退回音量判斷，畫面說明，噪音照樣送進 Whisper", async ({ page }) => {
+test("Silero VAD 載入失敗時退回音量判斷，畫面說明，噪音照樣送進 Whisper", async ({ page, guard }) => {
   test.skip(!hasModel, "沒有下載 base 模型");
   test.setTimeout(240_000);
   await page.context().route("**/models/vad/**", (route) => route.fulfill({ status: 404, body: "" }));
@@ -204,6 +204,8 @@ test("Silero VAD 載入失敗時退回音量判斷，畫面說明，噪音照樣
   await expect(page.getByTestId("transcribe-status")).toHaveText(/^(沒有辨識到說話的內容。|完成，共 \d+ 段)/, { timeout: 200_000 });
   // 音量判斷把整段噪音當成說話，送進 Whisper
   expect(Number(await page.getByTestId("transcribe-status").getAttribute("data-pieces"))).toBeGreaterThan(0);
+  // 故意讓模型回 404，WebKit 會在主控台留下載入失敗的紀錄（同 bench.spec.ts）
+  guard.errors = guard.errors.filter((e) => !e.includes("status of 404"));
 });
 
 test("緬甸語這類 sherpa-onnx 的模型不寫歌聲與背景音樂的說明（仍用音量判斷）", async ({ page }) => {
