@@ -197,7 +197,7 @@ CI（`.github/workflows/ci.yml`）依瀏覽器拆成四台機器同時執行：C
 - 關掉 WebAssembly 時說明原因、不下載模型，讀不到 canvas 時照其他自動尋找的做法
 - 「已下載的模型」把它列成獨立的一列（`storage.item.pii`，`classify` 依網址裡的模型目錄分出來），刪語言模型時不會一起刪掉
 - 授權與來源寫在 `licenses/redact-detect.txt`
-- 瀏覽器測試在 `tests/e2e/redact-model.spec.ts`：攔下模型的請求、回內容不對的檔案時停下來，記號還在時不提供按鈕，關掉 WebAssembly 的情況在 `wasm-unavailable.spec.ts`。真的下載與載入只在設了 `GEARS_PII_MODEL=1` 時執行（CI 的 Chromium 那台），請求直接經過 Cloudflare 的快取到 assets.anoni.net：從測試裡攔下再回 194 MB 的檔案太慢，200 秒還在下載。2026-11-21 在 M5 Pro 的 Chromium（正式建置、還沒有快取）下載加辨識約 12 秒，英文的截圖裡人名、公司與電話都框到
+- 瀏覽器測試在 `tests/e2e/redact-model.spec.ts`：攔下模型的請求、回內容不對的檔案時停下來，記號還在時不提供按鈕，關掉 WebAssembly 的情況在 `wasm-unavailable.spec.ts`。真的下載與載入只在本機設了 `GEARS_PII_MODEL=1` 時執行（`GEARS_PII_MODEL=1 npx playwright test tests/e2e/redact-model.spec.ts --project=chromium`），請求直接經過 Cloudflare 的快取到 assets.anoni.net：從測試裡攔下再回 194 MB 的檔案太慢，200 秒還在下載。CI 不執行這一項，assets.anoni.net 連不上時會擋住部署（2026-11-21 決定），改模型或流程時在本機執行一次。2026-11-21 在 M5 Pro 的 Chromium（正式建置、還沒有快取）下載加辨識約 12 秒，英文的截圖裡人名、公司與電話都框到
 
 ## 檢查畫面內容
 

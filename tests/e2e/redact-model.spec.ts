@@ -4,9 +4,9 @@ import { PII_MODEL } from "../../src/tools/redact/pii-model.ts";
 import { type Guard, expect, test } from "./guard.ts";
 
 // 遮蔽的「找人名、地址與單位」（#187，src/ui/pii-detect.ts）。模型從 assets.anoni.net 下載：
-// 一般的測試攔下來、回內容不對的檔案，確認會停下來。真的下載與載入只在 Chromium、設了 GEARS_PII_MODEL=1 時執行
-// （CI 的 Chromium 那台），約 200 MB 經過 Cloudflare 的快取。從測試裡攔下再回 194 MB 的檔案太慢（2026-11-21 試過，
-// 200 秒還在下載），所以那一項讓請求直接出去
+// 一般的測試攔下來、回內容不對的檔案，確認會停下來。真的下載與載入只在本機的 Chromium、設了 GEARS_PII_MODEL=1 時
+// 執行（約 200 MB，CI 不執行：assets.anoni.net 連不上時會擋住部署）。從測試裡攔下再回 194 MB 的檔案太慢
+// （2026-11-21 試過，200 秒還在下載），所以那一項讓請求直接出去
 
 const DIR = assetsUrl(PII_MODEL.dir, "");
 
