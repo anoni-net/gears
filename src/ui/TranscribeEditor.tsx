@@ -394,7 +394,8 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
     if (punct.kind === "running") {
       const p = punct.progress;
       if (!p) return t("transcribe.punct.loading");
-      if (p.kind === "download") return t("transcribe.punct.downloading", { loaded: mb(p.loaded), total: mb(p.total) });
+      // 用百分比：讀到的位元組是解壓縮之後的（總量 176 MB），跟說明裡經過壓縮的下載量（約 148 MB）對不上
+      if (p.kind === "download") return t("transcribe.punct.downloading", { percent: Math.round((p.loaded / p.total) * 100) });
       if (p.kind === "loading") return t("transcribe.punct.loading");
       return t("transcribe.punct.running", { percent: Math.round((p.done / p.total) * 100) });
     }

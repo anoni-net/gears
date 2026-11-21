@@ -136,6 +136,8 @@ test("標點建議：英語、台語、粵語與 Omnilingual 的逐字稿不出�
 });
 
 test("標點建議：接受之前匯出原文，可以逐段接受、全部接受、復原與全部捨棄", async ({ page }) => {
+  // 本機的 Firefox、WebKit 單獨執行就要 8 到 10 秒，CI 的機器只有 4 核心
+  test.setTimeout(90_000);
   await fakeWorkers(page, { segments: SEGMENTS, punct: MARKS });
   await transcribe(page);
   const original = await txt(page);
@@ -231,7 +233,7 @@ test("標點建議：下載途中按停止或關掉逐字稿，不會被當成�
   await fakeWorkers(page, { segments: SEGMENTS, punct: "hang" });
   await transcribe(page);
   await suggest(page);
-  await expect(page.getByTestId("punct-status")).toHaveText(/^下載標點模型中/);
+  await expect(page.getByTestId("punct-status")).toHaveText(/^下載標點模型中…\d+%$/);
   expect(await page.evaluate(() => sessionStorage.getItem("gears-punct"))).toBe("1");
   // 執行中不能重新轉
   await expect(page.getByRole("button", { name: "再轉一次" })).toBeDisabled();
@@ -328,8 +330,47 @@ test("標點建議：真的下載與執行模型，補上標點，接受之後�
   testInfo.annotations.push({ type: "punct", description: `${MINUTE.join("").length} 字，第一次（含下載）${first} ms，已在快取 ${cached} ms` });
   console.log(`[punct] ${MINUTE.join("").length} 字，第一次（含下載）${first} ms，已在快取 ${cached} ms`);
   console.log(accepted);
+  // 重新打開逐字稿：模型已經在快取裡，說明不寫下載量（punctStored 查的網址跟 Transformers.js 存的相同）
+  await transcribe(page);
+  await expect(page.getByTestId("punct-note")).toBeVisible();
+  await expect(page.getByTestId("punct-note")).not.toContainText("MB");
   // 模型存在快取，「已下載的模型」另外列一列
   await page.goto("./storage/");
   await expect(page.getByText("逐字稿的標點模型")).toBeVisible();
+  forgetRouted(guard);
+});
+
+test("標點建議：真的模型處理約 1 小時的逐字稿，分段算、只多了標點", async ({ page, guard, browserName }, testInfo) => {
+  test.skip(browserName !== "chromium", "真的模型只在 Chromium 載入");
+  test.skip(process.env.GEARS_PUNCT_MODEL !== "1", "真的下載模型（約 148 MB）要設 GEARS_PUNCT_MODEL=1");
+  test.setTimeout(600_000);
+  // 約 12,000 字，評測量到的朗讀速度（每秒 3.35 字）約 1 小時
+  const texts = Array.from({ length: 48 }, () => MINUTE).flat();
+  const segments = texts.map((text, i) => ({ start: i * 3.5, end: i * 3.5 + 3.5, text }));
+  await fakeWorkers(page, { segments });
+  await transcribe(page);
+  const original = await txt(page);
+  const status = page.getByTestId("punct-status");
+  // 先下載好模型，第二次才量分段處理的時間
+  await suggest(page);
+  await expect(status).toHaveText(/^\d+ 段有建議的標點/, { timeout: 400_000 });
+  await page.getByRole("button", { name: "全部捨棄" }).click();
+  const seen = new Set<string>();
+  const t0 = Date.now();
+  await suggest(page);
+  // 記下看到的進度，確認是一段一段算的
+  while (!/段有建議的標點/.test((await status.textContent()) ?? "")) {
+    seen.add((await status.textContent()) ?? "");
+    await page.waitForTimeout(200);
+    expect(Date.now() - t0).toBeLessThan(300_000);
+  }
+  const elapsed = Date.now() - t0;
+  expect([...seen].filter((s) => /分析中…\d+%/.test(s)).length).toBeGreaterThan(2);
+  await page.getByRole("button", { name: "全部接受" }).click();
+  const accepted = await txt(page);
+  expect(accepted.replace(/[，。？]/g, "")).toBe(original);
+  const chars = texts.join("").length;
+  testInfo.annotations.push({ type: "punct", description: `${chars} 字、${segments.length} 段，已在快取 ${elapsed} ms` });
+  console.log(`[punct] ${chars} 字、${segments.length} 段，已在快取 ${elapsed} ms，看到的進度：${[...seen].join(" / ")}`);
   forgetRouted(guard);
 });

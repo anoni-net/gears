@@ -668,8 +668,8 @@ ProofMode（Guardian Project 給人權紀錄者的 Android App）拍照時不改
 - 接受跟自己指定要換掉的字共用同一份復原紀錄，可以一步一步復原。每段的建議綁著算出它的那份文字，段落的文字換過（換掉的字、接受）時不顯示，復原回同一份文字時又出現。重新轉一次時清掉
 - 記憶體：開始之前結束辨識用的 Worker（Breeze 的模型超過 1 GB），標點的 Worker 算完就結束，下次轉逐字稿或再補一次標點時從快取載入。手機與平板上第一次按下時先展開說明（`transcribe.punct.phone`）：功能還在測試、要下載約 148 MB、電腦上執行時瀏覽器的記憶體峰值約 1.4 GB、記憶體不夠時頁面會重新載入，下面是「仍要使用」與「先幫忙量測」，照遮蔽的個資辨識
 - 當機記號：建立 Worker 時在 sessionStorage 記下 `gears-punct`，做完、失敗、按停止或關掉逐字稿時清掉。打開逐字稿時記號還在，畫面說明上一次做到一半頁面重新載入了（`transcribe.punct.crashed`），同一個分頁不再出現按鈕。手機上的說明展開時還沒開始，不記
-- 執行中顯示進度（下載的位元組，之後是算完幾段），可以停止，不能重新轉，也不出現換版本的提示（`useWorking`）。模型下載失敗（網路、SHA-256 對不上）與執行失敗分開說明：Transformers.js 會把 `env.fetch` 的錯誤換成找不到檔案，`assets-env.ts` 另外記下下載失敗的原因
-- 2026-11-21 在 M5 Pro 的 Chromium（正式建置）實測 17 段、251 字（約 75 秒的朗讀量）：第一次（下載加執行）11.4 秒，模型已在快取時 3.8 秒，大部分是建立 Worker、載入 tokenizer 與模型的時間
+- 執行中顯示進度，下載與分析都用百分比（讀到的位元組是解壓縮之後的，總量 176 MB，寫成 MB 會跟說明裡的約 148 MB 對不上），可以停止，不能重新轉，也不出現換版本的提示（`useWorking`）。模型下載失敗（網路、SHA-256 對不上）與執行失敗分開說明：Transformers.js 會把 `env.fetch` 的錯誤換成找不到檔案，`assets-env.ts` 另外記下下載失敗的原因
+- 2026-11-21 在 Apple M5 Pro 的 Chromium（Playwright、正式建置）實測，當時另有程式佔用約兩個核心：17 段、251 字（約 75 秒的朗讀量）第一次（下載加執行）9.4 到 11.4 秒，模型已在快取時 2.3 到 4.9 秒，大部分是建立 Worker、載入 tokenizer 與模型的時間。816 段、12,048 字（約 1 小時的朗讀量，7,490 個詞元、22 段）模型已在快取時 33 到 55 秒，比評測按比例推估的 18 秒慢，同一份文字在 Node（onnxruntime-node 單執行緒）要 7.3 秒。Worker 用的是 Transformers.js 選的 asyncify 版 WebAssembly，跟逐字稿與個資辨識相同，在沒有其他負載的電腦上要再量一次
 - 瀏覽器測試在 `tests/e2e/transcribe-punct.spec.ts`。CI 沒有會產生段落的錄音，辨識與標點的 Worker 換成固定回覆的假 Worker（用 `addInitScript` 換掉 `Worker`），測按鈕出現的條件、接受與捨棄之後下載的 TXT、手機上的確認、當機記號與停止。下載失敗那一項用真的標點 Worker，攔下模型的請求回內容不對的檔案。真的下載與執行只在本機設了 `GEARS_PUNCT_MODEL=1` 時執行（`GEARS_PUNCT_MODEL=1 npx playwright test tests/e2e/transcribe-punct.spec.ts --project=chromium`），請求經過 Cloudflare 到 assets.anoni.net，CI 不執行，改模型或流程時在本機執行一次
 - 還沒確認的：iPhone、Safari、Firefox 上的速度與記憶體，以及在 Worker 裡、跟 Whisper 的 Worker 先後執行時的峰值。自然對話、多人交談的錄音（評測的錄音是 FLEURS 的朗讀，口語只有立法院公報的速記稿）。拿掉 Whisper 原有的標點再交給模型、插入時保留原有標點的做法，F1 沒有另外量過。模型只會輸出逗號，原文該用頓號的地方（「鈣、鉀」）會建議成逗號
 

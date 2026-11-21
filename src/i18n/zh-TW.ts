@@ -348,7 +348,7 @@ export const zhTW = {
   "transcribe.punct.noteStored": "華語的逐字稿常常沒有標點。「建議標點」用開源本機模型補上逗號、句號與問號，由你確認之後才套用。",
   "transcribe.punct.phone": "建議標點在手機與平板上還在測試：要下載約 {mb} MB 的開源本機模型，在電腦上執行時瀏覽器的記憶體最多用到約 1.4 GB。記憶體不夠時頁面會重新載入，轉好的逐字稿與暫存區都會清空，請先下載需要的檔案。",
   "transcribe.punct.crashed": "上一次補標點時頁面重新載入了，多半是裝置的記憶體不夠，同一個分頁不再出現「建議標點」的按鈕。",
-  "transcribe.punct.downloading": "下載標點模型中…{loaded} / {total}",
+  "transcribe.punct.downloading": "下載標點模型中…{percent}%",
   "transcribe.punct.loading": "載入標點模型中…",
   "transcribe.punct.running": "標點模型分析中…{percent}%",
   "transcribe.punct.ready": "{n} 段有建議的標點，顏色較深、加了底線的就是。下載、複製與放進暫存區的內容維持原文，按「接受」之後才換上。",

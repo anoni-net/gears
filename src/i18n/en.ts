@@ -342,7 +342,7 @@ export const en: Record<MessageKey, string> = {
   "transcribe.punct.noteStored": "Mandarin transcripts often come out without punctuation. “Suggest punctuation” uses an open-source on-device model to add commas, full stops and question marks, and nothing changes until you accept them.",
   "transcribe.punct.phone": "Suggested punctuation is still being tested on phones and tablets. It downloads an open-source on-device model of about {mb} MB, and on a computer the browser uses up to about 1.4 GB of memory while it runs. If memory runs out the page reloads, clearing the transcript and the tray, so download the files you need first.",
   "transcribe.punct.crashed": "The page reloaded last time punctuation was being suggested, most likely because this device ran out of memory. This tab no longer offers the “Suggest punctuation” button.",
-  "transcribe.punct.downloading": "Downloading the punctuation model… {loaded} / {total}",
+  "transcribe.punct.downloading": "Downloading the punctuation model… {percent}%",
   "transcribe.punct.loading": "Loading the punctuation model…",
   "transcribe.punct.running": "Suggesting punctuation… {percent}%",
   "transcribe.punct.ready": "{n} segments have suggested punctuation, shown darker and underlined. Downloads, copies and files added to the tray keep the original text until you accept.",

@@ -343,7 +343,7 @@ export const zhCN: Record<MessageKey, string> = {
   "transcribe.punct.noteStored": "华语的逐字稿常常没有标点。「建议标点」用开源本地模型补上逗号、句号与问号，由你确认之后才应用。",
   "transcribe.punct.phone": "建议标点在手机与平板上还在测试：要下载约 {mb} MB 的开源本地模型，在电脑上运行时浏览器的内存最多用到约 1.4 GB。内存不够时页面会重新加载，转好的逐字稿与暂存区都会清空，请先下载需要的文件。",
   "transcribe.punct.crashed": "上一次补标点时页面重新加载了，多半是设备的内存不够，同一个分页不再出现「建议标点」的按钮。",
-  "transcribe.punct.downloading": "下载标点模型中…{loaded} / {total}",
+  "transcribe.punct.downloading": "下载标点模型中…{percent}%",
   "transcribe.punct.loading": "加载标点模型中…",
   "transcribe.punct.running": "标点模型分析中…{percent}%",
   "transcribe.punct.ready": "{n} 段有建议的标点，颜色较深、加了下划线的就是。下载、复制与放进暂存区的内容维持原文，按「接受」之后才换上。",
