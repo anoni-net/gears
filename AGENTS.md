@@ -77,6 +77,8 @@ CI（`.github/workflows/ci.yml`）依瀏覽器拆成四台機器同時執行：C
 
 開發伺服器沒有 CSP，瀏覽器測試用的是 `vite preview` 提供的正式建置，CSP 會一起生效。
 
+每個瀏覽器測試都經過 `tests/e2e/guard.ts`：頁面不能有對外連線，主控台不能有錯誤。已知、跟工作台的程式無關的錯誤列在 `BENIGN`。WebKit 內建的媒體控制列（`<audio>`、`<video>` 的影子樹）會印出按鈕圖示載入失敗（`airplay-placard`、`pip-placard` 這類）與控制列樣式被 `style-src` 擋下兩種錯誤，只在 WebKit 放過（`WEBKIT_MEDIA`，2026-11-22 起）。它們原本讓開錄音、影片的測試在 WebKit 與 iPhone 偶爾失敗，兩次擋下部署。工作台自己的樣式都是外部檔案，同樣的問題 Chromium 與 Firefox 會用各自的訊息報出來，那兩個核心照樣嚴格檢查。
+
 ## 目錄
 
 | 位置 | 內容 |
