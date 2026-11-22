@@ -4220,7 +4220,8 @@ body > noscript {
 }
 
 /* 設計原則頁的示意圖（src/ui/AboutFigures.tsx）：放大的圖示、外框與箭頭，標籤是一般的文字，三個語系各自換行。
-   圖示用連結色（深色模式是淺青），不用完成綠與分類色 */
+   圖示圈跟工具的圖示圈（.ic）同一種形狀：細框線加上淡底色。顏色用連結色（深色模式是淺青），
+   不用完成綠與分類色：分類色只用在桌面與工具的標題，用在這裡的話第二步會跟標題的工具圖示一模一樣，看起來像可以點 */
 .about-fig {
   margin: var(--sp-5) 0;
   padding: var(--sp-4);
@@ -4252,8 +4253,9 @@ body > noscript {
   justify-content: center;
   width: 2.75rem;
   height: 2.75rem;
+  border: 1px solid var(--link);
   border-radius: var(--radius-pill);
-  background: color-mix(in srgb, var(--link) 12%, var(--surface));
+  background: color-mix(in srgb, var(--link) 8%, var(--surface));
   color: var(--link);
 }
 
@@ -4282,7 +4284,8 @@ body > noscript {
 }
 
 .fig-node.danger .fig-icon {
-  background: color-mix(in srgb, var(--danger) 12%, var(--surface));
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 8%, var(--surface));
   color: var(--danger-text);
 }
 
