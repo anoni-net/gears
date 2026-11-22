@@ -104,7 +104,18 @@ export function Desktop({ onTask }: Props) {
                     </span>
                     {tDynamic(`tag.${tag}`)}
                   </dt>
-                  <dd>{tDynamic(`tag.${tag}.desc`)}</dd>
+                  <dd>
+                    {tDynamic(`tag.${tag}.desc`)}
+                    {/* 經過伺服器的說明接著連到遠端傳送的伺服器說明頁 */}
+                    {tag === "server" ? (
+                      <>
+                        <a href={routeUrl("remote-server")} onClick={(e) => onRouteClick(e, () => navigate("remote-server"))}>
+                          {t("remote-server.title")}
+                        </a>
+                        {t("tag.server.end")}
+                      </>
+                    ) : null}
+                  </dd>
                 </div>
               ))}
             </dl>

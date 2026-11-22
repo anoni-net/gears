@@ -98,9 +98,11 @@ const DETECT: Record<string, (sources: string[]) => boolean> = {
   // 模型的執行環境：onnxruntime、Transformers.js，以及逐字稿另外載入的 sherpa-onnx
   model: (sources) => sources.some((s) => /from "(onnxruntime-web|@huggingface\/transformers)|import\("(onnxruntime-web|@huggingface\/transformers)|vendor\/sherpa/.test(s)),
   camera: (sources) => sources.some((s) => s.includes("getUserMedia")),
+  // 經過伺服器：連到社群的轉送服務（WebSocket）。之後新增連網的工具，沒標會失敗
+  server: (sources) => sources.some((s) => /new WebSocket\(/.test(s)),
 };
 
-test("標籤跟程式實際做的事一致：開源本機模型、相機", () => {
+test("標籤跟程式實際做的事一致：開源本機模型、相機、經過伺服器", () => {
   expect(Object.keys(toolSources).length).toBeGreaterThan(10);
   for (const id of toolIds) {
     for (const [tag, detect] of Object.entries(DETECT)) {
