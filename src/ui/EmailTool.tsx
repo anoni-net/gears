@@ -260,7 +260,7 @@ export function EmailTool({ preset, onOpenTool }: CreateToolProps) {
   return (
     <div class="email-check">
       {file ? (
-        <p class="email-file">
+        <p>
           {t("email.opened", { name: file.name })}{" "}
           <button type="button" class="link" onClick={() => setFile(null)}>
             {t("email.clearFile")}

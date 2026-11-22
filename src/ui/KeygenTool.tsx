@@ -22,10 +22,10 @@ function RecipientQr({ recipient }: { recipient: string }) {
       </svg>
       <div class="buttons">
         <button type="button" onClick={() => saveBlob(new Blob([qrPng(matrix) as Uint8Array<ArrayBuffer>], { type: "image/png" }), "age-public-key.png")}>
-          {t("qr.downloadPng")}
+          {t("common.downloadPng")}
         </button>
         <button type="button" onClick={() => saveBlob(new Blob([qrSvg(matrix)], { type: "image/svg+xml" }), "age-public-key.svg")}>
-          {t("qr.downloadSvg")}
+          {t("common.downloadSvg")}
         </button>
       </div>
     </div>

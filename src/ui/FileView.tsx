@@ -302,7 +302,7 @@ function Steps({ file, busy }: { file: TrayFile; busy: boolean }) {
               onClick={() => setPicked(i)}
             >
               {i > 0 ? <span class="step-no" aria-hidden="true">{i}</span> : null}
-              <span class="step-name">{label(x, i)}</span>
+              <span>{label(x, i)}</span>
             </button>
           </li>
         ))}

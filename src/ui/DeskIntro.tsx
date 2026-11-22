@@ -48,7 +48,7 @@ export function DeskIntro() {
       </div>
       <div>
         <h2>
-          <span class="tool-tag tag-model" aria-hidden="true">
+          <span class="tool-tag" aria-hidden="true">
             <Icon name={TAGS.model.icon} />
           </span>
           {t("desk.intro.model.title")}

@@ -98,7 +98,7 @@ export function ScreenCheck({ blob, busy, canRedact, onRedact }: Props) {
       case "noWasm":
         return t("screen.noWasm");
       case "decodeFailed":
-        return t("redact.decodeFailed");
+        return t("common.decodeFailed");
     }
   };
 
@@ -110,7 +110,7 @@ export function ScreenCheck({ blob, busy, canRedact, onRedact }: Props) {
   const found = state.step === "done" && foundAnything(state.found) ? state.found : null;
 
   return (
-    <section class="screen-check" aria-labelledby="screen-check-title" data-testid="screen-check">
+    <section aria-labelledby="screen-check-title" data-testid="screen-check">
       <h2 id="screen-check-title">{t("screen.title")}</h2>
       <p class="hint">{t("screen.note")}</p>
       {downloadNote ? (

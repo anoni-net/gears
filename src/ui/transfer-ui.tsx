@@ -44,7 +44,7 @@ export function useOutgoing(state: TrayState) {
         {/* 檔案放在有外框的清單裡，一個檔案一列、大小靠右。「保留原本的檔名」是設定，放在清單外面，
             不然看起來像是清單的最後一個檔案 */}
         <fieldset class="choices">
-          <legend>{t("nearby.pick")}</legend>
+          <legend>{t("transfer.pick")}</legend>
           <div class="transfer-files" data-testid="transfer-files">
             {state.files.map((f) => (
               <label key={f.id} class="transfer-file">
@@ -58,8 +58,8 @@ export function useOutgoing(state: TrayState) {
         <label class="check transfer-option">
           <input type="checkbox" checked={keepNames} onChange={(e) => setKeepNames(e.currentTarget.checked)} data-testid="nearby-keep-names" />
           <span>
-            {t("nearby.keepNames")}
-            <small class="hint">{t("nearby.keepNamesNote")}</small>
+            {t("transfer.keepNames")}
+            <small class="hint">{t("transfer.keepNamesNote")}</small>
           </span>
         </label>
       </>

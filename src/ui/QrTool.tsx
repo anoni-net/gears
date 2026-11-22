@@ -152,7 +152,7 @@ export function QrTool({ preset, onCreate }: CreateToolProps) {
           {MODES.map((m) => (
             <label key={m}>
               <input type="radio" name="qr-mode" checked={mode === m} onChange={() => setMode(m)} />
-              {t(`qr.mode.${m}`)}
+              {t(`qrfield.mode.${m}`)}
             </label>
           ))}
         </fieldset>
@@ -161,9 +161,9 @@ export function QrTool({ preset, onCreate }: CreateToolProps) {
 
         {mode === "wifi" ? (
           <>
-            {field("ssid", t("qr.ssid"))}
+            {field("ssid", t("qrfield.ssid"))}
             <fieldset class="segmented">
-              <legend>{t("qr.security")}</legend>
+              <legend>{t("qrfield.security")}</legend>
               {SECURITY.map((sec) => (
                 <label key={sec}>
                   <input type="radio" name="qr-security" checked={security === sec} onChange={() => setSecurity(sec)} />
@@ -171,31 +171,31 @@ export function QrTool({ preset, onCreate }: CreateToolProps) {
                 </label>
               ))}
             </fieldset>
-            {security !== "nopass" ? field("password", t("qr.password")) : null}
+            {security !== "nopass" ? field("password", t("qrfield.password")) : null}
             <label class="check">
               <input type="checkbox" checked={hidden} onChange={(e) => setHidden(e.currentTarget.checked)} />
-              {t("qr.hidden")}
+              {t("qrfield.hidden")}
             </label>
           </>
         ) : null}
 
         {mode === "contact" ? (
           <>
-            {field("name", t("qr.contact.name"))}
-            {field("phone", t("qr.phone"), { type: "tel" })}
-            {field("email", t("qr.email"), { type: "email" })}
-            {field("org", t("qr.contact.org"))}
-            {field("url", t("qr.contact.url"), { type: "url", placeholder: "https://" })}
+            {field("name", t("qrfield.contact.name"))}
+            {field("phone", t("qrfield.phone"), { type: "tel" })}
+            {field("email", t("qrfield.email"), { type: "email" })}
+            {field("org", t("qrfield.contact.org"))}
+            {field("url", t("qrfield.contact.url"), { type: "url", placeholder: "https://" })}
             <p class="hint">{t("qr.contact.note")}</p>
           </>
         ) : null}
 
         {mode === "event" ? (
           <>
-            {field("title", t("qr.event.title"))}
-            {field("start", t("qr.event.start"), { type: "datetime-local" })}
+            {field("title", t("qrfield.event.title"))}
+            {field("start", t("qrfield.event.start"), { type: "datetime-local" })}
             {field("end", t("qr.event.end"), { type: "datetime-local" })}
-            {field("location", t("qr.event.location"))}
+            {field("location", t("qrfield.event.location"))}
             <p class="hint">{t("qr.event.note")}</p>
           </>
         ) : null}
@@ -209,18 +209,18 @@ export function QrTool({ preset, onCreate }: CreateToolProps) {
 
         {mode === "email" ? (
           <>
-            {field("to", t("qr.email.to"), { type: "email" })}
-            {field("subject", t("qr.email.subject"))}
-            {field("body", t("qr.email.body"), { rows: 3 })}
+            {field("to", t("qrfield.email.to"), { type: "email" })}
+            {field("subject", t("qrfield.email.subject"))}
+            {field("body", t("qrfield.email.body"), { rows: 3 })}
           </>
         ) : null}
 
-        {mode === "phone" ? field("phone", t("qr.phone"), { type: "tel" }) : null}
+        {mode === "phone" ? field("phone", t("qrfield.phone"), { type: "tel" }) : null}
 
         {mode === "sms" ? (
           <>
-            {field("phone", t("qr.phone"), { type: "tel" })}
-            {field("message", t("qr.sms.message"), { rows: 3 })}
+            {field("phone", t("qrfield.phone"), { type: "tel" })}
+            {field("message", t("qrfield.sms.message"), { rows: 3 })}
             <p class="hint">{t("qr.sms.note")}</p>
           </>
         ) : null}
@@ -261,10 +261,10 @@ export function QrTool({ preset, onCreate }: CreateToolProps) {
                 {t("qr.toTray")}
               </button>
               <button type="button" onClick={() => (made(), saveBlob(png(), `${name}.png`))}>
-                {t("qr.downloadPng")}
+                {t("common.downloadPng")}
               </button>
               <button type="button" onClick={() => (made(), saveBlob(new Blob([qrSvg(matrix)], { type: "image/svg+xml" }), `${name}.svg`))}>
-                {t("qr.downloadSvg")}
+                {t("common.downloadSvg")}
               </button>
             </div>
             <p class="hint">{t("qr.svgNote")}</p>

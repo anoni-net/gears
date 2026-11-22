@@ -37,7 +37,7 @@ export function BenchPage() {
   );
 
   return (
-    <section class="bench" aria-labelledby="bench-title">
+    <section aria-labelledby="bench-title">
       <h1 id="bench-title" class="tool-title">
         {t("bench.title")}
       </h1>

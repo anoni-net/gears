@@ -131,9 +131,9 @@ export function PrintDotsEditor({ blob, format, onDone, onCancel }: FileEditorPr
 
   if (status === "openFailed") {
     return (
-      <div class="print-dots">
+      <div>
         <p class="error" role="alert">
-          {t(isPdf ? "redact.pdfFailed" : "redact.decodeFailed")}
+          {t(isPdf ? "common.pdfFailed" : "common.decodeFailed")}
         </p>
         <div class="buttons action-bar">
           <button type="button" onClick={onCancel}>
@@ -146,7 +146,7 @@ export function PrintDotsEditor({ blob, format, onDone, onCancel }: FileEditorPr
 
   const total = pdf?.count ?? 1;
   return (
-    <div class="print-dots">
+    <div>
       <p class="hint">{t("printDots.intro")}</p>
       <fieldset class="segmented">
         <legend>{t("printDots.view")}</legend>
@@ -172,16 +172,16 @@ export function PrintDotsEditor({ blob, format, onDone, onCancel }: FileEditorPr
       {pdf && total > 1 ? (
         <div class="buttons">
           <button type="button" disabled={pageIndex === 0} onClick={() => setPageIndex((i) => i - 1)}>
-            {t("redact.prevPage")}
+            {t("common.prevPage")}
           </button>
-          <span>{t("redact.page", { n: pageIndex + 1, total })}</span>
+          <span>{t("common.page", { n: pageIndex + 1, total })}</span>
           <button type="button" disabled={pageIndex >= total - 1} onClick={() => setPageIndex((i) => i + 1)}>
-            {t("redact.nextPage")}
+            {t("common.nextPage")}
           </button>
         </div>
       ) : null}
       <p class="hint" role="status" data-testid="print-dots-status">
-        {blocked ? null : status === "loading" || finding === null ? t("printDots.loading") : tDynamic(`printDots.${finding}`)}
+        {blocked ? null : status === "loading" || finding === null ? t("app.loading") : tDynamic(`printDots.${finding}`)}
       </p>
       <div class={zoom ? "print-dots-canvas zoomed" : "print-dots-canvas"}>
         <canvas ref={canvas} data-testid="print-dots-canvas" role="img" aria-label={tDynamic(`printDots.view.${view}`)} />
