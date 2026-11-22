@@ -3934,7 +3934,8 @@ button.link {
 
 .about-table tbody th {
   font-weight: normal;
-  overflow-wrap: anywhere;
+  /* 只在沒有其他斷點時才在字中間斷行，連字號後面照常可以換行 */
+  overflow-wrap: break-word;
 }
 
 .about-table .about-license,
@@ -3945,6 +3946,49 @@ button.link {
 .about-table .about-size {
   text-align: right;
   font-variant-numeric: tabular-nums;
+}
+
+/* 手機上四欄太擠，模型名稱被壓到在字中間斷行（multilingual-punctuation-truecase-small 斷成六行）。
+   每一列改排成一張小卡：名稱一行、用途一行，授權與下載量並排在最後一行。表頭只留給讀螢幕軟體，
+   表格的語意靠 AboutPage.tsx 明寫的 role 保留 */
+@media (max-width: 39.99rem) {
+  .about-table table,
+  .about-table caption,
+  .about-table tbody {
+    display: block;
+  }
+
+  .about-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .about-table tbody tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--sp-1) var(--sp-3);
+    padding: var(--sp-2) 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .about-table tbody th,
+  .about-table tbody td {
+    border-bottom: 0;
+    padding: 0;
+  }
+
+  .about-table tbody th {
+    grid-column: 1 / -1;
+    font-weight: 600;
+  }
+
+  .about-table .about-use {
+    grid-column: 1 / -1;
+  }
 }
 
 .about-status {

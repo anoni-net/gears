@@ -81,6 +81,22 @@ test("模型表的列與 model-catalog 一致，授權連到授權與來源的�
   await scrolledTo(page, "licenses-redact-detect");
 });
 
+test("手機上模型表每一列排成一張小卡，最長的模型名稱不在字中間斷行，讀螢幕軟體照樣讀得到表格", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 640 });
+  await page.goto("./about/");
+  const table = page.getByTestId("about-models");
+  // 表格的語意：明寫的 role 讓 Safari 在 display 改掉之後仍然當成表格
+  await expect(page.getByRole("table", { name: "Gears 用到的開源模型" })).toBeVisible();
+  await expect(page.getByRole("columnheader")).toHaveCount(4);
+  await expect(table.locator("tbody tr")).toHaveCount(MODEL_CATALOG.length);
+  // 每一個名稱都只占一行：跟最短的 YuNet 一樣高
+  const heights = await table.locator("tbody th").evaluateAll((cells) => cells.map((c) => Math.round(c.getBoundingClientRect().height)));
+  expect(new Set(heights).size).toBe(1);
+  // 不必左右捲動
+  const [scroll, client] = await page.locator(".about-table").evaluate((e) => [e.scrollWidth, e.clientWidth]);
+  expect(scroll).toBeLessThanOrEqual(client);
+});
+
 test("延伸閱讀連到隱私說明、授權與來源、已下載的模型、協助測試與原始碼", async ({ page }) => {
   await page.goto("./about/");
   const more = page.getByTestId("about-more").getByRole("link");
