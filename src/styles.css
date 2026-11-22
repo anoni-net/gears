@@ -499,14 +499,98 @@ h1.tool-title {
   margin: 0 0 var(--sp-2);
 }
 
-.tool-howto h2 {
-  margin: var(--sp-4) 0 var(--sp-1);
-  font-size: var(--fs-md);
+/* 使用方式包在淡底的卡片裡，跟設計原則頁的示意圖同一種底色：說明性的圖在淡底上，可以操作的工具維持白底。
+   原本流程直接接著工具的第一組選項，圖示的份量跟選項按鈕相近，寬螢幕上容易混在一起 */
+.tool-howto {
+  margin: var(--sp-3) 0 var(--sp-5);
+  padding: var(--sp-3) var(--sp-4) var(--sp-4);
+  border-radius: var(--radius);
+  background: var(--fill);
 }
 
-.tool-howto ol {
-  margin: 0 0 var(--sp-4);
-  padding-left: var(--sp-5);
+.tool-howto h2 {
+  margin: 0 0 var(--sp-3);
+  font-size: var(--fs-sm);
+  color: var(--muted);
+}
+
+/* 使用方式的流程（ToolHeader）：每一步一個圖示，圖示的右上角標出第幾步。手機上由上往下，圖示之間用細線連起來，
+   寬一點的畫面由左往右排成三欄。圖示圈沿用設計原則頁示意圖的 .fig-icon */
+.howto-flow {
+  display: grid;
+  gap: var(--sp-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: howto;
+}
+
+.howto-flow li {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  counter-increment: howto;
+}
+
+.howto-flow .fig-icon {
+  position: relative;
+  z-index: 1;
+}
+
+.howto-flow .fig-icon::after {
+  content: counter(howto);
+  position: absolute;
+  top: -0.2rem;
+  right: -0.35rem;
+  display: grid;
+  place-items: center;
+  min-width: 1.2rem;
+  height: 1.2rem;
+  border-radius: var(--radius-pill);
+  background: var(--link);
+  color: var(--bg);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  line-height: 1;
+}
+
+.howto-flow li:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  top: 2.75rem;
+  bottom: calc(-1 * var(--sp-3));
+  left: calc(1.375rem - 1px);
+  border-left: 2px solid var(--line);
+}
+
+.howto-text {
+  align-self: center;
+}
+
+@media (min-width: 40rem) {
+  .howto-flow {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--sp-4);
+  }
+
+  .howto-flow li {
+    flex-direction: column;
+    gap: var(--sp-2);
+  }
+
+  .howto-flow li:not(:last-child)::before {
+    top: calc(1.375rem - 1px);
+    bottom: auto;
+    left: 3.25rem;
+    right: calc(-1 * var(--sp-4) + 0.5rem);
+    border-left: 0;
+    border-top: 2px solid var(--line);
+  }
+
+  .howto-text {
+    align-self: auto;
+  }
 }
 
 /* 還缺什麼：停用的主要按鈕旁邊的一行提示 */
@@ -4180,7 +4264,12 @@ body > noscript {
 }
 
 /* 設計原則頁的示意圖（src/ui/AboutFigures.tsx）：放大的圖示、外框與箭頭，標籤是一般的文字，三個語系各自換行。
-   圖示用連結色（深色模式是淺青），不用完成綠與分類色 */
+   圖示圈跟工具的圖示圈（.ic）同一種形狀：線框的圓圈。圈底用 --bg、圖示與框線用文字的顏色（--text）：
+   - 不用分類色：分類色只用在桌面與工具的標題，用在這裡的話第二步會跟標題的工具圖示一模一樣，看起來像可以點
+   - 不用連結色：它跟「檢查收到的」的分類色幾乎一樣（#006d99 與 #026a9d，ΔE 約 5）
+   - 不用中性灰的淡底：圈底對卡片（--fill）的對比只有 1.02，圓圈跟卡片糊成一片（2026-11-22 試過）。
+     白底圈加深色框線，框線對卡片 13.4，深色模式的圈底比卡片暗一階
+   步驟的數字用主色 */
 .about-fig {
   margin: var(--sp-5) 0;
   padding: var(--sp-4);
@@ -4212,8 +4301,16 @@ body > noscript {
   justify-content: center;
   width: 2.75rem;
   height: 2.75rem;
+  border: 1px solid var(--text);
   border-radius: var(--radius-pill);
-  background: color-mix(in srgb, var(--link) 12%, var(--surface));
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* 設計原則頁要強調的那一格（開源本機模型、對得上才使用、由你確認），圖示跟外框一起用連結色 */
+.fig-node.accent .fig-icon {
+  border-color: var(--link);
+  background: color-mix(in srgb, var(--link) 8%, var(--surface));
   color: var(--link);
 }
 
@@ -4242,7 +4339,8 @@ body > noscript {
 }
 
 .fig-node.danger .fig-icon {
-  background: color-mix(in srgb, var(--danger) 12%, var(--surface));
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 8%, var(--surface));
   color: var(--danger-text);
 }
 

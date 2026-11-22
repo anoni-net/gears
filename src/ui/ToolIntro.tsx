@@ -1,5 +1,6 @@
 import { t, tDynamic } from "../i18n/index.ts";
-import { IconCircle } from "./Icon.tsx";
+import { Icon, IconCircle } from "./Icon.tsx";
+import { HOWTO_ICONS } from "./howto-icons.ts";
 import { SampleLink } from "./SamplesPage.tsx";
 import { TOOL_META } from "./tool-meta.ts";
 
@@ -19,9 +20,15 @@ export function ToolHeader({ id, titleId, onSamples }: { id: string; titleId: st
       <SampleLink tool={id} onOpen={onSamples} />
       <div class="tool-howto">
         <h2>{t("intro.howto")}</h2>
-        <ol>
-          {HOWTO_STEPS.map((n) => (
-            <li key={n}>{tDynamic(`howto.${id}.${n}`)}</li>
+        {/* 三步排成流程，每一步一個圖示（src/ui/howto-icons.ts），跟設計原則頁的示意圖同一種排版 */}
+        <ol class="howto-flow" data-testid="howto-flow">
+          {HOWTO_STEPS.map((n, i) => (
+            <li key={n}>
+              <span class="fig-icon" aria-hidden="true">
+                <Icon name={HOWTO_ICONS[id]![i]!} />
+              </span>
+              <span class="howto-text">{tDynamic(`howto.${id}.${n}`)}</span>
+            </li>
           ))}
         </ol>
       </div>

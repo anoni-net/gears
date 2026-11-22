@@ -109,3 +109,14 @@ test("標籤跟程式實際做的事一致：開源本機模型、相機", () =>
     }
   }
 });
+
+// 工具頁使用方式的流程（src/ui/howto-icons.ts）：每個工具三步各一個圖示
+test("每個工具的使用方式三步都有圖示", async () => {
+  const { HOWTO_ICONS } = await import("../../src/ui/howto-icons.ts");
+  const { toolIds } = await import("../../src/tools/index.ts");
+  expect(Object.keys(HOWTO_ICONS).sort()).toEqual([...toolIds].sort());
+  for (const [id, icons] of Object.entries(HOWTO_ICONS)) {
+    expect(icons, id).toHaveLength(3);
+    for (const icon of icons) expect(Object.hasOwn(ICON_PATHS, icon), `${id} ${icon}`).toBe(true);
+  }
+});
