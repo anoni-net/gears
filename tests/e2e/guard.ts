@@ -16,15 +16,22 @@ export interface Guard {
 const DID_WEB = /\/\.well-known\/did\.json\b.*connect-src|connect-src\)? at https:\/\/[^ ]+\/\.well-known\/did\.json /;
 const BENIGN = [/WebRTC: ICE failed, add a STUN server/, DID_WEB];
 
+// WebKit 內建的媒體控制列（<audio>、<video> 的影子樹）自己印的錯誤，只在 WebKit 放過：
+// - 控制列的按鈕圖示從 blob: 載入失敗（airplay-placard、pip-placard、invalid-placard），iPhone 尺寸幾乎每次都有
+// - 控制列的樣式沒有 nonce，被頁面的 style-src 擋下。工作台自己的樣式都是外部檔案，同樣的問題 Chromium 與
+//   Firefox 會用各自的訊息報出來，那兩個核心照樣嚴格檢查
+// 兩者都跟工作台的程式無關，原本讓開錄音、影片的測試在 WebKit 偶爾失敗（2026-11-21 起擋下過兩次部署）
+const WEBKIT_MEDIA = [/^Button failed to load, iconName = [\w-]+-placard, /, /^Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive of the Content Security Policy\.$/];
+
 // 錄 trace 時，Playwright 在 Chromium 會從頁面讀 blob: 的圖片做快照，被 connect-src 擋下。
 // CI 只在重試時錄 trace（playwright.config.ts），重試時才忽略這一種，第一次執行照樣嚴格檢查
 const TRACING = /^Connecting to 'blob:[^']+' violates the following Content Security Policy directive: "connect-src /;
 
 export const test = base.extend<{ guard: Guard }>({
   guard: [
-    async ({ page, baseURL }, use, testInfo) => {
+    async ({ page, baseURL, browserName }, use, testInfo) => {
       const guard: Guard = { requests: [], errors: [] };
-      const benign = testInfo.retry > 0 ? [...BENIGN, TRACING] : BENIGN;
+      const benign = [...BENIGN, ...(browserName === "webkit" ? WEBKIT_MEDIA : []), ...(testInfo.retry > 0 ? [TRACING] : [])];
       const origin = new URL(baseURL!).origin;
       page.on("request", (r) => {
         const url = r.url();
