@@ -1985,6 +1985,75 @@ textarea.cipher {
   font-size: var(--fs-sm);
 }
 
+/* 從截圖讀出網址（網址檢查與檔案畫面的「畫面上的網址」共用列表） */
+
+.url-ocr {
+  margin-top: var(--sp-3);
+}
+
+.url-ocr-choose,
+.url-ocr-result,
+.screen-urls {
+  margin-top: var(--sp-4);
+}
+
+.url-ocr-tray {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 var(--sp-3);
+}
+
+.url-ocr-tray li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-2) 0;
+  border-bottom: 1px solid var(--line);
+  overflow-wrap: anywhere;
+}
+
+.url-ocr-progress {
+  margin-top: var(--sp-3);
+}
+
+.url-ocr-found > .callout {
+  margin-top: 0;
+}
+
+.url-ocr-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.url-ocr-list > li {
+  padding: var(--sp-3) 0;
+  border-bottom: 1px solid var(--line);
+}
+
+/* 裁切小圖照原本的比例縮到欄寬，長網址也看得到整段。白底與深色的截圖都有細框分開 */
+.url-ocr-crop canvas {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+
+.url-ocr-list .field {
+  margin: var(--sp-2) 0;
+}
+
+.url-ocr-list .field input {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+
+/* 從截圖的網址按「檢查這個網址」之後，焦點移到結果，不畫焦點框（結果本身不是可以操作的元件） */
+.url-check-result:focus {
+  outline: none;
+}
+
 /* QR code 讀取 */
 
 .qr-read .buttons,

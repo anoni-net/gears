@@ -115,7 +115,8 @@ test("桌面的圖示標籤：卡片上的圖示帶著補充說明，最下方�
   await expect(page.getByRole("link", { name: /^QR code 與條碼讀取 相機：用相機掃描 QR code 與條碼/ })).toBeVisible();
   await expect(page.getByRole("img", { name: "相機：用相機掃描對方螢幕上的 QR code" })).toHaveAttribute("title", "相機：用相機掃描對方螢幕上的 QR code");
   await expect(page.getByRole("img", { name: "相機：視訊通話時用相機與麥克風" })).toBeVisible();
-  await expect(page.locator(".tool-rows .tool-tag")).toHaveCount(6);
+  await expect(page.getByRole("link", { name: /^網址檢查 開源本機模型：從截圖讀出網址時用到/ })).toBeVisible();
+  await expect(page.locator(".tool-rows .tool-tag")).toHaveCount(7);
 
   const legend = page.getByTestId("tag-legend");
   await expect(legend.locator("dt")).toHaveText(["開源本機模型", "相機", "經過伺服器"]);

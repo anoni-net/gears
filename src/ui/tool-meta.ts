@@ -6,7 +6,7 @@ import type { TagId } from "./tool-tags.ts";
 // 不在這裡逐一指定。tags：桌面卡片上的圖示標籤（src/ui/tool-tags.ts），讀者打開之前就該知道的事
 const ICONS: Record<string, { icon: IconName; tags?: TagId[] }> = {
   "strip-metadata": { icon: "image-off-outline" },
-  "url-check": { icon: "shield-link-variant-outline" },
+  "url-check": { icon: "shield-link-variant-outline", tags: ["model"] },
   "qr-read": { icon: "qrcode-scan", tags: ["camera"] },
   qrcode: { icon: "qrcode" },
   redact: { icon: "selection-remove", tags: ["model"] },

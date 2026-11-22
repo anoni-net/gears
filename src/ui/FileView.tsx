@@ -633,6 +633,8 @@ export function FileView({ file, others, index, busy, preferred, onOpenTool }: P
               blob={current.blob}
               busy={busy}
               canRedact={canRedact}
+              receiving={file.intent === "check"}
+              onOpenTool={onOpenTool}
               onRedact={(found) => {
                 setScreenFound({ version: current.id, ...found });
                 setEditing("redact");

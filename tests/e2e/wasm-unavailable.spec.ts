@@ -122,3 +122,22 @@ test("檢查畫面內容：說明這個瀏覽器關掉了 WebAssembly，請讀�
   await expect(status).toContainText("請自己看一次整張圖");
   await expect(status).toHaveClass("error");
 });
+
+test("網址檢查：從截圖讀出網址說明關掉了 WebAssembly，不打開選檔案的視窗、不下載模型", async ({ page }) => {
+  const models: string[] = [];
+  page.on("request", (r) => r.url().includes("/models/") && models.push(r.url()));
+  let chooser = false;
+  page.on("filechooser", () => (chooser = true));
+  await page.route("**/gears/data/165.txt", (route) => route.fulfill({ body: "# count=0\n", contentType: "text/plain" }));
+  await page.goto("./url-check/");
+  await page.getByRole("button", { name: "從截圖讀出網址" }).click();
+  const status = page.getByTestId("url-ocr-status");
+  await expect(status).toContainText("關掉了 WebAssembly");
+  await expect(status).toContainText("打進上面的輸入框");
+  await expect(status).toHaveClass("error");
+  expect(chooser).toBe(false);
+  expect(models).toEqual([]);
+  // 不用截圖照樣可以檢查
+  await page.getByLabel("要檢查的網址").fill("https://example.com/?utm_source=x");
+  await expect(page.getByTestId("clean-url")).toHaveText("https://example.com/");
+});

@@ -1,4 +1,4 @@
-import { useState } from "preact/hooks";
+import { useEffect, useRef, useState } from "preact/hooks";
 import { list as joinList, t, tDynamic } from "../i18n/index.ts";
 import { cleanUrl, isShortener, parseUrl } from "../tools/url-check/clean.ts";
 import { type HostWarning, hostFacts } from "../tools/url-check/host.ts";
@@ -6,6 +6,7 @@ import { type ScamList, findScam } from "../tools/url-check/scam-list.ts";
 import { useScamList } from "./scam-list-loader.ts";
 import { useDoneOnce } from "./analytics.ts";
 import { CopyButton } from "./CopyButton.tsx";
+import { UrlFromScreenshot } from "./UrlFromScreenshot.tsx";
 import type { CreateToolProps } from "./types.ts";
 
 function warningText(w: HostWarning) {
@@ -28,6 +29,14 @@ export function UrlCheckTool({ preset }: CreateToolProps) {
   const list = useScamList();
   const parsed = parseUrl(input);
   useDoneOnce("url-check", parsed instanceof URL);
+  // 從截圖讀出的網址按「檢查這個網址」之後，填進輸入框，捲到結果、焦點移過去
+  const result = useRef<HTMLDivElement>(null);
+  const [jump, setJump] = useState(0);
+  useEffect(() => {
+    if (!jump) return;
+    result.current?.scrollIntoView({ block: "start" });
+    result.current?.focus({ preventScroll: true });
+  }, [jump]);
 
   return (
     <div class="url-check">
@@ -45,16 +54,24 @@ export function UrlCheckTool({ preset }: CreateToolProps) {
         />
       </label>
       <p class="hint">{t("url.privacy")}</p>
+      <UrlFromScreenshot
+        onCheck={(url) => {
+          setInput(url);
+          setJump((n) => n + 1);
+        }}
+      />
 
-      {typeof parsed === "string" ? (
-        parsed === "empty" ? null : (
-          <p class="error" role="alert">
-            {tDynamic(`url.error.${parsed}`)}
-          </p>
-        )
-      ) : (
-        <Result url={parsed} list={list} />
-      )}
+      <div ref={result} tabIndex={-1} class="url-check-result" data-testid="url-result">
+        {typeof parsed === "string" ? (
+          parsed === "empty" ? null : (
+            <p class="error" role="alert">
+              {tDynamic(`url.error.${parsed}`)}
+            </p>
+          )
+        ) : (
+          <Result url={parsed} list={list} />
+        )}
+      </div>
     </div>
   );
 }
