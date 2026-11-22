@@ -1975,7 +1975,7 @@ export const en: Record<MessageKey, string> = {
   "about.models.open.title": "What counts as open source",
   "about.models.open.intro": "Gears only uses models that meet these conditions:",
   "about.models.open.1": "The weights are public, so anyone can download the same file and inspect it.",
-  "about.models.open.2": "The license allows distributing it alongside Gears, which is MIT-licensed. Models under incompatible licenses such as GPL-3.0 aren't used.",
+  "about.models.open.2": "The license lets anyone use, modify and redistribute it. Gears' code is MIT-licensed, and models are downloaded separately from the code, each with its own license text, so share-alike licenses such as CC BY-SA and LGPL are fine too. Licenses limited to non-commercial or specific uses aren't used.",
   "about.models.open.3": "The community pins a specific version and records each file's SHA-256, a fingerprint that stops matching if even one byte changes. Files are checked before they go on the site, or when your browser downloads them from another site, and aren't used if they don't match.",
   "about.models.open.host": "Models are hosted on the Gears site or the community's servers where possible. The large-v3-turbo transcription model is downloaded from Hugging Face once you choose it, and the page explains what Hugging Face can see before you do.",
   "about.models.list.title": "Models in use",
