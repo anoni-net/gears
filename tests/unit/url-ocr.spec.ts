@@ -57,6 +57,21 @@ test("Email、版本號、小數不是網址", () => {
   expect(looksLikeUrl("e.g")).toBe(false);
 });
 
+test("檔名不是網址，頂層網域照樣列出（.zip、.mov 是真的頂層網域，常被拿來做釣魚）", () => {
+  expect(texts([line("photo.jpg 傳給你了")])).toEqual([]);
+  expect(texts([line("檔案是 report.pdf 我晚點傳")])).toEqual([]);
+  expect(texts([line("Node.js 跟 Vue.js 我都會")])).toEqual([]);
+  expect(texts([line("data.JSON、notes.txt、slides.pptx")])).toEqual([]);
+  expect(texts([line("下載 example.zip 就好")])).toEqual(["example.zip"]);
+  expect(texts([line("影片在 clip.mov")])).toEqual(["clip.mov"]);
+  expect(texts([line("readme.md")])).toEqual(["readme.md"]);
+  // 有協定、www. 或路徑時是網址
+  expect(texts([line("https://cdn.example/photo.jpg")])).toEqual(["https://cdn.example/photo.jpg"]);
+  expect(texts([line("https://files.pdf")])).toEqual(["https://files.pdf"]);
+  expect(texts([line("www.example.pdf")])).toEqual(["www.example.pdf"]);
+  expect(texts([line("report.pdf/download")])).toEqual(["report.pdf/download"]);
+});
+
 test("不自動修正看起來像的字：paypa1、rnicrosoft、g00gle 照辨識的結果", () => {
   expect(texts([line("https://paypa1.example/login")])).toEqual(["https://paypa1.example/login"]);
   expect(texts([line("rnicrosoft-support.test")])).toEqual(["rnicrosoft-support.test"]);

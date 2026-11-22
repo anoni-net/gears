@@ -99,9 +99,19 @@ function trimEnd(text: string): number {
   }
 }
 
+// 常見的副檔名，而且都不是頂層網域（2026-11-22 對照 IANA 的根區清單 tlds-alpha-by-domain.txt，
+// 版本 2026112100）。對話裡的 photo.jpg、report.pdf、Node.js 結構上跟網域一樣，只有沒有協定、
+// 也沒有路徑時才當成檔名。.zip、.mov、.md、.py 是真的頂層網域，.zip 與 .mov 也常被拿來做釣魚，
+// 一律不擋。新增之前先確認不在根區清單裡
+const FILE_EXTENSIONS = new Set([
+  "jpg", "jpeg", "png", "gif", "webp", "heic", "heif", "bmp", "svg",
+  "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "txt", "csv", "json", "html", "htm",
+  "js", "ts", "mp3", "mp4", "exe", "apk",
+]);
+
 // 這一段文字是不是網址：有 http(s):// 或 www. 開頭的直接算；沒有的要像網域（至少兩段、最後一段是
 // 兩個字以上的英文字母），或是認得的短網址服務（bit.ly、lin.ee 這類，clean.ts 的 isShortener）。
-// 判斷方式跟網址檢查相同（parseUrl）。Email 不算
+// 判斷方式跟網址檢查相同（parseUrl）。Email 與檔名（FILE_EXTENSIONS）不算
 export function looksLikeUrl(text: string): boolean {
   if (/^https?:\/\/\S/i.test(text)) return typeof parseUrl(text) !== "string";
   if (text.includes("@") && !/[/?#]/.test(text.split("@")[0]!)) return false;
@@ -113,6 +123,8 @@ export function looksLikeUrl(text: string): boolean {
   if (labels.length < 2 || labels.some((l) => !l)) return false;
   // 句點後面少了空白的句子（locked.Verify）：網域的最後一段不會寫成首字大寫
   if (/^[A-Z][a-z]+$/.test(text.split(/[/?#:]/)[0]!.split(".").at(-1)!)) return false;
+  // 檔名（photo.jpg、Node.js）：沒有協定、www.、路徑與參數，最後一段是常見的副檔名
+  if (!/[/?#]/.test(text) && FILE_EXTENSIONS.has(labels.at(-1)!)) return false;
   return /^[a-z]{2,}$/.test(labels.at(-1)!) || /^xn--[a-z0-9-]+$/.test(labels.at(-1)!);
 }
 
