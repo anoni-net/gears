@@ -23,8 +23,9 @@ export const DINO_MODEL = {
   } as Record<string, string>,
   // Worker 實際下載的兩個檔案，沒有壓縮的大小（模型 24.4 MB，權重檔是 application/octet-stream，Cloudflare 不壓縮）
   bytes: 24427763 + 988,
-  // 畫面上寫的下載量。還沒放上 assets.anoni.net、量不到經過 Cloudflare 的實際傳輸量，先用沒有壓縮的大小
-  transfer: 24427763 + 988,
+  // 經過 Cloudflare 的實際傳輸量（config.json 壓縮成 448 位元組，模型不壓縮，2026-11-22 放上 assets.anoni.net 之後量），
+  // 畫面上寫的下載量用這個數字
+  transfer: 24427763 + 448,
 } as const;
 
 // 畫面上寫的模型下載量（MB）
