@@ -1976,7 +1976,7 @@ export const zhCN: Record<MessageKey, string> = {
   "about.models.open.title": "开源的条件",
   "about.models.open.intro": "Gears 只采用符合下列条件的模型：",
   "about.models.open.1": "权重公开，任何人都可以下载同一份文件检查。",
-  "about.models.open.2": "授权允许跟 Gears 一起分发。Gears 本身是 MIT 授权，GPL-3.0 这类不兼容的模型不采用。",
+  "about.models.open.2": "授权允许任何人使用、修改与分发。Gears 的程序是 MIT 授权，模型跟程序分开下载、各自附上授权全文，所以 CC BY-SA、LGPL 这类要求沿用相同授权的模型也可以采用。限定非商业或特定用途的授权不采用。",
   "about.models.open.3": "社区固定使用的版本，并记下每个文件的 SHA-256（文件的指纹，内容差一个字节就对不上）。放上网站之前，或你的浏览器从其他网站下载时，都会比对一次，对不上就不使用。",
   "about.models.open.host": "模型优先放在 Gears 自己的域名或社区的服务器。逐字稿的 large-v3-turbo 由你选择之后从 Hugging Face 下载，下载之前页面会说明 Hugging Face 能得知的信息。",
   "about.models.list.title": "目前用到的模型",

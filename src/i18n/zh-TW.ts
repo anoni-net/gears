@@ -1998,7 +1998,7 @@ export const zhTW = {
   "about.models.open.title": "開源的條件",
   "about.models.open.intro": "Gears 只採用符合下列條件的模型：",
   "about.models.open.1": "權重公開，任何人都可以下載同一份檔案檢查。",
-  "about.models.open.2": "授權允許跟 Gears 一起散布。Gears 本身是 MIT 授權，GPL-3.0 這類不相容的模型不採用。",
+  "about.models.open.2": "授權允許任何人使用、修改與散布。Gears 的程式是 MIT 授權，模型跟程式分開下載、各自附上授權全文，所以 CC BY-SA、LGPL 這類要求延續相同授權的模型也可以採用。限定非商用或特定用途的授權不採用。",
   "about.models.open.3": "社群固定使用的版本，並記下每個檔案的 SHA-256（檔案的指紋，內容差一個位元組就對不上）。放上網站之前，或你的瀏覽器從其他網站下載時，都會比對一次，對不上就不使用。",
   "about.models.open.host": "模型優先放在 Gears 自己的網域或社群的伺服器。逐字稿的 large-v3-turbo 由你選擇之後從 Hugging Face 下載，下載之前畫面會說明 Hugging Face 可得知的資訊。",
   "about.models.list.title": "目前用到的模型",
