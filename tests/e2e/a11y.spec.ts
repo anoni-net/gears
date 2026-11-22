@@ -195,7 +195,7 @@ test("已下載的模型的持久儲存，申請之前與被拒絕之後深淺�
   }
 });
 
-test("網址檢查從截圖讀出的網址列表沒有無障礙問題（深淺色）", async ({ page }) => {
+test("從截圖讀出的網址列表：網址檢查與檔案畫面都沒有無障礙問題（深淺色）", async ({ page }) => {
   test.setTimeout(120_000);
   await page.route("**/gears/data/165.txt", (route) => route.fulfill({ body: "# count=0\n", contentType: "text/plain" }));
   await page.goto("./url-check/");
@@ -218,6 +218,15 @@ test("網址檢查從截圖讀出的網址列表沒有無障礙問題（深淺�
   expect(await audit(page)).toEqual([]);
   await page.getByRole("button", { name: "檢查這個網址" }).click();
   await expect(page.getByTestId("clean-url")).toBeVisible();
+  expect(await audit(page)).toEqual([]);
+  await page.emulateMedia({ colorScheme: "dark" });
+  expect(await audit(page)).toEqual([]);
+
+  // 檔案畫面：檢查收到的截圖列出畫面上的網址
+  await page.emulateMedia({ colorScheme: "light" });
+  await page.locator(".tray").getByText("chat.png").click();
+  await page.getByRole("button", { name: "檢查畫面內容" }).click();
+  await expect(page.getByTestId("screen-urls")).toBeVisible({ timeout: 90_000 });
   expect(await audit(page)).toEqual([]);
   await page.emulateMedia({ colorScheme: "dark" });
   expect(await audit(page)).toEqual([]);
