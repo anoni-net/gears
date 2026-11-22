@@ -504,9 +504,83 @@ h1.tool-title {
   font-size: var(--fs-md);
 }
 
-.tool-howto ol {
+/* 使用方式的流程（ToolHeader）：每一步一個圖示，圖示的右上角標出第幾步。手機上由上往下，圖示之間用細線連起來，
+   寬一點的畫面由左往右排成三欄。圖示圈沿用設計原則頁示意圖的 .fig-icon */
+.howto-flow {
+  display: grid;
+  gap: var(--sp-3);
   margin: 0 0 var(--sp-4);
-  padding-left: var(--sp-5);
+  padding: 0;
+  list-style: none;
+  counter-reset: howto;
+}
+
+.howto-flow li {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  counter-increment: howto;
+}
+
+.howto-flow .fig-icon {
+  position: relative;
+  z-index: 1;
+}
+
+.howto-flow .fig-icon::after {
+  content: counter(howto);
+  position: absolute;
+  top: -0.2rem;
+  right: -0.35rem;
+  display: grid;
+  place-items: center;
+  min-width: 1.2rem;
+  height: 1.2rem;
+  border-radius: var(--radius-pill);
+  background: var(--link);
+  color: var(--bg);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  line-height: 1;
+}
+
+.howto-flow li:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  top: 2.75rem;
+  bottom: calc(-1 * var(--sp-3));
+  left: calc(1.375rem - 1px);
+  border-left: 2px solid var(--line);
+}
+
+.howto-text {
+  align-self: center;
+}
+
+@media (min-width: 40rem) {
+  .howto-flow {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--sp-4);
+  }
+
+  .howto-flow li {
+    flex-direction: column;
+    gap: var(--sp-2);
+  }
+
+  .howto-flow li:not(:last-child)::before {
+    top: calc(1.375rem - 1px);
+    bottom: auto;
+    left: 3.25rem;
+    right: calc(-1 * var(--sp-4) + 0.5rem);
+    border-left: 0;
+    border-top: 2px solid var(--line);
+  }
+
+  .howto-text {
+    align-self: auto;
+  }
 }
 
 /* 還缺什麼：停用的主要按鈕旁邊的一行提示 */
