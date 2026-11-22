@@ -499,9 +499,19 @@ h1.tool-title {
   margin: 0 0 var(--sp-2);
 }
 
+/* 使用方式包在淡底的卡片裡，跟設計原則頁的示意圖同一種底色：說明性的圖在淡底上，可以操作的工具維持白底。
+   原本流程直接接著工具的第一組選項，圖示的份量跟選項按鈕相近，寬螢幕上容易混在一起 */
+.tool-howto {
+  margin: var(--sp-3) 0 var(--sp-5);
+  padding: var(--sp-3) var(--sp-4) var(--sp-4);
+  border-radius: var(--radius);
+  background: var(--fill);
+}
+
 .tool-howto h2 {
-  margin: var(--sp-4) 0 var(--sp-1);
-  font-size: var(--fs-md);
+  margin: 0 0 var(--sp-3);
+  font-size: var(--fs-sm);
+  color: var(--muted);
 }
 
 /* 使用方式的流程（ToolHeader）：每一步一個圖示，圖示的右上角標出第幾步。手機上由上往下，圖示之間用細線連起來，
@@ -509,7 +519,7 @@ h1.tool-title {
 .howto-flow {
   display: grid;
   gap: var(--sp-3);
-  margin: 0 0 var(--sp-4);
+  margin: 0;
   padding: 0;
   list-style: none;
   counter-reset: howto;
