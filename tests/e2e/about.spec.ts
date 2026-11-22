@@ -89,9 +89,25 @@ test("手機上模型表每一列排成一張小卡，最長的模型名稱不�
   await expect(page.getByRole("table", { name: "Gears 用到的開源模型" })).toBeVisible();
   await expect(page.getByRole("columnheader")).toHaveCount(4);
   await expect(table.locator("tbody tr")).toHaveCount(MODEL_CATALOG.length);
-  // 每一個名稱都只占一行：跟最短的 YuNet 一樣高
-  const heights = await table.locator("tbody th").evaluateAll((cells) => cells.map((c) => Math.round(c.getBoundingClientRect().height)));
-  expect(new Set(heights).size).toBe(1);
+  // 名稱只在空白、連字號或頓號後面換行，不在字中間斷開。逐字取位置，換到下一行的那個字前面必須是這些斷點
+  // （字型寬度不同，CI 的 Linux 在 320 寬會把最長的名稱在連字號後面換成兩行，這是可以的）
+  const midWord = await table.locator("tbody th a").evaluateAll((links) =>
+    links.flatMap((a) => {
+      const text = a.textContent ?? "";
+      const node = a.firstChild!;
+      const range = document.createRange();
+      const tops: number[] = [];
+      for (let i = 0; i < text.length; i++) {
+        range.setStart(node, i);
+        range.setEnd(node, i + 1);
+        tops.push(Math.round(range.getBoundingClientRect().top));
+      }
+      const bad: string[] = [];
+      for (let i = 1; i < text.length; i++) if (tops[i]! > tops[i - 1]! + 2 && !/[\s\-、]/.test(text[i - 1]!)) bad.push(`${text.slice(0, i)}|${text.slice(i)}`);
+      return bad;
+    }),
+  );
+  expect(midWord).toEqual([]);
   // 不必左右捲動
   const [scroll, client] = await page.locator(".about-table").evaluate((e) => [e.scrollWidth, e.clientWidth]);
   expect(scroll).toBeLessThanOrEqual(client);
