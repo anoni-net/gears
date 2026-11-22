@@ -4220,8 +4220,9 @@ body > noscript {
 }
 
 /* 設計原則頁的示意圖（src/ui/AboutFigures.tsx）：放大的圖示、外框與箭頭，標籤是一般的文字，三個語系各自換行。
-   圖示圈跟工具的圖示圈（.ic）同一種形狀：細框線加上淡底色。顏色用連結色（深色模式是淺青），
-   不用完成綠與分類色：分類色只用在桌面與工具的標題，用在這裡的話第二步會跟標題的工具圖示一模一樣，看起來像可以點 */
+   圖示圈跟工具的圖示圈（.ic）同一種形狀：細框線加上淡底色。顏色用中性灰（--icon），跟桌面的圖示標籤、檔案畫面的工具清單一樣，
+   不用分類色：分類色只用在桌面與工具的標題，用在這裡的話第二步會跟標題的工具圖示一模一樣，看起來像可以點。
+   連結色也不用，它跟「檢查收到的」的分類色幾乎一樣（#006d99 與 #026a9d）。步驟的數字用主色 */
 .about-fig {
   margin: var(--sp-5) 0;
   padding: var(--sp-4);
@@ -4253,8 +4254,15 @@ body > noscript {
   justify-content: center;
   width: 2.75rem;
   height: 2.75rem;
-  border: 1px solid var(--link);
+  border: 1px solid var(--icon);
   border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--icon) 8%, var(--surface));
+  color: var(--icon);
+}
+
+/* 設計原則頁要強調的那一格（開源本機模型、對得上才使用、由你確認），圖示跟外框一起用連結色 */
+.fig-node.accent .fig-icon {
+  border-color: var(--link);
   background: color-mix(in srgb, var(--link) 8%, var(--surface));
   color: var(--link);
 }
