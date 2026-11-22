@@ -194,3 +194,31 @@ test("已下載的模型的持久儲存，申請之前與被拒絕之後深淺�
     }
   }
 });
+
+test("網址檢查從截圖讀出的網址列表沒有無障礙問題（深淺色）", async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.route("**/gears/data/165.txt", (route) => route.fulfill({ body: "# count=0\n", contentType: "text/plain" }));
+  await page.goto("./url-check/");
+  const png = await page.evaluate(async () => {
+    const c = document.createElement("canvas");
+    c.width = 1000;
+    c.height = 200;
+    const g = c.getContext("2d")!;
+    g.fillStyle = "#fff";
+    g.fillRect(0, 0, c.width, c.height);
+    g.fillStyle = "#000";
+    g.font = "48px sans-serif";
+    g.fillText("Pay here https://secure-pay.test/verify", 40, 110);
+    const b = await new Promise<Blob>((r) => c.toBlob((x) => r(x!), "image/png"));
+    return Array.from(new Uint8Array(await b.arrayBuffer()));
+  });
+  const [chooser] = await Promise.all([page.waitForEvent("filechooser"), page.getByRole("button", { name: "從截圖讀出網址" }).click()]);
+  await chooser.setFiles({ name: "chat.png", mimeType: "image/png", buffer: Buffer.from(png) });
+  await expect(page.getByTestId("url-ocr-found")).toBeVisible({ timeout: 90_000 });
+  expect(await audit(page)).toEqual([]);
+  await page.getByRole("button", { name: "檢查這個網址" }).click();
+  await expect(page.getByTestId("clean-url")).toBeVisible();
+  expect(await audit(page)).toEqual([]);
+  await page.emulateMedia({ colorScheme: "dark" });
+  expect(await audit(page)).toEqual([]);
+});

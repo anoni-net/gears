@@ -3,6 +3,9 @@ import { list, t, tDynamic } from "../i18n/index.ts";
 import type { Box } from "../tools/redact/index.ts";
 import { type ScreenFound, foundAnything, piiCounts, screenBoxes, screenMaybe } from "../tools/redact/screen.ts";
 import { assertCanvasReadable, isCanvasBlocked } from "./canvas-access.ts";
+import { CopyButton } from "./CopyButton.tsx";
+import { OcrUrlList } from "./OcrUrlList.tsx";
+import { type FoundUrl, ocrText, urlsInImage } from "./url-ocr.ts";
 import { type DetectDownload, detectDownload } from "./detect-download.ts";
 import { decodeImage } from "./image-decode.ts";
 import { wasmAvailable } from "./wasm.ts";
@@ -14,11 +17,15 @@ import { useWorking } from "./working.ts";
 //
 // 檔案畫面依版本建立這個元件（key 是版本的 id），換了版本（縮成常見尺寸、HEIC 轉 JPEG 這類會改像素的處理）
 // 結果跟著清掉，框的座標不會套到另一個版本上
+//
+// 從「檢查收到的」那一組放進來的圖片（receiving，TrayFile.intent 是 check），另外列出畫面上的網址
+// （跟網址檢查的「從截圖讀出網址」同一份列表，按「檢查這個網址」交給網址檢查）與「複製讀出的文字」。
+// 交出去之前的照片只列數量，不列文字：看到內容、決定要不要遮的地方是遮蔽的畫面
 
 type State =
   | { step: "idle" }
   | { step: "faces" | "text"; progress: number | null }
-  | { step: "done"; found: ScreenFound }
+  | { step: "done"; found: ScreenFound; urls: FoundUrl[]; text: string }
   | { step: "failed" | "blocked" | "noWasm" | "decodeFailed" };
 
 interface Props {
@@ -27,9 +34,12 @@ interface Props {
   // 遮蔽接受這個格式時才有「打開遮蔽」的按鈕（TIFF 這類遮蔽不收的照樣可以檢查）
   canRedact: boolean;
   onRedact(found: { boxes: Box[]; maybe: Box[] }): void;
+  // 檢查收到的圖片：列出畫面上的網址與讀出的文字
+  receiving?: boolean;
+  onOpenTool(id: string, preset?: string): void;
 }
 
-export function ScreenCheck({ blob, busy, canRedact, onRedact }: Props) {
+export function ScreenCheck({ blob, busy, canRedact, onRedact, receiving = false, onOpenTool }: Props) {
   const [state, setState] = useState<State>({ step: "idle" });
   const [download, setDownload] = useState<DetectDownload | null>(null);
   const alive = useRef(true);
@@ -65,7 +75,10 @@ export function ScreenCheck({ blob, busy, canRedact, onRedact }: Props) {
       // 一次只執行一個模型，手機上不會同時佔兩份記憶體
       const faces = await findFaces(bitmap, progress("faces"));
       const text = await findText(bitmap, progress("text"));
-      if (alive.current) setState({ step: "done", found: { faces: faces.faces, maybe: faces.maybe, pii: text.pii } });
+      // 裁切小圖在關掉圖片之前畫好
+      const urls = receiving ? urlsInImage(bitmap, text.ocr) : [];
+      const read = receiving ? ocrText(text.ocr) : "";
+      if (alive.current) setState({ step: "done", found: { faces: faces.faces, maybe: faces.maybe, pii: text.pii }, urls, text: read });
     } catch (error) {
       if (alive.current) setState({ step: isCanvasBlocked(error) ? "blocked" : "failed" });
     } finally {
@@ -138,6 +151,24 @@ export function ScreenCheck({ blob, busy, canRedact, onRedact }: Props) {
         >
           {t("screen.redact")}
         </button>
+      ) : null}
+      {receiving && state.step === "done" ? (
+        <section class="screen-urls" aria-labelledby="screen-urls-title" data-testid="screen-urls">
+          <h3 id="screen-urls-title">{t("urlocr.screenTitle")}</h3>
+          {state.urls.length ? (
+            <OcrUrlList urls={state.urls} onCheck={(url) => onOpenTool("url-check", url)} />
+          ) : (
+            <p class="hint">{t("urlocr.screenNone")}</p>
+          )}
+          {state.text ? (
+            <>
+              <div class="buttons">
+                <CopyButton text={state.text} label={t("urlocr.copyText")} />
+              </div>
+              <p class="hint">{t("urlocr.copyNote")}</p>
+            </>
+          ) : null}
+        </section>
       ) : null}
     </section>
   );

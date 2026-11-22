@@ -47,6 +47,8 @@ const OWNERS: Record<string, string[]> = {
   qrread: ["QrReadTool.tsx", "QrContentView.tsx", "FileView.tsx", "SamplesPage.tsx"],
   // 信件檢查沿用網址檢查的相似品牌判斷，提醒的寫法相同
   url: ["UrlCheckTool.tsx", "EmailTool.tsx"],
+  // 從截圖讀出網址：網址檢查的入口與檔案畫面的「畫面上的網址」共用同一份列表
+  urlocr: ["UrlFromScreenshot.tsx", "OcrUrlList.tsx", "ScreenCheck.tsx"],
   style: ["WritingStyleTool.tsx"],
   software: ["SoftwareVerifyTool.tsx"],
   nearby: ["NearbyTool.tsx"],

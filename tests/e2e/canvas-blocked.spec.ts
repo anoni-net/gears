@@ -147,3 +147,17 @@ test("檢查畫面內容：讀不到 canvas 時說明要在網址列允許，允
   await button.click();
   await expect(status).toContainText("沒有找到人臉", { timeout: 90_000 });
 });
+
+test("網址檢查：讀不到 canvas 時說明要在網址列允許，允許之後再按一次才打開選檔案的視窗", async ({ page }) => {
+  await page.route("**/gears/data/165.txt", (route) => route.fulfill({ body: "# count=0\n", contentType: "text/plain" }));
+  await page.goto("./url-check/");
+  let chooser = 0;
+  page.on("filechooser", () => chooser++);
+  const button = page.getByRole("button", { name: "從截圖讀出網址" });
+  await button.click();
+  await expect(page.getByTestId("url-ocr-status")).toContainText("網址列跳出詢問");
+  expect(chooser).toBe(0);
+  await allow(page);
+  await Promise.all([page.waitForEvent("filechooser"), button.click()]);
+  await expect(page.getByTestId("url-ocr-status")).toHaveCount(0);
+});

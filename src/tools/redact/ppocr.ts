@@ -326,6 +326,22 @@ export function words(line: OcrLine): { text: string; box: Box }[] {
   return out.filter((w) => w.text).map(({ text, box }) => ({ text, box }));
 }
 
+// 照辨識的原文排成一行（pii.ts 的 LineText）：每個位置（UTF-16）一個字框，空白是 null。
+// 跟 words 不同，不在漢字與英數之間補空白，全形的「：／。」也照原樣留在原位，
+// 從截圖讀出網址（src/tools/url-check/ocr.ts）與複製讀出的文字用這一份
+export function ocrLineText(line: OcrLine): { text: string; boxes: (Box | null)[] } {
+  const boxes: (Box | null)[] = [];
+  let k = 0;
+  let text = "";
+  for (const ch of line.text) {
+    const c = ch === " " ? null : line.chars[k++];
+    if (ch !== " " && !c) break;
+    text += ch;
+    for (let i = 0; i < ch.length; i++) boxes.push(c ? c.box : null);
+  }
+  return { text, boxes };
+}
+
 // 「框起所有文字」要框的行。照片、頭像與標點的碎片常被認成一個字，分數都很低（合成截圖裡 0.04 到 0.58）。
 // 只丟一個字而且分數低於 0.6 的，分數低但字多的行是縮小、壓縮過的小字，裡面可能有個資，要留著
 export function keepLine(line: { text: string; score: number }): boolean {

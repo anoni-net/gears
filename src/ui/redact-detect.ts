@@ -2,7 +2,7 @@ import type { Box } from "../tools/redact/index.ts";
 import { type Detection, type FaceSelection, MAYBE_SCORE, type Outputs, SCALES, decodeYunet, inputSize, selectFaces, toImage } from "../tools/redact/faces.ts";
 import { findPiiInLines, lineBoxes, textLayerQuality, textLines } from "../tools/redact/pdf-text.ts";
 import { type LineText, type PiiMatch, findPiiInLineTexts, lineTexts, overlaps, pad } from "../tools/redact/pii.ts";
-import { type OcrLine, keepLine, words } from "../tools/redact/ppocr.ts";
+import { type OcrLine, keepLine, ocrLineText, words } from "../tools/redact/ppocr.ts";
 import yunet from "../tools/redact/yunet-model.json" with { type: "json" };
 import { assertCanvasReadable } from "./canvas-access.ts";
 import type { PdfPages } from "./pdf-pages.ts";
@@ -109,6 +109,8 @@ export interface TextResult {
   pii: PiiMatch[];
   lines: Box[]; // 每一行文字的範圍，讀者想把文字全部框起來時用
   texts: LineText[]; // 每一行的文字與每個字的框，個資辨識模型讀這一份（pii-detect.ts），PDF 的文字層沒有
+  // 照辨識原文的每一行（不補空白，ppocr.ts 的 ocrLineText），從截圖讀出網址與複製讀出的文字用。PDF 的文字層沒有
+  ocr: LineText[];
 }
 
 // regions 只辨識圖片上的這幾塊（PDF 頁面上的圖片），沒有時整張辨識
@@ -135,7 +137,7 @@ export async function findText(bitmap: ImageBitmap, onProgress?: OnProgress, reg
     const texts = lineTexts(lines.map(words));
     const pii = findPiiInLineTexts(texts).map((m) => ({ ...m, box: pad(m.box, 0.15, bitmap.width, bitmap.height) }));
     // 「框起所有文字」：每一行的框，照片與標點的碎片（一個字、分數又低）不框
-    return { pii, lines: lines.filter(keepLine).map((l) => pad(l.box, 0.1, bitmap.width, bitmap.height)), texts };
+    return { pii, lines: lines.filter(keepLine).map((l) => pad(l.box, 0.1, bitmap.width, bitmap.height)), texts, ocr: lines.map(ocrLineText) };
   } finally {
     await ocr.release();
   }
@@ -164,12 +166,13 @@ export async function findPdfText(pages: PdfPages, index: number, bitmap: ImageB
   const lines = textLines(runs);
   const pii = findPiiInLines(lines, width, height).map((m) => ({ ...m, box: pad(m.box, 0.15, width, height) }));
   const spans = lineBoxes(lines, width, height).map((box) => pad(box, 0.1, width, height));
-  if (!ocr || (images !== "page" && !images.length)) return { pii, lines: spans, texts: [] };
+  if (!ocr || (images !== "page" && !images.length)) return { pii, lines: spans, texts: [], ocr: [] };
   assertCanvasReadable();
   const found = await findText(bitmap, onProgress, images === "page" ? undefined : images);
   return {
     pii: [...pii, ...found.pii.filter((m) => !pii.some((p) => overlaps(p.box, m.box)))],
     lines: [...spans, ...found.lines.filter((box) => !spans.some((s) => overlaps(s, box)))],
     texts: [],
+    ocr: [],
   };
 }
