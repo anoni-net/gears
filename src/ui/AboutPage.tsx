@@ -8,6 +8,7 @@ import { useDeviceSupport } from "./device-support.ts";
 import { IconCircle } from "./Icon.tsx";
 import { nameOf } from "./StoragePage.tsx";
 import { PAGE_META } from "./tool-meta.ts";
+import { ConfirmFigure, LayersFigure, VerifyFigure } from "./AboutFigures.tsx";
 
 // 設計原則（/gears/about/）：寫給不熟技術的讀者，說明 Gears 的兩層設計：瀏覽器裡就能完成的工具，
 // 加上開源本機模型的加強（AGENTS.md「定位」、「設計原則頁」）。每一段用 Gears 裡實際的工具當例子。
@@ -170,6 +171,7 @@ export function AboutPage({ offlineReady }: { offlineReady: boolean }) {
         {t("about.title")}
       </h1>
       <p>{t("about.intro")}</p>
+      <LayersFigure />
 
       <section aria-labelledby="browser">
         <h2 id="browser">{t("about.browser.title")}</h2>
@@ -199,6 +201,7 @@ export function AboutPage({ offlineReady }: { offlineReady: boolean }) {
             <li key={n}>{tDynamic(`about.models.open.${n}`)}</li>
           ))}
         </ul>
+        <VerifyFigure />
         <p>{t("about.models.open.host")}</p>
         <h3 id="models-list">{t("about.models.list.title")}</h3>
         <p>{t("about.models.list.intro")}</p>
@@ -214,6 +217,7 @@ export function AboutPage({ offlineReady }: { offlineReady: boolean }) {
             <li key={n}>{tDynamic(`about.confirm.${n}`)}</li>
           ))}
         </ul>
+        <ConfirmFigure />
         <p>{t("about.confirm.why")}</p>
         <p>{t("about.confirm.why2")}</p>
         <h3 id="confirm-fallback">{t("about.confirm.fallback.title")}</h3>

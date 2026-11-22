@@ -174,3 +174,14 @@ test("英文版與簡體版沒有露出字串的鍵", async ({ page }) => {
   await expect(page.getByRole("heading", { level: 1, name: "设计原则" })).toBeVisible();
   await expect(page.getByTestId("about")).not.toContainText(/about\.[a-z]/);
 });
+
+// 示意圖（src/ui/AboutFigures.tsx）：三張都在，手機上總覽圖的兩條路線左右並排，疊成一排會看起來像同一條流程
+test("設計原則頁的示意圖：三張都在，手機上兩條路線並排", async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 780 });
+  await page.goto("./about/");
+  for (const id of ["layers", "verify", "confirm"]) await expect(page.getByTestId(`about-fig-${id}`)).toBeVisible();
+  const tops = await page.locator(".fig-cross > li").evaluateAll((items) => items.map((li) => Math.round(li.getBoundingClientRect().top)));
+  expect(tops).toHaveLength(2);
+  expect(tops[0]).toBe(tops[1]);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+});
