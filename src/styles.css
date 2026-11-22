@@ -4135,3 +4135,184 @@ body > noscript {
   cursor: pointer;
 }
 
+/* 設計原則頁的示意圖（src/ui/AboutFigures.tsx）：放大的圖示、外框與箭頭，標籤是一般的文字，三個語系各自換行。
+   圖示用連結色（深色模式是淺青），不用完成綠與分類色 */
+.about-fig {
+  margin: var(--sp-5) 0;
+  padding: var(--sp-4);
+  border-radius: var(--radius);
+  background: var(--fill);
+}
+
+.about-fig figcaption {
+  margin-top: var(--sp-3);
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
+
+.fig-node {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  line-height: 1.4;
+}
+
+.fig-icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: var(--radius-pill);
+  background: color-mix(in srgb, var(--link) 12%, var(--surface));
+  color: var(--link);
+}
+
+.fig-icon .icon {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
+.fig-text {
+  min-width: 0;
+}
+
+.fig-text strong,
+.fig-text small {
+  display: block;
+}
+
+.fig-text small {
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
+
+.fig-node.accent {
+  border-color: var(--link);
+  box-shadow: 0 0 0 1px var(--link);
+}
+
+.fig-node.danger .fig-icon {
+  background: color-mix(in srgb, var(--danger) 12%, var(--surface));
+  color: var(--danger-text);
+}
+
+.fig-arrow {
+  display: flex;
+  justify-content: center;
+  gap: var(--sp-1);
+  color: var(--muted);
+}
+
+.fig-arrow .icon {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.fig-arrow.up .icon,
+.fig-arrow.both .icon:first-child {
+  transform: rotate(180deg);
+}
+
+/* 總覽：虛線框是你的裝置，框外是跟檔案有關、會經過伺服器的兩件事 */
+.fig-device {
+  display: grid;
+  gap: var(--sp-2);
+  padding: var(--sp-3);
+  border: 2px dashed var(--link);
+  border-radius: var(--radius);
+}
+
+.fig-label {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin: 0;
+  color: var(--link);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+
+.fig-label .icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+/* 兩條路線一律左右並排，手機上疊成一排會看起來像同一條流程。窄的畫面裡圖示放在文字上方 */
+.fig-cross {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 var(--sp-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* 頁面的 .about li + li 會在清單項目之間多留一段，圖裡的項目由 gap 決定間距 */
+.about-fig li + li {
+  margin-top: 0;
+}
+
+.fig-cross li {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: var(--sp-1);
+  padding: var(--sp-1) 0;
+}
+
+.fig-outside .fig-node {
+  justify-content: center;
+}
+
+@media (max-width: 39.99rem) {
+  .fig-cross .fig-node {
+    flex-direction: column;
+    gap: var(--sp-1);
+    text-align: center;
+  }
+}
+
+/* 步驟：手機上由上往下，寬一點的畫面由左往右 */
+.fig-steps ol {
+  display: grid;
+  gap: var(--sp-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fig-steps li {
+  display: grid;
+  gap: var(--sp-1);
+}
+
+@media (min-width: 40rem) {
+  .fig-steps ol {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: center;
+    gap: var(--sp-2);
+  }
+
+  .fig-steps li {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+  }
+
+  .fig-steps li:first-child {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .fig-steps .fig-arrow .icon {
+    transform: rotate(-90deg);
+  }
+
+  .fig-branch > .fig-arrow {
+    grid-row: span 2;
+  }
+}
+

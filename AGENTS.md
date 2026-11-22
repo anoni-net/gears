@@ -574,6 +574,7 @@ ProofMode（Guardian Project 給人權紀錄者的 Android App）拍照時不改
 - 即時檢查只在畫面上顯示，不送出、不連線：離線使用讀 `src/ui/offline.ts` 的 `ready`（由 `src/app.tsx` 傳進來，不再註冊一次 service worker），分成已經可以離線使用、還沒準備好（還在存或沒有存成功，兩者分不出來，說明都寫）、不支援（沒有 `navigator.serviceWorker`，Tor Browser 與部分私密瀏覽）。已下載的模型用 `src/core/storage.ts` 的 `scanStorage` 與 `MODEL_GROUPS`（執行模型的程式、pdf.js 與 c2pa 不算模型），名稱照已下載的模型頁的 `nameOf`，不能用 Cache API 時照那一頁的說法（`storage.unavailable`）。WebAssembly 與顯示卡用 `useDeviceSupport`，跟桌面的支援狀況同一份
 - 評測的數字（個資辨識模型加上規則在文字上約八成五、截圖上約七成四，標點建議在立法院公報的口語發言上逗號 0.77、句號 0.66、問號 0.74）寫「社群的評測」，不附連結：評測放在社群的工作區，還沒有公開，公開的頁面連不過去。之後考慮把評測的摘要公開（例如放到文件站或這個 repo），再補上連結。評測的數字改了時，三個語系的 `about.confirm.why` 一起改
 - 頁面最下面的更新日期（`about.updated`）在改了文字時跟著改，模型表跟著程式更新，不必改日期
+- 示意圖（`src/ui/AboutFigures.tsx`，2026-11-22 起）：開頭的兩層設計與裝置的邊界、開源的條件裡模型檔的檢查、由你確認的模型結果，三張分散在頁面裡，原本整頁都是文字。圖形是放大的 MDI 圖示、外框與箭頭，標籤是一般的文字（`about.fig.*`），三個語系各自換行，深淺色跟著 CSS 變數，圖示用連結色，不用完成綠與分類色。整句的說明放在 `figcaption`，圖裡不放 `h2`、`h3`。內容要跟文字一致：伺服器只寫跟檔案有關的兩件事（存取紀錄另外寫在圖說），SHA-256 照 `about.models.open.3` 寫比對的時機，確認流程停在「套用」。圖裡不放下載量與模型數，要放就從 `MODEL_CATALOG` 取。手機上總覽圖的兩條路線維持左右並排，疊成一排會看起來像同一條流程
 - 瀏覽器測試在 `tests/e2e/about.spec.ts`：「了解更多」捲到對應段落、使用者區與頁尾、左欄、模型表跟 `MODEL_CATALOG` 逐列比對、即時檢查在沒有模型、有模型、不能用 Cache API、沒有 service worker、關掉 WebAssembly 與 `?gpu=force` 時的結果，以及英文版與簡體版沒有露出字串的鍵。可以離線使用的那一種在 `offline.spec.ts`（只有它打開 service worker），onion 版的入口在 `tests/onion/`
 
 ## 裝置量測（實驗頁）
