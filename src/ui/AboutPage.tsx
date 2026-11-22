@@ -46,31 +46,33 @@ function PageLink({ id, hash, children }: { id: string; hash?: string; children:
 function ModelTable() {
   return (
     <div class="about-table">
-      <table data-testid="about-models">
+      {/* 窄螢幕上每一列改排成一張小卡（styles.css 的 .about-table），CSS 改了 display 之後 Safari 會拿掉表格的語意，
+          所以每一層明寫 role，讀螢幕軟體照樣唸成表格 */}
+      <table data-testid="about-models" role="table">
         <caption>{t("about.models.caption")}</caption>
-        <thead>
-          <tr>
-            <th scope="col">{t("about.models.col.name")}</th>
-            <th scope="col">{t("about.models.col.use")}</th>
-            <th scope="col">{t("about.models.col.license")}</th>
-            <th scope="col">{t("about.models.col.size")}</th>
+        <thead role="rowgroup">
+          <tr role="row">
+            <th scope="col" role="columnheader">{t("about.models.col.name")}</th>
+            <th scope="col" role="columnheader">{t("about.models.col.use")}</th>
+            <th scope="col" role="columnheader">{t("about.models.col.license")}</th>
+            <th scope="col" role="columnheader">{t("about.models.col.size")}</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody role="rowgroup">
           {MODEL_CATALOG.map((m) => (
-            <tr key={m.id} data-model={m.id}>
-              <th scope="row">
+            <tr key={m.id} data-model={m.id} role="row">
+              <th scope="row" role="rowheader">
                 <a href={m.source} target="_blank" rel="noopener noreferrer">
                   {m.name}
                 </a>
               </th>
-              <td>{tDynamic(`about.use.${m.id}`)}</td>
-              <td class="about-license">
+              <td class="about-use" role="cell">{tDynamic(`about.use.${m.id}`)}</td>
+              <td class="about-license" role="cell">
                 <PageLink id="licenses" hash={`licenses-${m.licenses}`}>
                   {m.license}
                 </PageLink>
               </td>
-              <td class="about-size">{formatSize(m.bytes)}</td>
+              <td class="about-size" role="cell">{formatSize(m.bytes)}</td>
             </tr>
           ))}
         </tbody>

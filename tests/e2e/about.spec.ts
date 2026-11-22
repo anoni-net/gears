@@ -81,6 +81,38 @@ test("模型表的列與 model-catalog 一致，授權連到授權與來源的�
   await scrolledTo(page, "licenses-redact-detect");
 });
 
+test("手機上模型表每一列排成一張小卡，最長的模型名稱不在字中間斷行，讀螢幕軟體照樣讀得到表格", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 640 });
+  await page.goto("./about/");
+  const table = page.getByTestId("about-models");
+  // 表格的語意：明寫的 role 讓 Safari 在 display 改掉之後仍然當成表格
+  await expect(page.getByRole("table", { name: "Gears 用到的開源模型" })).toBeVisible();
+  await expect(page.getByRole("columnheader")).toHaveCount(4);
+  await expect(table.locator("tbody tr")).toHaveCount(MODEL_CATALOG.length);
+  // 名稱只在空白、連字號或頓號後面換行，不在字中間斷開。逐字取位置，換到下一行的那個字前面必須是這些斷點
+  // （字型寬度不同，CI 的 Linux 在 320 寬會把最長的名稱在連字號後面換成兩行，這是可以的）
+  const midWord = await table.locator("tbody th a").evaluateAll((links) =>
+    links.flatMap((a) => {
+      const text = a.textContent ?? "";
+      const node = a.firstChild!;
+      const range = document.createRange();
+      const tops: number[] = [];
+      for (let i = 0; i < text.length; i++) {
+        range.setStart(node, i);
+        range.setEnd(node, i + 1);
+        tops.push(Math.round(range.getBoundingClientRect().top));
+      }
+      const bad: string[] = [];
+      for (let i = 1; i < text.length; i++) if (tops[i]! > tops[i - 1]! + 2 && !/[\s\-、]/.test(text[i - 1]!)) bad.push(`${text.slice(0, i)}|${text.slice(i)}`);
+      return bad;
+    }),
+  );
+  expect(midWord).toEqual([]);
+  // 不必左右捲動
+  const [scroll, client] = await page.locator(".about-table").evaluate((e) => [e.scrollWidth, e.clientWidth]);
+  expect(scroll).toBeLessThanOrEqual(client);
+});
+
 test("延伸閱讀連到隱私說明、授權與來源、已下載的模型、協助測試與原始碼", async ({ page }) => {
   await page.goto("./about/");
   const more = page.getByTestId("about-more").getByRole("link");
