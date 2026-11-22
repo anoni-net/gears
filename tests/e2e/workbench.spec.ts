@@ -115,10 +115,13 @@ test("桌面的圖示標籤：卡片上的圖示帶著補充說明，最下方�
   await expect(page.getByRole("link", { name: /^QR code 與條碼讀取 相機：用相機掃描 QR code 與條碼/ })).toBeVisible();
   await expect(page.getByRole("img", { name: "相機：用相機掃描對方螢幕上的 QR code" })).toHaveAttribute("title", "相機：用相機掃描對方螢幕上的 QR code");
   await expect(page.getByRole("img", { name: "相機：視訊通話時用相機與麥克風" })).toBeVisible();
-  await expect(page.locator(".tool-rows .tool-tag")).toHaveCount(5);
+  await expect(page.locator(".tool-rows .tool-tag")).toHaveCount(6);
 
   const legend = page.getByTestId("tag-legend");
-  await expect(legend.locator("dt")).toHaveText(["開源本機模型", "相機"]);
+  await expect(legend.locator("dt")).toHaveText(["開源本機模型", "相機", "經過伺服器"]);
+  // 經過伺服器的說明連到遠端傳送的伺服器說明頁
+  await expect(legend.getByRole("link", { name: "遠端傳送的伺服器" })).toHaveAttribute("href", "/gears/remote-server/");
+  await expect(page.getByRole("img", { name: "經過伺服器：加密之後經過社群的轉送服務" })).toBeVisible();
   await expect(legend).toContainText("模型第一次使用時才下載");
   await expect(legend).toContainText("瀏覽器會先詢問是否允許");
   // 標籤名稱跟說明的第一行對齊，說明折成好幾行時也一樣
@@ -135,7 +138,7 @@ test("桌面的圖示標籤：卡片上的圖示帶著補充說明，最下方�
   // 標籤一律中性灰，卡片與圖示說明一致，不同標籤也是同一個顏色
   const color = (selector: string) => page.locator(selector).first().evaluate((el) => getComputedStyle(el).color);
   const colors = new Set<string>();
-  for (const tag of ["model", "camera"]) {
+  for (const tag of ["model", "camera", "server"]) {
     expect(await color(`.tool-rows .tag-${tag}`), tag).toBe(await color(`#tag-legend .tag-${tag}`));
     colors.add(await color(`.tool-rows .tag-${tag}`));
   }

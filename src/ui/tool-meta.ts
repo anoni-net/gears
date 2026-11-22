@@ -27,7 +27,7 @@ const ICONS: Record<string, { icon: IconName; tags?: TagId[] }> = {
   "writing-style": { icon: "text-box-edit-outline" },
   "video-frames": { icon: "movie-search-outline" },
   nearby: { icon: "cellphone-link", tags: ["camera"] },
-  remote: { icon: "send-lock-outline", tags: ["camera"] },
+  remote: { icon: "send-lock-outline", tags: ["camera", "server"] },
 };
 
 // 桌面的工具依讀者的目的分組（2026-10-16 起）。原本依操作方式分成「處理檔案」與「從空白開始」，

@@ -13,6 +13,7 @@ import type { IconName } from "./icon-paths.ts";
 export const TAGS = {
   model: { icon: "brain" }, // 在瀏覽器裡執行模型，第一次使用時下載
   camera: { icon: "camera-outline" }, // 會用到相機，瀏覽器會先詢問
+  server: { icon: "server-outline" }, // 內容（加密過）會經過社群的伺服器，沒有網路不能用。目前只有遠端傳送
 } as const satisfies Record<string, { icon: IconName }>;
 
 export type TagId = keyof typeof TAGS;
