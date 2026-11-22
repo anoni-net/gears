@@ -24,6 +24,7 @@ const GROUPS: { id: string; entries: Entry[] }[] = [
     entries: [
       { id: "transcribe", url: fileUrl("transcribe") },
       { id: "redact-detect", url: fileUrl("redact-detect") },
+      { id: "verify-similar", url: fileUrl("verify-similar") },
     ],
   },
   {

@@ -7,6 +7,7 @@ import { incrementalPdf } from "../helpers/pdf-incremental.ts";
 import { encodeQr, qrPng } from "../../src/tools/qrcode/index.ts";
 import { existsSync, readFileSync } from "node:fs";
 import { SCENES_WEBM } from "../global-setup.ts";
+import { similarImage } from "../helpers/similar.ts";
 import { expect, test } from "./guard.ts";
 
 // 用 axe-core 檢查 WCAG 2.1 AA。只在 Chromium 跑，結果跟瀏覽器無關
@@ -227,6 +228,20 @@ test("從截圖讀出的網址列表：網址檢查與檔案畫面都沒有無�
   await page.locator(".tray").getByText("chat.png").click();
   await page.getByRole("button", { name: "檢查畫面內容" }).click();
   await expect(page.getByTestId("screen-urls")).toBeVisible({ timeout: 90_000 });
+  expect(await audit(page)).toEqual([]);
+  await page.emulateMedia({ colorScheme: "dark" });
+  expect(await audit(page)).toEqual([]);
+});
+
+test("查證的相近的圖片：分組與模型的說明，深淺色都沒有無障礙問題", async ({ page }) => {
+  await page.goto("./verify/");
+  await page.getByTestId("verify-input").setInputFiles([
+    { name: "photo.jpg", mimeType: "image/jpeg", buffer: await similarImage(page, "orig") },
+    { name: "photo-small.jpg", mimeType: "image/jpeg", buffer: await similarImage(page, "small") },
+    { name: "photo-flip.png", mimeType: "image/png", buffer: await similarImage(page, "flip") },
+    { name: "other.jpg", mimeType: "image/jpeg", buffer: await similarImage(page, "other") },
+  ]);
+  await expect(page.getByTestId("similar-group")).toHaveCount(1, { timeout: 20_000 });
   expect(await audit(page)).toEqual([]);
   await page.emulateMedia({ colorScheme: "dark" });
   expect(await audit(page)).toEqual([]);

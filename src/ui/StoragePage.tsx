@@ -18,7 +18,7 @@ async function remove(rows: StorageRow[]) {
 
 // 這一列的名稱與用在哪裡。設計原則頁的即時檢查也用這個名稱
 export const nameOf = ({ group, model }: StorageKey) => (model ? tDynamic(`transcribe.model.${model}`) : tDynamic(`storage.item.${group}`));
-const usedBy = ({ group }: StorageKey) => (group === "transcribe" || group === "speaker" || group === "vad" || group === "punct" ? t("tool.transcribe") : group === "faces" || group === "ocr" || group === "pii" ? t("tool.redact") : group === "c2pa" ? t("tool.verify") : group === "other" ? "" : tDynamic(`storage.used.${group}`));
+const usedBy = ({ group }: StorageKey) => (group === "transcribe" || group === "speaker" || group === "vad" || group === "punct" ? t("tool.transcribe") : group === "faces" || group === "ocr" || group === "pii" ? t("tool.redact") : group === "c2pa" || group === "dino" ? t("tool.verify") : group === "other" ? "" : tDynamic(`storage.used.${group}`));
 
 export function StoragePage() {
   // undefined 是還在計算

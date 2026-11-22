@@ -154,7 +154,7 @@ CI（`.github/workflows/ci.yml`）依瀏覽器拆成四台機器同時執行：C
 
 | 標籤 | 圖示 | 工具 |
 |---|---|---|
-| 開源本機模型 | `brain` | 逐字稿、遮蔽（只有自動尋找人臉與個資用到）、網址檢查（只有從截圖讀出網址用到） |
+| 開源本機模型 | `brain` | 逐字稿、遮蔽（只有自動尋找人臉與個資用到）、網址檢查（只有從截圖讀出網址用到）、查證（只有比對裁切、加字之後的相近圖片用到） |
 | 相機 | `camera-outline` | QR code 與條碼讀取、面對面傳送、遠端傳送 |
 | 經過伺服器 | `server-outline` | 遠端傳送 |
 
@@ -320,6 +320,7 @@ pdf-lib 複製頁面時，頁面引用到的東西會一路複製過去，直接
 - 裝置、序號、軟體、人名，同一個值出現在哪幾個檔案。位置只列座標，不畫地圖、不換算地址
 - 編輯痕跡：照片內嵌的縮圖跟主圖並排、XMP 的編輯紀錄、Office 與 LibreOffice 的修訂次數與編輯時間、PDF 的數位簽章（簽章、憑證鏈與涵蓋的範圍，見下方「PDF 數位簽章的驗證」），以及 PDF 的版本紀錄（見下方）
 - 來源標示（`provenance.ts`，見下方「來源標示」）：IPTC 的數位來源類型與 AI 欄位、GB 45438 的隱式標識、生成工具寫下的參數，以及有沒有 C2PA 內容憑證
+- 相近的圖片：內容相近的圖片分在同一組並排（見下方「相近的圖片」）
 - 需要留意的地方（`summary.ts`）：內容相同、副檔名跟格式不符、修改早於建立、拍攝時間跟 GPS 時間對不上（有時區時差 5 分鐘以上，沒有時區時差距不接近任何真實的時區）、記錄的軟體是影像編輯軟體、簽章之後還有加入內容、PDF 有舊版本
 
 畫面的順序照讀者想問的（2026-10-16 首次試用時回饋全部攤開不好讀）：最上面一行總覽，接著是需要留意的地方，每一項是短標題加一句可能的原因。再來是每個檔案一張卡片，只列開始與最後修改的時間、裝置、軟體、人名、位置與其他痕跡，雜湊值、序號與所有的時間收在「完整資訊」裡。兩個以上的檔案才顯示檔案之間的關聯（出現在兩個以上檔案的值），合併的時間線預設收起來。沒有資料的區塊不顯示。檔案一律用檔名稱呼，不讓讀者在編號之間對照。匯出的紀錄用同一套說法（`src/ui/verify-report.ts`），技術資訊照樣全部寫出。
@@ -340,6 +341,28 @@ PDF 的版本紀錄：每一個 `%%EOF` 是一次存檔的結尾，切到那裡�
 查證處理的是整個暫存區，在它的畫面加入檔案時留在原畫面（見「工具模組」的 `tray`）。
 
 照片讀 EXIF（`extractExif` 支援的格式，`parseExif` 補上了拍攝、數位化、修改三種時間與各自的時區、GPS 的 UTC 時間、縮圖的位置與 UserComment），PDF 用 pdf-lib 讀文件資訊、XMP、簽章與舊版本，Office 讀 `docProps/core.xml` 與 `app.xml`，LibreOffice 讀 `meta.xml`，XMP 在其他格式裡用 `<x:xmpmeta` 搜尋。其他格式用加入暫存區時清除中繼資料的檢查結果，MP4、MOV、M4A 的時間是 UTC。單元測試在 `tests/unit/verify.spec.ts`。本機另外用 Pillow 寫入 EXIF 的照片、python-docx 產生的 Word 與 Chromium 列印的 PDF 驗證過。
+
+### 相近的圖片
+
+同一張照片轉傳幾次之後會被縮小、重新壓縮、裁切或加上文字，SHA-256 只認得完全相同的檔案。2026-11-22 起查證在需要留意的地方下面多一區「相近的圖片」（`src/ui/SimilarImages.tsx`，#129），暫存區裡讀者加入的圖片，內容相近的分在同一組並排，讀者自己判斷哪一張比較接近原檔。純邏輯在 `src/tools/verify/similar.ts` 與 `pdq.ts`，有單元測試。
+
+- 兩層：PDQ 感知雜湊是預設，不用模型，所有檔案整理完之後自動比對。DINOv2 small 是讀者按「也比對裁切、加字之後的版本」才下載的加強，照「定位」的模型是加強的那一層。桌面上查證因此標了開源本機模型的圖示
+- PDQ（`src/tools/verify/pdq.ts`）：照 meta/ThreatExchange `9f627fb1` 的 C++ 參考實作逐段改寫成 TypeScript，浮點運算用 `Math.fround` 對齊 C++ 的 float，8 個方向直接在 DCT 係數上換號與轉置。純 JavaScript，關掉 WebAssembly 時照樣可以用。單元測試（`tests/unit/pdq.spec.ts`）用整數公式產生三張圖（64 × 64、200 × 120，以及超過 512 像素、要先縮小的 600 × 400），8 個方向與品質都跟參考實作的 `pdq-photo-hasher --pdqdih-across` 完全相同。授權是 BSD，檔頭保留 Meta 的版權聲明
+- 解碼與縮小（`src/ui/similar-images.ts`）：在主執行緒用 `decodeImage()`（HEIC 在不支援的瀏覽器上靠 libheif），直接畫進長邊 512 的 canvas、讓瀏覽器平滑縮小再算 PDQ，讀出來不到 1 MB。照參考實作整張讀出像素再縮小的話，4,800 萬像素的照片約要 192 MB。評測裡兩種做法在同一批裡的分組幾乎相同，只是算出的雜湊跟其他系統不一定一樣，所以雜湊不顯示、不匯出。同一次解碼另外畫一張 224 × 224 留給 DINOv2，以及長邊 320 的縮圖（只畫不讀回）。一次只解碼一張，同一個原檔只算一次
+- 門檻：PDQ 8 個方向取最小的距離，31 以內算相近（PDQ README 的門檻）。品質 49 以下的雜湊不用（README 的建議，純色、幾乎全黑的圖雜湊很接近），評測的照片沒有一張低於 49，這條沒有實際量過。DINOv2 取 CLS 特徵（`pooler_output`），正規化之後 1 − cos 在 0.15 以內算相近
+- 分組（`groupSimilar`）：組裡每一對都相近才併（complete linkage）。兩層的距離各自除以門檻換成同一把尺，每次合併「兩組之間最遠的一對」最近的那兩組，直到沒有可以合併的。每張圖只放進一組，也跟組外的圖相近時，在那一張下面寫「也跟 X 相近，沒有分在同一組」。SHA-256 相同的複本只比第一個，其他的寫在那一張下面，需要留意的地方照樣列「內容完全相同」
+- 畫面：每組一張卡片，同一組的圖並排，每張是縮圖、檔名、解析度、檔案大小、有沒有中繼資料（加入暫存區時的檢查結果，內文的個資這類內容不算）與拍攝時間。不顯示距離、相似度或百分比，照查證「只給線索」的原則。組裡每一對都是 PDQ 判斷相近時寫「內容相近，可能是同一張圖縮小、重新壓縮、調色或翻轉之後的版本」，有一對只有 DINOv2 判斷相近時寫「畫面相近，可能是同一張圖裁切、加字或加框之後的版本，也可能是同一個場景、同一地點同一角度拍的另一張照片」（`verify.similar.layer.*`）。區塊最後用小字寫明聊天截圖找不回原圖、裁掉三成以上也可能找不回，沒有分在同一組不代表不是同一張，還沒用模型時另外寫裁切、加字要用模型比對。匯出的查證紀錄用同一套說法寫出分組與比對方式（`verify-report.ts` 的 `SimilarReport`），比對還沒完成時匯出的按鈕先停用
+- 範圍：暫存區裡讀者加入的圖片（`SIMILAR_FORMATS`，大檔案除外），兩張以上才顯示。瀏覽器解不開的格式（多數瀏覽器的 TIFF、JPEG XL）列在「沒有比對」
+- canvas：比對之前先讀一次 canvas（`canvasReadable`）。Tor Browser 沒有允許時只比 SHA-256，畫面說明並請讀者在網址列允許之後按「再比對一次」，在點擊的當下再讀一次，網址列才會跳出詢問，模型的按鈕跟著拿掉。Brave 的雜訊對 PDQ 沒有影響（評測裡兩次 Brave 的雜湊全部相同），DINOv2 只讓剛好在門檻邊緣的組合改變判斷，同一批圖重新整理之後可能多一張或少一張。畫面不另外說明，測試也不假設 Brave 的結果固定
+- DINOv2 small：onnx-community/dinov2-small-ONNX `08c606e3` 的 `model_int8.onnx`（24,427,763 位元組，上游 facebook/dinov2-small 是 Apache-2.0，轉檔的 repo 沒有授權標籤），照原樣放在 assets.anoni.net 的 `dinov2-small-08c606e/`（附 `README.txt` 與授權全文，onion 版由 `/models/assets/` 提供），檔案與 SHA-256 在 `src/tools/verify/dino-model.ts` 的 `DINO_MODEL`。Worker（`src/ui/dino.worker.ts`）只讀 `config.json` 與模型檔。`preprocessor_config.json` 是中央裁切的前處理，門檻是用整張壓成 224 × 224 量出來的，所以前處理自己做（ImageNet 的平均與標準差），檔案照樣放在目錄裡。載入的設定跟個資辨識、標點建議共用 `assets-env.ts`，存在 `transformers-cache`，「已下載的模型」另外一列（`storage.item.dino`）。一批算完就結束 Worker。2026-11-22 在本機用評測的三張照片比對，算出的特徵跟評測在 Chromium 存下的相同（1 − cos 小於 0.0001）
+- 下載量：電腦上按下之前寫出還要下載多少（`dinoDownloadMb`）。模型 24 MB，Transformers.js 的 asyncify 版 WebAssembly（26.9 MB，逐字稿、個資辨識與標點建議共用）不在 `gears-keep` 時再加 27 MB，兩者都在時不寫。DINOv2 還沒放上 assets.anoni.net，模型的大小先用沒有壓縮的位元組（`transfer`），上傳之後用 curl 量經過 Cloudflare 的傳輸量再改
+- 手機與當機：手機與平板第一次按下時先展開說明（`verify.similar.model.phone`，照遮蔽的「找人名、地址與單位」）：還在測試、要下載的量、電腦上的記憶體尖峰約 750 MB（評測只有電腦的數字）、記憶體不夠時暫存區會清空，下面是「仍要使用」與「先幫忙量測」（協助測試頁的第四項）。建立 Worker 時在 sessionStorage 記下 `gears-dino`，做完、失敗、停止或離開查證時清掉。打開查證時記號還在，就說明上一次頁面重新載入了，同一個分頁不再出現按鈕。關掉 WebAssembly 時不出現按鈕，改寫說明，PDQ 照常分組
+- 讀者加入新的圖片之後，只有新的那幾張要交給模型，畫面寫出還有幾張沒有用模型比對，按鈕再出現一次（特徵依原檔記在 `WeakMap`）
+- 評測在社群工作區的 `research/gears-similar/01-pdq-dinov2.md`（2026-11-22，64 張 CC0 照片、1,189 個變化版本、41 組困難負例，數字是報告用的 test 那一半）。PDQ 8 個方向 31 以內：縮小、JPEG、調色全部找回，翻轉與轉 90、180 度全部找回、轉 3 度的翻拍找不回，裁切、加框與截圖 0%，全部 55%，困難負例 0 組。DINOv2 0.15 以內：全部 84%，裁切 93%、加字 96%、加框 81%、截圖 19%，構圖相近 0/10、跨家族 171,058 組 0 組，連拍 7 組有 5 組、同一地點 6 組有 3 組被判斷相近。兩層合併 89%。一批 30 張的分組，每一對都相近才併的併錯 6 組、漏掉 3 組，相連就併的併錯 29 組。速度在 Apple M5 Pro 的 Chromium：1920 像素的圖 PDQ 每張約 13 ms（解碼、讀出像素與算雜湊），DINOv2 單執行緒每張 245 ms、載入 309 ms，分頁的記憶體尖峰 749 MB
+- 使用統計不記錄這一項
+- 還沒確認的：iPhone 與 Safari 上 DINOv2 的時間與記憶體（750 MB 在 iPhone 上可能太高）、Safari 的 canvas 解碼。聊天截圖要先找出截圖裡照片的範圍再比，沒有做。門檻 0.15 的困難負例只有 test 那一半的連拍 7 組、同一地點 6 組，也是看過 test 的結果之後才訂的，要用更多組合確認。品質分數低的圖、HEIC 與帶 EXIF 方向的手機照片在實際流程裡的結果
+- 之後：影片的關鍵影格可以共用 DINOv2，晃動的手機影片從同一個場景挑出的幾格可以認成同一格，門檻要另外量，這次不做
+- 瀏覽器測試在 `tests/e2e/verify-similar.spec.ts`（縮小版與翻轉版分在一組、複本、匯出、模型下載失敗、手機的說明、當機記號），讀不到 canvas 與關掉 WebAssembly 在 `canvas-blocked.spec.ts`、`wasm-unavailable.spec.ts`，無障礙在 `a11y.spec.ts`。測試圖在頁面裡用 canvas 畫（`tests/helpers/similar.ts`），抽象的圖形對 DINOv2 來說彼此都很像，所以 CI 只測模型的下載與說明，攔下模型的請求、回內容不對的檔案。真的模型只在本機設了 `GEARS_DINO_MODEL=1` 時執行，模型檔、照片與特徵取自評測的目錄（`~/tmp/similar-exp/`，`GEARS_DINO_EXP` 可以換），模型用 route 提供（`GEARS_DINO_MODEL=1 npx playwright test tests/e2e/verify-similar.spec.ts --project=chromium`）。CI 不執行，改模型或流程時在本機執行一次
 
 ### 來源標示
 
@@ -591,6 +614,7 @@ ProofMode（Guardian Project 給人權紀錄者的 Android App）拍照時不改
 - 第一項是手機上的模型量測（#144）：個資辨識（#187 上線前要知道手機能不能載入）與文字辨識，機型照 #144 的記憶體分級。Safari 的 `userAgent` 不一定帶著真實的 iOS 版本，所以請讀者在備註寫機型與系統版本
 - 第二項是逐字稿的語音偵測（#196，2026-11-21 起）：Silero VAD 上線時只在 Playwright 的模擬環境執行過，要知道真的 Safari、Android 與電腦的瀏覽器能不能載入、約 1 分鐘的錄音模型下載之後要幾秒，以及有背景音樂時有沒有漏句。逐字稿沒有量測頁，請讀者用自己的聲音錄音、用碼錶計時，從建議與回饋回報，不附錄音檔，這一項不會自動送出任何資料。步驟裡的按鈕名稱是 `transcribe.start`、`tool.transcribe.again`、`transcribe.model.base`，說明的開頭是 `transcribe.vad.fallback`
 - 第三項是逐字稿的標點建議（#199，2026-11-21 起）：手機上按下「建議標點」時的確認說明連到這一頁（「先幫忙量測」）。要知道手機與平板能不能執行完（電腦上的記憶體峰值約 1.4 GB）、模型下載之後要幾秒，以及自然說話的錄音上標點放得準不準（評測用的是朗讀與立法院公報）。請讀者用自己的華語錄音、用碼錶計時，從建議與回饋回報，只貼放錯或漏掉的幾句、不附錄音檔，這一項不會自動送出任何資料。步驟裡的按鈕名稱是 `transcribe.punct.button`、`redact.model.phoneGo`、`transcribe.punct.loading`。收到手機的結果之後，再決定拿掉手機上的確認步驟或依機型調整
+- 第四項是查證的相似圖片（#129，2026-11-22 起）：手機上按下「也比對裁切、加字之後的版本」時的確認說明連到這一頁。要知道手機與平板能不能執行完（電腦上的記憶體尖峰約 750 MB）、一批照片要幾秒，以及讀者自己裁切、加字的版本有沒有分對。請讀者用自己拍的照片，從建議與回饋回報，不附照片，這一項不會自動送出任何資料。步驟裡的按鈕名稱是 `verify.similar.model.button`、`common.phoneGo`、`verify.similar.model.loading`
 - 入口在桌面的使用者區（`USER_PAGES`，圖示 `cellphone-check`），設計原則頁的代價與取捨也連過來。不是實驗頁，搜尋引擎可以收錄，對外徵求測試時連到這一頁，不直接連裝置量測
 
 ## 設計原則頁
@@ -600,7 +624,7 @@ ProofMode（Guardian Project 給人權紀錄者的 Android App）拍照時不改
 - 段落與 id：開頭一段寫兩層設計與這樣設計的原因，接著是瀏覽器裡的工作台（`browser`）、開源本機模型（`models`）、由你確認的模型結果（`confirm`）、代價與取捨（`tradeoffs`）、你的瀏覽器現在的狀態（`status`）、延伸閱讀（`more`），各段底下的 h3 也有固定的 id（`browser-server`、`models-list` 這類）。桌面的「了解更多」連到 `#browser`、`#models`，左欄的本頁目錄讀這些 h2、h3。改 id 時一起改 `DeskIntro.tsx` 與測試
 - 入口：桌面兩段定位說明的「了解更多」、使用者區的第一個（`USER_PAGES`，圖示 `layers-outline`）、寬螢幕的左欄、頁尾。放在使用者區最前面：它說明兩層設計，後面的已下載的模型、協助測試與裝置量測都從模型那一層延伸，桌面最下面那一行由左往右讀是先理解、再試用、再回報。不是實驗頁，搜尋引擎可以收錄，建置時寫進 HTML 的內容照其他頁面只有標題與描述
 - 跟隱私說明重複的部分（存取紀錄、使用統計、表單）只寫一句並連過去，同一件事不寫兩份完整版。伺服器經手的部分照「原則」寫，限定在跟檔案有關的兩件事，存取紀錄另外寫明
-- 模型表從 `src/core/model-catalog.ts` 的 `MODEL_CATALOG` 產生，數字一律讀各模型的設定，不在字串裡手寫：YuNet 是 `src/tools/redact/yunet-model.json`（2026-11-21 加上，單元測試比對 `public/models/` 的檔案大小與 SHA-256），PP-OCR 是 `ppocr-models.json` 兩個模型的大小相加（`storage.ts` 的 `OCR_MB` 也改成從這裡算），個資辨識與標點模型是 `PII_MODEL.transfer`、`PUNCT_MODEL.transfer`（跟工具畫面寫的「約 200 MB」、「約 148 MB」同一個數字），逐字稿的模型照 `models.json` 每一個都列（只用 CPU 時的大小），語音偵測與分辨說話者是 `vad-model.json`、`speaker-model.json`。模型名稱連到 `source`，授權連到授權與來源頁的 `licenses-redact-detect` 或 `licenses-transcribe`。裝置量測的語言模型是實驗頁用的，不列。新增模型時在 `MODEL_CATALOG` 加一筆，三個語系加上 `about.use.<id>`（`tests/unit/i18n.spec.ts` 會檢查），逐字稿的模型自動列出，`WHISPER_NAMES` 少了名稱時型別檢查會失敗。代價與取捨那一段的下載量範圍（`catalogRange`）也從同一份算
+- 模型表從 `src/core/model-catalog.ts` 的 `MODEL_CATALOG` 產生，數字一律讀各模型的設定，不在字串裡手寫：YuNet 是 `src/tools/redact/yunet-model.json`（2026-11-21 加上，單元測試比對 `public/models/` 的檔案大小與 SHA-256），PP-OCR 是 `ppocr-models.json` 兩個模型的大小相加（`storage.ts` 的 `OCR_MB` 也改成從這裡算），個資辨識與標點模型是 `PII_MODEL.transfer`、`PUNCT_MODEL.transfer`（跟工具畫面寫的「約 200 MB」、「約 148 MB」同一個數字），查證的 DINOv2 small 是 `DINO_MODEL.transfer`（還沒放上 assets.anoni.net，先用沒有壓縮的大小），逐字稿的模型照 `models.json` 每一個都列（只用 CPU 時的大小），語音偵測與分辨說話者是 `vad-model.json`、`speaker-model.json`。模型名稱連到 `source`，授權連到授權與來源頁的 `licenses-redact-detect`、`licenses-transcribe` 或 `licenses-verify-similar`。裝置量測的語言模型是實驗頁用的，不列。新增模型時在 `MODEL_CATALOG` 加一筆，三個語系加上 `about.use.<id>`（`tests/unit/i18n.spec.ts` 會檢查），逐字稿的模型自動列出，`WHISPER_NAMES` 少了名稱時型別檢查會失敗。代價與取捨那一段的下載量範圍（`catalogRange`）也從同一份算
 - 手機上（寬度不到 40rem）模型表每一列排成一張小卡：名稱一行、用途一行，授權與下載量並排在最後一行，表頭只留給讀螢幕軟體（2026-11-22）。原本四欄擠在一起，名稱欄被壓到在字中間斷行，`multilingual-punctuation-truecase-small` 斷成六行。CSS 改了 `display` 之後 Safari 會拿掉表格的語意，所以 `AboutPage.tsx` 每一層明寫 `role`（`table`、`rowgroup`、`row`、`columnheader`、`rowheader`、`cell`）
 - 即時檢查只在畫面上顯示，不送出、不連線：離線使用讀 `src/ui/offline.ts` 的 `ready`（由 `src/app.tsx` 傳進來，不再註冊一次 service worker），分成已經可以離線使用、還沒準備好（還在存或沒有存成功，兩者分不出來，說明都寫）、不支援（沒有 `navigator.serviceWorker`，Tor Browser 與部分私密瀏覽）。已下載的模型用 `src/core/storage.ts` 的 `scanStorage` 與 `MODEL_GROUPS`（執行模型的程式、pdf.js 與 c2pa 不算模型），名稱照已下載的模型頁的 `nameOf`，不能用 Cache API 時照那一頁的說法（`storage.unavailable`）。WebAssembly 與顯示卡用 `useDeviceSupport`，跟桌面的支援狀況同一份
 - 評測的數字（個資辨識模型加上規則在文字上約八成五、截圖上約七成四，標點建議在立法院公報的口語發言上逗號 0.77、句號 0.66、問號 0.74）寫「社群的評測」，不附連結：評測放在社群的工作區，還沒有公開，公開的頁面連不過去。之後考慮把評測的摘要公開（例如放到文件站或這個 repo），再補上連結。評測的數字改了時，三個語系的 `about.confirm.why` 一起改
@@ -792,7 +816,7 @@ ProofMode（Guardian Project 給人權紀錄者的 Android App）拍照時不改
 - 用到時才存的這些檔案放在不隨版本清掉的快取（`gears-keep`，#142）。工作台一天常部署好幾次，原本放在隨版本清掉的快取，每次換版本之後第一次找人臉或個資都要重新下載約 23 MB（換成 v6 small 的辨識之後約 28 MB）。網址不變，建置時 `vite.config.ts` 的 `serviceWorker()` 替每個檔案算內容的雜湊，寫進 `sw.js` 的 `LAZY`，service worker 存的時候在回應加上 `x-gears-hash`。讀的時候雜湊對不上就重新下載，新版本接手時刪掉內容變了或不在清單上的。存進去的內容已經解壓縮，原本的 `content-encoding` 與 `content-length` 拿掉。這份清單也算進 service worker 的版本，只換了用到時才存的檔案時一樣會換一版
 - 逐字稿的 Whisper 模型存在另一個不隨版本清掉的快取（`gears-models`），換新版本時不必重新下載 80 到 250 MB。網址帶著模型的版本，清單以外的在新版本接手時刪掉。畫面上標出已下載的模型，可以刪除
 - 模型檔的下載、比對 SHA-256、切段與這個快取共用 `src/core/models.ts`（#142）：`downloadVerified` 下載並比對，`cachedModel` 先找快取、同一個檔案同時有好幾個請求時共用一次下載、存不進去時這次照樣使用，`isCached`、`removeCached` 給畫面判斷「已下載」與刪除。逐字稿、sherpa-onnx 與裝置量測的語言模型的 Worker 都用它，量測頁只用下載與比對，快取留給 Transformers.js。分辨說話者的 `speaker-embed.ts` 只能匯入 Transformers.js 與 onnxruntime（見上方「逐字稿」），不用這裡，靠 service worker 快取
-- 已下載的模型（`/gears/storage/`，畫面在 `src/ui/StoragePage.tsx`，分類在 `src/core/storage.ts`，#142）：讀 `gears-models`、`gears-keep` 與 `transformers-cache`，逐字稿的模型一個一列，其他依用途分列（分辨說話者、逐字稿的語音偵測、逐字稿的標點建議、找人臉、辨識文字、找人名與地址、執行模型的程式、pdf.js 的資料、驗證內容憑證、裝置量測的語言模型），列出大小，可以逐列刪除或全部刪除，刪除之後下次用到時再下載。工作台本身的頁面與程式（`gears-<版本>`）是離線使用要用的，不列進來。大小用快取裡每個回應的 `blob().size` 加總，快取的內容在磁碟上，不會整個讀進記憶體。不能用 Cache API 時（私密瀏覽、Tor Browser）說明每次都要重新下載。入口在桌面的使用者區，逐字稿畫面原本的「刪除模型」保留
+- 已下載的模型（`/gears/storage/`，畫面在 `src/ui/StoragePage.tsx`，分類在 `src/core/storage.ts`，#142）：讀 `gears-models`、`gears-keep` 與 `transformers-cache`，逐字稿的模型一個一列，其他依用途分列（分辨說話者、逐字稿的語音偵測、逐字稿的標點建議、找人臉、辨識文字、找人名與地址、比對相近圖片、執行模型的程式、pdf.js 的資料、驗證內容憑證、裝置量測的語言模型），列出大小，可以逐列刪除或全部刪除，刪除之後下次用到時再下載。工作台本身的頁面與程式（`gears-<版本>`）是離線使用要用的，不列進來。大小用快取裡每個回應的 `blob().size` 加總，快取的內容在磁碟上，不會整個讀進記憶體。不能用 Cache API 時（私密瀏覽、Tor Browser）說明每次都要重新下載。入口在桌面的使用者區，逐字稿畫面原本的「刪除模型」保留
 - 這個網站的儲存空間（`src/ui/StorageQuota.tsx`，2026-11-21 起）：已下載的模型這一頁列出 `navigator.storage.estimate()` 的已用與上限、`persisted()` 的狀態，以及「申請持久儲存」的按鈕（`persist()`）。模型存在一般的快取裡，標點模型約 148 MB、個資模型約 200 MB（`PUNCT_MB`、`PII_MB`），空間不夠時瀏覽器可能自動清掉，下次要重新下載。申請之後瀏覽器比較不會自動清掉。只在讀者按下按鈕時申請，不自動申請。用量與持久儲存以整個網站（origin）計算，clearnet 版包含 anoni.net 的其他頁面與工作台本身的程式，所以比已下載的模型的合計多，畫面上寫明
 - 三個 API 各自偵測：依 MDN 的相容性表，Safari 的 `persisted()` 與 `persist()` 從 15.2 就有，`estimate()` 要 17 才有（還沒在 16.4 實機確認），沒有時不顯示用量。結果分成已經是持久儲存（不放按鈕）、申請成功、瀏覽器沒有同意、等待回覆、申請出錯與瀏覽器不支援。Chrome 與 Brave 依使用情況自行決定、不會詢問，所以沒有同意不寫成讀者拒絕。Firefox 跳出詢問時請讀者在詢問裡選擇，按鈕照樣可以再按：詢問被讀者關掉時不會有回覆，停用按鈕的話只能重新整理頁面。刪除模型之後重讀用量（`STORAGE_CHANGED`）
 - 寬螢幕放在左欄（見「介面上的限制」），手機放在頁面最下面，依 `useMedia(WIDE)` 只渲染一份。2026-11-21 在本機的 Playwright 實測：Chromium 與 WebKit 一按就回覆沒有同意（全新的設定檔沒有使用紀錄），Firefox 跳出詢問、沒有人回答時一直等待。瀏覽器測試（`tests/e2e/page-aside.spec.ts`）改寫 `navigator.storage` 的方法模擬每一種結果
@@ -1174,7 +1198,7 @@ iPhone 預設拍出來的是 HEIC，在網頁上選照片時交出來的也是�
 
 ## 第三方資料
 
-讀者從頁尾的「授權與來源」打開授權頁（`/gears/licenses/`，`src/ui/Licenses.tsx`，頁面清單在 `src/pages.ts`）。頁面依用途分成五組，每組一個 `<h2>`、每一項一個 `<h3>`，左欄的本頁目錄照這些小標題產生（2026-11-21 起，原本十三項排成一張清單，沒有小標題）：工作台本身、模型與執行環境（逐字稿、遮蔽的自動尋找）、讀寫檔案的程式（pdf.js、pdf-lib、libheif、zxing-wasm）、驗證簽章與憑證（OpenPGP.js、c2pa-web、pkijs）、圖示與資料（Material Design Icons、165 反詐騙清單、密語的字詞表）。`licenses/` 底下的授權全文用 `?url` 匯入，跟著建置一起輸出（檔名帶雜湊），service worker 也會存起來，離線也能看。工作台自己的 `LICENSE` 沒有副檔名，伺服器會當成二進位檔，所以直接展開在頁面上。新增 `licenses/` 的檔案時，在 `Licenses.tsx` 的 `GROUPS` 對應的那一組加一筆，三個語系加上 `licenses.<id>` 與 `licenses.<id>.desc`，`tests/e2e/licenses.spec.ts` 會比對每份授權全文。
+讀者從頁尾的「授權與來源」打開授權頁（`/gears/licenses/`，`src/ui/Licenses.tsx`，頁面清單在 `src/pages.ts`）。頁面依用途分成五組，每組一個 `<h2>`、每一項一個 `<h3>`，左欄的本頁目錄照這些小標題產生（2026-11-21 起，原本十三項排成一張清單，沒有小標題）：工作台本身、模型與執行環境（逐字稿、遮蔽的自動尋找、查證的相似圖片）、讀寫檔案的程式（pdf.js、pdf-lib、libheif、zxing-wasm）、驗證簽章與憑證（OpenPGP.js、c2pa-web、pkijs）、圖示與資料（Material Design Icons、165 反詐騙清單、密語的字詞表）。`licenses/` 底下的授權全文用 `?url` 匯入，跟著建置一起輸出（檔名帶雜湊），service worker 也會存起來，離線也能看。工作台自己的 `LICENSE` 沒有副檔名，伺服器會當成二進位檔，所以直接展開在頁面上。新增 `licenses/` 的檔案時，在 `Licenses.tsx` 的 `GROUPS` 對應的那一組加一筆，三個語系加上 `licenses.<id>` 與 `licenses.<id>.desc`，`tests/e2e/licenses.spec.ts` 會比對每份授權全文。
 
 逐字稿畫面最下面另有收起來的「使用的模型與授權」，每個模型分三行：原始模型與授權（`source`、`license`）、誰轉成 ONNX 檔（`repo`）、從哪裡下載（`host`）。`repo` 跟原始模型是同一個時當成社群自己轉檔，連到 assets.anoni.net 那個目錄的 `README.txt`，不同時連到轉檔者的 repo。新增模型時填好這幾欄就會出現。
 
@@ -1185,6 +1209,7 @@ iPhone 預設拍出來的是 HEIC，在網頁上選照片時交出來的也是�
 - PDF 的遮蔽用 [pdf.js](https://github.com/mozilla/pdf.js)（pdfjs-dist 6.4.299，Apache-2.0）與它附帶的 CMap、標準字型與解碼器，見 `licenses/pdfjs.txt`
 - 遮蔽的自動尋找用 [YuNet](https://github.com/opencv/opencv_zoo/tree/main/models/face_detection_yunet) 模型（MIT）、PaddleOCR 的 [PP-OCR](https://github.com/PaddlePaddle/PaddleOCR) 模型（v5 mobile 的偵測與 v6 small 的辨識，Apache-2.0）與 [onnxruntime-web](https://github.com/microsoft/onnxruntime) 1.30.0（MIT），見 `licenses/redact-detect.txt`
 - 逐字稿用 [Transformers.js](https://github.com/huggingface/transformers.js) 4.3.2（Apache-2.0）、Whisper small 與 base 的 ONNX 檔（onnx-community，原始模型的模型卡標示 Apache-2.0）、讀者選擇之後從 Hugging Face 下載的 large-v3-turbo（模型卡標示 MIT）、分辨說話者用的 3D-Speaker CAM++（Apache-2.0，ONNX 檔取自 sherpa-onnx）、語音偵測用的 [Silero VAD](https://github.com/snakers4/silero-vad) v6.2.3（MIT）、標點建議用的 [Horizon-Labs multilingual-punctuation-truecase-small](https://huggingface.co/Horizon-Labs/multilingual-punctuation-truecase-small)（Apache-2.0，社群重新量化，底層模型 mmBERT-small 是 MIT）、[opencc-js](https://github.com/nk2028/opencc-js) 1.4.2（MIT，字典 Apache-2.0），見 `licenses/transcribe.txt`
+- 查證的相似圖片用 [PDQ](https://github.com/facebook/ThreatExchange/tree/main/pdq)（meta/ThreatExchange `9f627fb1`，BSD，改寫成 TypeScript）與讀者選擇之後下載的 [DINOv2 small](https://huggingface.co/facebook/dinov2-small)（Apache-2.0，onnx-community 的 ONNX 轉檔版），見 `licenses/verify-similar.txt`
 - 下載的軟體驗證用 [OpenPGP.js](https://github.com/openpgpjs/openpgpjs) 6.3.2（LGPL-3.0），內建 Tor Project 與 Tails 公開的簽章公鑰，見 `licenses/openpgp.txt`
 - 查證驗證 PDF 數位簽章用 [pkijs](https://github.com/PeculiarVentures/PKI.js) 3.4.2（BSD-3-Clause）與它相依的 asn1js 等套件，內建台灣政府憑證總管理中心公開的根憑證與下屬憑證機構的憑證，見 `licenses/pkijs.txt`
 - 查證驗證內容憑證用 [c2pa-web](https://github.com/contentauth/c2pa-js) 0.15.4（MIT，裡面是 [c2pa-rs](https://github.com/contentauth/c2pa-rs) 編成的 WebAssembly），內建 C2PA 的正式信任清單（CC BY 4.0）與過渡信任清單（Apache-2.0），見 `licenses/c2pa.txt`

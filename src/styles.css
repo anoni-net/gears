@@ -2961,6 +2961,112 @@ button.link {
   color: var(--muted);
 }
 
+/* 相近的圖片（src/ui/SimilarImages.tsx）：一組一張卡片，同一組的圖並排，每張下面列出讀者判斷用的線索 */
+.similar-groups {
+  display: grid;
+  gap: var(--sp-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.similar-group {
+  padding: var(--sp-3) var(--sp-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.similar-group h4 {
+  margin: 0;
+}
+
+.similar-group > p {
+  margin: var(--sp-1) 0 var(--sp-3);
+}
+
+.similar-members {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  gap: var(--sp-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.similar-member {
+  min-width: 0;
+  font-size: var(--fs-sm);
+}
+
+.similar-member .verify-facts {
+  gap: 0 var(--sp-2);
+}
+
+.similar-member .verify-facts dd {
+  margin-bottom: 0;
+}
+
+.similar-member .hint {
+  margin: var(--sp-1) 0 0;
+}
+
+/* 縮圖只畫不讀回，長邊 320 像素，框在固定的高度裡，同一組的圖上緣對齊 */
+.similar-thumb {
+  display: block;
+  max-width: 100%;
+  max-height: 10rem;
+  box-shadow: 0 0 0 1px var(--hair);
+}
+
+.similar-name {
+  margin: var(--sp-2) 0 var(--sp-1);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.similar-model {
+  margin-top: var(--sp-3);
+}
+
+.similar-model .buttons {
+  margin: var(--sp-2) 0;
+}
+
+.similar-limit {
+  margin: var(--sp-2) 0 0;
+  font-size: var(--fs-xs);
+}
+
+/* 手機上一張一列：縮圖在左、線索在右，標籤與內容維持左右兩欄，一組的高度不會拉得太長 */
+@media (max-width: 40rem) {
+  .similar-members {
+    grid-template-columns: 1fr;
+    gap: var(--sp-3);
+  }
+
+  .similar-member {
+    display: grid;
+    grid-template-columns: 7rem 1fr;
+    column-gap: var(--sp-3);
+    align-items: start;
+  }
+
+  .similar-member .similar-thumb {
+    grid-row: 1 / span 4;
+    max-height: 7rem;
+  }
+
+  .similar-member .similar-name {
+    margin-top: 0;
+  }
+
+  .similar-member .verify-facts {
+    grid-template-columns: max-content 1fr;
+    gap: 0 var(--sp-2);
+  }
+}
+
 /* PDF 的版本紀錄與兩個版本的比對 */
 .verify-versions {
   margin: var(--sp-2) 0 0;

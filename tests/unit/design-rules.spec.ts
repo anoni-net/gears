@@ -36,7 +36,7 @@ const OWNERS: Record<string, string[]> = {
   // 查證也讀 .eml，匯出的紀錄寫出同樣的寄件驗證結果
   email: ["EmailTool.tsx", "verify-report.ts"],
   // 查證的畫面、匯出的紀錄與服務提供者編碼的說明
-  verify: ["VerifyTool.tsx", "verify-report.ts", "provider-text.ts"],
+  verify: ["VerifyTool.tsx", "verify-report.ts", "provider-text.ts", "SimilarImages.tsx"],
   // 已下載的模型列出逐字稿的模型名稱
   transcribe: ["TranscribeEditor.tsx", "StoragePage.tsx"],
   textcrypt: ["TextCryptTool.tsx"],

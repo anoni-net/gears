@@ -4,6 +4,7 @@ import { expect, test } from "./guard.ts";
 import { existsSync, readFileSync } from "node:fs";
 import { SCENES_WEBM } from "../global-setup.ts";
 import { textPdf } from "../helpers/text-pdf.ts";
+import { similarImage } from "../helpers/similar.ts";
 
 // Tor Browser 在讀者允許之前，讀取 canvas 的像素一律得到亂數（src/ui/canvas-access.ts）。
 // 這裡把 getImageData 換成回傳亂數，window.allowCanvas() 模擬讀者在網址列按了允許
@@ -160,4 +161,22 @@ test("網址檢查：讀不到 canvas 時說明要在網址列允許，允許之
   await allow(page);
   await Promise.all([page.waitForEvent("filechooser"), button.click()]);
   await expect(page.getByTestId("url-ocr-status")).toHaveCount(0);
+});
+
+test("查證的相近的圖片：讀不到 canvas 時只比內容完全相同並說明，允許之後按「再比對一次」就分組", async ({ page }) => {
+  await page.goto("./verify/");
+  await page.getByTestId("verify-input").setInputFiles([
+    { name: "photo.jpg", mimeType: "image/jpeg", buffer: await similarImage(page, "orig") },
+    { name: "photo-small.jpg", mimeType: "image/jpeg", buffer: await similarImage(page, "small") },
+  ]);
+  const blocked = page.getByTestId("similar-blocked");
+  await expect(blocked).toContainText("只比對了內容完全相同的檔案", { timeout: 20_000 });
+  await expect(blocked).toContainText("網址列跳出詢問");
+  await expect(page.getByTestId("similar-group")).toHaveCount(0);
+  // 讀不到 canvas 時模型也不能用，不出現模型的按鈕
+  await expect(page.getByRole("button", { name: "也比對裁切、加字之後的版本" })).toHaveCount(0);
+  await allow(page);
+  await blocked.getByRole("button", { name: "再比對一次" }).click();
+  await expect(page.getByTestId("similar-group")).toHaveCount(1, { timeout: 20_000 });
+  await expect(blocked).toHaveCount(0);
 });

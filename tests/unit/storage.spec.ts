@@ -17,6 +17,9 @@ test("依快取與網址分成一列一列", () => {
   // 逐字稿的標點模型也存在 transformers-cache，另外一列
   expect(classify(LLM_CACHE, "https://assets.anoni.net/gears/models/horizon-punct-a527b62/onnx/model_quantized.onnx", "/gears/")).toEqual({ group: "punct" });
   expect(classify(LLM_CACHE, "http://gears.example.onion/models/assets/horizon-punct-a527b62/tokenizer.json", "/")).toEqual({ group: "punct" });
+  // 查證比對相近圖片的 DINOv2 small 另外一列
+  expect(classify(LLM_CACHE, "https://assets.anoni.net/gears/models/dinov2-small-08c606e/onnx/model_int8.onnx", "/gears/")).toEqual({ group: "dino" });
+  expect(classify(LLM_CACHE, "http://gears.example.onion/models/assets/dinov2-small-08c606e/config.json", "/")).toEqual({ group: "dino" });
   expect(classify(LLM_CACHE, "https://assets.anoni.net/gears/models/qwen3-1.7b-3231b52/config.json", "/gears/")).toEqual({ group: "llm" });
   expect(classify(KEEP_CACHE, at("models/ppocr/PP-OCRv6_small_rec.onnx"), "/gears/")).toEqual({ group: "ocr" });
   expect(classify(KEEP_CACHE, at("models/bench/ocr-phone.png"), "/gears/")).toEqual({ group: "ocr" });

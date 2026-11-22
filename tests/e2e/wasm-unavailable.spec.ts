@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { GENERATED } from "../global-setup.ts";
 import { wav } from "../helpers/audio.ts";
 import { textPdf } from "../helpers/text-pdf.ts";
+import { similarImage } from "../helpers/similar.ts";
 import { expect, test } from "./guard.ts";
 
 // iPhone、iPad 與 Mac 的鎖定模式會關掉 WebAssembly（src/ui/wasm.ts）。這裡把頁面的 WebAssembly
@@ -140,4 +141,18 @@ test("網址檢查：從截圖讀出網址說明關掉了 WebAssembly，不打�
   // 不用截圖照樣可以檢查
   await page.getByLabel("要檢查的網址").fill("https://example.com/?utm_source=x");
   await expect(page.getByTestId("clean-url")).toHaveText("https://example.com/");
+});
+
+test("查證的相近的圖片：不用模型的比對照常分組，模型的選項說明為什麼不能用", async ({ page }) => {
+  const models: string[] = [];
+  page.on("request", (r) => r.url().includes("/models/") && models.push(r.url()));
+  await page.goto("./verify/");
+  await page.getByTestId("verify-input").setInputFiles([
+    { name: "photo.jpg", mimeType: "image/jpeg", buffer: await similarImage(page, "orig") },
+    { name: "photo-flip.png", mimeType: "image/png", buffer: await similarImage(page, "flip") },
+  ]);
+  await expect(page.getByTestId("similar-group")).toHaveCount(1, { timeout: 20_000 });
+  await expect(page.getByTestId("similar-nowasm")).toContainText("鎖定模式");
+  await expect(page.getByRole("button", { name: "也比對裁切、加字之後的版本" })).toHaveCount(0);
+  expect(models).toEqual([]);
 });

@@ -6,6 +6,7 @@ import { OCR_MB } from "../../src/core/storage.ts";
 import { PII_MB, PII_MODEL } from "../../src/tools/redact/pii-model.ts";
 import ppocr from "../../src/tools/redact/ppocr-models.json" with { type: "json" };
 import yunet from "../../src/tools/redact/yunet-model.json" with { type: "json" };
+import { DINO_MB, DINO_MODEL } from "../../src/tools/verify/dino-model.ts";
 import { PUNCT_MB, PUNCT_MODEL } from "../../src/tools/transcribe/punct.ts";
 import whisper from "../../src/tools/transcribe/models.json" with { type: "json" };
 import speaker from "../../src/tools/transcribe/speaker-model.json" with { type: "json" };
@@ -22,7 +23,7 @@ test("YuNet 的設定跟進版控的模型檔一致", () => {
 test("模型表列出每一個工具用到的模型，大小跟各自的設定相同", () => {
   const byId = new Map(MODEL_CATALOG.map((m) => [m.id, m]));
   expect(byId.size).toBe(MODEL_CATALOG.length);
-  expect(MODEL_CATALOG.length).toBe(Object.keys(whisper).length + 6);
+  expect(MODEL_CATALOG.length).toBe(Object.keys(whisper).length + 7);
   expect(byId.get("yunet")!.bytes).toBe(yunet.bytes);
   expect(byId.get("ppocr")!.bytes).toBe(ppocr.det.bytes + ppocr.rec.bytes);
   expect(Math.round(byId.get("ppocr")!.bytes / 1e6)).toBe(OCR_MB);
@@ -31,6 +32,10 @@ test("模型表列出每一個工具用到的模型，大小跟各自的設定�
   expect(byId.get("pii")!.license).toBe(PII_MODEL.license);
   expect(Math.round(byId.get("punct")!.bytes / 1e6)).toBe(PUNCT_MB);
   expect(byId.get("punct")!.license).toBe(PUNCT_MODEL.license);
+  // 查證的 DINOv2 small 跟畫面寫的下載量相同，授權照上游的 Apache-2.0
+  expect(Math.round(byId.get("dino")!.bytes / 1e6)).toBe(DINO_MB);
+  expect(byId.get("dino")!.license).toBe(DINO_MODEL.license);
+  expect(byId.get("dino")!.licenses).toBe("verify-similar");
   expect(byId.get("vad")!.bytes).toBe(vad.bytes);
   expect(byId.get("speaker")!.bytes).toBe(speaker.bytes);
   for (const [id, m] of Object.entries(whisper)) {
