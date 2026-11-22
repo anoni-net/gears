@@ -259,7 +259,30 @@ export function overviewText(files: CaseFile[], summary: Summary): string {
 
 // 匯出的 Markdown。讀者會存檔、交給同事或附在報導的工作紀錄裡，開頭寫清楚是什麼時候、
 // 用哪一版的工具產生，每個檔案都附上雜湊值
-export function buildReport(files: CaseEntry[], summary: Summary, now: number, commit: string): string {
+// 相近的圖片（src/ui/SimilarImages.tsx）：畫面上的分組照樣寫進紀錄，不寫距離或分數。
+// 讀不到 canvas 時只比了內容完全相同（SHA-256），也寫明
+export interface SimilarReport {
+  blocked: boolean;
+  model: boolean; // 有沒有用 DINOv2 比對
+  groups: { names: string[]; layer: "pdq" | "dino"; alsoNear: { name: string; near: string[] }[] }[];
+  skipped: string[]; // 解不開、沒有比對的圖
+}
+
+function similarLines(similar: SimilarReport): string[] {
+  if (similar.blocked) return [t("verify.similar.reportBlocked")];
+  const out = [t(similar.model ? "verify.similar.methodBoth" : "verify.similar.methodPdq")];
+  if (!similar.groups.length) out.push(t("verify.similar.none"));
+  similar.groups.forEach((g, k) => {
+    out.push(`- ${t("verify.similar.group", { n: k + 1, m: g.names.length })}：${list(g.names)}。${tDynamic(`verify.similar.layer.${g.layer}`)}`);
+    for (const a of g.alsoNear) out.push(`    - ${a.name}：${t("verify.similar.alsoNear", { names: list(a.near) })}`);
+  });
+  if (similar.skipped.length) out.push("", t("verify.similar.reportSkipped", { names: list(similar.skipped) }));
+  if (!similar.model) out.push("", t("verify.similar.limitPdq"));
+  out.push("", t("verify.similar.limit"));
+  return out;
+}
+
+export function buildReport(files: CaseEntry[], summary: Summary, now: number, commit: string, similar?: SimilarReport | null): string {
   const lines: string[] = [];
   const h = (level: number, text: string) => lines.push("", `${"#".repeat(level)} ${text}`, "");
   lines.push(`# ${t("verify.report.title")}`, "");
@@ -270,6 +293,11 @@ export function buildReport(files: CaseEntry[], summary: Summary, now: number, c
   if (summary.warnings.length) {
     h(2, t("verify.section.warnings"));
     for (const w of summary.warnings) lines.push(`- **${warningTitle(w)}**：${warningDetail(w, files)}`);
+  }
+
+  if (similar) {
+    h(2, t("verify.section.similar"));
+    lines.push(...similarLines(similar));
   }
 
   h(2, t("verify.section.files"));

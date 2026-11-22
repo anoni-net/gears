@@ -15,8 +15,10 @@ import { useObjectUrl, useTray } from "./hooks.ts";
 import { saveBlob } from "./save.ts";
 import { checkAttachment, checkTrayFile, checkableData, checkableFormat } from "./doc-check-link.ts";
 import type { CreateToolProps } from "./types.ts";
+import { SimilarImages, similarCandidate } from "./SimilarImages.tsx";
 import {
   type CaseEntry,
+  type SimilarReport,
   buildReport,
   fingerprintText,
   formatSize,
@@ -483,6 +485,9 @@ export function VerifyTool(_: CreateToolProps) {
   const [results, setResults] = useState<Map<number, Result>>(new Map());
   const [failed, setFailed] = useState<Set<number>>(new Set());
   const input = useRef<HTMLInputElement>(null);
+  // 相近的圖片的分組，匯出的紀錄也寫進去（src/ui/SimilarImages.tsx）
+  const [similar, setSimilar] = useState<SimilarReport | null>(null);
+  const shown = useRef<{ file: TrayFile; hash: string; evidence: Evidence }[]>([]);
   const key = files.map((f) => f.id).join(",");
   useDoneOnce("verify", results.size > 0);
   // 大檔案的雜湊值要算一陣子
@@ -547,10 +552,21 @@ export function VerifyTool(_: CreateToolProps) {
   const ready = entries.filter((e) => results.has(files[e.index - 1]!.id));
   const summary = summarize(ready);
   const rel = relations(summary);
+  // 兩張以上的圖片才比對相近的圖片，所有檔案都整理完（SHA-256 相同的複本只比一次）才開始。
+  // 讀者加入新的檔案、還在整理時沿用上一批，元件不會卸下，進行中的模型比對也不會中斷
+  if (!pending)
+    shown.current = files.flatMap((f) => {
+      const r = results.get(f.id);
+      return r && similarCandidate(f) ? [{ file: f, hash: r.hash, evidence: r.evidence }] : [];
+    });
+  const images = shown.current;
+  const showSimilar = images.length > 1;
+  // 相近的圖片還在比對時先不匯出，紀錄裡才不會少了這一節
+  const exportBusy = !!pending || (showSimilar && !similar);
 
   const exportReport = (toTray: boolean) => {
     const now = Date.now();
-    const text = buildReport(ready, summary, now, `${VERSION} ${COMMIT}`);
+    const text = buildReport(ready, summary, now, `${VERSION} ${COMMIT}`, showSimilar ? similar : null);
     const stamp = localTime(now).slice(0, 16).replace(/[-: ]/g, "");
     const name = `gears-verify-${stamp}.md`;
     if (toTray) void tray.add([new File([text], name, { type: "text/markdown" })], "verify");
@@ -581,6 +597,8 @@ export function VerifyTool(_: CreateToolProps) {
           </ul>
         </section>
       ) : null}
+
+      {showSimilar ? <SimilarImages items={images} onReport={setSimilar} /> : null}
 
       <section aria-labelledby="verify-files">
         <h3 id="verify-files">{t("verify.section.files")}</h3>
@@ -635,10 +653,10 @@ export function VerifyTool(_: CreateToolProps) {
         <h3 id="verify-export">{t("verify.section.export")}</h3>
         <p class="hint">{t("verify.exportNote")}</p>
         <div class="buttons">
-          <button type="button" class="primary" disabled={!!pending} onClick={() => exportReport(false)}>
+          <button type="button" class="primary" disabled={exportBusy} onClick={() => exportReport(false)}>
             {t("verify.download")}
           </button>
-          <button type="button" disabled={!!pending} onClick={() => exportReport(true)}>
+          <button type="button" disabled={exportBusy} onClick={() => exportReport(true)}>
             {t("verify.toTray")}
           </button>
         </div>

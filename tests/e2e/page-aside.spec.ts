@@ -69,7 +69,7 @@ test.describe("寬螢幕的左欄", () => {
     await page.goto("./testing/");
     const toc = page.getByTestId("aside-toc");
     // 每一項底下重複的「需要的裝置」與步驟的小標題沒有 id，不列進來
-    await expect(toc.getByRole("link")).toHaveText(["手機上的模型量測", "逐字稿的語音偵測", "逐字稿的標點建議", "使用時遇到的問題"]);
+    await expect(toc.getByRole("link")).toHaveText(["手機上的模型量測", "逐字稿的語音偵測", "逐字稿的標點建議", "查證的相似圖片", "使用時遇到的問題"]);
     await expect(page.getByRole("navigation", { name: "本頁目錄" })).toBeVisible();
 
     await mark(page);
@@ -100,7 +100,7 @@ test.describe("寬螢幕的左欄", () => {
     await page.goto("./licenses/");
     await expect(page.getByRole("heading", { level: 2 })).toHaveText(["工作台本身", "模型與執行環境", "讀寫檔案的程式", "驗證簽章與憑證", "圖示與資料"]);
     const toc = page.getByTestId("aside-toc");
-    await expect(toc.getByRole("link")).toHaveCount(5 + 13);
+    await expect(toc.getByRole("link")).toHaveCount(5 + 14);
     await expect(toc.locator("li:not(.sub) a")).toHaveText(["工作台本身", "模型與執行環境", "讀寫檔案的程式", "驗證簽章與憑證", "圖示與資料"]);
     await expect(toc.locator("li.sub a").nth(0)).toHaveText("檔案工作台");
     await expect(toc.locator("li.sub a").nth(1)).toHaveText("逐字稿");

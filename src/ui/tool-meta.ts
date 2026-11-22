@@ -18,7 +18,7 @@ const ICONS: Record<string, { icon: IconName; tags?: TagId[] }> = {
   passphrase: { icon: "dice-multiple-outline" },
   "age-keygen": { icon: "key-plus" },
   "text-crypt": { icon: "message-lock-outline" },
-  verify: { icon: "file-search-outline" },
+  verify: { icon: "file-search-outline", tags: ["model"] },
   "doc-check": { icon: "file-alert-outline" },
   "print-dots": { icon: "printer-eye" },
   blend: { icon: "image-size-select-large" },
