@@ -1714,6 +1714,8 @@ export const en: Record<MessageKey, string> = {
   "style.model.button": "Find names, addresses and organizations",
   "style.model.again": "Search again",
   "style.model.phone": "Finding names, addresses and organizations is still being tested on phones and tablets: it downloads an open-source on-device model of about {mb} MB, and if memory runs out the page reloads and the pasted text is lost. Copy it first.",
+  "style.model.noteTranscript": "Names, addresses and organizations have no fixed format. This searches once with an open-source on-device model, which downloads about {mb} MB the first time; the transcript is processed only in this tab. The speech recognition model is released first. If memory runs out the page reloads and any transcript you haven't downloaded is lost.",
+  "style.model.phoneTranscript": "Finding names, addresses and organizations is still being tested on phones and tablets: it downloads an open-source on-device model of about {mb} MB, and if memory runs out the page reloads and any transcript you haven't downloaded is lost. Download the TXT first.",
   "style.model.crashed": "The page reloaded the last time the open-source on-device model ran, most likely because the device ran out of memory, so the button won't appear again in this tab. Use the form above to specify names, organizations and places yourself.",
   "style.model.loading": "Loading the open-source on-device model…",
   "style.model.downloading": "Downloading the open-source on-device model…",

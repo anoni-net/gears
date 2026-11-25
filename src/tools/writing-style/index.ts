@@ -526,7 +526,8 @@ export function modelTerms(text: string, spans: readonly { kind: string; start: 
     if (!kind) continue;
     const term = text.slice(span.start, span.end).trim();
     // 只有一個字的不列：換掉時其他詞裡的同一個字也會一起被換掉
-    if ([...term].length < 2 || kept.some((r) => r.start < span.end && r.end > span.start)) continue;
+    // 跨過換行的（逐字稿的兩段之間）換不到，不列
+    if ([...term].length < 2 || term.includes("\n") || kept.some((r) => r.start < span.end && r.end > span.start)) continue;
     const key = `${kind}\u0000${term}`;
     if (!out.has(key)) out.set(key, { kind, term });
   }
