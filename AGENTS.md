@@ -40,7 +40,7 @@ Gears 結合兩件事：可以在本機使用的工具，以及用開源模型�
 Safari 16.4（iOS 16.4，2023-03）以前打不開 Gears。主程式的正規表示式用到 lookbehind（`pii.ts`、寫作習慣檢查、逐字稿的段落整理、QR code 讀取），舊版讀到時整支程式出錯，不是只有某個工具不能用。WebAssembly SIMD（onnxruntime-web 與 Transformers.js 的 WebAssembly）、壓縮串流（`DecompressionStream`，Office 文件與 PNG 的文字欄位）與 `OffscreenCanvas` 的 2D 也是 16.4 才有。建置目標是 `es2022`（`vite.config.ts`），不另外轉譯成舊的語法。
 
 - 舊版的提示（`public/legacy-check.js`，2026-11-20 起）：在主程式之前執行，只用舊瀏覽器也認得的寫法，`new RegExp("(?<=a)b")` 丟出錯誤時顯示 HTML 裡依語系寫好的提示（`#legacy-browser`，字串是 `app.legacy`，`vite.config.ts` 的 `localized` 寫進每一頁）。原本舊版只看得到建置時寫進 HTML 的說明，按了沒反應，讀者不知道原因。不轉址、不送出任何資料。瀏覽器測試（`tests/e2e/legacy-browser.spec.ts`）把 `RegExp` 換成遇到 lookbehind 就出錯的版本來模擬
-- 主程式之後再用到更新的語法或 API 時，先確認 Safari 16.4 有沒有，沒有的話要另外偵測、退回，或把這裡的最低需求跟著提高，並更新 `legacy-check.js` 的偵測
+- 主程式之後再用到更新的語法或 API 時，先確認 Safari 16.4 有沒有，沒有的話要另外偵測、退回，或把這裡的最低需求跟著提高，並更新 `legacy-check.js` 的偵測，三個語系的 `app.legacy` 與設計原則頁的支援的瀏覽器與裝置（`about.support.*`）一起改
 - Safari 26（iOS 26，2025-09）才有的：WebGPU（沒有時模型只用 CPU）、WebCodecs 的 `AudioDecoder`（沒有時逐字稿把 MP4、M4A 整個檔案一次解碼，上限 256 MB 與 2 小時）
 
 iPhone 能升級到的 iOS 與記憶體（Apple 不公布記憶體，數字來自拆解與供應鏈的報導，2026-11-20 整理）：
@@ -624,16 +624,17 @@ ProofMode（Guardian Project 給人權紀錄者的 Android App）拍照時不改
 
 `/gears/about/`（`src/ui/AboutPage.tsx`，2026-11-21 起）寫給不熟技術的讀者，說明 Gears 的兩層設計：瀏覽器裡就能完成的工具，加上開源本機模型的加強（見上方「定位」、「原則」）。桌面的兩段定位說明只有一兩句，讀者想知道檔案會不會送出、模型是什麼與從哪裡來時沒有地方可以看，隱私說明列的是連線與紀錄，不談模型。每一段用 Gears 裡實際的工具當例子，不寫口號。
 
-- 段落與 id：開頭一段寫兩層設計與這樣設計的原因，接著是瀏覽器裡的工作台（`browser`）、開源本機模型（`models`）、由你確認的模型結果（`confirm`）、代價與取捨（`tradeoffs`）、你的瀏覽器現在的狀態（`status`）、延伸閱讀（`more`），各段底下的 h3 也有固定的 id（`browser-server`、`models-list` 這類）。桌面的「了解更多」連到 `#browser`、`#models`，左欄的本頁目錄讀這些 h2、h3。改 id 時一起改 `DeskIntro.tsx` 與測試
+- 段落與 id：開頭一段寫兩層設計與這樣設計的原因，接著是瀏覽器裡的工作台（`browser`）、開源本機模型（`models`）、由你確認的模型結果（`confirm`）、代價與取捨（`tradeoffs`）、支援的瀏覽器與裝置（`support`）、你的瀏覽器現在的狀態（`status`）、延伸閱讀（`more`），各段底下的 h3 也有固定的 id（`browser-server`、`models-list` 這類）。桌面的「了解更多」連到 `#browser`、`#models`，左欄的本頁目錄讀這些 h2、h3。改 id 時一起改 `DeskIntro.tsx` 與測試
 - 入口：桌面兩段定位說明的「了解更多」、使用者區的第一個（`USER_PAGES`，圖示 `layers-outline`）、寬螢幕的左欄、頁尾。放在使用者區最前面：它說明兩層設計，後面的已下載的模型、協助測試與裝置量測都從模型那一層延伸，桌面最下面那一行由左往右讀是先理解、再試用、再回報。不是實驗頁，搜尋引擎可以收錄，建置時寫進 HTML 的內容照其他頁面只有標題與描述
 - 跟隱私說明重複的部分（存取紀錄、使用統計、表單）只寫一句並連過去，同一件事不寫兩份完整版。伺服器經手的部分照「原則」寫，限定在跟檔案有關的兩件事，存取紀錄另外寫明
 - 模型表從 `src/core/model-catalog.ts` 的 `MODEL_CATALOG` 產生，數字一律讀各模型的設定，不在字串裡手寫：YuNet 是 `src/tools/redact/yunet-model.json`（2026-11-21 加上，單元測試比對 `public/models/` 的檔案大小與 SHA-256），PP-OCR 是 `ppocr-models.json` 兩個模型的大小相加（`storage.ts` 的 `OCR_MB` 也改成從這裡算），個資辨識與標點模型是 `PII_MODEL.transfer`、`PUNCT_MODEL.transfer`（跟工具畫面寫的「約 200 MB」、「約 148 MB」同一個數字），查證的 DINOv2 small 是 `DINO_MODEL.transfer`（還沒放上 assets.anoni.net，先用沒有壓縮的大小），逐字稿的模型照 `models.json` 每一個都列（只用 CPU 時的大小），語音偵測與分辨說話者是 `vad-model.json`、`speaker-model.json`。模型名稱連到 `source`，授權連到授權與來源頁的 `licenses-redact-detect`、`licenses-transcribe` 或 `licenses-verify-similar`。裝置量測的語言模型是實驗頁用的，不列。新增模型時在 `MODEL_CATALOG` 加一筆，三個語系加上 `about.use.<id>`（`tests/unit/i18n.spec.ts` 會檢查），逐字稿的模型自動列出，`WHISPER_NAMES` 少了名稱時型別檢查會失敗。代價與取捨那一段的下載量範圍（`catalogRange`）也從同一份算
 - 手機上（寬度不到 40rem）模型表每一列排成一張小卡：名稱一行、用途一行，授權與下載量並排在最後一行，表頭只留給讀螢幕軟體（2026-11-22）。原本四欄擠在一起，名稱欄被壓到在字中間斷行，`multilingual-punctuation-truecase-small` 斷成六行。CSS 改了 `display` 之後 Safari 會拿掉表格的語意，所以 `AboutPage.tsx` 每一層明寫 `role`（`table`、`rowgroup`、`row`、`columnheader`、`rowheader`、`cell`）
 - 即時檢查只在畫面上顯示，不送出、不連線：離線使用讀 `src/ui/offline.ts` 的 `ready`（由 `src/app.tsx` 傳進來，不再註冊一次 service worker），分成已經可以離線使用、還沒準備好（還在存或沒有存成功，兩者分不出來，說明都寫）、不支援（沒有 `navigator.serviceWorker`，Tor Browser 與部分私密瀏覽）。已下載的模型用 `src/core/storage.ts` 的 `scanStorage` 與 `MODEL_GROUPS`（執行模型的程式、pdf.js 與 c2pa 不算模型），名稱照已下載的模型頁的 `nameOf`，不能用 Cache API 時照那一頁的說法（`storage.unavailable`）。WebAssembly 與顯示卡用 `useDeviceSupport`，跟桌面的支援狀況同一份
 - 評測的數字（個資辨識模型加上規則在文字上約八成五、截圖上約七成四，標點建議在立法院公報的口語發言上逗號 0.77、句號 0.66、問號 0.74）寫「社群的評測」，不附連結：評測放在社群的工作區，還沒有公開，公開的頁面連不過去。之後考慮把評測的摘要公開（例如放到文件站或這個 repo），再補上連結。評測的數字改了時，三個語系的 `about.confirm.why` 一起改
+- 支援的瀏覽器與裝置（`support`，#185，2026-11-25 起）用讀者的說法寫上方「支援的瀏覽器」的三條線：電腦與 Android 手機、iPhone 與 iPad（iOS 16.4 以前打不開、iOS 26 與 Safari 26 以前沒有顯示卡加速、逐字稿的 MP4、M4A、MOV 要整檔解碼、各機型能升級到的 iOS）、Tor Browser。原本規劃另開一頁，跟這一頁的代價與取捨、即時檢查重複，改寫在這裡。整檔解碼的上限讀 `LARGE_FILE` 與 `MAX_SECONDS`。記憶體重新載入與鎖定模式已經寫在代價與取捨、不靠模型的做法，這裡只用一句話指過去。iPhone 機型的記憶體不寫，等 #144 收到實測再補。Chrome、Firefox 與 Android 的最低版本沒有查證過，只寫更新到最新版
 - 頁面最下面的更新日期（`about.updated`）在改了文字時跟著改，模型表跟著程式更新，不必改日期
 - 示意圖（`src/ui/AboutFigures.tsx`，2026-11-22 起）：開頭的兩層設計與裝置的邊界、開源的條件裡模型檔的檢查、由你確認的模型結果，三張分散在頁面裡，原本整頁都是文字。圖形是放大的 MDI 圖示、外框與箭頭，標籤是一般的文字（`about.fig.*`），三個語系各自換行，深淺色跟著 CSS 變數，圖示圈跟使用方式同一種（白底、深色線條），要強調的那一格用連結色，不用完成綠與分類色（見「設計語言」的骨架）。整句的說明放在 `figcaption`，圖裡不放 `h2`、`h3`。內容要跟文字一致：伺服器只寫跟檔案有關的兩件事（存取紀錄另外寫在圖說），SHA-256 照 `about.models.open.3` 寫比對的時機，確認流程停在「套用」。圖裡不放下載量與模型數，要放就從 `MODEL_CATALOG` 取。手機上總覽圖的兩條路線維持左右並排，疊成一排會看起來像同一條流程
-- 瀏覽器測試在 `tests/e2e/about.spec.ts`：「了解更多」捲到對應段落、使用者區與頁尾、左欄、模型表跟 `MODEL_CATALOG` 逐列比對、即時檢查在沒有模型、有模型、不能用 Cache API、沒有 service worker、關掉 WebAssembly 與 `?gpu=force` 時的結果，以及英文版與簡體版沒有露出字串的鍵。可以離線使用的那一種在 `offline.spec.ts`（只有它打開 service worker），onion 版的入口在 `tests/onion/`
+- 瀏覽器測試在 `tests/e2e/about.spec.ts`：「了解更多」捲到對應段落、使用者區與頁尾、左欄、模型表跟 `MODEL_CATALOG` 逐列比對、支援的瀏覽器與裝置的三小段與整檔解碼的上限、即時檢查在沒有模型、有模型、不能用 Cache API、沒有 service worker、關掉 WebAssembly 與 `?gpu=force` 時的結果，以及英文版與簡體版沒有露出字串的鍵。可以離線使用的那一種在 `offline.spec.ts`（只有它打開 service worker），onion 版的入口在 `tests/onion/`
 
 ## 裝置量測（實驗頁）
 
