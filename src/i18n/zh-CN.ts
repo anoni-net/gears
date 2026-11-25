@@ -2561,6 +2561,8 @@ export const zhCN: Record<MessageKey, string> = {
   "licenses.zxing.desc": "zxing-wasm 3.1.4（ZXing-C++ 的 WebAssembly 版），MIT 与 Apache-2.0，读 QR code 以外的条码，打包成独立的文件。",
   "licenses.material-design-icons": "工具的图标",
   "licenses.material-design-icons.desc": "Material Design Icons，Pictogrammers Free License。",
+  "licenses.peer-logos": "同类工具的图标",
+  "licenses.peer-logos.desc": "“为什么做 Gears”里各项目的图标，取自各项目的 repo 或网站，属于各项目或组织，只用来指出提到的是哪个项目。来源、授权与全文见授权文件。",
   "licenses.data-165": "165 反诈骗清单",
   "licenses.data-165.desc": "网址检查比对的「遭停止解析涉诈网站」清单，台湾政府资料开放平台数据集 176455，内政部警政署，政府资料开放授权条款第 1 版。",
   "licenses.data-diceware": "密语的词表",

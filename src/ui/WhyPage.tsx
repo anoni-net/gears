@@ -2,9 +2,9 @@ import { Fragment } from "preact";
 import { MODEL_CATALOG } from "../core/model-catalog.ts";
 import { list, t, tDynamic } from "../i18n/index.ts";
 import { PageLink, withLink } from "./AboutPage.tsx";
-import { IconCircle } from "./Icon.tsx";
+import { Icon, IconCircle } from "./Icon.tsx";
 import { PAGE_META, TOOL_GROUPS, type GroupId } from "./tool-meta.ts";
-import { AI_NOTES, GAPS, LINK_IDS, PEERS, type Peer, type PeerName, type PeerSection } from "./why-peers.ts";
+import { AI_NOTES, GAPS, LINKS, PEERS, type Peer, type PeerName, type PeerSection } from "./why-peers.ts";
 
 // 為什麼做 Gears（/gears/why/）：Gears 要處理的三種情況，以及國內外已經在做同類工具的組織與專案、
 // 跟 Gears 的關係（AGENTS.md「為什麼做 Gears」）。
@@ -13,6 +13,20 @@ import { AI_NOTES, GAPS, LINK_IDS, PEERS, type Peer, type PeerName, type PeerSec
 //   連到設計原則頁的模型表（#models-list）
 // - 同類工具的名稱與連結在 src/ui/why-peers.ts，說明在字串（why.peer.<id>.*）
 // - 小標題的 id 給寬螢幕左欄的本頁目錄讀（src/ui/PageAside.tsx）
+// - 名稱前面的 logo 從自己的網域載入（public/peers/，scripts/make-peer-logos.mjs），不連到各專案的網站。
+//   放在固定的淺色底上，深色模式也看得到深色的 logo。名稱就在旁邊，圖片的 alt 留空
+
+const BASE = import.meta.env.BASE_URL;
+
+// logo 是 public/peers/ 的檔名，gears 是自己的網站圖示，沒有時放中性的圖示佔位
+export function Logo({ logo }: { logo?: string }) {
+  const src = logo === "gears" ? `${BASE}favicon.svg` : logo ? `${BASE}peers/${logo}.png` : null;
+  return (
+    <span class={src ? "why-logo" : "why-logo none"} aria-hidden="true" data-logo={logo ?? ""}>
+      {src ? <img src={src} alt="" width={20} height={20} decoding="async" /> : <Icon name="image-off-outline" />}
+    </span>
+  );
+}
 
 function Names({ names }: { names: PeerName[] }) {
   return (
@@ -20,6 +34,7 @@ function Names({ names }: { names: PeerName[] }) {
       {names.map((n, i) => (
         <Fragment key={n.name}>
           {i ? t("list.separator") : null}
+          <Logo logo={n.logo} />
           {n.url ? (
             <a href={n.url} target="_blank" rel="noopener noreferrer">
               {n.name}
@@ -75,14 +90,25 @@ function Matrix() {
         </thead>
         <tbody role="rowgroup">
           <tr class="why-gears" data-peer="gears" role="row">
-            <th scope="row" role="rowheader">Gears</th>
+            <th scope="row" role="rowheader">
+              <Logo logo="gears" />
+              Gears
+            </th>
             <td class="why-wide" role="cell">{groupNames(all)}</td>
             <td role="cell">{t("why.matrix.gears.form")}</td>
             <td class="why-wide" role="cell">{t("why.matrix.gears.path")}</td>
           </tr>
           {rows.map((p) => (
             <tr key={p.id} data-peer={p.id} role="row">
-              <th scope="row" role="rowheader">{list(p.names.map((n) => n.name))}</th>
+              <th scope="row" role="rowheader">
+                {p.names.map((n, i) => (
+                  <Fragment key={n.name}>
+                    {i ? t("list.separator") : null}
+                    <Logo logo={n.logo} />
+                    {n.name}
+                  </Fragment>
+                ))}
+              </th>
               <td class="why-wide" role="cell">{groupNames(p.covers)}</td>
               <td role="cell">{tDynamic(`why.peer.${p.id}.form`)}</td>
               <td class="why-wide" role="cell">{tDynamic(`why.peer.${p.id}.path`)}</td>
@@ -182,9 +208,14 @@ export function WhyPage() {
         <h2 id="links">{t("why.links.title")}</h2>
         <p>{t("why.links.intro")}</p>
         <dl class="why-pairs">
-          {LINK_IDS.map((id) => (
+          {LINKS.map(({ id, logos }) => (
             <div key={id}>
-              <dt>{tDynamic(`why.links.${id}.title`)}</dt>
+              <dt>
+                {logos.map((logo) => (
+                  <Logo key={logo} logo={logo} />
+                ))}
+                {tDynamic(`why.links.${id}.title`)}
+              </dt>
               <dd>{tDynamic(`why.links.${id}.body`)}</dd>
             </div>
           ))}

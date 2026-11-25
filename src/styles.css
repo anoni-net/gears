@@ -4319,6 +4319,43 @@ button.link {
   gap: 0 var(--sp-2);
 }
 
+/* 同類工具名稱前面的 logo：固定的淺色底（深色模式也是），深色的 logo 才看得到。
+   找不到官方 logo 的放中性的圖示佔位（.none） */
+.why-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin-right: var(--sp-1);
+  vertical-align: middle;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+
+.why-logo img {
+  display: block;
+  width: 1.25rem;
+  height: 1.25rem;
+  object-fit: contain;
+}
+
+.why-logo.none {
+  background: var(--fill);
+  color: var(--muted);
+}
+
+.why-logo.none svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+* + .why-logo {
+  margin-left: var(--sp-1);
+}
+
 .why-peer-who,
 .why-peer-form {
   color: var(--muted);
