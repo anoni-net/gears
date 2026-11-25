@@ -146,6 +146,7 @@ function fileWarnings(f: CaseFile): Warning[] {
   const chainRevoked = ev.signatures.flatMap((s) => [
     ...(s.check?.chainRevocation ?? []).filter((c) => c.check.status === "revoked" && !c.check.afterTimestamp).map((c) => c.subject),
     ...(s.check?.timestamp?.revocation?.status === "revoked" ? [s.check.timestamp.tsa ?? ""] : []),
+    ...(s.check?.timestamp?.chainRevocation ?? []).filter((c) => c.check.status === "revoked").map((c) => c.subject),
   ]);
   if (chainRevoked.length) out.push({ code: "pdf-chain-revoked", files: [f.index], value: chainRevoked[0] });
   if (ev.revisions.length) out.push({ code: "pdf-revisions", files: [f.index], value: String(ev.revisions.length + 1) });

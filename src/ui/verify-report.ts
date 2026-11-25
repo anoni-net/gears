@@ -94,7 +94,10 @@ function signatureLines(c: PdfSignatureCheck): string[] {
     const vars = { who, source: r.source ? tDynamic(`verify.pdfsig.revocation.source.${r.source}`) : "-", time: time(r.checkedAt), revoked: time(r.revokedAt) };
     return tDynamic(`verify.pdfsig.otherRevocation.${r.status === "revoked" && r.afterTimestamp ? "revoked-after" : r.status}`, vars);
   };
-  const tsaRevocation = (ts: TimestampCheck) => (ts.revocation ? [other(t("verify.pdfsig.who.tsa", { subject: ts.tsa ?? "-" }), ts.revocation)] : []);
+  const tsaRevocation = (ts: TimestampCheck) => [
+    ...(ts.revocation ? [other(t("verify.pdfsig.who.tsa", { subject: ts.tsa ?? "-" }), ts.revocation)] : []),
+    ...(ts.chainRevocation ?? []).map((link) => other(t("verify.pdfsig.who.chain", { subject: link.subject }), link.check)),
+  ];
   const out: string[] = [];
   // 整份文件的時間戳記：簽署者就是時間戳記服務，只列時間戳記
   if (c.kind === "document" && c.timestamp) {
