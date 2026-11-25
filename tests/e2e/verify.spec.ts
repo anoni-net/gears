@@ -247,8 +247,8 @@ test("PDF 的時間戳記：附在簽章上的與整份文件的，對不上的�
   ]);
   const card = (name: string) => page.locator(".verify-card").filter({ has: page.getByRole("heading", { name }) });
   // 測試的根憑證不在內建的清單裡，時間戳記服務也接不到
-  await expect(card("stamped.pdf").getByText(/^時間戳記：.*由 .*CN=Gears Test TSA.* 簽署。時間戳記服務接不到內建的信任清單/)).toBeVisible({ timeout: 30000 });
-  await expect(card("wrong-stamp.pdf").getByText("時間戳記跟它證明的內容對不上，可能被換過")).toBeVisible({ timeout: 30000 });
+  await expect(card("stamped.pdf").getByText(/^時間戳記：.*由 .*CN=Gears Test TSA.* 簽署。這個時間戳記服務不在內建的信任清單裡/)).toBeVisible({ timeout: 30000 });
+  await expect(card("wrong-stamp.pdf").getByText("時間戳記證明的不是這份簽章，時間戳記或簽章可能被換過", { exact: false })).toBeVisible({ timeout: 30000 });
   await expect(page.locator(".verify-warnings").getByText("時間戳記驗證沒有通過")).toBeVisible();
   const doc = card("document.pdf");
   await expect(doc.getByText(/^整份文件的時間戳記，證明簽署的範圍在 .* 已經存在/)).toBeVisible({ timeout: 30000 });

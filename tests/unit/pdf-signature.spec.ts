@@ -360,7 +360,7 @@ test("撤銷狀態的說明與需要留意的地方", async () => {
   expect(lines({ status: "revoked", source: "crl", revokedAt: "2026-10-01T00:00:00.000Z" })).toContain("憑證已被撤銷（簽發單位宣告它作廢）：檔案裡附的撤銷資料（憑證撤銷清單）寫著撤銷的時間是");
   expect(lines({ status: "revoked", source: "ocsp", revokedAt: "2026-10-01T00:00:00.000Z", afterTimestamp: true })).toContain("可信的時間戳記證明簽章在撤銷之前就已經存在");
   expect(lines({ status: "unverified", source: "ocsp" })).toContain("撤銷狀態沒有確認");
-  expect(lines({ status: "not-checked" })).toContain("撤銷狀態沒有檢查");
+  expect(lines({ status: "not-checked" })).toContain("撤銷狀態（憑證有沒有被簽發單位宣告作廢）沒有檢查");
   expect(codes({ status: "revoked", source: "crl" })).toContain("pdf-signature-revoked");
   expect(codes({ status: "revoked", source: "crl", afterTimestamp: true })).not.toContain("pdf-signature-revoked");
   expect(codes({ status: "good", source: "crl" })).not.toContain("pdf-signature-revoked");

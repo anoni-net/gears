@@ -52,7 +52,7 @@ test("裝置量測：文字辨識用範例截圖量出時間與字錯率，結�
   // 只量 1 個執行緒，CI 的機器只有 4 核心
   // 個資辨識也有同樣的選項，只在文字辨識那一區裡找
   const ocr = page.locator('section[aria-labelledby="bench-ocr-title"]');
-  for (const label of ["CPU，4 個執行緒", "CPU，8 個執行緒"]) {
+  for (const label of ["CPU，同時用 4 個核心", "CPU，同時用 8 個核心"]) {
     const box = ocr.getByLabel(label);
     if (await box.isChecked()) await box.uncheck();
   }
@@ -65,7 +65,7 @@ test("裝置量測：文字辨識用範例截圖量出時間與字錯率，結�
 
   const row = page.getByTestId("bench-ocr-table").locator("tbody tr");
   await expect(row).toHaveCount(1);
-  await expect(row).toContainText("CPU，1 個執行緒");
+  await expect(row).toContainText("CPU，同時用 1 個核心");
   const rate = Number((await row.locator("td").last().textContent())!.replace("%", ""));
   // #140 的評測裡 PP-OCRv5 在合成截圖的字錯率約 4%（v6 small 的辨識約 2%），三張範例都是清楚的截圖
   expect(rate).toBeLessThan(10);
