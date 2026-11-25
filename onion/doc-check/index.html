@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' blob: data:; media-src blob:; connect-src 'self' http://form.anoninetru5tflukgfaehun7q6khowgmymcff3gtk5oyesqazhmfxtyd.onion/api/v1/client/cmc9borto0008lj014bq33jqq/responses; worker-src 'self' blob:; font-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'" />
     <meta name="referrer" content="no-referrer" />
-    <meta name="description" content="列出 Word、Excel、PowerPoint、LibreOffice 文件與 PDF 打開時會連到的外部網址、巨集與 JavaScript，PDF 可以轉成只有圖片的安全版本。" />
+    <meta name="description" content="列出 Word、Excel、PowerPoint、LibreOffice 文件與 PDF 打開時會連到的外部網址，以及藏在裡面的程式（巨集與 JavaScript），PDF 可以轉成只有圖片的安全版本。" />
     <meta name="color-scheme" content="light dark" />
     <meta name="theme-color" content="#e0f4ff" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#082b3a" media="(prefers-color-scheme: dark)" />
@@ -21,12 +21,12 @@
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="anoni.net Gears" />
     <meta property="og:title" content="文件開啟前的連線與程式檢查 | Gears 檔案工作台" />
-    <meta property="og:description" content="列出 Word、Excel、PowerPoint、LibreOffice 文件與 PDF 打開時會連到的外部網址、巨集與 JavaScript，PDF 可以轉成只有圖片的安全版本。" />
+    <meta property="og:description" content="列出 Word、Excel、PowerPoint、LibreOffice 文件與 PDF 打開時會連到的外部網址，以及藏在裡面的程式（巨集與 JavaScript），PDF 可以轉成只有圖片的安全版本。" />
     <meta property="og:url" content="http://gears.anoninetru5tflukgfaehun7q6khowgmymcff3gtk5oyesqazhmfxtyd.onion/doc-check/" />
     <meta property="og:locale" content="zh_TW" />
     <meta property="og:locale:alternate" content="zh_CN" />
     <meta property="og:locale:alternate" content="en_US" />
-    <script type="module" crossorigin src="/assets/index-Hf0DemIR.js"></script>
+    <script type="module" crossorigin src="/assets/index-DP2aYsUN.js"></script>
     <link rel="modulepreload" crossorigin href="/assets/rolldown-runtime-COiEfhsA.js">
     <link rel="modulepreload" crossorigin href="/assets/tool-B_UYnq8T.js">
     <link rel="modulepreload" crossorigin href="/assets/zip-CH0OCUzR.js">
@@ -34,14 +34,14 @@
     <link rel="modulepreload" crossorigin href="/assets/preload-helper-BLdHbfdN.js">
     <link rel="modulepreload" crossorigin href="/assets/doc-check-Be4y9ut_.js">
     <link rel="modulepreload" crossorigin href="/assets/pii-CLSyrwjZ.js">
-    <link rel="modulepreload" crossorigin href="/assets/jsxRuntime-CQhZrkBm.js">
+    <link rel="modulepreload" crossorigin href="/assets/jsxRuntime-CjijrOHJ.js">
     <link rel="modulepreload" crossorigin href="/assets/wasm-DdAUNWSt.js">
     <link rel="modulepreload" crossorigin href="/assets/models-CtPeRKyg.js">
     <link rel="stylesheet" crossorigin href="/assets/index-DheFFjks.css">
   </head>
   <body>
     <p id="legacy-browser" class="legacy-browser" role="alert" hidden>這個瀏覽器的版本太舊，沒有辦法執行檔案工作台。iPhone 與 iPad 請更新到 iOS 16.4 以上，電腦請把 Safari、Chrome、Firefox 更新到最新版。</p>
-    <div id="app"><div class="frame static-page"><h1>文件開啟前檢查</h1><p>打開收到的 Word、PDF 之前，先看看會不會連到外面、執行程式。</p><h2>使用方式</h2><ol><li>選擇收到的 Word、Excel、PowerPoint、LibreOffice 文件或 PDF。</li><li>畫面列出打開時會連到的外部網址、巨集與 JavaScript，以及文件裡的連結。</li><li>PDF 有疑慮時按「轉成安全的 PDF」，每一頁轉成圖片，之後打開轉好的版本。</li></ol><h2>檢查收到的</h2><p>收到檔案、信件或連結時，先確認來源是否可信。</p><ul><li><a href="/verify/">查證檔案</a><br>收到的照片與文件</li><li><a href="/video-frames/">影片的關鍵影格</a><br>找出影片原本的出處</li><li><a href="/email-check/">信件檢查</a><br>可疑的通知信</li><li><a href="/software-verify/">下載的軟體驗證</a><br>下載的 Tor Browser 與 Tails</li><li><a href="/url-check/">網址檢查</a><br>可疑的連結</li><li><a href="/qr-read/">QR code 與條碼讀取</a><br>掃到的連結、付款碼與票券</li></ul><p><a href="/">回到桌面</a></p></div></div>
+    <div id="app"><div class="frame static-page"><h1>文件開啟前檢查</h1><p>打開收到的 Word、PDF 之前，先看看會不會連到外面、執行程式。</p><h2>使用方式</h2><ol><li>選擇收到的 Word、Excel、PowerPoint、LibreOffice 文件或 PDF。</li><li>畫面列出打開時會連到的外部網址、巨集與 JavaScript 這類打開時會執行的程式，以及文件裡的連結。</li><li>PDF 有疑慮時按「轉成安全的 PDF」，每一頁轉成圖片，之後打開轉好的版本。</li></ol><h2>檢查收到的</h2><p>收到檔案、信件或連結時，先確認來源是否可信。</p><ul><li><a href="/verify/">查證檔案</a><br>收到的照片與文件</li><li><a href="/video-frames/">影片的關鍵影格</a><br>找出影片原本的出處</li><li><a href="/email-check/">信件檢查</a><br>可疑的通知信</li><li><a href="/software-verify/">下載的軟體驗證</a><br>下載的 Tor Browser 與 Tails</li><li><a href="/url-check/">網址檢查</a><br>可疑的連結</li><li><a href="/qr-read/">QR code 與條碼讀取</a><br>掃到的連結、付款碼與票券</li></ul><p><a href="/">回到桌面</a></p></div></div>
     <noscript>檔案工作台需要 JavaScript 才能在你的瀏覽器裡處理檔案。</noscript>
     <script src="/legacy-check.js"></script>
   </body>
