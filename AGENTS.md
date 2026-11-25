@@ -695,6 +695,7 @@ Whisper base 與 small 在這台裝置的 CPU 與顯示卡上要多久、字錯�
 - 直接用逐字稿的 Worker（`transcribe.worker.ts`），訊息格式不變，不另寫一份推論：核心數照逐字稿的預設值（`src/ui/thread-default.ts`，逐字稿也從這裡讀），顯示卡照逐字稿的判斷（`detectGpu` 與 `gpuUsable`），CPU 用 8 位元、顯示卡用 4 位元的模型。模型從工作台自己的網域下載，用過逐字稿就不必重新下載
 - 範例錄音 `public/models/bench/asr-zh.wav`（進版控，約 0.9 MB）：Google FLEURS（CC BY 4.0）華語測試集的三句朗讀，男女聲各有，句子之間補 0.6 秒的靜音，共 29 秒。存成 16 kHz、單聲道、16 位元的 WAV，用 `wavLayout` 與 `pcmToFloat` 讀，不經過瀏覽器的解碼器。挑的句子不含數字與英文，數字的寫法會讓字錯率失真。正確答案、句子的 id 與 SHA-256 在 `src/tools/bench/asr-sample.json`，正確答案用逐字稿同一套 OpenCC（cn → twp）轉成正體。畫面上寫明出處與授權
 - 同一個 Worker 辨識兩次：第一次包含顯示卡準備的時間，第二次才是之後每一段的速度。速度是第二次的時間除以錄音長度。字錯率只比文字（`asrCer`，標點、空白拿掉，英文小寫），用第一次的結果
+- 載入時間從建立 Worker 算到模型載入完成，包含下載。從 service worker 快取讀出的模型也會回報下載進度，所以另外記開始之前模型是否已在快取（`cached`，照逐字稿判斷「已下載」的做法）與其中下載的時間（`download`），只比 `cached` 相同的數字
 - 記下實際用的裝置（Worker 拿不到顯示卡時改用 CPU）、語音偵測有沒有退回音量判斷、送進模型的片段數。拿不到顯示卡的資訊（瀏覽器的實作不完整）時當成沒有顯示卡
 - 記憶體不夠時的處理照個資辨識：`history.state` 的 `gearsAsrBench`，重新載入之後記成 `crashed`
 - 結果的 JSON 多一個 `asr`（`schema` 從 2 變 3），辨識出來的文字不放進去
