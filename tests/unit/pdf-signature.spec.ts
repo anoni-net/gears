@@ -238,6 +238,99 @@ test("/DSS 裡的中繼憑證用來建憑證鏈", async () => {
   expect(result.revocation).toMatchObject({ status: "good", source: "ocsp" });
 });
 
+// 中繼憑證的撤銷：根憑證簽的撤銷清單（ARL）列出中繼憑證，時間戳記服務的憑證也一樣檢查（#128）
+async function chainSetup() {
+  const root = await makeCert({ cn: "Gears Test Root", ca: true, serial: 1, from: new Date(now - 3650 * day), to: new Date(now + 3650 * day) });
+  const mid = await makeCert({ cn: "Gears Test CA", ca: true, issuer: root, serial: 3, from: new Date(now - 3650 * day), to: new Date(now + 3650 * day) });
+  const leaf = await makeCert({ cn: "測試簽署人", issuer: mid, serial: 4, from: new Date(now - day), to: new Date(now + 365 * day) });
+  return { root, mid, leaf };
+}
+
+test("撤銷狀態：中繼憑證由根憑證的撤銷清單檢查，沒有資料時沒有檢查", async () => {
+  const { root, mid, leaf } = await chainSetup();
+  const at = new Date(now - day);
+  const revokedAt = new Date(Math.floor((now - 2 * day) / 1000) * 1000);
+  const leafGood = await ocspResponse(leaf, mid, { status: "good", at });
+  const trust = { roots: [root.der], intermediates: [mid.der] };
+
+  const revoked = await verifyWithDss(await signedPdf(leaf, { revocation: { where: "dss", ocsps: [leafGood], crls: [await crl(root, at, [{ serial: 3, at: revokedAt }])] } }), trust);
+  expect(revoked.revocation).toMatchObject({ status: "good", source: "ocsp" });
+  expect(revoked.chainRevocation).toHaveLength(1);
+  expect(revoked.chainRevocation![0]!.subject).toContain("CN=Gears Test CA");
+  expect(revoked.chainRevocation![0]!.check).toMatchObject({ status: "revoked", source: "crl", revokedAt: revokedAt.toISOString() });
+
+  const good = await verifyWithDss(await signedPdf(leaf, { revocation: { where: "cms", ocsps: [leafGood], crls: [await crl(root, at, [])] } }), trust);
+  expect(good.chainRevocation![0]!.check).toMatchObject({ status: "good", source: "crl" });
+
+  // 簽署者的簽發者（中繼憑證）簽的撤銷清單不能用來判斷中繼憑證自己
+  const wrong = await verifyWithDss(await signedPdf(leaf, { revocation: { where: "dss", crls: [await crl(mid, at, [{ serial: 3, at: revokedAt }])] } }), trust);
+  expect(wrong.chainRevocation![0]!.check).toEqual({ status: "not-checked" });
+  // 簽署者直接由根憑證簽發時沒有中繼憑證
+  const { root: r2, leaf: l2 } = await setup();
+  expect((await verify(await signedPdf(l2), { roots: [r2.der], intermediates: [] })).chainRevocation).toBeUndefined();
+});
+
+test("撤銷狀態：中繼憑證在可信的時間戳記之後才被撤銷", async () => {
+  const { root, mid, leaf } = await chainSetup();
+  const { tsaRoot, tsa } = await tsaSetup();
+  const revokedAt = new Date(Math.floor((now - 2 * day) / 1000) * 1000);
+  const pdf = await signedPdf(leaf, { timestamp: { tsa, at: new Date(now - 10 * day) }, revocation: { where: "cms", crls: [await crl(root, new Date(now - day), [{ serial: 3, at: revokedAt }])] } });
+  const result = await verify(pdf, { roots: [root.der], intermediates: [mid.der], tsaRoots: [tsaRoot.der] });
+  expect(result.chainRevocation![0]!.check).toMatchObject({ status: "revoked", afterTimestamp: true });
+});
+
+test("撤銷狀態：時間戳記服務的憑證被撤銷時，它證明的時間不採信", async () => {
+  const { root, leaf } = await setup();
+  const { tsaRoot, tsa } = await tsaSetup();
+  const at = new Date(now - day);
+  const tsaRevoked = await crl(tsaRoot, at, [{ serial: 12, at: new Date(Math.floor((now - 20 * day) / 1000) * 1000) }]);
+  // 簽署者在時間戳記之後才被撤銷：時間戳記可信時算在撤銷之前，時間戳記服務被撤銷時就不算
+  const leafRevoked = await ocspResponse(leaf, root, { status: "revoked", at, revokedAt: new Date(now - 2 * day) });
+  const trust = { roots: [root.der], intermediates: [], tsaRoots: [tsaRoot.der] };
+  const result = await verify(await signedPdf(leaf, { timestamp: { tsa, at: new Date(now - 10 * day) }, revocation: { where: "cms", ocsps: [leafRevoked], crls: [tsaRevoked] } }), trust);
+  expect(result.timestamp).toMatchObject({ chain: "trusted", revocation: { status: "revoked", source: "crl" } });
+  expect(result.revocation).toMatchObject({ status: "revoked" });
+  expect(result.revocation!.afterTimestamp).toBeUndefined();
+
+  const clean = await verify(await signedPdf(leaf, { timestamp: { tsa, at: new Date(now - 10 * day) }, revocation: { where: "cms", ocsps: [leafRevoked], crls: [await crl(tsaRoot, at, [])] } }), trust);
+  expect(clean.timestamp!.revocation).toMatchObject({ status: "good", source: "crl" });
+  expect(clean.revocation).toMatchObject({ status: "revoked", afterTimestamp: true });
+});
+
+test("撤銷狀態：整份文件的時間戳記也檢查時間戳記服務的憑證", async () => {
+  const { tsaRoot, tsa } = await tsaSetup();
+  const at = new Date(now - day);
+  const pdf = await signedPdf(tsa, { document: true, timestamp: { tsa, at }, revocation: { where: "dss", crls: [await crl(tsaRoot, at, [{ serial: 12, at: new Date(Math.floor((now - 2 * day) / 1000) * 1000) }])] } });
+  const result = await verifyWithDss(pdf, { roots: [], intermediates: [], tsaRoots: [tsaRoot.der] });
+  expect(result).toMatchObject({ kind: "document", chain: "trusted" });
+  expect(result.timestamp!.revocation).toMatchObject({ status: "revoked", source: "crl" });
+});
+
+test("中繼憑證與時間戳記服務的撤銷狀態：說明與需要留意的地方", async () => {
+  const { traceLines } = await import("../../src/ui/verify-report.ts");
+  const { summarize } = await import("../../src/tools/verify/summary.ts");
+  const base = { integrity: "intact", signature: "valid", chain: "trusted", root: "CN=Root", signer: "CN=測試簽署人", kind: "signature", revocation: { status: "good", source: "ocsp" } } as const;
+  const evidence = (extra: Partial<PdfSignatureCheck>) => {
+    const ev = { times: [], devices: [], serials: [], software: [], people: [], locations: [], traces: [], revisions: [], signatures: [{ coversWhole: true, check: { ...base, ...extra } }] };
+    return ev as unknown as Parameters<typeof traceLines>[0];
+  };
+  const lines = (extra: Partial<PdfSignatureCheck>) => traceLines(evidence(extra)).join("\n");
+  const warnings = (extra: Partial<PdfSignatureCheck>) => summarize([{ index: 1, name: "a.pdf", format: "pdf", size: 1, evidence: evidence(extra) }]).warnings;
+
+  const mid = (check: PdfSignatureCheck["revocation"]) => ({ chainRevocation: [{ subject: "CN=Mid CA", check: check! }] });
+  expect(lines(mid({ status: "good", source: "crl", checkedAt: "2026-10-01T00:00:00.000Z" }))).toContain("中繼憑證 CN=Mid CA：檔案裡附的撤銷資料（憑證撤銷清單，");
+  expect(lines(mid({ status: "not-checked" }))).toContain("中繼憑證 CN=Mid CA：檔案裡沒有附撤銷資料");
+  expect(lines(mid({ status: "revoked", source: "crl", revokedAt: "2026-10-01T00:00:00.000Z" }))).toContain("中繼憑證 CN=Mid CA 已被撤銷");
+  expect(warnings(mid({ status: "revoked", source: "crl" }))).toContainEqual(expect.objectContaining({ code: "pdf-chain-revoked", value: "CN=Mid CA" }));
+  expect(warnings(mid({ status: "revoked", source: "crl", afterTimestamp: true })).map((w) => w.code)).not.toContain("pdf-chain-revoked");
+  expect(warnings(mid({ status: "good", source: "crl" })).map((w) => w.code)).not.toContain("pdf-chain-revoked");
+
+  const stamp = { time: "2026-10-01T00:00:00.000Z", tsa: "CN=TSA", imprint: "match", signature: "valid", chain: "trusted", root: "CN=TSA Root" } as const;
+  const tsaRevoked = { timestamp: { ...stamp, revocation: { status: "revoked", source: "ocsp", revokedAt: "2026-09-01T00:00:00.000Z" } } } as const;
+  expect(lines(tsaRevoked)).toContain("時間戳記服務的憑證 CN=TSA 已被撤銷");
+  expect(warnings(tsaRevoked)).toContainEqual(expect.objectContaining({ code: "pdf-chain-revoked", value: "CN=TSA" }));
+});
+
 test("內建的 GRCA 根憑證與下屬憑證機構：pkijs 讀得出來，效期內的都接得到根憑證", async () => {
   const roots = pemToDer(readFileSync("src/tools/verify/pdf-trust/grca-roots.pem", "utf8")).map((d) => pkijs.Certificate.fromBER(d.slice().buffer));
   const cas = pemToDer(readFileSync("src/tools/verify/pdf-trust/gpki-cas.pem", "utf8")).map((d) => pkijs.Certificate.fromBER(d.slice().buffer));

@@ -12,7 +12,8 @@ import type * as Pkijs from "pkijs";
 //    （/SubFilter 為 ETSI.RFC3161，直接證明簽署的範圍）。驗時間戳記服務的簽章與憑證鏈，接到內建的
 //    根憑證才採信，簽署者的憑證現在過期時，用時間戳記證明的時間再驗一次
 // 4. 撤銷狀態：只讀檔案裡已經存好的資料，簽章裡附的（adbe-revocationInfoArchival 與 CMS 的
-//    crls）與長期驗證存在 /DSS 的 OCSP 回應與撤銷清單（CRL），不連線查詢。只檢查簽署者的憑證，
+//    crls）、時間戳記裡附的與長期驗證存在 /DSS 的 OCSP 回應與撤銷清單（CRL），不連線查詢。
+//    檢查簽署者、憑證鏈上的中繼憑證與時間戳記服務的憑證，根憑證沒有簽發者可以撤銷它，不檢查。
 //    憑證鏈接到內建的根憑證才檢查，接不到的話分不出撤銷資料是誰簽的
 //
 // 只給線索：簽章有效不代表文件的內容是真的，法律上的效力也不在這裡判斷
@@ -42,6 +43,7 @@ export interface TimestampCheck {
   signature: "valid" | "invalid";
   chain: "trusted" | "untrusted";
   root?: string;
+  revocation?: RevocationCheck; // 時間戳記服務的憑證，憑證鏈接到內建的根憑證時才有
 }
 
 export interface RevocationCheck {
@@ -67,6 +69,8 @@ export interface PdfSignatureCheck {
   kind?: "signature" | "document"; // document：整份文件的時間戳記，簽署者就是時間戳記服務
   timestamp?: TimestampCheck;
   revocation?: RevocationCheck; // 憑證鏈接到內建的根憑證時才有
+  // 憑證鏈上的中繼憑證（簽署者與根憑證之間），從靠近簽署者的那一張排起
+  chainRevocation?: { subject: string; check: RevocationCheck }[];
 }
 
 type Lib = typeof Pkijs;
@@ -173,7 +177,13 @@ const embeddedOf = (lib: Lib, signed: Pkijs.SignedData) => (signed.certificates 
 
 // 時間戳記（TimeStampToken）是一份 CMS，內容是 TSTInfo：雜湊演算法、它證明的資料的雜湊值與時間。
 // pkijs 驗簽章時一併比對雜湊值（data 是它證明的資料）
-async function verifyToken(lib: Lib, token: Pkijs.SignedData, covered: Uint8Array, trust: TrustStore): Promise<{ check: TimestampCheck; at?: Date }> {
+interface TokenResult {
+  check: TimestampCheck;
+  at?: Date;
+  path?: Pkijs.Certificate[]; // 時間戳記服務的憑證鏈，接到內建的根憑證時才有
+}
+
+async function verifyToken(lib: Lib, token: Pkijs.SignedData, covered: Uint8Array, trust: TrustStore): Promise<TokenResult> {
   const check: TimestampCheck = { imprint: "match", signature: "invalid", chain: "untrusted" };
   let at: Date | undefined;
   try {
@@ -204,13 +214,15 @@ async function verifyToken(lib: Lib, token: Pkijs.SignedData, covered: Uint8Arra
     check.chain = "trusted";
     check.root = nameText(path.at(-1)!.subject);
   }
-  return { check, at };
+  return { check, at, path };
 }
 
 interface Revocations {
   ocsps: Pkijs.BasicOCSPResponse[];
   crls: Pkijs.CertificateRevocationList[];
 }
+
+const merge = (...list: Revocations[]): Revocations => ({ ocsps: list.flatMap((r) => r.ocsps), crls: list.flatMap((r) => r.crls) });
 
 // 簽章裡附的撤銷資料：Adobe 的 adbe-revocationInfoArchival（簽署的屬性，[0] 是 CRL、[1] 是 OCSP
 // 回應）與 CMS 本身的 crls（RFC 5940 的 OCSP 回應放在 OtherRevocationInfoFormat），再加上 /DSS
@@ -337,6 +349,21 @@ async function revocationOf(lib: Lib, cert: Pkijs.Certificate, issuer: Pkijs.Cer
   return result;
 }
 
+// 憑證鏈上每一張中繼憑證的撤銷狀態，簽發者是鏈上的下一張。path 是 [簽署者, 中繼憑證…, 根憑證]
+async function chainRevocations(lib: Lib, path: Pkijs.Certificate[], data: Revocations) {
+  const out: { subject: string; check: RevocationCheck }[] = [];
+  for (let i = 1; i < path.length - 1; i++) out.push({ subject: nameText(path[i]!.subject), check: await revocationOf(lib, path[i]!, path[i + 1]!, data) });
+  return out;
+}
+
+// 時間戳記服務的憑證：簽發者是鏈上的下一張。被撤銷的時間戳記服務，它證明的時間不能採信
+async function tsaRevocation(lib: Lib, result: TokenResult, data: Revocations): Promise<boolean> {
+  const issuer = result.path?.[1];
+  if (!issuer) return true;
+  result.check.revocation = await revocationOf(lib, result.path![0]!, issuer, data);
+  return result.check.revocation.status !== "revoked";
+}
+
 export async function verifyPdfSignature(bytes: Uint8Array, input: PdfSignatureInput, trust: TrustStore): Promise<PdfSignatureCheck> {
   const lib: Lib = await import("pkijs");
   const asn1: typeof import("asn1js") = await import("asn1js");
@@ -363,7 +390,9 @@ export async function verifyPdfSignature(bytes: Uint8Array, input: PdfSignatureI
 
   // 整份文件的時間戳記：簽署者是時間戳記服務，證明簽署的範圍在那個時間已經存在
   if (signed.encapContentInfo.eContentType === "1.2.840.113549.1.9.16.1.4") {
-    const { check } = await verifyToken(lib, signed, data, trust);
+    const result = await verifyToken(lib, signed, data, trust);
+    const { check } = result;
+    await tsaRevocation(lib, result, collectRevocations(lib, asn1, signed, signerInfo, input.dss));
     out.kind = "document";
     out.timestamp = check;
     out.integrity = check.imprint === "match" ? "intact" : "changed";
@@ -403,14 +432,19 @@ export async function verifyPdfSignature(bytes: Uint8Array, input: PdfSignatureI
   if (out.signature !== "valid") return out;
 
   // 第三層：附在簽章上的時間戳記，證明簽章值（signerInfo.signature）在那個時間已經存在
+  // 撤銷資料：簽章裡附的與 /DSS，附在簽章上的時間戳記裡附的另外加進來
+  let revocations = collectRevocations(lib, asn1, signed, signerInfo, input.dss);
   let trustedAt: Date | undefined;
   const tokenAttr = signerInfo.unsignedAttrs?.attributes.find((a) => a.type === "1.2.840.113549.1.9.16.2.14");
   if (tokenAttr?.values[0]) {
     try {
       const info = new lib.ContentInfo({ schema: tokenAttr.values[0] });
-      const { check, at } = await verifyToken(lib, new lib.SignedData({ schema: info.content }), new Uint8Array(signerInfo.signature.valueBlock.valueHexView), trust);
-      out.timestamp = check;
-      if (check.chain === "trusted") trustedAt = at;
+      const token = new lib.SignedData({ schema: info.content });
+      const result = await verifyToken(lib, token, new Uint8Array(signerInfo.signature.valueBlock.valueHexView), trust);
+      const tokenInfo = token.signerInfos[0];
+      if (tokenInfo) revocations = merge(revocations, collectRevocations(lib, asn1, token, tokenInfo));
+      out.timestamp = result.check;
+      if (result.check.chain === "trusted" && (await tsaRevocation(lib, result, revocations))) trustedAt = result.at;
     } catch {
       out.timestamp = { imprint: "mismatch", signature: "invalid", chain: "untrusted" };
     }
@@ -434,10 +468,16 @@ export async function verifyPdfSignature(bytes: Uint8Array, input: PdfSignatureI
 
   // 第四層：撤銷狀態。簽發者是憑證鏈的下一張
   const issuer = path?.[1];
-  if (issuer) {
-    out.revocation = await revocationOf(lib, signerCert, issuer, collectRevocations(lib, asn1, signed, signerInfo, input.dss));
-    const revokedAt = out.revocation.revokedAt ? new Date(out.revocation.revokedAt) : undefined;
-    if (revokedAt && trustedAt && revokedAt > trustedAt) out.revocation.afterTimestamp = true;
+  if (path && issuer) {
+    const after = (r: RevocationCheck) => {
+      const revokedAt = r.revokedAt ? new Date(r.revokedAt) : undefined;
+      if (revokedAt && trustedAt && revokedAt > trustedAt) r.afterTimestamp = true;
+      return r;
+    };
+    out.revocation = after(await revocationOf(lib, signerCert, issuer, revocations));
+    const chain = await chainRevocations(lib, path, revocations);
+    for (const c of chain) after(c.check);
+    if (chain.length) out.chainRevocation = chain;
   }
   return out;
 }

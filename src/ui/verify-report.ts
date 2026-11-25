@@ -4,7 +4,7 @@ import type { Evidence, TimeEntry } from "../tools/verify/examine.ts";
 import { DIGITAL_SOURCE_TYPES, type Provenance } from "../tools/verify/provenance.ts";
 import { C2PA_ACTIONS, CAWG_ACCOUNT_TYPES, CAWG_TRAINING_KINDS, CAWG_TRAINING_USES, type C2paAccount, type C2paAction } from "../tools/verify/c2pa.ts";
 import { isoTime } from "../tools/verify/times.ts";
-import type { PdfSignatureCheck, TimestampCheck } from "../tools/verify/pdf-signature.ts";
+import type { PdfSignatureCheck, RevocationCheck, TimestampCheck } from "../tools/verify/pdf-signature.ts";
 import type { ProofItem, SigResult } from "../tools/verify/proofmode.ts";
 import { providerText } from "./provider-text.ts";
 import type { CaseFile, Group, Summary, Warning } from "../tools/verify/summary.ts";
@@ -89,12 +89,18 @@ function signatureLines(c: PdfSignatureCheck): string[] {
     const vars = { time: time(ts.time), tsa: ts.tsa ?? "-", root: ts.root ?? "-" };
     return t(ts.chain === "trusted" ? "verify.pdfsig.timestamp.trusted" : "verify.pdfsig.timestamp.untrusted", vars);
   };
+  // 簽署者以外的憑證（中繼憑證、時間戳記服務的憑證）的撤銷狀態
+  const other = (who: string, r: RevocationCheck) => {
+    const vars = { who, source: r.source ? tDynamic(`verify.pdfsig.revocation.source.${r.source}`) : "-", time: time(r.checkedAt), revoked: time(r.revokedAt) };
+    return tDynamic(`verify.pdfsig.otherRevocation.${r.status === "revoked" && r.afterTimestamp ? "revoked-after" : r.status}`, vars);
+  };
+  const tsaRevocation = (ts: TimestampCheck) => (ts.revocation ? [other(t("verify.pdfsig.who.tsa", { subject: ts.tsa ?? "-" }), ts.revocation)] : []);
   const out: string[] = [];
   // 整份文件的時間戳記：簽署者就是時間戳記服務，只列時間戳記
   if (c.kind === "document" && c.timestamp) {
     out.push(t("verify.pdfsig.document", { time: time(c.timestamp.time) }));
     if (c.integrity === "changed") out.push(t("verify.pdfsig.changed"));
-    else out.push(tDynamic(`verify.pdfsig.signature.${c.signature}`), stamp(c.timestamp));
+    else out.push(tDynamic(`verify.pdfsig.signature.${c.signature}`), stamp(c.timestamp), ...tsaRevocation(c.timestamp));
     return out;
   }
   if (c.integrity === "changed") out.push(t("verify.pdfsig.changed"));
@@ -103,7 +109,7 @@ function signatureLines(c: PdfSignatureCheck): string[] {
   if (c.issuer) out.push(t("verify.pdfsig.issuer", { value: c.issuer }));
   if (c.validFrom && c.validTo) out.push(t("verify.pdfsig.validity", { from: time(c.validFrom), to: time(c.validTo) }));
   if (c.signingTime) out.push(t("verify.pdfsig.signingTime", { time: time(c.signingTime) }));
-  if (c.timestamp) out.push(stamp(c.timestamp));
+  if (c.timestamp) out.push(stamp(c.timestamp), ...tsaRevocation(c.timestamp));
   if (c.chain === "trusted") out.push(t("verify.pdfsig.chain.trusted", { root: c.root ?? "-" }));
   else if (c.chain === "trusted-at-timestamp") out.push(t("verify.pdfsig.chain.trusted-at-timestamp", { root: c.root ?? "-" }));
   else if (c.chain === "trusted-at-signing") out.push(t("verify.pdfsig.chain.trusted-at-signing", { root: c.root ?? "-" }));
@@ -114,6 +120,7 @@ function signatureLines(c: PdfSignatureCheck): string[] {
     const key = r.status === "revoked" && r.afterTimestamp ? "revoked-after" : r.status;
     out.push(tDynamic(`verify.pdfsig.revocation.${key}`, vars));
   }
+  for (const link of c.chainRevocation ?? []) out.push(other(t("verify.pdfsig.who.chain", { subject: link.subject }), link.check));
   return out;
 }
 
