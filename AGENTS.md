@@ -40,7 +40,7 @@ Gears 結合兩件事：可以在本機使用的工具，以及用開源模型�
 Safari 16.4（iOS 16.4，2023-03）以前打不開 Gears。主程式的正規表示式用到 lookbehind（`pii.ts`、寫作習慣檢查、逐字稿的段落整理、QR code 讀取），舊版讀到時整支程式出錯，不是只有某個工具不能用。WebAssembly SIMD（onnxruntime-web 與 Transformers.js 的 WebAssembly）、壓縮串流（`DecompressionStream`，Office 文件與 PNG 的文字欄位）與 `OffscreenCanvas` 的 2D 也是 16.4 才有。建置目標是 `es2022`（`vite.config.ts`），不另外轉譯成舊的語法。
 
 - 舊版的提示（`public/legacy-check.js`，2026-11-20 起）：在主程式之前執行，只用舊瀏覽器也認得的寫法，`new RegExp("(?<=a)b")` 丟出錯誤時顯示 HTML 裡依語系寫好的提示（`#legacy-browser`，字串是 `app.legacy`，`vite.config.ts` 的 `localized` 寫進每一頁）。原本舊版只看得到建置時寫進 HTML 的說明，按了沒反應，讀者不知道原因。不轉址、不送出任何資料。瀏覽器測試（`tests/e2e/legacy-browser.spec.ts`）把 `RegExp` 換成遇到 lookbehind 就出錯的版本來模擬
-- 主程式之後再用到更新的語法或 API 時，先確認 Safari 16.4 有沒有，沒有的話要另外偵測、退回，或把這裡的最低需求跟著提高，並更新 `legacy-check.js` 的偵測
+- 主程式之後再用到更新的語法或 API 時，先確認 Safari 16.4 有沒有，沒有的話要另外偵測、退回，或把這裡的最低需求跟著提高，並更新 `legacy-check.js` 的偵測，三個語系的 `app.legacy` 與設計原則頁的支援的瀏覽器與裝置（`about.support.*`）一起改
 - Safari 26（iOS 26，2025-09）才有的：WebGPU（沒有時模型只用 CPU）、WebCodecs 的 `AudioDecoder`（沒有時逐字稿把 MP4、M4A 整個檔案一次解碼，上限 256 MB 與 2 小時）
 
 iPhone 能升級到的 iOS 與記憶體（Apple 不公布記憶體，數字來自拆解與供應鏈的報導，2026-11-20 整理）：
@@ -193,13 +193,13 @@ CI（`.github/workflows/ci.yml`）依瀏覽器拆成四台機器同時執行：C
 
 ### 個資辨識模型
 
-規則找不到的人名、地址與單位，用個資辨識模型 nym-pii 補上（#187，2026-11-21 起，模型與下載見下方「裝置量測」的「個資辨識」）。第一版只做圖片，PDF 與檢查畫面內容之後接上。社群工作區的評測（`research/gears-ocr/` 的 `pipeline.mjs`）在 196 張合成截圖上，規則加上模型蓋住 74% 的個資，規則本身 15%，每張多框 0.10 處。
+規則找不到的人名、地址與單位，用個資辨識模型 nym-pii 補上（#187，2026-11-21 起，模型與下載見下方「裝置量測」的「個資辨識」）。第一版只做圖片，2026-11-25 接上檢查畫面內容（見下方「檢查畫面內容」），PDF、寫作習慣檢查與逐字稿之後接上。社群工作區的評測（`research/gears-ocr/` 的 `pipeline.mjs`）在 196 張合成截圖上，規則加上模型蓋住 74% 的個資，規則本身 15%，每張多框 0.10 處。
 
 - 按鈕「找人名、地址與單位」前面帶著大腦圖示（開源本機模型的標籤）。還沒辨識過文字時先辨識，規則找到的電話、Email 一起加上，模型找到的框跟規則的框一次加上，重疊的只留一個（`addFound` 讀的是上一次畫面更新時的框，連續呼叫兩次會漏算）。框直接加上、讀者逐一確認，評測裡每張只多框 0.10 處，不另外畫「可能是」的虛線
 - 流程（`src/ui/pii-detect.ts`）：文字辨識讀出的每一行（`findText` 的 `texts`，`pii.ts` 的 `lineTexts`）留著，再按一次不必重新辨識。`chunkLines` 依行分塊（每塊不超過 3,000 字，模型一次最多讀 8,192 個詞元，超過的部分會被截掉、不會報錯），`joinLines` 接成一段、行與行之間放換行，字與字之間補上的空白只在兩邊都是英數時留著，跟評測的做法相同。Worker（`src/ui/pii.worker.ts`）找到的範圍由 `spanBoxes` 換回字框，往外多留 15%，跟規則的框一樣
 - Worker 在編輯畫面打開時第一次用到才建立，之後留著，關掉編輯畫面時結束。模型的載入與辨識在 `src/ui/pii-runtime.ts`，裝置量測的 Worker 也用它：只用單執行緒的 WebAssembly，模型存在 `transformers-cache`，量測頁下載過的遮蔽直接用。service worker 換版本時只清 `gears-` 開頭的快取，不會清掉它
 - 按下按鈕之前寫出要下載約 200 MB（`PII_MB`，經過 Cloudflare 的實際傳輸量，量測頁與協助測試頁也用這個數字），以及手機上可能因為記憶體不夠讓頁面重新載入、暫存區會跟著清空，請先下載需要的檔案（`redact.model.note`）。下載量跟找人臉、辨識文字的下載量在同一次查詢裡算出來（`detect-download.ts` 的 `pii`），說明一起出現，圖片只會跳一次。模型已經在快取時不寫
-- 記憶體不夠：開始之前在 sessionStorage 記下（`gears-pii-redact`），做完、失敗或取消（關掉編輯畫面時 `dispose`）時清掉。只清進行中的那一次，沒有在執行模型時關掉遮蔽不動記號，2026-11-25 以前會一起清掉，關掉再打開遮蔽按鈕就又出現。打開遮蔽時記號還在，代表上一次做到一半分頁被重新載入，畫面說明原因（`redact.model.crashed`），同一個分頁不再出現按鈕。不用量測頁的 `history.state`：它是每一筆歷史紀錄各一份，回到桌面再點進遮蔽就讀不到。sessionStorage 關掉分頁就清掉，私密瀏覽存不進去時只是記不住。沒有讀到文字的圖不下載模型，直接說沒有找到。手機與平板上（`src/ui/phone.ts` 的 `onPhone`，iPadOS 回報的是 Mac，靠觸控點數分出來）第一次按下時先展開說明（`redact.model.phone`）：功能在手機上還在測試、要下載約 200 MB、記憶體不夠時暫存區會清空，下面是「仍要使用」與「先幫忙量測」（連到協助測試頁）。手機上的下載量與記憶體提醒寫在這段說明裡，上方的模型說明只給電腦，同一件事不寫兩次。2026-11-21 決定：手機上直接拿掉按鈕的話，之後會忘記這裡還有功能要做，多一步確認讓功能一直看得到，也把讀者導去量測。協助測試頁收到 iPhone 的數字之後，再決定拿掉這一步或依機型調整
+- 記憶體不夠：開始之前在 sessionStorage 記下（`gears-pii-redact`，檢查畫面內容也用同一個記號，同一個模型、同一台裝置），做完、失敗或取消（關掉編輯畫面時 `dispose`）時清掉。只清進行中的那一次，沒有在執行模型時關掉遮蔽不動記號，2026-11-25 以前會一起清掉，關掉再打開遮蔽按鈕就又出現。打開遮蔽時記號還在，代表上一次做到一半分頁被重新載入，畫面說明原因（`redact.model.crashed`），同一個分頁不再出現按鈕。不用量測頁的 `history.state`：它是每一筆歷史紀錄各一份，回到桌面再點進遮蔽就讀不到。sessionStorage 關掉分頁就清掉，私密瀏覽存不進去時只是記不住。沒有讀到文字的圖不下載模型，直接說沒有找到。手機與平板上（`src/ui/phone.ts` 的 `onPhone`，iPadOS 回報的是 Mac，靠觸控點數分出來）第一次按下時先展開說明（`redact.model.phone`）：功能在手機上還在測試、要下載約 200 MB、記憶體不夠時暫存區會清空，下面是「仍要使用」與「先幫忙量測」（連到協助測試頁）。手機上的下載量與記憶體提醒寫在這段說明裡，上方的模型說明只給電腦，同一件事不寫兩次。2026-11-21 決定：手機上直接拿掉按鈕的話，之後會忘記這裡還有功能要做，多一步確認讓功能一直看得到，也把讀者導去量測。協助測試頁收到 iPhone 的數字之後，再決定拿掉這一步或依機型調整
 - 關掉 WebAssembly 時說明原因、不下載模型，讀不到 canvas 時照其他自動尋找的做法
 - 「已下載的模型」把它列成獨立的一列（`storage.item.pii`，`classify` 依網址裡的模型目錄分出來），刪語言模型時不會一起刪掉
 - 授權與來源寫在 `licenses/redact-detect.txt`
@@ -217,11 +217,15 @@ CI（`.github/workflows/ci.yml`）依瀏覽器拆成四台機器同時執行：C
     - 只看 `intent`，不照工具列表的 `leadGroup` 從工具的網址或格式猜：圖片沒有信件、巨集那樣的格式線索，從桌面直接加入的照片多半是讀者自己要交出去的
 - 找到東西時有「打開遮蔽，框已經放好」：確定的人臉與個資合成框（重疊的只留一個，`screenBoxes`），可能是臉的範圍照遮蔽的做法畫成虛線，透過 `FileEditorProps` 的 `found` 交給遮蔽。遮蔽的訊息寫明框是檢查找到的、要逐一確認（`redact.fromCheck`）。遮蔽不收的格式（TIFF 這類）只顯示結果
 - 框的座標只對檢查的那個版本有效：元件依版本建立（`key` 是版本的 id），縮成常見尺寸、HEIC 轉 JPEG 這類會改像素的處理之後，結果跟著清掉。檔案畫面記下框是哪個版本的，遮蔽關掉（取消或套用）時清掉，之後從工具列打開遮蔽不會再帶進來
-- 沒有找到用灰色寫明自動尋找會漏，不用代表完成的綠色。人名與地址目前找不到，說明裡寫明，個資辨識模型（#139）上線之後接進同一個檢查
+- 沒有找到用灰色寫明自動尋找會漏，不用代表完成的綠色
+- 人名、地址與單位（2026-11-25 起，#187）：檢查完、讀到文字之後才出現「找人名、地址與單位」（帶著大腦圖示），讀者按下才下載個資辨識模型，約 200 MB 不跟著「檢查畫面內容」一起下載。沒有讀到文字的圖不出現按鈕。辨識文字讀出的每一行（`findText` 的 `texts`）與圖片的大小留在結果裡，交給 `src/ui/pii-detect.ts` 的 `piiDetector`，不必重新辨識。Worker 在第一次按下時建立，元件消失時結束
+    - 模型也會找到電話與 Email，跟規則的框重疊的不重複算，模型自己的框互相重疊時只留一個（`screen.ts` 的 `modelOnly`）。數量分成人名、地址、單位名稱，其他類別合成「其他個資」（`modelCounts`），交給遮蔽的框（`screenBoxes`）用同一份，數量與框對得上。仍然只列數量，不列找到的文字
+    - 模型的狀態跟規則的結果分開：下載失敗或內容對不上時只在按鈕下面說明（`screen.model.failed`），規則的結果與「打開遮蔽」留著，可以再按一次。執行中有進度條與「停止」，「打開遮蔽」先停用
+    - 電腦上在按鈕上方寫出下載量與記憶體的提醒（`screen.model.note`），手機與平板第一次按下時先展開說明（`screen.model.phone`），照遮蔽的做法。上一次頁面重新載入的記號跟遮蔽共用，記號還在時不出現按鈕，改寫說明（`screen.model.crashed`）
 - 順序跟遮蔽的自動尋找一樣：先看 WebAssembly（`wasmAvailable()`），再在點擊的當下讀一次 canvas（Tor Browser 這時才會在網址列跳出詢問），之後才解碼與下載模型。檢查中不出現換版本的提示（`useWorking`）
 - 使用統計目前不記錄這一項。要記的話，`EVENTS` 與隱私說明要一起改（見下方「使用統計」、「隱私說明」）
 - 只做了檔案畫面的照片，PDF 的頁面、查證與影片的關鍵影格之後依序接上
-- 瀏覽器測試在 `tests/e2e/screen-check.spec.ts`，關掉 WebAssembly 與讀不到 canvas 的情況在 `wasm-unavailable.spec.ts`、`canvas-blocked.spec.ts`，依目的列出網址的情況在 `url-ocr.spec.ts`
+- 瀏覽器測試在 `tests/e2e/screen-check.spec.ts`（含模型的下載失敗、停止、記號與手機的說明，真的下載照遮蔽只在本機設了 `GEARS_PII_MODEL=1` 時執行，2026-11-25 在 Apple M5 Pro 的 Chromium（正式建置、還沒有快取）整個測試約 12 秒，含辨識文字、下載與執行模型，英文的截圖裡人名與公司都列進數量），關掉 WebAssembly 與讀不到 canvas 的情況在 `wasm-unavailable.spec.ts`、`canvas-blocked.spec.ts`，依目的列出網址的情況在 `url-ocr.spec.ts`
 
 ## 從截圖讀出網址
 
@@ -624,16 +628,17 @@ ProofMode（Guardian Project 給人權紀錄者的 Android App）拍照時不改
 
 `/gears/about/`（`src/ui/AboutPage.tsx`，2026-11-21 起）寫給不熟技術的讀者，說明 Gears 的兩層設計：瀏覽器裡就能完成的工具，加上開源本機模型的加強（見上方「定位」、「原則」）。桌面的兩段定位說明只有一兩句，讀者想知道檔案會不會送出、模型是什麼與從哪裡來時沒有地方可以看，隱私說明列的是連線與紀錄，不談模型。每一段用 Gears 裡實際的工具當例子，不寫口號。
 
-- 段落與 id：開頭一段寫兩層設計與這樣設計的原因，接著是瀏覽器裡的工作台（`browser`）、開源本機模型（`models`）、由你確認的模型結果（`confirm`）、代價與取捨（`tradeoffs`）、你的瀏覽器現在的狀態（`status`）、延伸閱讀（`more`），各段底下的 h3 也有固定的 id（`browser-server`、`models-list` 這類）。桌面的「了解更多」連到 `#browser`、`#models`，左欄的本頁目錄讀這些 h2、h3。改 id 時一起改 `DeskIntro.tsx` 與測試
+- 段落與 id：開頭一段寫兩層設計與這樣設計的原因，接著是瀏覽器裡的工作台（`browser`）、開源本機模型（`models`）、由你確認的模型結果（`confirm`）、代價與取捨（`tradeoffs`）、支援的瀏覽器與裝置（`support`）、你的瀏覽器現在的狀態（`status`）、延伸閱讀（`more`），各段底下的 h3 也有固定的 id（`browser-server`、`models-list` 這類）。桌面的「了解更多」連到 `#browser`、`#models`，左欄的本頁目錄讀這些 h2、h3。改 id 時一起改 `DeskIntro.tsx` 與測試
 - 入口：桌面兩段定位說明的「了解更多」、使用者區的第一個（`USER_PAGES`，圖示 `layers-outline`）、寬螢幕的左欄、頁尾。放在使用者區最前面：它說明兩層設計，後面的已下載的模型、協助測試與裝置量測都從模型那一層延伸，桌面最下面那一行由左往右讀是先理解、再試用、再回報。不是實驗頁，搜尋引擎可以收錄，建置時寫進 HTML 的內容照其他頁面只有標題與描述
 - 跟隱私說明重複的部分（存取紀錄、使用統計、表單）只寫一句並連過去，同一件事不寫兩份完整版。伺服器經手的部分照「原則」寫，限定在跟檔案有關的兩件事，存取紀錄另外寫明
 - 模型表從 `src/core/model-catalog.ts` 的 `MODEL_CATALOG` 產生，數字一律讀各模型的設定，不在字串裡手寫：YuNet 是 `src/tools/redact/yunet-model.json`（2026-11-21 加上，單元測試比對 `public/models/` 的檔案大小與 SHA-256），PP-OCR 是 `ppocr-models.json` 兩個模型的大小相加（`storage.ts` 的 `OCR_MB` 也改成從這裡算），個資辨識與標點模型是 `PII_MODEL.transfer`、`PUNCT_MODEL.transfer`（跟工具畫面寫的「約 200 MB」、「約 148 MB」同一個數字），查證的 DINOv2 small 是 `DINO_MODEL.transfer`（還沒放上 assets.anoni.net，先用沒有壓縮的大小），逐字稿的模型照 `models.json` 每一個都列（只用 CPU 時的大小），語音偵測與分辨說話者是 `vad-model.json`、`speaker-model.json`。模型名稱連到 `source`，授權連到授權與來源頁的 `licenses-redact-detect`、`licenses-transcribe` 或 `licenses-verify-similar`。裝置量測的語言模型是實驗頁用的，不列。新增模型時在 `MODEL_CATALOG` 加一筆，三個語系加上 `about.use.<id>`（`tests/unit/i18n.spec.ts` 會檢查），逐字稿的模型自動列出，`WHISPER_NAMES` 少了名稱時型別檢查會失敗。代價與取捨那一段的下載量範圍（`catalogRange`）也從同一份算
 - 手機上（寬度不到 40rem）模型表每一列排成一張小卡：名稱一行、用途一行，授權與下載量並排在最後一行，表頭只留給讀螢幕軟體（2026-11-22）。原本四欄擠在一起，名稱欄被壓到在字中間斷行，`multilingual-punctuation-truecase-small` 斷成六行。CSS 改了 `display` 之後 Safari 會拿掉表格的語意，所以 `AboutPage.tsx` 每一層明寫 `role`（`table`、`rowgroup`、`row`、`columnheader`、`rowheader`、`cell`）
 - 即時檢查只在畫面上顯示，不送出、不連線：離線使用讀 `src/ui/offline.ts` 的 `ready`（由 `src/app.tsx` 傳進來，不再註冊一次 service worker），分成已經可以離線使用、還沒準備好（還在存或沒有存成功，兩者分不出來，說明都寫）、不支援（沒有 `navigator.serviceWorker`，Tor Browser 與部分私密瀏覽）。已下載的模型用 `src/core/storage.ts` 的 `scanStorage` 與 `MODEL_GROUPS`（執行模型的程式、pdf.js 與 c2pa 不算模型），名稱照已下載的模型頁的 `nameOf`，不能用 Cache API 時照那一頁的說法（`storage.unavailable`）。WebAssembly 與顯示卡用 `useDeviceSupport`，跟桌面的支援狀況同一份
 - 評測的數字（個資辨識模型加上規則在文字上約八成五、截圖上約七成四，標點建議在立法院公報的口語發言上逗號 0.77、句號 0.66、問號 0.74）寫「社群的評測」，不附連結：評測放在社群的工作區，還沒有公開，公開的頁面連不過去。之後考慮把評測的摘要公開（例如放到文件站或這個 repo），再補上連結。評測的數字改了時，三個語系的 `about.confirm.why` 一起改
+- 支援的瀏覽器與裝置（`support`，#185，2026-11-25 起）用讀者的說法寫上方「支援的瀏覽器」的三條線：電腦與 Android 手機、iPhone 與 iPad（iOS 16.4 以前打不開、iOS 26 與 Safari 26 以前沒有顯示卡加速、逐字稿的 MP4、M4A、MOV 要整檔解碼、各機型能升級到的 iOS）、Tor Browser。原本規劃另開一頁，跟這一頁的代價與取捨、即時檢查重複，改寫在這裡。整檔解碼的上限讀 `LARGE_FILE` 與 `MAX_SECONDS`。記憶體重新載入與鎖定模式已經寫在代價與取捨、不靠模型的做法，這裡只用一句話指過去。iPhone 機型的記憶體不寫，等 #144 收到實測再補。Chrome、Firefox 與 Android 的最低版本沒有查證過，只寫更新到最新版
 - 頁面最下面的更新日期（`about.updated`）在改了文字時跟著改，模型表跟著程式更新，不必改日期
 - 示意圖（`src/ui/AboutFigures.tsx`，2026-11-22 起）：開頭的兩層設計與裝置的邊界、開源的條件裡模型檔的檢查、由你確認的模型結果，三張分散在頁面裡，原本整頁都是文字。圖形是放大的 MDI 圖示、外框與箭頭，標籤是一般的文字（`about.fig.*`），三個語系各自換行，深淺色跟著 CSS 變數，圖示圈跟使用方式同一種（白底、深色線條），要強調的那一格用連結色，不用完成綠與分類色（見「設計語言」的骨架）。整句的說明放在 `figcaption`，圖裡不放 `h2`、`h3`。內容要跟文字一致：伺服器只寫跟檔案有關的兩件事（存取紀錄另外寫在圖說），SHA-256 照 `about.models.open.3` 寫比對的時機，確認流程停在「套用」。圖裡不放下載量與模型數，要放就從 `MODEL_CATALOG` 取。手機上總覽圖的兩條路線維持左右並排，疊成一排會看起來像同一條流程
-- 瀏覽器測試在 `tests/e2e/about.spec.ts`：「了解更多」捲到對應段落、使用者區與頁尾、左欄、模型表跟 `MODEL_CATALOG` 逐列比對、即時檢查在沒有模型、有模型、不能用 Cache API、沒有 service worker、關掉 WebAssembly 與 `?gpu=force` 時的結果，以及英文版與簡體版沒有露出字串的鍵。可以離線使用的那一種在 `offline.spec.ts`（只有它打開 service worker），onion 版的入口在 `tests/onion/`
+- 瀏覽器測試在 `tests/e2e/about.spec.ts`：「了解更多」捲到對應段落、使用者區與頁尾、左欄、模型表跟 `MODEL_CATALOG` 逐列比對、支援的瀏覽器與裝置的三小段與整檔解碼的上限、即時檢查在沒有模型、有模型、不能用 Cache API、沒有 service worker、關掉 WebAssembly 與 `?gpu=force` 時的結果，以及英文版與簡體版沒有露出字串的鍵。可以離線使用的那一種在 `offline.spec.ts`（只有它打開 service worker），onion 版的入口在 `tests/onion/`
 
 ## 裝置量測（實驗頁）
 

@@ -2,11 +2,13 @@ import type { ComponentChildren } from "preact";
 import { useEffect, useState } from "preact/hooks";
 import { MODEL_CATALOG, catalogRange } from "../core/model-catalog.ts";
 import { MODEL_GROUPS, RUNTIME_MB, type StorageRow, formatSize, scanStorage } from "../core/storage.ts";
+import { LARGE_FILE } from "../core/tool.ts";
 import { getLocale, t, tDynamic } from "../i18n/index.ts";
 import { navigate, onRouteClick, routeUrl } from "../router.ts";
 import { useDeviceSupport } from "./device-support.ts";
 import { IconCircle } from "./Icon.tsx";
 import { nameOf } from "./StoragePage.tsx";
+import { MAX_SECONDS } from "../tools/transcribe/segments.ts";
 import { PAGE_META } from "./tool-meta.ts";
 import { ConfirmFigure, LayersFigure, VerifyFigure } from "./AboutFigures.tsx";
 
@@ -20,6 +22,8 @@ import { ConfirmFigure, LayersFigure, VerifyFigure } from "./AboutFigures.tsx";
 //   service worker）、已下載的模型（src/core/storage.ts 的分類）、WebAssembly 與顯示卡（src/ui/device-support.ts）
 // - 引用社群評測的數字不附連結：評測放在社群的工作區，還沒有公開
 // - 跟隱私說明重複的內容只寫重點，連到那一頁
+// - 支援的瀏覽器與裝置（#support）照 AGENTS.md「支援的瀏覽器」的三條線，最低需求改了（public/legacy-check.js）
+//   這一段要一起改。iOS 26 以前整檔解碼的上限讀 LARGE_FILE 與 MAX_SECONDS，跟逐字稿的程式同一份
 
 const BASE = import.meta.env.BASE_URL;
 
@@ -240,6 +244,24 @@ export function AboutPage({ offlineReady }: { offlineReady: boolean }) {
         <p>{withLink(t("about.tradeoffs.device.invite"), <PageLink id="testing">{t("testing.title")}</PageLink>)}</p>
         <h3 id="tradeoffs-criteria">{t("about.tradeoffs.criteria.title")}</h3>
         <p>{t("about.tradeoffs.criteria.body")}</p>
+      </section>
+
+      <section aria-labelledby="support" data-testid="about-support">
+        <h2 id="support">{t("about.support.title")}</h2>
+        <p>{t("about.support.intro")}</p>
+        <h3 id="support-desktop">{t("about.support.desktop.title")}</h3>
+        <p>{t("about.support.desktop.body")}</p>
+        <h3 id="support-ios">{t("about.support.ios.title")}</h3>
+        <p>{t("about.support.ios.body")}</p>
+        <ul>
+          <li>{t("about.support.ios.old")}</li>
+          <li>{t("about.support.ios.mid", { size: `${LARGE_FILE / 1024 / 1024} MB`, hours: MAX_SECONDS / 3600 })}</li>
+          <li>{t("about.support.ios.new")}</li>
+        </ul>
+        <p>{withLink(t("about.support.ios.memory"), <PageLink id="testing">{t("testing.title")}</PageLink>)}</p>
+        <h3 id="support-tor">{t("about.support.tor.title")}</h3>
+        <p>{t("about.support.tor.body")}</p>
+        <p>{t("about.support.lockdown")}</p>
       </section>
 
       <section aria-labelledby="status">

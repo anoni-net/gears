@@ -1997,6 +1997,15 @@ textarea.cipher {
   margin-top: var(--sp-4);
 }
 
+/* 檢查畫面內容的「找人名、地址與單位」（src/ui/ScreenCheck.tsx），規則的結果之後才出現 */
+.screen-model {
+  margin-top: var(--sp-3);
+}
+
+.screen-model .buttons {
+  margin: var(--sp-2) 0;
+}
+
 .url-ocr-tray {
   list-style: none;
   padding: 0;

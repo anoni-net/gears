@@ -1,6 +1,8 @@
 import type { Page } from "@playwright/test";
 import { MODEL_CATALOG, catalogRange } from "../../src/core/model-catalog.ts";
 import { formatSize } from "../../src/core/storage.ts";
+import { LARGE_FILE } from "../../src/core/tool.ts";
+import { MAX_SECONDS } from "../../src/tools/transcribe/segments.ts";
 import { expect, test } from "./guard.ts";
 
 // 設計原則（src/ui/AboutPage.tsx）：桌面兩段說明的「了解更多」捲到對應段落，使用者區、左欄與頁尾都連得到，
@@ -57,7 +59,7 @@ test("寬螢幕的左欄列出設計原則，本頁目錄有每一段", async ({
   const pages = page.getByTestId("aside-pages");
   await expect(pages.getByRole("link", { name: "設計原則" })).toHaveAttribute("aria-current", "page");
   const toc = page.getByTestId("aside-toc").getByRole("link");
-  await expect(toc).toContainText(["瀏覽器裡的工作台", "開源本機模型", "由你確認的模型結果", "代價與取捨", "你的瀏覽器現在的狀態", "延伸閱讀"]);
+  await expect(toc).toContainText(["瀏覽器裡的工作台", "開源本機模型", "由你確認的模型結果", "代價與取捨", "支援的瀏覽器與裝置", "你的瀏覽器現在的狀態", "延伸閱讀"]);
 });
 
 test("模型表的列與 model-catalog 一致，授權連到授權與來源的那一項", async ({ page }) => {
@@ -119,6 +121,21 @@ test("延伸閱讀連到隱私說明、授權與來源、已下載的模型、�
   await expect(more).toHaveText(["隱私說明", "授權與來源", "已下載的模型", "協助測試", "原始碼（GitHub）"]);
   await expect(more.last()).toHaveAttribute("href", "https://github.com/anoni-net/gears");
   await more.nth(3).click();
+  await expect(page).toHaveURL(/\/testing\/$/);
+});
+
+// 支援的瀏覽器與裝置（#185）：iOS 的門檻跟 public/legacy-check.js 的提示一致，整檔解碼的上限讀逐字稿的設定
+test("支援的瀏覽器與裝置：三條線各一段，iOS 的門檻與整檔解碼的上限", async ({ page }) => {
+  await page.goto("./about/#support");
+  await scrolledTo(page, "support");
+  const support = page.getByTestId("about-support");
+  for (const name of ["電腦與 Android 手機", "iPhone 與 iPad", "Tor Browser"]) {
+    await expect(support.getByRole("heading", { level: 3, name })).toBeVisible();
+  }
+  await expect(support).toContainText("iOS 16.4 以前打不開 Gears");
+  await expect(support).toContainText(`限制在 ${LARGE_FILE / 1024 / 1024} MB 與 ${MAX_SECONDS / 3600} 小時以內`);
+  await expect(support).not.toContainText(/[{}]/);
+  await support.getByRole("link", { name: "協助測試" }).click();
   await expect(page).toHaveURL(/\/testing\/$/);
 });
 
