@@ -655,7 +655,7 @@ ProofMode（Guardian Project 給人權紀錄者的 Android App）拍照時不改
 
 ## 裝置量測（實驗頁）
 
-`/gears/bench/`（`src/ui/BenchPage.tsx`，#157）在讀者的瀏覽器裡量 Gears 用到的模型要多久，給社群收集手機、平板與舊電腦的數字（#144），模型能不能上線、預設值怎麼訂都看這些數字。目前有文字辨識、個資辨識與語言模型三個區塊，各自執行，結果合成一份 JSON，讀者確認過內容之後送給社群，或按「複製結果」保留。只用內建的範例，不讀暫存區的檔案。
+`/gears/bench/`（`src/ui/BenchPage.tsx`，#157）在讀者的瀏覽器裡量 Gears 用到的模型要多久，給社群收集手機、平板與舊電腦的數字（#144），模型能不能上線、預設值怎麼訂都看這些數字。目前有文字辨識、個資辨識、逐字稿與語言模型四個區塊，各自執行，結果合成一份 JSON，讀者確認過內容之後送給社群，或按「複製結果」保留。只用內建的範例，不讀暫存區的檔案。
 
 - 實驗頁的清單是 `src/pages.ts` 的 `labIds`：不進 sitemap，頁面帶 `<meta name="robots" content="noindex">`。入口在桌面最下面的使用者區（`USER_PAGES`），名稱寫「裝置量測（實驗）」（`PAGE_META` 的 `label`），2026-10-23 以前只從頁尾連過去
 - 原本只量語言模型，網址是 `/gears/llm-bench/`。實驗頁沒有對外連結過，舊網址不轉址，打開是找不到這一頁
@@ -687,6 +687,19 @@ ProofMode（Guardian Project 給人權紀錄者的 Android App）拍照時不改
 - 手機記憶體不夠時，系統會把分頁重新載入，量測的結果跟著不見（2026-10-24 Gemma 4 E2B 在 iPhone 15 Pro 上就是這樣）。開始每一種設定之前在 `history.state` 記下設定（`gearsPiiBench`），做完或停止時清掉。打開頁面時記號還在，代表上一次量到一半被重新載入，結果多一筆 `crashed: true`，讀者照樣可以送出。`history.state` 只在這個分頁裡，不寫進 localStorage
 - 結果的 JSON 多一個 `pii`（`schema` 從 1 變 2），只有設定、時間、詞元數與找到幾個，範例文字與找到的範圍不放進去
 - 2026-11-19 在 Apple M5 Pro 的 Chromium（正式建置）實測：下載 210.7 MB，載入 14.8 秒，單執行緒每段 0.24 到 0.39 秒，13 處找到 12 處
+
+### 逐字稿
+
+Whisper base 與 small 在這台裝置的 CPU 與顯示卡上要多久、字錯率多少（`src/ui/AsrBench.tsx`，2026-11-25 起，#157）。#138 要知道顯示卡到底有沒有比較快，目前只有軟體模擬顯示卡的數字，逐字稿也是讀者最常等的工具。
+
+- 直接用逐字稿的 Worker（`transcribe.worker.ts`），訊息格式不變，不另寫一份推論：核心數照逐字稿的預設值（`src/ui/thread-default.ts`，逐字稿也從這裡讀），顯示卡照逐字稿的判斷（`detectGpu` 與 `gpuUsable`），CPU 用 8 位元、顯示卡用 4 位元的模型。模型從工作台自己的網域下載，用過逐字稿就不必重新下載
+- 範例錄音 `public/models/bench/asr-zh.wav`（進版控，約 0.9 MB）：Google FLEURS（CC BY 4.0）華語測試集的三句朗讀，男女聲各有，句子之間補 0.6 秒的靜音，共 29 秒。存成 16 kHz、單聲道、16 位元的 WAV，用 `wavLayout` 與 `pcmToFloat` 讀，不經過瀏覽器的解碼器。挑的句子不含數字與英文，數字的寫法會讓字錯率失真。正確答案、句子的 id 與 SHA-256 在 `src/tools/bench/asr-sample.json`，正確答案用逐字稿同一套 OpenCC（cn → twp）轉成正體。畫面上寫明出處與授權
+- 同一個 Worker 辨識兩次：第一次包含顯示卡準備的時間，第二次才是之後每一段的速度。速度是第二次的時間除以錄音長度。字錯率只比文字（`asrCer`，標點、空白拿掉，英文小寫），用第一次的結果
+- 記下實際用的裝置（Worker 拿不到顯示卡時改用 CPU）、語音偵測有沒有退回音量判斷、送進模型的片段數。拿不到顯示卡的資訊（瀏覽器的實作不完整）時當成沒有顯示卡
+- 記憶體不夠時的處理照個資辨識：`history.state` 的 `gearsAsrBench`，重新載入之後記成 `crashed`
+- 結果的 JSON 多一個 `asr`（`schema` 從 2 變 3），辨識出來的文字不放進去
+- #138 要比較的 encoder 精度（fp32、fp16）需要另外的模型檔，m6 上還沒有，這裡只量逐字稿實際用的設定
+- 2026-11-25 在 Apple M5 Pro 的 Playwright WebKit（正式建置，8 個核心）實測 base：CPU 載入 1.9 秒、第二次辨識 1.8 秒（錄音長度的 0.06 倍），顯示卡載入 10.4 秒、第二次 1.5 秒（0.05 倍），字錯率約 20%
 
 ### 語言模型
 
@@ -741,7 +754,7 @@ ProofMode（Guardian Project 給人權紀錄者的 Android App）拍照時不改
 - 分辨說話者（勾選才做，另外下載 28 MB）：每一段逐字稿用 3D-Speaker 的 CAM++ 算一個 192 維的聲紋（`src/ui/speaker-embed.ts`，特徵是 Transformers.js 的 `WeSpeakerFeatureExtractor` 換成 povey 視窗），全部辨識完再分群（`src/tools/transcribe/speakers.ts`，有單元測試）。平均連結的階層式分群，餘弦相似度低於 0.5 就不再合併，總共說不到 10 秒的群併到最相近的大群，依第一次開口的順序編號。分群樹用 nearest-neighbor chain 建，兩千段在一秒左右分完。不到 0.3 秒的段落算不出可靠的聲紋，沿用前一段的說話者
 - 用 Whisper 的段落當單位，不另外執行分段模型：研究時比較過 pyannote 的分段、固定視窗與音量偵測，Whisper 的段落最準。換人點落在同一段裡時，那一段只能整段標給一個人，兩人同時說話時也只標一位。實測（base 模型，在畫面上用四位朗讀者剪接的錄音）兩人的錄音 71 段、三人的困難組（切在句子中間、沒有停頓就換人）130 段，人數都估對，以段落計標對 96.6% 與 93.7%
 - CAM++ 的 ONNX 檔取自 sherpa-onnx 的 release，來源與 SHA-256 寫在 `src/tools/transcribe/speaker-model.json`。sherpa-onnx 在 2026-11-19 重新上傳同一個檔名，權重相同、檔頭差幾個位元組，SHA-256 跟著變，CI 的快取一失效就下載失敗，所以原本那一份照原樣放在 assets.anoni.net 的 `speaker-campplus-f682b51/`（附 `README.txt` 與授權全文），`fetch-whisper.mjs` 從那裡下載。網址由腳本用 `dir` 與 `file` 組出來，不寫進 JSON：JSON 會被打包進網頁，onion 版的產物不能出現 clearnet 的 anoni.net。JSON 的 `upstream` 記上游原本的位置，`node scripts/fetch-whisper.mjs` 一起下載到 `public/models/speaker/`。存進跟 Whisper 同一個不隨版本清掉的快取
-- `src/ui/speaker-embed.ts` 與 `src/ui/silero-vad.ts` 跟 Transformers.js 共用同一份 onnxruntime（從同一個檔案路徑匯入，Vite 當成同一個模組），不另外下載 WebAssembly。這兩個檔案只能匯入 Transformers.js 與 onnxruntime，跟 Worker 共用的程式（模型清單、分群）由參數傳進來：打包時共用的程式會放進 Worker 的進入點，這裡再匯入它的話，WebKit 會把 Worker 的進入點當成另一份模組再執行一次，蓋掉 `onmessage`。瀏覽器測試會檢查建置產物裡沒有其他檔案匯入 Worker 的進入點
+- `src/ui/speaker-embed.ts` 與 `src/ui/silero-vad.ts` 跟 Transformers.js 共用同一份 onnxruntime（從同一個檔案路徑匯入，Vite 當成同一個模組），不另外下載 WebAssembly。這兩個檔案只能匯入 Transformers.js 與 onnxruntime，跟 Worker 共用的程式（模型清單、分群）由參數傳進來：打包時共用的程式會放進 Worker 的進入點，這裡再匯入它的話，WebKit 會把 Worker 的進入點當成另一份模組再執行一次，蓋掉 `onmessage`。瀏覽器測試會檢查建置產物裡沒有其他檔案匯入 Worker 的進入點（進入點認內容裡的 `onmessage`，不認檔名：逐字稿與裝置量測共用 Worker 的網址之後，放網址的小 chunk 也以 `transcribe.worker` 命名，那一份匯入沒有問題）
 - 自己指定要換掉的字（2026-11-19 起，#143 的後半裡不需要模型的部分）：轉完之後，讀者輸入「王經理」、選類別，逐字稿每一段裡的「王經理」都換成同一個代稱（`〔人名 A〕`），下載的 TXT、SRT、複製的文字與放進暫存區的檔案都跟著換，可以一步一步復原，重新轉一次時清空。表單跟寫作習慣檢查共用 `src/ui/AliasForm.tsx`，逐段替換是 `src/tools/writing-style/` 的 `replaceInParts`，時間與說話者不動。這支函式放在寫作習慣檢查的模組、不放在 `segments.ts`：`segments.ts` 也給 Worker 用，在那裡匯入寫作習慣檢查的規則會一起打包進 Worker。名字剛好被切在兩段之間時換不到，畫面上寫明。自動標出人名要等個資辨識模型（#139）
 - 失敗時在主控台印出錯誤訊息（不含錄音的內容），讀者回報問題時用
 

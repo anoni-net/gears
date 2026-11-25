@@ -2,6 +2,7 @@ import { useEffect, useState } from "preact/hooks";
 import { t } from "../i18n/index.ts";
 import { COMMIT, VERSION } from "../version.ts";
 import { type BenchEnv, probeEnv } from "./bench-env.ts";
+import { type AsrRun, AsrBench, asrReport } from "./AsrBench.tsx";
 import { BenchSubmit } from "./BenchSubmit.tsx";
 import { CopyButton } from "./CopyButton.tsx";
 import { type LlmRun, LlmBench, llmReport } from "./LlmBench.tsx";
@@ -15,8 +16,8 @@ import { useWorking } from "./working.ts";
 // 原本只量語言模型，網址是 /gears/llm-bench/，舊網址不轉址。
 // 入口在桌面最下面的使用者區，不進 sitemap。
 
-// 結果的格式有變時加一，整理數字的人才分得出新舊。2 起多了個資辨識（pii）
-const SCHEMA = 2;
+// 結果的格式有變時加一，整理數字的人才分得出新舊。2 起多了個資辨識（pii），3 起多了逐字稿（asr）
+const SCHEMA = 3;
 
 export function BenchPage() {
   const [env, setEnv] = useState<BenchEnv | null>(null);
@@ -24,6 +25,7 @@ export function BenchPage() {
   const [ocr, setOcr] = useState<OcrRun[]>([]);
   const [llm, setLlm] = useState<LlmRun[]>([]);
   const [pii, setPii] = useState<PiiRun[]>([]);
+  const [asr, setAsr] = useState<AsrRun[]>([]);
   useWorking(busy);
 
   useEffect(() => {
@@ -31,7 +33,7 @@ export function BenchPage() {
   }, []);
 
   const report = JSON.stringify(
-    { schema: SCHEMA, version: VERSION, commit: COMMIT, env, userAgent: navigator.userAgent, ocr: ocrReport(ocr), pii: piiReport(pii), llm: llmReport(llm) },
+    { schema: SCHEMA, version: VERSION, commit: COMMIT, env, userAgent: navigator.userAgent, ocr: ocrReport(ocr), pii: piiReport(pii), asr: asrReport(asr), llm: llmReport(llm) },
     null,
     2,
   );
@@ -59,15 +61,16 @@ export function BenchPage() {
 
       <OcrBench env={env} runs={ocr} setRuns={setOcr} busy={busy} setBusy={setBusy} />
       <PiiBench env={env} runs={pii} setRuns={setPii} busy={busy} setBusy={setBusy} />
+      <AsrBench env={env} runs={asr} setRuns={setAsr} busy={busy} setBusy={setBusy} />
       <LlmBench env={env} runs={llm} setRuns={setLlm} busy={busy} setBusy={setBusy} />
 
       <section class="bench-section" aria-labelledby="bench-report-title">
         <h3 id="bench-report-title">{t("bench.report.title")}</h3>
         <p class="hint">{t("bench.report.hint")}</p>
         <div class="buttons">
-          <CopyButton primary text={ocr.length || pii.length || llm.length ? report : ""} label={t("bench.copy")} />
+          <CopyButton primary text={ocr.length || pii.length || asr.length || llm.length ? report : ""} label={t("bench.copy")} />
         </div>
-        {ocr.length || pii.length || llm.length ? (
+        {ocr.length || pii.length || asr.length || llm.length ? (
           <details>
             <summary>{t("bench.report.show")}</summary>
             <pre class="bench-text" data-testid="bench-report">
@@ -77,7 +80,7 @@ export function BenchPage() {
         ) : null}
       </section>
 
-      <BenchSubmit report={ocr.length || pii.length || llm.length ? report : ""} disabled={busy} />
+      <BenchSubmit report={ocr.length || pii.length || asr.length || llm.length ? report : ""} disabled={busy} />
     </section>
   );
 }
