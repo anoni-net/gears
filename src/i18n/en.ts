@@ -1864,7 +1864,7 @@ export const en: Record<MessageKey, string> = {
   "email.verdict.fail.title": "Sender authentication failed",
   "email.verdict.fail.detail": "After checking, the receiving server found that this email does not appear to have come from {domain}, so the sender may be impersonated. Do not click its links or reply, and confirm with the sender another way.",
   "email.verdict.unclear.title": "Sender authentication is inconclusive",
-  "email.verdict.unclear.detail": "The receiving server did not confirm that this email came from {domain}. The sending domain may not have authentication set up, or the email may have been forwarded. Until you've confirmed with the sender, don't click its links, open its attachments or make payments. Confirm with them by phone or another way.",
+  "email.verdict.unclear.detail": "The receiving server did not confirm that this email came from {domain}. The sending domain may not have authentication set up, or the email may have been forwarded. If it asks you to click a link, open an attachment or make a payment, check with the sender by phone or another way first.",
   "email.verdict.unrecorded.title": "No sender authentication result",
   "email.verdict.unrecorded.detail": "What you pasted has no authentication result recorded by the receiving server. Make sure you pasted the complete original message, including the headers at the top (the lines starting with Received:, From:, To: and so on). Some mail services also don't record authentication results.",
   "email.note.reply-to.title": "Reply address differs from the sender",
