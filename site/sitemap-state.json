@@ -4,11 +4,11 @@
   "lastmod": "2026-11-25"
  },
  "zh-cn/": {
-  "sha": "fcd4af432e44b483",
+  "sha": "868f6d1ef282e971",
   "lastmod": "2026-11-25"
  },
  "en/": {
-  "sha": "29efcc2b962a23a3",
+  "sha": "a276581f66217933",
   "lastmod": "2026-11-25"
  },
  "strip-metadata": {
@@ -52,8 +52,8 @@
   "lastmod": ""
  },
  "zh-cn/pdf-pages": {
-  "sha": "6deab81ab3c763e4",
-  "lastmod": ""
+  "sha": "e5afe50011ad9eca",
+  "lastmod": "2026-11-25"
  },
  "en/pdf-pages": {
   "sha": "76ad33b753bbe6f9",
@@ -140,7 +140,7 @@
   "lastmod": "2026-11-25"
  },
  "en/doc-check": {
-  "sha": "4f22a74c12a2b2b8",
+  "sha": "eb53a80c9032d8c6",
   "lastmod": "2026-11-25"
  },
  "qrcode": {
@@ -212,7 +212,7 @@
   "lastmod": "2026-11-25"
  },
  "en/text-crypt": {
-  "sha": "bb439706a89afc65",
+  "sha": "8b3b1d6528db018a",
   "lastmod": "2026-11-25"
  },
  "verify": {
@@ -220,7 +220,7 @@
   "lastmod": "2026-11-25"
  },
  "zh-cn/verify": {
-  "sha": "08a2b92f75760f8d",
+  "sha": "85da939be72bff9c",
   "lastmod": "2026-11-25"
  },
  "en/verify": {
@@ -232,7 +232,7 @@
   "lastmod": "2026-11-25"
  },
  "zh-cn/email-check": {
-  "sha": "20eb1a28e55d483e",
+  "sha": "9fbe2b108de6c000",
   "lastmod": "2026-11-25"
  },
  "en/email-check": {
@@ -296,7 +296,7 @@
   "lastmod": "2026-11-25"
  },
  "en/about": {
-  "sha": "f0d2b1f3ad0ac2cb",
+  "sha": "b72225212539a894",
   "lastmod": "2026-11-25"
  },
  "why": {
@@ -344,8 +344,8 @@
   "lastmod": ""
  },
  "en/samples": {
-  "sha": "7d2c2be5b31ec391",
-  "lastmod": ""
+  "sha": "469627260a8ac84e",
+  "lastmod": "2026-11-25"
  },
  "remote-server": {
   "sha": "9da44cea03e80a3a",
