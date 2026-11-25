@@ -139,7 +139,7 @@ test("查證讀出 XMP 裡的 IPTC 欄位與 GB 45438 的隱式標識", async ()
     c2pa: false,
   });
   const lines = provenanceLines(ev);
-  expect(lines).toContain(`IPTC 的數位來源類型：${zhTW["verify.dst.trainedAlgorithmicMedia"]}（trainedAlgorithmicMedia）`);
+  expect(lines).toContain(`IPTC（新聞與圖庫業界通用的照片資訊格式）的數位來源類型：${zhTW["verify.dst.trainedAlgorithmicMedia"]}（trainedAlgorithmicMedia）`);
   expect(lines).toContain(`生成服務：組織，統一社會信用代碼 9100000000TEST001X（${ORG}）`);
 });
 

@@ -8,7 +8,7 @@ test("密語預設 6 個字，可以重新產生，也可以換成隨機密碼",
 
   const secret = page.getByTestId("secret");
   await expect(secret).toHaveText(/^[a-z]+( [a-z]+){5}$/);
-  await expect(page.getByText("強度約 78 位元。")).toBeVisible();
+  await expect(page.getByText("強度約 78 位元，數字越大越難被猜中。")).toBeVisible();
   const first = await secret.textContent();
   await page.getByRole("button", { name: "重新產生" }).click();
   await expect(secret).not.toHaveText(first!);

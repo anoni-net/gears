@@ -16,13 +16,13 @@ test("用密語加密一段文字，用 age 解得開，再用工作台解回來
   d.addPassphrase("correct horse battery staple");
   expect(await d.decrypt(armor.decode(cipher), "text")).toBe(secret);
 
-  await page.getByLabel("解開加密的文字").check();
+  await page.getByLabel("解密文字").check();
   await page.getByLabel("加密的文字", { exact: true }).fill(cipher);
   await page.getByLabel("密語或私鑰").fill("wrong passphrase");
-  await page.getByRole("button", { name: "解開" }).click();
-  await expect(page.getByText("解不開。請確認貼上的是完整的一段，密語或私鑰也要正確。")).toBeVisible();
+  await page.getByRole("button", { name: "解密", exact: true }).click();
+  await expect(page.getByText("沒有成功解密。請確認貼上的是完整的一段", { exact: false })).toBeVisible();
   await page.getByLabel("密語或私鑰").fill("correct horse battery staple");
-  await page.getByRole("button", { name: "解開" }).click();
+  await page.getByRole("button", { name: "解密", exact: true }).click();
   await expect(page.getByTestId("textcrypt-plain")).toHaveValue(secret);
 });
 

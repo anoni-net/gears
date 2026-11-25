@@ -13,7 +13,7 @@ test.setTimeout(90_000);
 
 test("沒有 crypto.subtle：金鑰產生器說明需要 HTTPS，按鈕停用", async ({ page }) => {
   await page.goto("./age-keygen/");
-  await expect(page.getByRole("alert")).toContainText("只有 https:// 開頭的網址才能使用");
+  await expect(page.getByRole("alert")).toContainText("請改用 https:// 開頭的網址打開 Gears");
   await expect(page.getByRole("button", { name: "產生一組金鑰" })).toBeDisabled();
 });
 
@@ -22,7 +22,7 @@ test("沒有 crypto.subtle：用公鑰加密停用，用密語加密照常", asy
   await page.getByTestId("file-input").setInputFiles({ name: "notes.txt", mimeType: "text/plain", buffer: Buffer.from("hello") });
   await page.getByRole("button", { name: "打開加密" }).click();
   await page.getByLabel("對方的公鑰").check();
-  await expect(page.getByText("只有 https:// 開頭的網址才能使用")).toBeVisible();
+  await expect(page.getByText("請改用 https:// 開頭的網址打開 Gears", { exact: false })).toBeVisible();
   await page.getByLabel("對方的 age 公鑰，一行一把").fill("age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p");
   await expect(page.getByRole("button", { name: "加密", exact: true })).toBeDisabled();
 

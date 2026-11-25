@@ -51,7 +51,7 @@ test("遮蔽：自動尋找說明原因，請讀者手動框選", async ({ page 
   await chooser.setFiles({ name: "chat.png", mimeType: "image/png", buffer: Buffer.from(png) });
   await expect(page.getByTestId("redact-canvas")).toBeVisible();
   await page.getByRole("button", { name: "找人臉" }).click();
-  await expect(page.getByTestId("redact-auto-status")).toContainText("關掉了 WebAssembly");
+  await expect(page.getByTestId("redact-auto-status")).toContainText("需要的程式（WebAssembly）");
   await expect(page.getByTestId("redact-auto-status")).toContainText("請手動框選");
 });
 
@@ -73,7 +73,7 @@ test("遮蔽：找人名、地址與單位也說明原因，不下載模型", as
   await chooser.setFiles({ name: "chat.png", mimeType: "image/png", buffer: Buffer.from(png) });
   await expect(page.getByTestId("redact-canvas")).toBeVisible();
   await page.getByRole("button", { name: "找人名、地址與單位" }).click();
-  await expect(page.getByTestId("redact-auto-status")).toContainText("關掉了 WebAssembly");
+  await expect(page.getByTestId("redact-auto-status")).toContainText("需要的程式（WebAssembly）");
   expect(asked).toEqual([]);
 });
 
@@ -83,13 +83,13 @@ test("HEIC：瀏覽器不能直接顯示又沒有 WebAssembly 時，說明載入
   test.skip(!existsSync(`${GENERATED}/photo.heic`), "沒有 HEIC 測試檔（需要 pillow-heif）");
   await page.goto("./");
   await page.getByTestId("file-input").setInputFiles({ name: "IMG_0001.HEIC", mimeType: "image/heic", buffer: readFileSync(`${GENERATED}/photo.heic`) });
-  await expect(page.locator(".preview")).toContainText("又關掉了 WebAssembly");
+  await expect(page.locator(".preview")).toContainText("又關掉了另外開啟它需要的程式（WebAssembly");
 });
 
 test("QR code 與條碼讀取：說明只能讀 QR code，QR code 照樣讀得出來", async ({ page }) => {
   const { encodeQr, qrPng } = await import("../../src/tools/qrcode/index.ts");
   await page.goto("./qr-read/");
-  await expect(page.getByText("只能讀 QR code，讀不了登機證與商品條碼")).toBeVisible();
+  await expect(page.getByText("目前只能讀 QR code，讀不了登機證、商品條碼這類其他條碼", { exact: false })).toBeVisible();
   await page.getByTestId("qr-input").setInputFiles({ name: "q.png", mimeType: "image/png", buffer: Buffer.from(qrPng(encodeQr("https://anoni.net/", "M"), 6)) });
   await expect(page.getByTestId("qr-text")).toHaveText("https://anoni.net/");
 });
@@ -103,7 +103,7 @@ test("遮蔽 PDF：有文字層時不必辨識，照樣找得到個資", async (
   await expect(page.getByTestId("redact-auto-status")).toHaveText("加了 2 個框，請逐一確認，框錯的點一下就會拿掉。");
   // 找人臉一定要 WebAssembly
   await page.getByRole("button", { name: "找人臉" }).click();
-  await expect(page.getByTestId("redact-auto-status")).toContainText("關掉了 WebAssembly");
+  await expect(page.getByTestId("redact-auto-status")).toContainText("需要的程式（WebAssembly）");
 });
 
 test("檢查畫面內容：說明這個瀏覽器關掉了 WebAssembly，請讀者自己看一次", async ({ page }) => {
@@ -119,7 +119,7 @@ test("檢查畫面內容：說明這個瀏覽器關掉了 WebAssembly，請讀�
   await page.getByTestId("file-input").setInputFiles({ name: "chat.png", mimeType: "image/png", buffer: Buffer.from(png) });
   await page.getByRole("button", { name: "檢查畫面內容" }).click();
   const status = page.getByTestId("screen-status");
-  await expect(status).toContainText("關掉了 WebAssembly");
+  await expect(status).toContainText("需要的程式（WebAssembly）");
   await expect(status).toContainText("請自己看一次整張圖");
   await expect(status).toHaveClass("error");
 });
@@ -133,7 +133,7 @@ test("網址檢查：從截圖讀出網址說明關掉了 WebAssembly，不打�
   await page.goto("./url-check/");
   await page.getByRole("button", { name: "從截圖讀出網址" }).click();
   const status = page.getByTestId("url-ocr-status");
-  await expect(status).toContainText("關掉了 WebAssembly");
+  await expect(status).toContainText("需要的程式（WebAssembly）");
   await expect(status).toContainText("打進上面的輸入框");
   await expect(status).toHaveClass("error");
   expect(chooser).toBe(false);

@@ -118,7 +118,7 @@ test("檢查收到的截圖：檔案畫面列出畫面上的網址、複製讀�
   await urls.getByRole("button", { name: "檢查這個網址" }).first().click();
   await expect(page).toHaveURL(/\/gears\/url-check\/$/);
   await expect(page.getByLabel("要檢查的網址")).toHaveValue(URL_A);
-  await expect(page.getByText("真正的網域是 secure-pay.test")).toBeVisible();
+  await expect(page.getByText("這個網址真正屬於 secure-pay.test", { exact: false })).toBeVisible();
 });
 
 test("交出去之前的照片：檔案畫面只列數量，不列網址與文字", async ({ page }) => {

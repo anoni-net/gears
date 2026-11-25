@@ -116,7 +116,7 @@ test("找人名、地址與單位：檢查之後才出現，模型的內容對�
     await expect(ask).toContainText("在手機與平板上還在測試");
     await ask.getByRole("button", { name: "仍要使用" }).click();
   } else await expect(ask).toHaveCount(0);
-  await expect(page.getByTestId("screen-model-status")).toHaveText("沒有辦法執行開源本機模型，上面的結果不受影響，人名與地址請自己看一次。", {
+  await expect(page.getByTestId("screen-model-status")).toHaveText("沒有辦法執行開源本機模型，可能是下載中斷，可以再按一次「找人名、地址與單位」。上面的結果不受影響，人名與地址請自己看一次。", {
     timeout: 90_000,
   });
   expect(asked.length).toBeGreaterThan(0);

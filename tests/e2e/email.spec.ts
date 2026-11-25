@@ -24,7 +24,7 @@ test("從任務貼上冒用的信：驗證沒有通過、需要留意的地方�
 
   // 只採信最上面那一筆驗證結果，下面自稱通過的不算
   await page.getByText("驗證的細節").click();
-  await expect(page.getByText("以下是 mx.example.net 收到信時記下的結果。", { exact: false })).toBeVisible();
+  await expect(page.getByText("以下是 mx.example.net 收到信時記下的檢查結果。", { exact: false })).toBeVisible();
   await expect(page.getByText("DMARC：fail，網域 secure-login.example.com，跟寄件網域一致")).toBeVisible();
 
   const link = page.locator(".email-links li").first();
@@ -39,7 +39,7 @@ test("開啟正常的 .eml：驗證通過、主旨、附件加入暫存區", asy
   await page.getByTestId("email-file").setInputFiles({ name: "newsletter.eml", mimeType: "message/rfc822", buffer: Buffer.from(LEGIT_EML) });
   await expect(page.getByText("已開啟 newsletter.eml")).toBeVisible();
   await expect(page.getByTestId("email-verdict")).toContainText("寄件驗證通過");
-  await expect(page.getByTestId("email-verdict")).toContainText("收件的伺服器確認這封信來自 news.example.org");
+  await expect(page.getByTestId("email-verdict")).toContainText("收件的伺服器確認這封信確實從 news.example.org 寄出");
   // 標頭的全文收在「所有標頭」裡，限定在寄件人的區塊
   const sender = page.locator(".email-result section").first();
   await expect(sender.getByText("十月活動通知")).toBeVisible();
@@ -49,8 +49,8 @@ test("開啟正常的 .eml：驗證通過、主旨、附件加入暫存區", asy
   await page.getByText("信件經過的伺服器（2 站）").click();
   await expect(page.getByText("mail.news.example.org（192.0.2.10）→ mx.example.net")).toBeVisible();
 
-  await page.locator(".email-attachments li", { hasText: "報告.pdf" }).getByRole("button", { name: "加入暫存區" }).click();
-  await expect(page.getByRole("button", { name: "已加入暫存區" })).toBeDisabled();
+  await page.locator(".email-attachments li", { hasText: "報告.pdf" }).getByRole("button", { name: "放進暫存區" }).click();
+  await expect(page.getByRole("button", { name: "已放進暫存區" })).toBeDisabled();
   await expect(page.getByRole("button", { name: "從暫存區移除：報告.pdf" })).toBeVisible();
 });
 

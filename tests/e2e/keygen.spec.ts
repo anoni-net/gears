@@ -89,7 +89,7 @@ test("從加密畫面連到金鑰產生器，暫存區不會被清空", async ({
   await page.getByTestId("file-input").setInputFiles({ name: "notes.txt", mimeType: "text/plain", buffer: Buffer.from("hello") });
   await page.getByRole("button", { name: "打開加密" }).click();
   await page.getByLabel("對方的公鑰").check();
-  await page.getByRole("button", { name: /還沒有金鑰/ }).click();
+  await page.getByRole("button", { name: /還沒有公鑰/ }).click();
   await expect(page).toHaveURL(/\/gears\/age-keygen\/$/);
   await expect(page.locator(".tray .item")).toContainText("notes.txt");
 });

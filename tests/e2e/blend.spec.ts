@@ -46,7 +46,7 @@ test("縮成常見尺寸：直的照片依高度縮到 1280，輸出 JPEG", asyn
 test("比常見尺寸小的照片不放大，只重新壓縮", async ({ page }) => {
   await page.goto("./blend/");
   await page.getByTestId("file-input").setInputFiles({ name: "small.jpg", mimeType: "image/jpeg", buffer: await photo(page, 800, 600) });
-  await expect(page.getByText("原圖比這個小，不放大，只重新壓縮").first()).toBeVisible();
+  await expect(page.getByText("原圖比這個尺寸小，不會放大，只重新壓縮", { exact: false }).first()).toBeVisible();
   await page.getByRole("button", { name: "縮小並重新壓縮" }).click();
   await expect(page.getByText("用一般的參數（JPEG 品質 85）重新壓縮", { exact: false })).toBeVisible();
   await expect(page.getByText("長邊縮成", { exact: false })).toHaveCount(0);

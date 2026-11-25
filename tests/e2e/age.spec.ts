@@ -21,7 +21,7 @@ test("加密任何檔案：產生密語、加密、下載，再在工作台裡�
   await page.getByRole("button", { name: "加密", exact: true }).click();
 
   await expect(page.getByTestId("history-current").getByText("加密", { exact: true })).toBeVisible({ timeout: 60_000 });
-  await expect(page.getByText("用密語加密（age，scrypt）")).toBeVisible();
+  await expect(page.getByText("用密語加密（age 格式）")).toBeVisible();
   await expect(page.locator(".tray .item")).toContainText("已加密");
   const encrypted = await downloadFrom(page, () => page.getByRole("link", { name: "下載" }).click());
   expect(encrypted.name).toBe("gears-1.pdf.age");
@@ -55,7 +55,7 @@ test("加密給公鑰，輸出成文字格式", async ({ page }) => {
   await page.getByLabel("對方的 age 公鑰，一行一把").fill(recipient);
   await page.getByLabel("輸出成文字，方便貼進電子郵件或訊息").check();
   await page.getByRole("button", { name: "加密", exact: true }).click();
-  await expect(page.getByText("加密給公鑰（age）")).toBeVisible();
+  await expect(page.getByText("用對方的公鑰加密（age 格式）")).toBeVisible();
 
   const out = await downloadFrom(page, () => page.getByRole("link", { name: "下載" }).click());
   expect(out.name).toBe("gears-1.txt.age");
@@ -72,7 +72,7 @@ test("密語太短不能加密，密語錯了解不開", async ({ page }) => {
   await page.getByRole("button", { name: "打開解密" }).click();
   await page.getByLabel("密語或私鑰").fill("wrong passphrase");
   await page.locator(".age").getByRole("button", { name: "解密" }).click();
-  await expect(page.getByRole("alert")).toContainText("解不開");
+  await expect(page.getByRole("alert")).toContainText("沒有成功解密");
 
   await page.getByLabel("密語或私鑰").fill("right passphrase");
   await page.locator(".age").getByRole("button", { name: "解密" }).click();
