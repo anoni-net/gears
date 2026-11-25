@@ -1,15 +1,15 @@
 {
  "": {
-  "sha": "9b90e5a87f5eb31a",
-  "lastmod": "2026-11-21"
+  "sha": "6886f4a4c52df8b9",
+  "lastmod": "2026-11-25"
  },
  "zh-cn/": {
-  "sha": "2c6ddb6ad3b04b8e",
-  "lastmod": "2026-11-21"
+  "sha": "086684a12371430a",
+  "lastmod": "2026-11-25"
  },
  "en/": {
-  "sha": "3bd010055c1cdc5b",
-  "lastmod": "2026-11-21"
+  "sha": "3b86082d1a5bcc2c",
+  "lastmod": "2026-11-25"
  },
  "strip-metadata": {
   "sha": "ad6a0d41edd69719",
@@ -297,6 +297,18 @@
  },
  "en/about": {
   "sha": "1b7687117edefc4b",
+  "lastmod": "2026-11-25"
+ },
+ "why": {
+  "sha": "0035b3d16d7bf7c4",
+  "lastmod": "2026-11-25"
+ },
+ "zh-cn/why": {
+  "sha": "646a0c212dadeed1",
+  "lastmod": "2026-11-25"
+ },
+ "en/why": {
+  "sha": "9335f331fb386e2f",
   "lastmod": "2026-11-25"
  },
  "licenses": {
