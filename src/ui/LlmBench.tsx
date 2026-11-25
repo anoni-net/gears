@@ -8,6 +8,7 @@ import { FIXABLE, findHabits, fixHabits } from "../tools/writing-style/index.ts"
 import type { BenchEnv } from "./bench-env.ts";
 import type { BenchReply, BenchRequest } from "./llm-bench.worker.ts";
 import workerUrl from "./llm-bench.worker.ts?worker&url";
+import { PrivacyLink } from "./PrivacyLink.tsx";
 
 // 裝置量測（src/ui/BenchPage.tsx）的語言模型：在這台裝置的瀏覽器裡執行小型語言模型，改寫範例文字，
 // 量測載入時間、第一個字出現的時間與每秒的詞元數，也用寫作習慣檢查的規則看改寫的品質。
@@ -181,7 +182,7 @@ export function LlmBench({ env, runs, setRuns, busy, setBusy }: Props) {
       <h3 id="bench-llm-title">{t("bench.llm.title")}</h3>
       <p class="hint">{t("bench.intro")}</p>
       <p class="callout" data-testid="bench-remote">
-        {t("bench.remote")}
+        {t("bench.remote")} <PrivacyLink section="models" label="common.privacyHf" />
       </p>
 
       <fieldset class="choices" disabled={busy}>

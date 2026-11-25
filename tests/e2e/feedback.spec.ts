@@ -42,7 +42,8 @@ test("從桌面的使用者區打開建議與回饋，送出之後顯示收到�
   await page.locator(".desktop").getByRole("link", { name: /^建議與回饋/ }).click();
   await expect(page).toHaveURL(/\/gears\/feedback\/$/);
   await expect(page.getByRole("heading", { name: "建議與回饋" })).toBeVisible();
-  await expect(page.getByTestId("feedback-privacy")).toContainText("暫存區的檔案不會送出");
+  await expect(page.getByTestId("feedback-privacy")).toContainText("介面的語言與 Gears 的版本");
+  await expect(page.getByTestId("feedback-privacy").getByTestId("privacy-link")).toHaveAttribute("href", "/gears/privacy/#privacy-forms");
   // 工具以外的頁面不顯示暫存區
   await expect(page.getByRole("heading", { name: "暫存區" })).toHaveCount(0);
 

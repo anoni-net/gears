@@ -29,13 +29,9 @@ test("打開分享連結、按加入，兩端的確認碼相同，接收之後�
   await receiver.goto(link);
   await expect(receiver.getByTestId("remote-invite")).toContainText("按下「加入」才會連線");
   expect(new URL(receiver.url()).hash).toBe("");
-  // 各方可得知的資訊對照表：中繼伺服器與 Cloudflare 無法得知內容，對方無法得知你的 IP
-  // 傳送的路線：你、Cloudflare、中繼伺服器、對方
-  await expect(receiver.getByTestId("remote-route").locator(".node")).toHaveText(["你", "Cloudflare", "中繼伺服器", "對方"]);
-  const who = receiver.getByTestId("remote-who");
-  await expect(who.locator("thead th")).toHaveText(["中繼伺服器", "Cloudflare", "對方"]);
-  await expect(who.locator("tbody tr").nth(0).locator("td")).toHaveText(["可得知", "可得知", "無法得知"]);
-  await expect(who.locator("tbody tr").nth(2).locator("td")).toHaveText(["無法得知", "無法得知", "可得知"]);
+  // 收到連結的畫面只寫使用的限制，誰可得知什麼寫在伺服器說明頁
+  await expect(receiver.getByTestId("remote-privacy")).toContainText("兩端要同時開著頁面");
+  await expect(receiver.getByTestId("remote-who")).toHaveCount(0);
   await receiver.getByRole("button", { name: "加入", exact: true }).click();
 
   await expect(receiver.getByTestId("remote-incoming").locator("li")).toHaveCount(2, { timeout: 20_000 });
@@ -246,7 +242,7 @@ test("暫存區沒有檔案也能產生連結，連上之後只互傳文字訊�
   await close();
 });
 
-test("告知畫面連到遠端傳送的伺服器說明，在新分頁打開，看完回到遠端傳送", async ({ page }) => {
+test("遠端傳送的畫面連到伺服器說明，在新分頁打開，路線與對照表寫在說明頁，看完回到遠端傳送", async ({ page }) => {
   await page.goto("./remote/");
   await page.getByRole("button", { name: "只傳文字訊息或視訊通話" }).click();
   const link = page.getByTestId("remote-server-link");
@@ -259,6 +255,13 @@ test("告知畫面連到遠端傳送的伺服器說明，在新分頁打開，�
   await expect(section.getByRole("heading", { level: 3 })).toHaveText(["經過的伺服器", "伺服器可得知與無法讀取的資訊", "保存的資料", "加密的方式", "使用的限制", "濫用的回報"]);
   await expect(section).toContainText("不保存檔案");
   await expect(section).toContainText("whisper@anoni.net");
+  // 傳送的路線與各方可得知的資訊對照表：中繼伺服器與 Cloudflare 無法得知內容，對方無法得知你的 IP
+  await expect(section.getByTestId("remote-route").locator(".node")).toHaveText(["你", "Cloudflare", "中繼伺服器", "對方"]);
+  const who = section.getByTestId("remote-who");
+  await expect(who.locator("thead th")).toHaveText(["中繼伺服器", "Cloudflare", "對方"]);
+  await expect(who.locator("tbody tr").nth(0).locator("td")).toHaveText(["可得知", "可得知", "無法得知"]);
+  await expect(who.locator("tbody tr").nth(2).locator("td")).toHaveText(["無法得知", "無法得知", "可得知"]);
+  await expect(section).toContainText("不想讓第三方知道你的 IP 位址");
   await page.getByRole("button", { name: "回到遠端傳送" }).click();
   await expect(page).toHaveURL(/\/gears\/remote\/$/);
 });

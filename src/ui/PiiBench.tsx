@@ -6,6 +6,7 @@ import { PII_MB, PII_MODEL } from "../tools/redact/pii-model.ts";
 import { type BenchEnv, hasGpu } from "./bench-env.ts";
 import type { PiiBenchReply, PiiBenchRequest } from "./pii-bench.worker.ts";
 import workerUrl from "./pii-bench.worker.ts?worker&url";
+import { PrivacyLink } from "./PrivacyLink.tsx";
 
 // 裝置量測的個資辨識：找人名、地址、機構用的 nym-pii（#139）在這台裝置上要多久、記憶體夠不夠。
 // 模型約 211 MB，從 Hugging Face 下載，上線之前要先知道手機能不能用（#144）。
@@ -163,7 +164,7 @@ export function PiiBench({ env, runs, setRuns, busy, setBusy }: Props) {
       <h3 id="bench-pii-title">{t("bench.pii.title")}</h3>
       <p class="hint">{t("bench.pii.intro", { mb: PII_MB })}</p>
       <p class="callout" data-testid="bench-pii-remote">
-        {t("bench.pii.remote", { mb: PII_MB })}
+        {t("bench.pii.remote", { mb: PII_MB })} <PrivacyLink section="models" />
       </p>
 
       <fieldset class="choices" disabled={busy}>

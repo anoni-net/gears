@@ -3,6 +3,7 @@ import { getLocale, t, tDynamic } from "../i18n/index.ts";
 import { COMMIT, VERSION } from "../version.ts";
 import { BENCH_DEVICES, BENCH_LIMITS, BENCH_MEMORIES, type BenchAnswers, type BenchDevice, type BenchMemory, benchPayload, benchReady } from "../bench-submit.ts";
 import { type FeedbackResult, sendFeedback } from "../feedback.ts";
+import { PrivacyLink } from "./PrivacyLink.tsx";
 
 // 裝置量測的「送給社群」：讀者補上裝置類型、大約的年份與記憶體，確認過要送出的內容之後才送（src/bench-submit.ts）。
 // 瀏覽器回報的核心數與記憶體不可信，所以另外請讀者自己填。不會自動送出
@@ -75,7 +76,7 @@ export function BenchSubmit({ report, disabled }: { report: string; disabled: bo
       </label>
 
       <p class="hint" data-testid="bench-send-privacy">
-        {t("bench.send.privacy")}
+        {t("bench.send.privacy")} <PrivacyLink section="forms" />
       </p>
       {report.length > BENCH_LIMITS.report ? (
         <p class="error" role="alert">

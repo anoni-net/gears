@@ -67,13 +67,12 @@ interface Props {
   busy: boolean;
   failed: string[];
   compact: boolean; // 在工具裡、暫存區又是空的，手機上收起來，不擋在工具前面
-  home: boolean; // 在桌面上：「檔案在你的瀏覽器裡處理」寫在桌面的說明（DeskIntro），這裡不重複
   keep: boolean; // 檢查收到的檔案，不放一次清除的按鈕（BatchActions）
   accepts: boolean; // 目前的工具收不收檔案。不收的工具（密語產生器這類），空的暫存區只留一行摘要
 }
 
 // 暫存區一直放在桌面上。空的時候就是拖放區。
-export function TrayList({ files, selected, onSelect, onPick, busy, failed, compact, home, keep, accepts }: Props) {
+export function TrayList({ files, selected, onSelect, onPick, busy, failed, compact, keep, accepts }: Props) {
   return (
     <section class={compact ? "tray compact" : "tray"} aria-labelledby="tray-title">
       <h2 id="tray-title">{t("tray.title")}</h2>
@@ -109,7 +108,7 @@ export function TrayList({ files, selected, onSelect, onPick, busy, failed, comp
             {t("tray.pick")}
           </button>
           <p class="drag-note">{t("tray.empty")}</p>
-          <p class="hint">{t(home ? "tray.hint.home" : "tray.hint")}</p>
+          <p class="hint">{t("tray.hint")}</p>
         </div>
       )}
     </section>

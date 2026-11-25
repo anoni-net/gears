@@ -15,6 +15,7 @@ import {
 } from "../feedback.ts";
 import { IconCircle } from "./Icon.tsx";
 import { PAGE_META } from "./tool-meta.ts";
+import { PrivacyLink } from "./PrivacyLink.tsx";
 
 // 決定要做的需求整理成 anoni-net/gears 的 issue，掛 request 標籤
 const LIST_URL = "https://github.com/anoni-net/gears/issues?q=label%3Arequest";
@@ -147,7 +148,7 @@ export function FeedbackPage({ from }: { from: string }) {
       </label>
 
       <p class="hint" data-testid="feedback-privacy">
-        {t("feedback.privacy")}
+        {t("feedback.privacy")} <PrivacyLink section="forms" />
       </p>
       {status === "closed" || status === "network" || status === "other" ? (
         <p class="error" role="alert">

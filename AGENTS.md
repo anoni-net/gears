@@ -1,13 +1,13 @@
 # AGENTS.md
 
-給參與開發的人與 AI 工具的說明。anoni.net Gears 檔案工作台是匿名網路社群 anoni.net 的產品，產品名稱是 Gears，每個語系都一樣，網頁標題與主畫面圖示寫成「Gears 檔案工作台」（简体「Gears 文件工作台」），英文版就叫 Gears。頁首的名稱寫「檔案工作台」（英文版 File Workbench，`app.title`），右上角的小標記寫 Gears（`app.badge`）。2026-10-16 從「隱私工作台」改名，三組工具裡只有「交出去之前」在保護隱私，查證檔案的記者看到「隱私」容易以為跟自己無關。「隱私」原本改寫在桌面最上面的標語，那句跟三組工具的說明、頁尾都重複，2026-10-17 拿掉，在瀏覽器裡處理改寫在暫存區的說明（`tray.hint`），讀者選檔案時就看得到。2026-11-20 起桌面最上方另有兩段定位說明，桌面上這一句改寫在那裡（見下方「桌面」與「介面文字」）。網址是 `anoni.net/gears/`，在瀏覽器裡處理讀者要交出去的檔案，也替收到檔案的人整理可以查證的線索。文件站的小工具區（`anoni-net/docs` 的 `utils/`）是另一套，兩邊各自開發，不共用程式。
+給參與開發的人與 AI 工具的說明。anoni.net Gears 檔案工作台是匿名網路社群 anoni.net 的產品，產品名稱是 Gears，每個語系都一樣，網頁標題與主畫面圖示寫成「Gears 檔案工作台」（简体「Gears 文件工作台」），英文版就叫 Gears。頁首的名稱寫「檔案工作台」（英文版 File Workbench，`app.title`），右上角的小標記寫 Gears（`app.badge`）。2026-10-16 從「隱私工作台」改名，三組工具裡只有「交出去之前」在保護隱私，查證檔案的記者看到「隱私」容易以為跟自己無關。「隱私」原本改寫在桌面最上面的標語，那句跟三組工具的說明、頁尾都重複，2026-10-17 拿掉，在瀏覽器裡處理改寫在暫存區的說明（`tray.hint`），讀者選檔案時就看得到。2026-11-20 起桌面最上方另有兩段定位說明，這一句改寫在那裡，2026-11-26 起暫存區不再重複（見下方「桌面」與「介面文字」）。網址是 `anoni.net/gears/`，在瀏覽器裡處理讀者要交出去的檔案，也替收到檔案的人整理可以查證的線索。文件站的小工具區（`anoni-net/docs` 的 `utils/`）是另一套，兩邊各自開發，不共用程式。
 
 ## 定位
 
 Gears 結合兩件事：可以在本機使用的工具，以及用開源模型加強的功能（2026-11-20 確定）。瀏覽器分成三條線設計，見下方「支援的瀏覽器」。
 
 - 模型是加強的那一層：每個工具不靠模型也要能完成基本的功能，模型只負責標出來，由讀者確認，不自動套用（照遮蔽的自動尋找的做法）。鎖定模式關掉 WebAssembly、Tor Browser 擋下 canvas 的讀取時，退回不用模型的路徑
-- 開源模型的條件：權重公開、授權照下一項、鎖定 commit 並比對 SHA-256（`src/core/models.ts`）、優先放在自己的網域或 assets.anoni.net。要從 Hugging Face 下載時，先在畫面上說明 Hugging Face 看得到 IP 位址、瀏覽器與下載了哪個模型（照逐字稿的 large-v3-turbo）
+- 開源模型的條件：權重公開、授權照下一項、鎖定 commit 並比對 SHA-256（`src/core/models.ts`）、優先放在自己的網域或 assets.anoni.net。要從 Hugging Face 下載時，畫面上寫明下載的來源、按下按鈕才連線，Hugging Face 可得知什麼寫在隱私說明，畫面上只連過去（照逐字稿的 large-v3-turbo，見下方「介面文字」）
 - 模型的授權（2026-11-22 維護者決定）：Gears 的程式維持 MIT。模型跟程式分開，用到時才另外下載，所以模型的授權不必跟 MIT 相同。MIT、Apache-2.0、BSD、CC BY 這類寬鬆授權直接採用。CC BY-SA、LGPL 這類要求延續相同授權的也採用，跟 LGPL 套件（libheif、OpenPGP.js）與 pdf.js 內附的 GPL 字型一樣，以獨立的檔案放著、附上授權全文。GPL 的模型個別評估：模型權重適用 GPL 的方式還沒有定論，真要採用時，先在「寫信問授權人」與「Gears 改成 GPL-3.0」之間選（Gears 的相依套件都能跟 GPL-3.0 一起散布，git 只有一位作者，改授權不必徵求他人同意）。非商用、營收門檻、地區限制、競爭限制這類不是開源授權，不採用。2026-11-20 到 11-22 這一條寫成「授權能跟 MIT 一起散布」，是從 `LICENSE` 推論出來的限制，沒有被當成決定討論過，之後的模型調查因此略過了 copyleft 的候選。補充調查在社群工作區的 `research/gears-copyleft/`：值得考慮的只有 CKIP bert-tiny（GPL-3.0，手機版的個資辨識，召回率比 nym-pii 低、記憶體少約四成，等 iPhone 的量測再決定），YOLO 找人物跟 D-FINE-N 打平，CED-Tiny 的權重是 CC-BY-4.0 與 Apache-2.0，不必改授權
 - 新增模型的門檻沿用 #139 的草案：主線只用 CPU 也能在幾秒內完成、下載量在 200 MB 以內，只能用顯示卡的模型當選配的一層（#159）。每個模型都要有自己的評測資料，評測放在社群工作區的 `research/`
 - 需要確定結果的工具不加模型：加密、解密、加密文字、age 金鑰產生器、密語與密碼產生器、下載的軟體驗證。結果要嘛對、要嘛不對，模型的機率只會增加風險
@@ -15,9 +15,9 @@ Gears 結合兩件事：可以在本機使用的工具，以及用開源模型�
 ## 原則
 
 - 檔案一律在瀏覽器裡處理，不提供上傳到伺服器處理的選項。原本規劃影片這類吃重的處理可以上傳，跟「本機使用」的定位不一致，2026-11-20 拿掉。伺服器只經手兩件事：遠端傳送途中的密文，以及模型的下載
-- 上傳端點不經過 Cloudflare。Cloudflare 在邊緣解開 TLS，經過的檔案對它是明文。兩端之間另有加密、Cloudflare 只經手密文的通道可以經過，畫面上要寫明 Cloudflare 看得到 IP 與時間（遠端傳送的 clearnet 入口，見下方「遠端傳送的轉送服務」）
+- 上傳端點不經過 Cloudflare。Cloudflare 在邊緣解開 TLS，經過的檔案對它是明文。兩端之間另有加密、Cloudflare 只經手密文的通道可以經過，Cloudflare 看得到 IP 與時間要寫在遠端傳送的伺服器說明頁與隱私說明（遠端傳送的 clearnet 入口，見下方「遠端傳送的轉送服務」）
 - 伺服器不保存讀者的檔案，加密過的也一樣。遠端傳送的轉送服務只在轉給對方的途中經手，對方不在時直接丟掉，兩端一律同時在線（見下方「遠端傳送的轉送服務」）
-- 頁面能連線的對象寫死在 CSP 裡（`vite.config.ts`），新增任何對外連線都要改那裡，並在畫面上標示。伺服器送的標頭另外有 `frame-ancestors 'none'`，別的網站不能把工作台嵌進頁框（meta 標籤裡寫這一項沒有作用）。頁面的 meta 標籤只有自己的網域、使用統計的送出網址（`https://aa.anoni.net/api/send`，見下方「使用統計」）與建議與回饋的送出網址（見下方「建議與回饋」）。逐字稿的大模型從 Hugging Face 下載（見下方「逐字稿」），只開在伺服器送的 CSP 標頭 <!-- docs-style-lint: disable-line -->
+- 頁面能連線的對象寫死在 CSP 裡（`vite.config.ts`），新增任何對外連線都要改那裡，並補上隱私說明的對應段落，會連到的地方在畫面上寫明（見下方「介面文字」）。伺服器送的標頭另外有 `frame-ancestors 'none'`，別的網站不能把工作台嵌進頁框（meta 標籤裡寫這一項沒有作用）。頁面的 meta 標籤只有自己的網域、使用統計的送出網址（`https://aa.anoni.net/api/send`，見下方「使用統計」）與建議與回饋的送出網址（見下方「建議與回饋」）。逐字稿的大模型從 Hugging Face 下載（見下方「逐字稿」），只開在伺服器送的 CSP 標頭 <!-- docs-style-lint: disable-line -->
 - 執行期的相依套件只有 `preact`、`qrcode-generator`（QR code 產生）、`jsqr`（QR code 讀取）、`zxing-wasm`（QR code 以外的條碼，見下方「QR code 的內容格式」）、`age-encryption`（加密，連同它相依的 noble 系列）、`libheif-js`（HEIC 解碼，LGPL-3.0，見下方「HEIC」）、`pdf-lib`（PDF 的解析與寫出，見下方「文件」）、`pdfjs-dist`（PDF 的遮蔽，見下方「PDF 的遮蔽」），以及遮蔽的自動尋找用的 `onnxruntime-web`（見下方「遮蔽的自動尋找」，人臉與文字辨識都用它）、逐字稿用的 `@huggingface/transformers` 與 `opencc-js`（見下方「逐字稿」，分辨說話者用的 onnxruntime 是 Transformers.js 帶的那一份），以及查證計算 SHA-256 用的 `@noble/hashes`（age 加密原本就相依它，鎖定同一個版本，見下方「查證」）、遠端傳送的加密用的 `@noble/curves` 與 `@noble/ciphers`（同樣是 age 加密已經帶進來的版本，見下方「遠端傳送的轉送服務」）、下載的軟體驗證用的 `openpgp`（LGPL-3.0，見下方「下載的軟體驗證」，查證的 ProofMode 證明檔也用它），以及查證驗證內容憑證用的 `@contentauth/c2pa-web`（MIT，見下方「內容憑證的驗證」）、驗證 PDF 數位簽章用的 `pkijs` 與 `asn1js`（BSD-3-Clause，見下方「PDF 數位簽章的驗證」）。新增套件前先想能不能自己寫，必要時鎖定確切的版本。工具用到的套件在打開工具時才載入
 - 結構有問題的檔案就停下來，不交出一份沒處理乾淨的檔案
 
@@ -472,10 +472,10 @@ ProofMode（Guardian Project 給人權紀錄者的 Android App）拍照時不改
 
 兩個人不在同一個地方時，經過社群的伺服器傳暫存區的檔案（anoni-net/gears#104）。畫面在 `src/ui/RemoteTool.tsx`，轉送服務在 `server/relay.ts`，瀏覽器端在 `src/tools/remote/relay-client.ts`，兩邊共用的控制訊息在 `src/tools/remote/relay.ts`。
 
-- 畫面：送出端選檔案、看過經過伺服器的說明（clearnet 與 onion 各一段，另有收起來的「伺服器記下什麼」），按「產生連結」開房，分享連結的 `#` 後面是房間代碼與連結金鑰（`r`、`k`，`src/tools/remote/invite.ts`）。接收端打開連結時讀完 `#` 就用 `history.replaceState` 清掉，按「加入」才連線：通訊軟體的預覽可能在伺服器端打開連結，自動加入的話一次性的房間會先被用掉。之後跟面對面傳送一樣顯示確認碼、清單，讀者按「接收」才開始傳，收到的檔案放進暫存區（來源記成 `remote`）。手機切回前景時呼叫 `reconnectNow()`，斷線接回去與對方暫時離線另外顯示一行狀態
+- 畫面：送出端選檔案，下方一行寫使用的限制（兩端要同時開著頁面、連結的效期與容量）並連到伺服器說明頁，按「產生連結」開房，分享連結的 `#` 後面是房間代碼與連結金鑰（`r`、`k`，`src/tools/remote/invite.ts`）。接收端打開連結時讀完 `#` 就用 `history.replaceState` 清掉，按「加入」才連線：通訊軟體的預覽可能在伺服器端打開連結，自動加入的話一次性的房間會先被用掉。之後跟面對面傳送一樣顯示確認碼、清單，讀者按「接收」才開始傳，收到的檔案放進暫存區（來源記成 `remote`）。手機切回前景時呼叫 `reconnectNow()`，斷線接回去與對方暫時離線另外顯示一行狀態
 - 頁面已經開著、在網址列貼上連結時只有 `#` 後面變了，瀏覽器不會重新載入，靠 `hashchange` 讀。上一次傳完、拒絕或出錯之後直接換成新的連結，傳送進行中（等對方、確認清單、傳送中）不打斷，畫面上問讀者要改用新的連結還是繼續目前的傳送。原本只接受還沒操作的畫面，其他狀態下貼上連結沒有任何反應（2026-10-21 遇到）。面對面傳送的代碼一樣，上一次傳完或出錯之後也接得住
 - 文字訊息：連上之後（確認碼出現）兩端可以互傳文字，一則最多 2000 字。一條連線用 `src/tools/remote/mux.ts` 分成檔案與文字訊息兩條，每則訊息第一個字元或位元組標記是哪一條，所以文字訊息一樣經過加密與續傳，傳輸的流程只看得到檔案那一條。訊息只在畫面元件的記憶體裡，不寫進任何儲存空間，關掉頁面就不見。檔案傳完、拒絕之後連線留著，讀者按「結束連線」、重新開始或換一個連結才關掉，對方看到「對方已經結束連線」。單元測試（`tests/unit/remote-mux.spec.ts`）確認傳檔案時夾著的訊息不會混進檔案那一條
-- 政策頁（`src/ui/RemoteServerPage.tsx`，`/gears/remote-server/`）：經過哪些伺服器、看得到與保存什麼、加密的方式、使用的限制與濫用的回報（whisper@anoni.net），告知畫面收起來的「伺服器記下什麼」最後連過去，開新分頁，接收端在同一個分頁換頁會弄丟連結。內容要跟程式一致，改了 `server/relay.ts` 的上限、`tools/nginx-gears.conf` 的紀錄設定或經過的服務時，三個語系的 `remote-server.*` 一起改
+- 政策頁（`src/ui/RemoteServerPage.tsx`，`/gears/remote-server/`）：經過哪些伺服器、看得到與保存什麼、加密的方式、使用的限制與濫用的回報（whisper@anoni.net），遠端傳送的畫面只寫使用的限制並連過來，開新分頁，接收端在同一個分頁換頁會弄丟連結。傳送的路線圖與各方可得知的資訊對照表（`remote-route`、`remote-who`）2026-11-26 從遠端傳送的畫面搬到這一頁，畫面上原本另有一段「伺服器記下什麼」，跟這一頁重複，內容已經開始對不上（一邊寫不記錄 IP，一邊寫 IP 在記憶體留 10 分鐘）。內容要跟程式一致，改了 `server/relay.ts` 的上限、`tools/nginx-gears.conf` 的紀錄設定或經過的服務時，三個語系的 `remote-server.*` 一起改
 - 不傳檔案：暫存區是空的也能從「只傳文字訊息或視訊通話」產生連結。檔案的協定（`nearby/protocol.ts`）不收空的清單，所以不走檔案那一條，送出端在確認碼出現之後送 `via` 加上 `files: false`，兩端直接進入只有文字訊息與視訊通話的狀態（`talk`）。接收端打開連結時還不知道對方要不要傳檔案，邀請的說明兩種都寫
 - A 版：經過 TURN 的 WebRTC 資料通道（`src/tools/remote/direct.ts`，#104）。轉送服務在配對之後發一則 `ice`（伺服器與帳密，`server/turn.ts` 向 Cloudflare Realtime 申請，效期跟房間的上限相同），只發給在開房、加入、接回時聲明 `ice: true` 的一端，舊版的頁面不認得這則訊息，不發才不會斷線。沒有設定 TURN key 時發 `off`。兩端在加密過的信令那一條（`mux.ts` 的 `s`）交換 SDP 與候選，DTLS 的指紋經過兩端之間的加密送達，轉送服務與 Cloudflare 都換不掉。`iceTransportPolicy` 是 `relay`，只經過 TURN，兩端看不到彼此的 IP，STUN 與 port 53 的網址拿掉。10 秒內打不開、瀏覽器沒有 WebRTC、onion 版（TURN 走 UDP、不經過 Tor，會讓 Cloudflare 看到讀者的 IP）都改走轉送服務。送出端決定檔案走哪一條，用 `via` 告訴接收端，畫面上標出這次經過哪裡。資料通道傳到一半斷掉時，送出端用 `via` 的 `retry` 改走轉送服務重傳，接收端清單相同就直接接收。文字訊息一律留在轉送服務上
 - TURN key 由維護者在 Cloudflare 控制台（Realtime → TURN）建立，Key ID 與 API token 寫進 m6 的 `/srv/anoni-net-gears/relay.env`（`CF_TURN_KEY_ID`、`CF_TURN_KEY_TOKEN`，權限 600），`tools/relay-compose.yml` 的 `env_file` 讀它，沒有這個檔案時不發 TURN。Cloudflare 的 API 會把建立時回傳的 key 標成敏感欄位，透過 MCP 這類工具建立時拿不到，2026-10-21 試過一次、刪掉了。每月前 1,000 GB 免費，之後每 GB 0.05 美元，要在帳號設用量警示
@@ -497,7 +497,7 @@ ProofMode（Guardian Project 給人權紀錄者的 Android App）拍照時不改
 - 限制（`DEFAULTS`）：一則訊息 256 KB、沒人加入的房間 30 分鐘、配對之後最長 6 小時、同時 200 個房間、每個房間轉送 3 GB、同一個鍵 10 分鐘內開 20 個房間（onion 共用一個鍵，300 個），從 onion 開的房間同時最多 100 個（`roomsOnion`，2026-11-19 起，原本單一個 onion 的讀者就能把 200 個房間佔滿）。clearnet 的鍵是 IP 位址，IPv6 只取前 64 位元（`clientKey`），同一段 /64 換位址不算新的鍵。連上之後 10 秒內沒送控制訊息、版本不對、配對之後送文字都會被斷線
 - 不保存、不記錄：訊息只在轉給對方的途中經過記憶體，不寫進磁碟。房間只在記憶體裡，開房次數時間到就清掉，log 只寫啟動與程式的錯誤，nginx 的這兩個 location 也不記 access log
 - 部署：`vite.server.config.ts` 連同 `ws` 打包成單一個 `dist-server/relay.mjs`，`deploy.yml` 推到 `build` 分支的 `server/`，推送前用 `scripts/check-relay.mjs` 實際開房、配對、轉送一次。m6 用 docker compose 在 `node:24-slim`（鎖定 digest）的容器裡執行（`tools/relay-compose.yml`，主機用 apt 裝的 Node.js 是 18，不拿來執行），只聽本機的 8790，根目錄唯讀。拉取腳本發現 `server/` 有更新時重建容器。`ws` 只給轉送服務用，放在 devDependencies，不進網頁的執行期相依
-- nginx：clearnet 是 `/gears/relay/`，經過 Cloudflare（內容由兩端另外加密，Cloudflare 只經手密文，告知畫面要寫明），onion 是 `gears.<onion>/relay/`，兩個入口接到同一個程序，一端走 clearnet、一端走 onion 也配得起來。`X-Relay-Client` 帶計算開房次數用的鍵：clearnet 用 Cloudflare 的 `CF-Connecting-IP`，onion 一律是 `onion`（`tools/nginx-gears.conf`）。這個標頭誰都能自己帶，能直接採信是因為 m6 上 anoni.net 的 server block include 了 `cloudflare-allow.conf`，不經過 Cloudflare 的外部連線在 nginx 就被擋下。2026-11-19 曾在範本另外抄一份 Cloudflare 的網段來判斷，跟 m6 既有的那一份重複，當天收回。上線時把這兩個 location 加進 m6 的設定
+- nginx：clearnet 是 `/gears/relay/`，經過 Cloudflare（內容由兩端另外加密，Cloudflare 只經手密文，寫在伺服器說明頁），onion 是 `gears.<onion>/relay/`，兩個入口接到同一個程序，一端走 clearnet、一端走 onion 也配得起來。`X-Relay-Client` 帶計算開房次數用的鍵：clearnet 用 Cloudflare 的 `CF-Connecting-IP`，onion 一律是 `onion`（`tools/nginx-gears.conf`）。這個標頭誰都能自己帶，能直接採信是因為 m6 上 anoni.net 的 server block include 了 `cloudflare-allow.conf`，不經過 Cloudflare 的外部連線在 nginx 就被擋下。2026-11-19 曾在範本另外抄一份 Cloudflare 的網段來判斷，跟 m6 既有的那一份重複，當天收回。上線時把這兩個 location 加進 m6 的設定
 - 單元測試（`tests/unit/relay.spec.ts`）在 Node 裡起轉送服務、用真的 WebSocket 連線：配對與轉送、面對面傳送的傳輸流程經過轉送（含 24 MB 的檔案）、斷線重連、等太久關閉、各種拒絕與限制
 
 ## QR code 的內容格式
@@ -714,7 +714,7 @@ Whisper base 與 small 在這台裝置的 CPU 與顯示卡上要多久、字錯�
 
 `src/ui/LlmBench.tsx`（Worker 是 `src/ui/llm-bench.worker.ts`）執行小型語言模型，改寫範例文字，量測載入時間、第一個字出現的時間與每秒的詞元數，也用寫作習慣檢查的規則看改寫有沒有少了數字或引述。給社群評估寫作風格的第二層（用語言模型改寫，研究在社群工作區的 `research/gears-llm/`）用，結論是還不能上線。
 
-- 模型在 `src/tools/llm-bench/models.json`，從 Hugging Face 下載，鎖定 commit，伺服器送的 CSP 只開這幾個下載路徑（跟 large-v3-turbo 一樣）。Transformers.js 有幾處讀檔沒有把 `revision` 傳下去，Worker 直接把 `env.remotePathTemplate` 鎖在這個 commit。畫面上說明 Hugging Face 看得到 IP 位址、瀏覽器與下載了哪個模型
+- 模型在 `src/tools/llm-bench/models.json`，從 Hugging Face 下載，鎖定 commit，伺服器送的 CSP 只開這幾個下載路徑（跟 large-v3-turbo 一樣）。Transformers.js 有幾處讀檔沒有把 `revision` 傳下去，Worker 直接把 `env.remotePathTemplate` 鎖在這個 commit。畫面上寫明從 Hugging Face 下載，可得知的資訊連到隱私說明
 - Qwen3 1.7B 改用社群轉檔的版本（`host` 是 `assets`），從 assets.anoni.net 的 `qwen3-1.7b-3231b52/` 下載。onnx-community 的顯示卡版把權重包在單一個 1.43 GB 的 `.onnx` 檔，瀏覽器裡建立推論環境時記憶體不夠（`std::bad_alloc`，2026-10-18 在 Apple M5 Pro 的 Chromium 實測），其他模型都把權重放在另外的 `.onnx_data` 檔。轉檔只把權重改存成外部檔案，權重與計算都沒有修改，外部權重檔再用 `scripts/split-model.mjs` 切成 400 MB 一段，轉檔的做法與實測數字見社群工作區的 `research/gears-llm/02-browser-gpu.md`。Worker 的 `env.fetch` 只下載 `files` 清單上的檔案、比對 SHA-256，切段的檔案沿用逐字稿的 `joinParts`，CSP 不必另外開（assets.anoni.net 的模型目錄已經開了），也不再開這個模型在 Hugging Face 的路徑
 - 下載的檔案存在 Transformers.js 自己的快取（`transformers-cache`），頁面上可以刪掉。`useWasmCache` 關掉：存了之後 onnxruntime 的載入程式改用 `blob:` 網址載入，CSP 不允許
 - 下載進度由 `env.fetch` 自己計算，不傳 `progress_callback`（理由同逐字稿）
@@ -732,7 +732,7 @@ Whisper base 與 small 在這台裝置的 CPU 與顯示卡上要多久、字錯�
 - 模型：Whisper small（252 MB，預設）與 base（80 MB），onnx-community 的 8 位元量化版，另外可以選從 Hugging Face 下載的 large-v3-turbo，以及社群轉檔、放在 assets.anoni.net 的三個模型（見下方），讀者自己選。tiny 對華語幾乎不能用（實測字錯率 98%，會掉進英文的重複迴圈），不提供。用魯迅〈阿Q正傳〉的 LibriVox 朗讀實測字錯率：small 約 24%、base 約 56%
 - 模型不進版控，`node scripts/fetch-whisper.mjs` 從 Hugging Face 下載到 `public/models/whisper/`（CPU 與 WebGPU 兩組，CI 加 `--no-webgpu` 只下載 CPU 用的），版本與每個檔案的 SHA-256 寫在 `src/tools/transcribe/models.json`。部署前先執行一次，網頁只從自己的網域載入
 - 模型從哪裡下載寫在 `models.json` 的 `host`：`self` 是工作台自己的網域（service worker 快取），`hf` 是 Hugging Face，`assets` 是 assets.anoni.net。後兩種由 Worker 下載、比對 SHA-256、存進快取（`src/core/models.ts`，見下方「離線使用」）
-- large-v3-turbo（4 位元量化版，約 760 MB）從 m6 送出的流量太重，`host` 是 `hf`，讀者選擇之後由網頁直接從 Hugging Face 下載（`src/core/models.ts`）。選了還沒下載的大模型時，畫面先說明 Hugging Face 看得到 IP 位址、瀏覽器與下載了哪個模型，按鈕寫成「從 Hugging Face 下載並開始」。網址鎖定 commit，每個檔案讀完比對 SHA-256，對不上就不存。請求不帶 cookie 與 Referer。下載好的檔案存進同一個 `gears-models` 快取，網址用自己網域的路徑，「已下載」與刪除跟 small、base 一樣處理。Transformers.js 會把 `env.fetch` 的錯誤換成「找不到檔案」，Worker 另外記下下載失敗的原因
+- large-v3-turbo（4 位元量化版，約 760 MB）從 m6 送出的流量太重，`host` 是 `hf`，讀者選擇之後由網頁直接從 Hugging Face 下載（`src/core/models.ts`）。選了還沒下載的大模型時，畫面先寫明這個模型從 Hugging Face 下載、按下開始才連線，Hugging Face 可得知什麼連到隱私說明的下載模型那一段，按鈕寫成「從 Hugging Face 下載並開始」。網址鎖定 commit，每個檔案讀完比對 SHA-256，對不上就不存。請求不帶 cookie 與 Referer。下載好的檔案存進同一個 `gears-models` 快取，網址用自己網域的路徑，「已下載」與刪除跟 small、base 一樣處理。Transformers.js 會把 `env.fetch` 的錯誤換成「找不到檔案」，Worker 另外記下下載失敗的原因
 - 用同一段朗讀實測（Node），large-v3-turbo 的字錯率約 22%，small 約 28%，辨識時間約 small 的 1.7 倍。q8 版的字錯率相近、檔案大 300 多 MB，所以用 q4
 - 社群轉檔的模型（`host` 是 `assets`）：泰語的 distill-whisper-th-small（MIT）、台灣華語與中英夾雜的 Breeze-ASR-25、台語的 Breeze-ASR-26（Apache-2.0）。用 Transformers.js 3.8.1 的轉檔腳本匯出、量化，q4 改用非對稱量化（對稱的泰語模型在兩段陷入重複迴圈），轉檔的做法與實測記錄在社群的工作區。放在 m6 的 `/srv/images-anoni-net/gears/models/<模型目錄>/`，網址是 `https://assets.anoni.net/gears/models/<模型目錄>/`，目錄名稱帶著原始模型的 commit，內容不會變，每個目錄附 `README.txt`（來源、授權、轉檔方式）與授權全文。超過 500 MB 的檔案切段後只上傳切好的段。nginx 已經送出 `Access-Control-Allow-Origin: *`
 - 緬甸語、高棉語、寮語、孟加拉語、尼泊爾語、蒙古語用 Meta 的 Omnilingual ASR CTC 300M（Apache-2.0，365 MB），Whisper 在這些語言錯誤率接近或超過 100%。Transformers.js 不支援這個架構，改用 sherpa-onnx 的 WebAssembly 在另一個 Worker 執行（`src/ui/sherpa.worker.ts`，訊息格式跟 `transcribe.worker.ts` 相同，畫面依 `models.json` 的 `engine` 決定開哪一個）。模型是 sherpa-onnx 轉檔版，放在 assets.anoni.net。實測 FLEURS 字錯率：緬甸 14.2%、高棉 14.6%、寮 23.7%、孟加拉 8.2%、尼泊爾 11.4%、蒙古 15.7%，瀏覽器裡單執行緒的辨識時間約錄音長度的 0.7 倍。CTC 模型沒有段落時間，語音偵測切出的一個片段就是一段，輸出沒有標點
@@ -811,10 +811,11 @@ Whisper base 與 small 在這台裝置的 CPU 與顯示卡上要多久、字錯�
 
 ## 隱私說明
 
-`/gears/privacy/`（`src/ui/PrivacyPage.tsx`，頁尾的「隱私說明」）一頁列出 Gears 會連到哪裡、經過的服務與社群的伺服器可得知與保存什麼，以及留在讀者裝置上的資料。工具畫面只寫各自的例外（見下方「介面文字」），讀者要判斷整個工作台能不能用時看這一頁。
+`/gears/privacy/`（`src/ui/PrivacyPage.tsx`，頁尾的「隱私說明」）一頁列出 Gears 會連到哪裡、經過的服務與社群的伺服器可得知與保存什麼，以及留在讀者裝置上的資料。2026-11-26 起跟隱私有關的做法集中寫在這一頁（遠端傳送的細節在它的伺服器說明頁），工具畫面只寫操作，需要提到時放 `src/ui/PrivacyLink.tsx` 的連結（見下方「介面文字」）。
 
 - 照實寫，包括還沒做到的部分。2026-10-24 確認 m6 的 nginx 在 anoni.net（Gears 的頁面與從自己網域下載的模型）、form.anoni.net、aa.anoni.net、assets.anoni.net 都記存取紀錄，含 IP（clearnet 的頁面另外記由 IP 推算的國家與城市），每天輪替、保留 52 份，決定維持現狀、照實寫。轉送服務的兩個 location 不記。onion 版沒有讀者的 IP，但一樣記時間、網址與瀏覽器 <!-- docs-style-lint: disable-line -->
-- 建議與回饋（`feedback.privacy`）與裝置量測的送出（`bench.send.privacy`）原本寫「不記錄你的 IP 位址」。表單伺服器本身確實不存 IP，但前面的 nginx 有記，2026-10-24 改成兩者分開寫
+- 建議與回饋（`feedback.privacy`）與裝置量測的送出（`bench.send.privacy`）原本寫「不記錄你的 IP 位址」。表單伺服器本身確實不存 IP，但前面的 nginx 有記，2026-10-24 改成兩者分開寫，2026-11-26 起這部分只寫在隱私說明的表單那一段（`privacy.forms.*`）
+- 從工具畫面拿掉的說明要在這一頁找得到：模型檔比對 SHA-256（`privacy.models.4`）、Hugging Face 可得知的資訊（`privacy.models.2`）、輸入的文字與範例文字不送出（`privacy.local.2`）、裝置量測的結果不記錄是誰提供的（`privacy.forms.3`）。再從畫面拿掉一句說明時，先確認這一頁或伺服器說明頁有對應的內容
 - 改了下面任何一項，三個語系的 `privacy.*` 跟著改，並更新 `privacy.updated` 的日期：CSP 的 `connect-src`（`vite.config.ts`）、使用統計送出的欄位（`src/ui/analytics.ts`）、表單送出的欄位、模型的下載來源（`host`）、m6 的存取紀錄或保存期限、localStorage 或 Cache API 的用法
 - 每一節的項目數寫在 `PrivacyPage.tsx` 的 `SECTIONS`，瀏覽器測試（`tests/e2e/privacy.spec.ts`）確認畫面上沒有露出字串的鍵
 
@@ -824,7 +825,7 @@ Whisper base 與 small 在這台裝置的 CPU 與顯示卡上要多久、字錯�
 
 - 表單由 Gears 自己畫，送到社群自架的 Formbricks（`form.anoni.net`），用它給網頁用的公開 API（`/api/v1/client/<環境>/responses`），不需要金鑰。不嵌入 Formbricks 的頁面：整個網站送了 `Cross-Origin-Embedder-Policy: require-corp`，別的網站的頁面嵌不進來，讀者也不必認識另一個服務。畫面上不提 Formbricks
 - CSP 的 `connect-src` 只開送出的那一個路徑（`FEEDBACK_ENDPOINT_CLEARNET`，meta 標籤與標頭都有）。onion 版送到 `form.<onion>` 的同一個路徑（`FEEDBACK_ENDPOINT_ONION`），兩個網址分成兩個常數，建置時沒用到的會被拿掉，onion 版的產物裡沒有 clearnet 的網址
-- 送出前畫面寫明送到哪裡、一併送出哪些資訊、暫存區的檔案不會送出、伺服器記下什麼（`feedback.privacy`）。請求不帶 cookie 與 Referer
+- 送出前畫面寫明送到哪裡、一併送出哪些資訊（`feedback.privacy`），伺服器記下什麼與保存多久連到隱私說明。請求不帶 cookie 與 Referer
 - 裝置量測的結果也送到同一個網址，送出的內容與問卷見上方「裝置量測（實驗頁）」
 - 一併送出的是讀者從哪個工具過來（`tool`，桌面是 `home`，在 `src/app.tsx` 記下）、介面的語系（`locale`）與版本（`version`），對應問卷的三個 hidden fields
 - Formbricks 每個語系一份問卷，id 寫在 `FEEDBACK_SURVEYS`。題目 id 與選項照社群工作區的 `formbricks/gears_survey.py`，選擇題存的是選項的文字，`feedback.kind.*` 與 `feedback.frequency.*` 的字串要跟那份檔案一字不差，改字時兩邊一起改
@@ -1232,7 +1233,13 @@ iPhone 預設拍出來的是 HEIC，在網頁上選照片時交出來的也是�
 - 瀏覽器的語言清單裡沒有目前的語系時，頁首下方建議換成清單裡第一個認得的語系，文字用建議的那個語系寫（`src/ui/LocaleHint.tsx`，對應規則在 `src/i18n/suggest.ts`，有單元測試）。不自動轉址，關掉的狀態只在記憶體裡：站內換頁不再出現，重新整理或重新打開會再出現一次。只有 `zh` 分不出字系，不猜。onion 版不顯示，Tor Browser 一律回報英文。瀏覽器測試預設把語言設成 `zh-TW`（`playwright.config.ts`），測這個提示的另外指定
 - 文字照社群的[寫作風格規範](https://anoni.net/join/writing-style/)，品牌寫成小寫的 `anoni.net`。三個語系各照各的規則（英文另有一套），檢查時把字串放在 `docs/zh-CN/`、`docs/en/` 這樣的路徑底下，linter 才會套用該語系的規則
 - 簡體版的用詞跟著文件站簡體版：元数据、遮蔽、复制、生成器、识别、个资、截图、社区、账号。正體的「套用」寫成「应用」
-- 在瀏覽器裡處理是工作台的預設，同一個畫面只寫一次：桌面寫在最上方的定位說明（`desk.intro.browser.body`），暫存區改用不含這一句的 `tray.hint.home`。工具頁沒有定位說明，暫存區仍用 `tray.hint` 寫這一句，從搜尋結果直接打開工具的讀者也看得到。搜尋結果與分享預覽的描述（`meta.<id>.description`、`scripts/make-og.mjs`、`public/manifest.webmanifest`）不再以「在你的瀏覽器裡處理，檔案不上傳」收尾，改寫工具能處理什麼、交出什麼，首頁寫不必安裝或註冊、沒有網路也能用。2026-10-22 以前幾乎每個工具、頁尾與圖示說明都有一行「不會上傳」、「不會送出」、「不會存起來」，手機的桌面就出現四次，讀起來像工作台什麼都不碰，使用的方法反而沒有地方寫。工具畫面只寫例外，也就是會連到哪裡、誰看得到什麼（Hugging Face 的模型下載、遠端傳送經過的伺服器與 Cloudflare、建議與回饋送出的內容），以及限制（不連線查詢撤銷狀態這類）。原本放隱私說明的位置改寫讀者接下來要做的事，例如離開頁面之前先複製、讀到的網址可以先交給網址檢查
+- 隱私的做法集中寫在隱私說明，工具畫面只寫功能與操作（2026-11-26 起）。誰可得知什麼、保存什麼、保存多久、如何加密、哪些內容不會送出，一律寫在隱私說明，遠端傳送的細節寫在它的伺服器說明頁（`/gears/remote-server/`）。工具畫面需要提到時，放 `src/ui/PrivacyLink.tsx` 的連結（開新分頁，`section` 指到隱私說明的那一段），不展開內容。工具畫面可以寫的：
+    - 要做什麼、會得到什麼，以及操作上的提醒，例如關掉分頁就清空、離開頁面之前先複製、模型第一次要下載多少、之後存在這台裝置
+    - 功能上的限制，例如撤銷狀態不連線查詢所以沒有檢查、自動尋找會漏
+    - 按下去才會連到 Gears 以外的地方時（Hugging Face 的模型下載），用一句話寫出來源與按下才連線，可得知的資訊連到隱私說明。送出表單時寫出會送出哪些欄位，伺服器記下什麼連到隱私說明
+    - 「在瀏覽器裡處理」是 Gears 的定位，只寫在桌面的定位說明（`desk.intro.browser.body`）與設計原則頁，暫存區（`tray.hint`）與工具畫面不重複。2026-11-26 以前工具頁的暫存區另寫一次，給從搜尋結果直接打開工具的讀者看，拿掉之後他們從頁尾的隱私說明與設計原則看得到
+    - 搜尋結果與分享預覽的描述（`meta.<id>.description`、`scripts/make-og.mjs`、`public/manifest.webmanifest`）寫工具能處理什麼、交出什麼。兩端之間加密這類工具本身的功能可以寫，伺服器保不保存這類做法不寫
+    - 經過：2026-10-22 以前幾乎每個工具、頁尾與圖示說明都有一行「不會上傳」、「不會送出」、「不會存起來」，當時改成「工具畫面只寫例外，也就是會連到哪裡、誰看得到什麼」。例外越寫越長，遠端傳送的畫面有路線圖、對照表與六條說明，跟伺服器說明頁幾乎重複，內容也開始對不上，2026-11-26 維護者決定例外也移到隱私說明
 - 每個工具頁的開頭列出三步的使用方式（`howto.<工具 id>.<n>`，`src/ui/ToolIntro.tsx` 的 `ToolHeader`）。處理檔案的工具從桌面點工具、搜尋引擎或分享的連結進來的讀者都先看到這個畫面，按「選擇檔案」才打開系統的選檔案視窗，從工具頁選檔案會直接打開編輯畫面，步驟從那裡寫起。從空白開始的工具 2026-11-22 起也有（原本只有一句說明，各工具的起點不同）。同一天起三步排成有圖示的流程（`HOWTO_ICONS`，跟設計原則頁的示意圖同一種排版），改了步驟的文字時一起看圖示對不對得上，`tests/unit/tool-meta.spec.ts` 檢查每個工具三個圖示都有。按鈕名稱照畫面上的寫，改了按鈕的字串時一起改。`tests/unit/i18n.spec.ts` 檢查每個工具三步都有
 
 ## 規劃
