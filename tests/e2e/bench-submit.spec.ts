@@ -36,7 +36,7 @@ async function answer(page: Page, sent: Record<string, unknown>[], status: numbe
 async function measureOcr(page: Page) {
   await page.goto("./bench/");
   await expect(page.getByTestId("bench-env")).toContainText("核心");
-  for (const label of ["CPU，4 個執行緒", "CPU，8 個執行緒"]) {
+  for (const label of ["CPU，同時用 4 個核心", "CPU，同時用 8 個核心"]) {
     // 個資辨識也有同樣的選項，只在文字辨識那一區裡找
     const box = page.locator('section[aria-labelledby="bench-ocr-title"]').getByLabel(label);
     if (await box.isChecked()) await box.uncheck();
@@ -81,7 +81,7 @@ test("裝置量測：英文介面送出的選項仍是正體中文，表單沒�
   await answer(page, sent, 403);
   await page.goto("./en/bench/");
   await expect(page.getByTestId("bench-env")).toContainText("cores");
-  for (const label of ["CPU, 4 threads", "CPU, 8 threads"]) {
+  for (const label of ["CPU, 4 cores at once", "CPU, 8 cores at once"]) {
     // 個資辨識也有同樣的選項，只在文字辨識那一區裡找
     const box = page.locator('section[aria-labelledby="bench-ocr-title"]').getByLabel(label);
     if (await box.isChecked()) await box.uncheck();

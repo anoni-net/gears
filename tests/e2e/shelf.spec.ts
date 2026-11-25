@@ -48,7 +48,7 @@ test("從「收到的照片與文件」加入：檢查收到的在前面，建�
 test("有巨集的 Word：說明改指向開啟前檢查，建議附上連線的數量", async ({ page }) => {
   await page.goto("./");
   await page.getByTestId("file-input").setInputFiles({ name: "invite.docm", mimeType: "application/octet-stream", buffer: Buffer.from(await trackedDocx()) });
-  await expect(page.getByText("有巨集的文件不清除中繼資料", { exact: false })).toBeVisible();
+  await expect(page.getByText("這份文件含有巨集", { exact: false })).toBeVisible();
   await expect(groupTitles(page).first()).toHaveText("檢查收到的");
   await expect(item(page, "文件開啟前檢查")).toContainText("打開時會連到 4 個外部位址");
 });
@@ -71,7 +71,7 @@ test("下載的檔案與簽章檔：從暫存區打開下載的軟體驗證，�
     { name: `${name}.asc`, mimeType: "application/pgp-signature", buffer: readFileSync(new URL(`${name}.asc`, dir)) },
   ]);
   await page.locator(".tray .item", { hasText: `${name}.asc` }).click();
-  await expect(page.getByText("這是 OpenPGP 簽章檔", { exact: false })).toBeVisible();
+  await expect(page.getByText("這是簽章檔（OpenPGP", { exact: false })).toBeVisible();
   await expect(item(page, "下載的軟體驗證")).toContainText("這是簽章檔");
   await item(page, "下載的軟體驗證").getByRole("button", { name: "打開下載的軟體驗證" }).click();
   await expect(page.getByTestId("software-verdict")).toContainText("簽章正確");

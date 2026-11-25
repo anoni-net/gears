@@ -42,7 +42,7 @@ test("從任務選照片與 PDF：雜湊值、時間線、裝置、人名、位�
   await expect(page.getByText("2 個檔案，有 1 個地方需要留意。")).toBeVisible();
   const warnings = page.locator(".verify-warnings");
   await expect(warnings.getByText("存著較早的版本")).toBeVisible();
-  await expect(warnings.getByText("report.pdf 裡存了 2 個版本，修改時舊的內容留在檔案裡。可以在檔案的版本紀錄裡比對各版本改了什麼。")).toBeVisible();
+  await expect(warnings.getByText("report.pdf 裡存了 2 個版本，修改時舊的內容留在檔案裡。很多軟體存檔時都會這樣，不代表被竄改，舊版本裡可能還留著刪掉的文字。可以在檔案的版本紀錄裡比對各版本改了什麼。")).toBeVisible();
   await expect(cards.nth(1).getByText("需要留意：存著較早的版本")).toBeVisible();
 
   // 每個檔案的重點
@@ -120,11 +120,11 @@ test("來源標示：IPTC 的 AI 欄位與 GB 45438 的隱式標識列在卡片�
 
   const card = page.locator(".verify-card").first();
   await expect(card.getByText("來源標示")).toBeVisible({ timeout: 15000 });
-  await expect(card.getByText("IPTC 的數位來源類型：用生成式 AI 產生（trainedAlgorithmicMedia）")).toBeVisible();
+  await expect(card.getByText("IPTC（新聞與圖庫業界通用的照片資訊格式）的數位來源類型：用生成式 AI 產生（trainedAlgorithmicMedia）")).toBeVisible();
   await expect(card.getByText("IPTC 記錄的 AI 系統：Example Image Model")).toBeVisible();
-  await expect(card.getByText("GB 45438 的隱式標識（XMP）：標示為 AI 生成合成的內容")).toBeVisible();
+  await expect(card.getByText("中國 AI 生成內容的隱式標識（GB 45438，寫在檔案裡、畫面上看不到的標示），位置在 XMP：標示為 AI 生成合成的內容")).toBeVisible();
   await expect(card.getByText(`生成服務：個人，手機號碼 19900001111（${producer}）`)).toBeVisible();
-  await expect(card.getByText(/除了 C2PA 內容憑證，這些標示都沒有簽章/)).toBeVisible();
+  await expect(card.getByText(/其他標示都沒有簽章，誰都能寫入或修改/)).toBeVisible();
   // 卡片上只列提示詞的開頭，完整的收在完整資訊
   await expect(card.getByText(`IPTC 記錄的提示詞：${prompt.slice(0, 120)}…`)).toBeVisible();
   await card.getByText("完整資訊（雜湊值與所有時間）").click();
@@ -178,7 +178,7 @@ test("C2PA 內容憑證：用 c2pa-web 驗證，列出信任清單、撤銷狀�
   ]);
   const cards = page.locator(".verify-card");
   const signed = cards.filter({ has: page.getByRole("heading", { name: "photoshop.jpg" }) });
-  await expect(signed.getByText("C2PA 內容憑證：簽章有效，簽署者在 C2PA 的過渡信任清單裡（2026 年起不再新增簽署者）")).toBeVisible({ timeout: 30000 });
+  await expect(signed.getByText("C2PA 內容憑證：簽章有效，簽署者在 C2PA 的過渡信任清單裡（2026 年起不再新增簽署者，已經在清單裡的照樣有效）")).toBeVisible({ timeout: 30000 });
   await expect(signed.getByText("簽署者：Adobe C2PA（Adobe Inc.）")).toBeVisible();
   await expect(signed.getByText("檔案內附的撤銷資料顯示憑證沒有被撤銷")).toBeVisible();
   await expect(signed.getByText(/^動作紀錄：開啟既有的檔案（用生成式 AI 編修過（compositeWithTrainedAlgorithmicMedia））/)).toBeVisible();
@@ -200,7 +200,7 @@ test("C2PA 內容憑證：身分聲明的帳號與 AI 訓練的標示，影片�
   ]);
   const card = (name: string) => page.locator(".verify-card").filter({ has: page.getByRole("heading", { name }) });
   const identity = card("identity.jpg");
-  await expect(identity.getByText("身分聲明：由 did:web:connected-identities.identity-stage.adobe.com 簽發，列出創作者驗證過的帳號")).toBeVisible({ timeout: 30000 });
+  await expect(identity.getByText("身分聲明（創作者附上、證明自己是誰的資料）：由 did:web:connected-identities.identity-stage.adobe.com 簽發，列出創作者驗證過的帳號")).toBeVisible({ timeout: 30000 });
   await expect(identity.getByText(/^社群帳號：behance testuser23 <https:\/\/net\.s2stagehance\.com\/testuser23>，驗證時間 2025-04-09 22:45:26/)).toBeVisible();
   // 驗證簽發者要連線取得 did:web 的金鑰，頁面的 CSP 擋下，內容憑證本身照樣有效
   await expect(identity.getByText("身分聲明的簽發者要連線才能確認，這裡不連線，列出的帳號沒有經過驗證")).toBeVisible();
@@ -222,12 +222,12 @@ test("PDF 數位簽章：驗證簽章與憑證鏈，簽完之後被改過的列�
   const card = (name: string) => page.locator(".verify-card").filter({ has: page.getByRole("heading", { name }) });
   const signed = card("signed.pdf");
   await expect(signed.getByText("簽章正確，簽完之後涵蓋的範圍沒有被改過")).toBeVisible({ timeout: 30000 });
-  await expect(signed.getByText(/^簽署者的憑證：.*CN=測試簽署人/)).toBeVisible();
+  await expect(signed.getByText(/^簽署者的憑證（證明簽署者身分的電子證件）：.*CN=測試簽署人/)).toBeVisible();
   // 測試的根憑證不在內建的清單裡
   await expect(signed.getByText(/^憑證鏈接不到內建的信任清單/)).toBeVisible();
 
   const tampered = card("tampered.pdf");
-  await expect(tampered.getByText("簽署的範圍在簽完之後被改過")).toBeVisible({ timeout: 30000 });
+  await expect(tampered.getByText("簽署之後內容被改過，簽章不能證明現在的內容就是簽署時的那一份")).toBeVisible({ timeout: 30000 });
   await expect(page.locator(".verify-warnings").getByText("數位簽章驗證沒有通過")).toBeVisible();
 });
 
@@ -247,8 +247,8 @@ test("PDF 的時間戳記：附在簽章上的與整份文件的，對不上的�
   ]);
   const card = (name: string) => page.locator(".verify-card").filter({ has: page.getByRole("heading", { name }) });
   // 測試的根憑證不在內建的清單裡，時間戳記服務也接不到
-  await expect(card("stamped.pdf").getByText(/^時間戳記：.*由 .*CN=Gears Test TSA.* 簽署。時間戳記服務接不到內建的信任清單/)).toBeVisible({ timeout: 30000 });
-  await expect(card("wrong-stamp.pdf").getByText("時間戳記跟它證明的內容對不上，可能被換過")).toBeVisible({ timeout: 30000 });
+  await expect(card("stamped.pdf").getByText(/^時間戳記：.*由 .*CN=Gears Test TSA.* 簽署。這個時間戳記服務不在內建的信任清單裡/)).toBeVisible({ timeout: 30000 });
+  await expect(card("wrong-stamp.pdf").getByText("時間戳記證明的不是這份簽章，時間戳記或簽章可能被換過", { exact: false })).toBeVisible({ timeout: 30000 });
   await expect(page.locator(".verify-warnings").getByText("時間戳記驗證沒有通過")).toBeVisible();
   const doc = card("document.pdf");
   await expect(doc.getByText(/^整份文件的時間戳記，證明簽署的範圍在 .* 已經存在/)).toBeVisible({ timeout: 30000 });

@@ -3,7 +3,38 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { TrayFile, TrayState } from "../core/tray.ts";
 import { t } from "../i18n/index.ts";
+import { tray } from "../state.ts";
+import { Icon } from "./Icon.tsx";
 import { outputName } from "./output-name.ts";
+
+// 暫存區是空的時候，工具裡自己放一個「選擇檔案」。手機上的工具頁會把空的暫存區收起來（styles.css 的 .tray.compact），
+// 只靠暫存區的話，手機上沒有地方可以選檔案。選好的檔案以「安全地傳送」的目的放進暫存區，跟查證的做法相同
+export function EmptyTrayPicker({ note }: { note: string }) {
+  const input = useRef<HTMLInputElement>(null);
+  return (
+    <>
+      <p class="hint">{note}</p>
+      <input
+        ref={input}
+        type="file"
+        multiple
+        hidden
+        data-testid="transfer-input"
+        onChange={(e) => {
+          const el = e.currentTarget;
+          void tray.add([...(el.files ?? [])], null, "send");
+          el.value = "";
+        }}
+      />
+      <div class="buttons">
+        <button type="button" class="pick-files" onClick={() => input.current?.click()}>
+          <Icon name="file-upload-outline" />
+          {t("tray.pick")}
+        </button>
+      </div>
+    </>
+  );
+}
 
 export const size = (n: number) => (n >= 1024 ** 2 ? `${(n / 1024 ** 2).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
 

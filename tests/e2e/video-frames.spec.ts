@@ -110,7 +110,7 @@ async function pickAndAdd(page: Page) {
 
   // 加進暫存區之後，暫存區切到第一張新圖片
   await frames.first().getByRole("checkbox").uncheck();
-  await page.getByRole("button", { name: `加進暫存區（${count - 1} 張）` }).click();
+  await page.getByRole("button", { name: `放進暫存區（${count - 1} 張）` }).click();
   await expect(page.locator(".preview img")).toBeVisible();
   await expect(page.locator("section.tray li").getByText(/^frame-\d+-\d\d\.\d\.jpg$/)).toHaveCount(count - 1);
 }

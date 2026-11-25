@@ -16,7 +16,7 @@ import { RemoteSession, type SessionState } from "../tools/remote/session.ts";
 import { track, trackFail } from "./analytics.ts";
 import { useTray } from "./hooks.ts";
 import { Icon } from "./Icon.tsx";
-import { size, useOutgoing, useWakeLock } from "./transfer-ui.tsx";
+import { EmptyTrayPicker, size, useOutgoing, useWakeLock } from "./transfer-ui.tsx";
 import type { CreateToolProps } from "./types.ts";
 import { useWorking } from "./working.ts";
 import { ProgressBar } from "./ProgressBar.tsx";
@@ -551,7 +551,7 @@ export function RemoteTool(_props: CreateToolProps) {
   if (mode === "choose") {
     body = (
       <>
-        {!state.files.length ? <p class="hint">{t("remote.emptyTray")}</p> : null}
+        {!state.files.length ? <EmptyTrayPicker note={t("remote.emptyTray")} /> : null}
         <form
           class="nearby-paste"
           onSubmit={(e) => {

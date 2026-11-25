@@ -259,7 +259,7 @@ test("PNG：內容憑證與 GB 45438 的標識列成單獨的一項，個人的�
   const png = insertIntoPng(await canvasImage(page, "image/png"), chunk("caBX", c2paJumbf()), chunk("tEXt", text(`AIGC\0${aigc}`)));
   await addFile(page, "generated.png", "image/png", png);
   await expect(page.getByText("C2PA 內容憑證，可能帶有創作者的名字、拍攝的裝置與編輯紀錄")).toBeVisible();
-  await expect(page.getByText(/GB 45438 的 AI 生成標識/)).toBeVisible();
+  await expect(page.getByText(/AI 生成標識（中國標準 GB 45438/)).toBeVisible();
   await expect(page.getByText(`個人，手機號碼 19900001111（${producer}）`)).toBeVisible();
 
   await page.getByRole("button", { name: "清除", exact: true }).click();

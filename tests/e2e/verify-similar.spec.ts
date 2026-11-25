@@ -80,7 +80,7 @@ test("內容完全相同的複本只比一次，在那一張下面註明，匯�
   const { data } = await downloadFrom(page, () => page.getByRole("button", { name: "下載查證紀錄" }).click());
   const text = new TextDecoder().decode(data);
   expect(text).toContain("## 相近的圖片");
-  expect(text).toContain("比對方式：PDQ 感知雜湊（不用模型）。");
+  expect(text).toContain("比對方式：PDQ 感知雜湊（依畫面內容算出的指紋，縮小、調色之後仍然相近，不用模型）。");
   expect(text).toContain("- 第 1 組，2 張：a.jpg、a-small.jpg。內容相近，可能是同一張圖縮小、重新壓縮、調色或翻轉之後的版本。");
 });
 

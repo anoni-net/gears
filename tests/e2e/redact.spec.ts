@@ -107,7 +107,7 @@ test("JPEG 遮蔽後重新編碼，原本的中繼資料一起拿掉", async ({ 
   await chooser.setFiles({ name: "photo.jpg", mimeType: "image/jpeg", buffer: await image(page, "image/jpeg") });
   await drag(page, [0.1, 0.2], [0.4, 0.5]);
   await page.getByRole("button", { name: "套用遮蔽" }).click();
-  await expect(page.getByText("重新編碼，原檔的中繼資料一併拿掉")).toBeVisible();
+  await expect(page.getByText("重新產生整張圖，原檔的中繼資料一併拿掉")).toBeVisible();
   expect(Math.max(...(await pixel(page, 0.25, 0.35)))).toBeLessThanOrEqual(24);
 });
 

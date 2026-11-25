@@ -66,8 +66,8 @@ test("large-v3-turbo 從 Hugging Face 下載：先說明，SHA-256 對不上就�
   });
   await open(page, "talk.wav", wav(2));
   await page.getByLabel(/^large-v3-turbo：最準確/).check();
-  await expect(page.getByText(`從 Hugging Face 下載約 ${Math.round(models.turbo.bytes / 1e6)} MB`)).toBeVisible();
-  await expect(page.getByTestId("transcribe-remote")).toContainText("這個模型從 Hugging Face 下載");
+  await expect(page.getByText(`從 Hugging Face（存放開源模型的網站）下載約 ${Math.round(models.turbo.bytes / 1e6)} MB`)).toBeVisible();
+  await expect(page.getByTestId("transcribe-remote")).toContainText("這個模型從 Hugging Face（存放開源模型的網站）下載");
   // Hugging Face 可得知什麼寫在隱私說明，畫面上只連過去、開新分頁
   const privacyLink = page.getByTestId("transcribe-remote").getByTestId("privacy-link");
   await expect(privacyLink).toHaveAttribute("href", "/gears/privacy/#privacy-models");
@@ -161,7 +161,7 @@ test("瀏覽器讀不了聲音的檔案，說明原因，不下載模型", async
   // 結構完整、但影音資料是假的 MP4：暫存區認得，瀏覽器解不出聲音
   await open(page, "clip.mp4", syntheticMp4());
   await page.getByRole("button", { name: "開始轉逐字稿" }).click();
-  await expect(page.getByTestId("transcribe-status")).toHaveText("目前的瀏覽器無法讀取這個檔案的聲音，請換成 MP3、M4A 或 WAV 再試一次。");
+  await expect(page.getByTestId("transcribe-status")).toHaveText("目前的瀏覽器無法讀取這個檔案的聲音，也可能這個影片本身沒有聲音。請用其他軟體轉成 MP3、M4A 或 WAV 再試一次。");
   expect(models).toEqual([]);
 });
 
@@ -234,7 +234,7 @@ test("顯示卡無法使用時改用 CPU，畫面上說明", async ({ page }) =>
   await page.getByLabel("1", { exact: true }).check();
   await page.getByRole("button", { name: "開始轉逐字稿" }).click();
   await expect(page.getByTestId("transcribe-status")).toHaveText("沒有辨識到說話的內容。", { timeout: 200_000 });
-  await expect(page.getByTestId("transcribe-device")).toHaveText("顯示卡無法使用，這次改用 CPU，另外下載 CPU 用的模型。");
+  await expect(page.getByTestId("transcribe-device")).toHaveText("顯示卡無法使用，這次改用 CPU，速度會比較慢，也要另外下載 CPU 用的模型。");
   // Worker 先確認拿不到 adapter，沒有下載 4 位元的模型
   expect(onnx.sort()).toEqual(BASE_ONNX);
 });

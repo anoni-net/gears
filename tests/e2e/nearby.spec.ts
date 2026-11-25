@@ -37,9 +37,9 @@ async function finish(sender: Page, receiver: Page, answer: string) {
   await expect(sender.getByTestId("nearby-confirm").locator("strong")).toHaveText(code);
 
   await receiver.getByRole("button", { name: "接收", exact: true }).click();
-  await expect(receiver.getByTestId("nearby-status")).toHaveText("收到 2 個檔案，SHA-256 都對得上，已經放進暫存區。", { timeout: 30_000 });
+  await expect(receiver.getByTestId("nearby-status")).toHaveText("收到 2 個檔案，已經確認完整、沒有在途中損壞，都放進暫存區了。", { timeout: 30_000 });
   await sender.bringToFront();
-  await expect(sender.getByTestId("nearby-status")).toHaveText("2 個檔案都送到了，對方核對過 SHA-256。");
+  await expect(sender.getByTestId("nearby-status")).toHaveText("2 個檔案都送到了，對方已經確認檔案完整、沒有在途中損壞。");
   await expect(receiver.locator("section.tray li")).toHaveCount(2);
 }
 
@@ -147,7 +147,7 @@ test("找不到區網位址時說明要先連上 Wi-Fi 或熱點", async ({ page
   await page.getByRole("link", { name: /^面對面傳送/ }).click();
   await page.getByRole("button", { name: "送出暫存區的檔案" }).click();
   await page.getByRole("button", { name: "開始配對（1 個檔案）" }).click();
-  await expect(page.getByTestId("nearby-status")).toContainText("找不到這台裝置的區網位址");
+  await expect(page.getByTestId("nearby-status")).toContainText("這台裝置還沒有連上區域網路");
 });
 
 test("在面對面傳送的畫面加入檔案，留在原畫面並預設勾選；可以保留原本的檔名", async ({ browser, baseURL }) => {
@@ -183,4 +183,16 @@ test("接收端的頁面已經開著，打開送出端的網址（只有 # 後�
   await receiver.goto(offer);
   await expect(receiver.getByTestId("nearby-status")).toContainText("讓送出端的鏡頭掃這個 QR code");
   await context.close();
+});
+
+test("暫存區是空的時候，傳送工具裡有自己的「選擇檔案」，手機上收起空的暫存區也選得到", async ({ page }) => {
+  for (const tool of ["nearby", "remote"]) {
+    await page.goto(`./${tool}/`);
+    const send = page.getByRole("button", { name: "送出暫存區的檔案" });
+    await expect(send).toBeDisabled();
+    await expect(page.getByRole("button", { name: "選擇檔案" }).last()).toBeVisible();
+    await page.getByTestId("transfer-input").setInputFiles({ name: "notes.txt", mimeType: "text/plain", buffer: Buffer.from("hello") });
+    await expect(send).toBeEnabled();
+    await expect(page.getByTestId("transfer-input")).toHaveCount(0);
+  }
 });

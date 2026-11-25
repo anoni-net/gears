@@ -66,8 +66,8 @@ test("加上 /DSS 時一併更新 XMP：算驗證資料，另外標出中繼資�
   expect(sig.later).toEqual({ validationOnly: true, metadata: true });
   const { traceLines } = await import("../../src/ui/verify-report.ts");
   const lines = traceLines({ ...(await examine(bytes, "pdf")) }).join("\n");
-  expect(lines).toContain("簽完之後只加入了長期驗證的資料與文件時間戳記（這裡沒有驗證憑證）");
-  expect(lines).toContain("加入驗證資料的那次更新也改了文件的中繼資料");
+  expect(lines).toContain("簽完之後只加入了日後驗證簽章用的資料（長期驗證資料）與文件時間戳記，簽署的內容沒有改變（只讀出檔案裡寫的資訊，沒有驗證簽章與簽署者的身分）");
+  expect(lines).toContain("簽完之後加入長期驗證資料的那次存檔，也改了文件的中繼資料");
 });
 
 test("文件時間戳記：簽章欄位加進 /AcroForm 與頁面的 /Annots", async () => {

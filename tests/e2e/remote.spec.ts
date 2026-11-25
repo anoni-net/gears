@@ -48,8 +48,8 @@ test("打開分享連結、按加入，兩端的確認碼相同，接收之後�
   else if (browser.browserType().name() === "chromium") await expect(receiver.getByTestId("remote-via")).toHaveAttribute("data-via", "direct");
 
   await receiver.getByRole("button", { name: "接收", exact: true }).click();
-  await expect(receiver.getByTestId("remote-status")).toHaveText("收到 2 個檔案，SHA-256 都對得上，已經放進暫存區。", { timeout: 30_000 });
-  await expect(sender.getByTestId("remote-status")).toHaveText("2 個檔案都送到了，對方核對過 SHA-256。");
+  await expect(receiver.getByTestId("remote-status")).toHaveText("收到 2 個檔案，已經確認完整、沒有在途中損壞，都放進暫存區了。", { timeout: 30_000 });
+  await expect(sender.getByTestId("remote-status")).toHaveText("2 個檔案都送到了，對方已經確認檔案完整、沒有在途中損壞。");
   await expect(receiver.locator("section.tray li")).toHaveCount(2);
   await close();
 });
