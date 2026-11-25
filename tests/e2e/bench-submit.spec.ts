@@ -53,7 +53,8 @@ test("裝置量測：選了裝置才能送出，送出的是畫面上的 JSON �
   await page.goto("./bench/");
   await expect(page.getByRole("button", { name: "送出結果" })).toBeDisabled();
   await measureOcr(page);
-  await expect(page.getByTestId("bench-send-privacy")).toContainText("保留 52 天");
+  // 伺服器記下什麼、保存多久寫在隱私說明，送出的地方只連過去
+  await expect(page.getByTestId("bench-send-privacy").getByTestId("privacy-link")).toHaveAttribute("href", "/gears/privacy/#privacy-forms");
   await expect(page.getByRole("button", { name: "送出結果" })).toBeDisabled();
 
   await page.getByLabel("筆電").check();
