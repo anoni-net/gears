@@ -16,7 +16,7 @@ test("從任務貼上冒用的信：驗證沒有通過、需要留意的地方�
   const verdict = page.getByTestId("email-verdict");
   await expect(verdict).toContainText("寄件驗證沒有通過");
   await expect(verdict).toContainText("這封信不像是 secure-login.example.com 寄出的");
-  await expect(page.getByText("寄件網域在 165 的停止解析清單上")).toBeVisible();
+  await expect(page.getByText("寄件網域在 165 反詐騙清單上")).toBeVisible();
   await expect(page.getByText("回覆地址跟寄件地址不同")).toBeVisible();
   await expect(page.getByText("按下回覆時，信會寄到 collect@another.example，不是 alert@secure-login.example.com。")).toBeVisible();
   await expect(page.getByText("顯示的名稱裡藏著另一個信箱")).toBeVisible();
