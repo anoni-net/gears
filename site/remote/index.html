@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' blob: data:; media-src blob:; connect-src 'self' https://aa.anoni.net/api/send https://form.anoni.net/api/v1/client/cmc9borto0008lj014bq33jqq/responses; worker-src 'self' blob:; font-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'" />
     <meta name="referrer" content="no-referrer" />
-    <meta name="description" content="產生一個連結交給不在身邊的人，經過社群的中繼伺服器傳暫存區的檔案。兩端之間加密，伺服器無法讀取內容，也不保存檔案，斷線之後從斷掉的地方接著傳，傳完比對 SHA-256。" />
+    <meta name="description" content="產生一個連結交給不在身邊的人，經過社群的中繼伺服器傳暫存區的檔案，兩端之間加密，斷線之後從斷掉的地方接著傳，傳完比對 SHA-256。" />
     <meta name="color-scheme" content="light dark" />
     <meta name="theme-color" content="#e0f4ff" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#082b3a" media="(prefers-color-scheme: dark)" />
@@ -21,7 +21,7 @@
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="anoni.net Gears" />
     <meta property="og:title" content="遠端傳送檔案 | Gears 檔案工作台" />
-    <meta property="og:description" content="產生一個連結交給不在身邊的人，經過社群的中繼伺服器傳暫存區的檔案。兩端之間加密，伺服器無法讀取內容，也不保存檔案，斷線之後從斷掉的地方接著傳，傳完比對 SHA-256。" />
+    <meta property="og:description" content="產生一個連結交給不在身邊的人，經過社群的中繼伺服器傳暫存區的檔案，兩端之間加密，斷線之後從斷掉的地方接著傳，傳完比對 SHA-256。" />
     <meta property="og:url" content="https://anoni.net/gears/remote/" />
     <meta property="og:locale" content="zh_TW" />
     <meta property="og:locale:alternate" content="zh_CN" />
@@ -31,24 +31,22 @@
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="檔案工作台 Gears" />
     <meta name="twitter:card" content="summary_large_image" />
-    <script type="module" crossorigin src="/gears/assets/index-DGOszIql.js"></script>
+    <script type="module" crossorigin src="/gears/assets/index-BmrchCcu.js"></script>
     <link rel="modulepreload" crossorigin href="/gears/assets/rolldown-runtime-COiEfhsA.js">
     <link rel="modulepreload" crossorigin href="/gears/assets/tool-B_UYnq8T.js">
     <link rel="modulepreload" crossorigin href="/gears/assets/zip-CH0OCUzR.js">
     <link rel="modulepreload" crossorigin href="/gears/assets/bytes-Dk56OFjV.js">
-    <link rel="modulepreload" crossorigin href="/gears/assets/package-HJPWFZhs.js">
-    <link rel="modulepreload" crossorigin href="/gears/assets/jsxRuntime-ByiFmScf.js">
-    <link rel="modulepreload" crossorigin href="/gears/assets/pii-CLSyrwjZ.js">
     <link rel="modulepreload" crossorigin href="/gears/assets/preload-helper-CMmJIFbb.js">
-    <link rel="modulepreload" crossorigin href="/gears/assets/doc-check-COVaF4Eh.js">
-    <link rel="modulepreload" crossorigin href="/gears/assets/analytics-BfxjbLAx.js">
+    <link rel="modulepreload" crossorigin href="/gears/assets/doc-check-CGpp_6_o.js">
+    <link rel="modulepreload" crossorigin href="/gears/assets/pii-CLSyrwjZ.js">
+    <link rel="modulepreload" crossorigin href="/gears/assets/jsxRuntime-oMVZq-q3.js">
     <link rel="modulepreload" crossorigin href="/gears/assets/wasm-DdAUNWSt.js">
     <link rel="modulepreload" crossorigin href="/gears/assets/models-D7QoyNQi.js">
-    <link rel="stylesheet" crossorigin href="/gears/assets/index-rfUSW5Xp.css">
+    <link rel="stylesheet" crossorigin href="/gears/assets/index-DheFFjks.css">
   </head>
   <body>
     <p id="legacy-browser" class="legacy-browser" role="alert" hidden>這個瀏覽器的版本太舊，沒有辦法執行檔案工作台。iPhone 與 iPad 請更新到 iOS 16.4 以上，電腦請把 Safari、Chrome、Firefox 更新到最新版。</p>
-    <div id="app"><div class="frame static-page"><h1>遠端傳送</h1><p>對方不在身邊時，產生一個連結交給對方，經過社群的中繼伺服器傳暫存區的檔案，連上之後也能互傳文字訊息、視訊通話。兩端之間加密，伺服器無法讀取內容，也不保存檔案。</p><h2>使用方式</h2><ol><li>把檔案加進暫存區，按「送出暫存區的檔案」產生連結。只傳文字或視訊時按「只傳文字訊息或視訊通話」。</li><li>用另一個管道把連結傳給對方，對方打開連結按「加入」。</li><li>核對兩邊的確認碼相同，對方按「接收」，檔案放進對方的暫存區。</li></ol><h2>安全地傳送</h2><p>加密之後再傳送，只有對方能打開。</p><ul><li><a href="/gears/encrypt/">加密</a><br>只給對方看的檔案</li><li><a href="/gears/decrypt/">解密</a><br>打開收到的 .age 檔案</li><li><a href="/gears/text-crypt/">加密文字</a><br>只給對方看的一段訊息</li><li><a href="/gears/nearby/">面對面傳送</a><br>當面把檔案傳給對方</li><li><a href="/gears/age-keygen/">age 金鑰產生器</a><br>讓別人加密檔案給你</li><li><a href="/gears/passphrase/">密語與密碼產生器</a><br>好記又夠強的密語</li><li><a href="/gears/qrcode/">QR code 產生器</a><br>網址、Wi-Fi 密碼、聯絡資料</li></ul><p><a href="/gears/">回到桌面</a></p></div></div>
+    <div id="app"><div class="frame static-page"><h1>遠端傳送</h1><p>對方不在身邊時，產生一個連結交給對方，經過社群的中繼伺服器傳暫存區的檔案，連上之後也能互傳文字訊息、視訊通話。</p><h2>使用方式</h2><ol><li>把檔案加進暫存區，按「送出暫存區的檔案」產生連結。只傳文字或視訊時按「只傳文字訊息或視訊通話」。</li><li>用另一個管道把連結傳給對方，對方打開連結按「加入」。</li><li>核對兩邊的確認碼相同，對方按「接收」，檔案放進對方的暫存區。</li></ol><h2>安全地傳送</h2><p>加密之後再傳送，只有對方能打開。</p><ul><li><a href="/gears/encrypt/">加密</a><br>只給對方看的檔案</li><li><a href="/gears/decrypt/">解密</a><br>打開收到的 .age 檔案</li><li><a href="/gears/text-crypt/">加密文字</a><br>只給對方看的一段訊息</li><li><a href="/gears/nearby/">面對面傳送</a><br>當面把檔案傳給對方</li><li><a href="/gears/age-keygen/">age 金鑰產生器</a><br>讓別人加密檔案給你</li><li><a href="/gears/passphrase/">密語與密碼產生器</a><br>好記又夠強的密語</li><li><a href="/gears/qrcode/">QR code 產生器</a><br>網址、Wi-Fi 密碼、聯絡資料</li></ul><p><a href="/gears/">回到桌面</a></p></div></div>
     <noscript>檔案工作台需要 JavaScript 才能在你的瀏覽器裡處理檔案。</noscript>
     <script src="/gears/legacy-check.js"></script>
   </body>
