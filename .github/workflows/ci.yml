@@ -23,13 +23,14 @@ concurrency:
 jobs:
   # 瀏覽器測試依瀏覽器拆開，每個瀏覽器再用 Playwright 的 --shard 分成幾片，各自一台機器同時執行。
   # 公開 repo 的 GitHub 機器是 4 核心、16 GB，Playwright 開 2 個 worker，原本一個瀏覽器一台時
-  # 測試本身要 5 到 10 分鐘，iPhone 最慢。分片照測試的數量切，不照時間，逐字稿的測試排在後面，
-  # 所以 iPhone 切三片。2026-11-25 用一次 CI 的每項時間估算，最慢的一片連同安裝約 5 到 6 分鐘，
-  # 原本最慢的一台是 8 到 11 分鐘。
+  # 測試本身要 5 到 10 分鐘，iPhone 與 WebKit 最慢。分片照測試的數量切，不照時間，逐字稿的測試
+  # 排在後面，後面的那一片比較重，所以 WebKit 與 iPhone 切三片。2026-11-25 的 #222 先試 WebKit 兩片，
+  # 第二片的測試要 6 分鐘，iPhone 三片每片約 3 分鐘，整次 CI 7.3 分鐘，之後 WebKit 改成三片。
   # 單元測試、型別檢查、轉送服務與 onion 版只做一次，放在 Chromium 的第一片。單元測試另外執行一次
   # playwright，跟 Chromium 一起分片的話，第一片會分到全部的單元測試（數量多但很快），兩片很不平均。
   # 每一片都通過，這個 workflow 才算通過，deploy.yml 等的就是它。
-  # Free 方案的 organization 同時最多 20 個 job，這裡一次是 9 個，PR 與 main 的 CI 重疊時仍在上限以內
+  # Free 方案的 organization 同時最多 20 個 job，這裡一次是 10 個，PR 與 main 的 CI 重疊時剛好 20 個，
+  # 再多就要排隊。要加片之前先算一下
   test:
     name: test (${{ matrix.name }} ${{ matrix.shard }}/${{ matrix.total }})
     runs-on: ubuntu-latest
@@ -44,8 +45,9 @@ jobs:
           - { name: chromium, project: chromium, browser: chromium, shard: 2, total: 2 }
           - { name: firefox, project: firefox, browser: firefox, shard: 1, total: 2 }
           - { name: firefox, project: firefox, browser: firefox, shard: 2, total: 2 }
-          - { name: webkit, project: webkit, browser: webkit, shard: 1, total: 2 }
-          - { name: webkit, project: webkit, browser: webkit, shard: 2, total: 2 }
+          - { name: webkit, project: webkit, browser: webkit, shard: 1, total: 3 }
+          - { name: webkit, project: webkit, browser: webkit, shard: 2, total: 3 }
+          - { name: webkit, project: webkit, browser: webkit, shard: 3, total: 3 }
           - { name: iphone, project: iphone, browser: webkit, shard: 1, total: 3 }
           - { name: iphone, project: iphone, browser: webkit, shard: 2, total: 3 }
           - { name: iphone, project: iphone, browser: webkit, shard: 3, total: 3 }
