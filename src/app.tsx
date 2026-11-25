@@ -28,6 +28,7 @@ import { RemoteServerPage } from "./ui/RemoteServerPage.tsx";
 import { SamplesPage } from "./ui/SamplesPage.tsx";
 import { StoragePage } from "./ui/StoragePage.tsx";
 import { AboutPage } from "./ui/AboutPage.tsx";
+import { WhyPage } from "./ui/WhyPage.tsx";
 import { TestingPage } from "./ui/TestingPage.tsx";
 import { type FileSample, makeSampleFile } from "./ui/samples.ts";
 
@@ -334,6 +335,8 @@ export function App() {
     view = <TestingPage />;
   } else if (route === "about") {
     view = <AboutPage offlineReady={offline.ready} />;
+  } else if (route === "why") {
+    view = <WhyPage />;
   } else if (route === "samples") {
     view = <SamplesPage focus={preset} onOpenFile={openSample} onOpenQr={(id) => openTool("qr-read", `sample:${id}`)} />;
   } else if (selected) {

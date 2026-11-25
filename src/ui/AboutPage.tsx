@@ -28,7 +28,7 @@ import { ConfirmFigure, LayersFigure, VerifyFigure } from "./AboutFigures.tsx";
 const BASE = import.meta.env.BASE_URL;
 
 // 字串裡的 {link} 換成連結，其他變數照 t() 的做法
-function withLink(text: string, link: ComponentChildren) {
+export function withLink(text: string, link: ComponentChildren) {
   const [before, after] = text.split("{link}");
   return (
     <>
@@ -39,7 +39,7 @@ function withLink(text: string, link: ComponentChildren) {
   );
 }
 
-function PageLink({ id, hash, children }: { id: string; hash?: string; children: ComponentChildren }) {
+export function PageLink({ id, hash, children }: { id: string; hash?: string; children: ComponentChildren }) {
   return (
     <a href={`${routeUrl(id)}${hash ? `#${hash}` : ""}`} onClick={(e) => onRouteClick(e, () => navigate(id, hash))}>
       {children}
@@ -165,6 +165,7 @@ function Status({ offlineReady }: { offlineReady: boolean }) {
 export function AboutPage({ offlineReady }: { offlineReady: boolean }) {
   const { min, max } = catalogRange();
   const more: [id: string, title: string][] = [
+    ["why", t("why.title")],
     ["privacy", t("privacy.title")],
     ["licenses", t("licenses.title")],
     ["storage", t("storage.title")],
