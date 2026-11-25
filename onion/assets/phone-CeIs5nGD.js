@@ -1,1 +1,0 @@
-function e(){if(navigator.userAgentData?.mobile)return!0;let e=navigator.userAgent;return/iPhone|iPad|iPod|Android/.test(e)||/Macintosh/.test(e)&&navigator.maxTouchPoints>1}export{e as t};
