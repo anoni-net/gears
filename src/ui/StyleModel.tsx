@@ -12,7 +12,7 @@ import { navigate, onRouteClick, routeUrl } from "../router.ts";
 import { wasmAvailable } from "./wasm.ts";
 import { useWorking } from "./working.ts";
 
-// 寫作習慣檢查的「找人名、地址與單位」（#143）：貼上的文字交給個資辨識模型（nym-pii，跟遮蔽、檢查畫面內容
+// 寫作習慣檢查與逐字稿的「找人名、地址與單位」（#143）：貼上的文字或逐字稿交給個資辨識模型（nym-pii，跟遮蔽、檢查畫面內容
 // 同一個模型與快取，src/ui/pii-detect.ts），找到的人名、地址與單位列成清單，讀者逐項確認之後換成代稱
 // （〔人名 A〕，跟自行指定的表單同一套 replaceTerm）。不自動替換，模型會漏也會認錯。
 // 文字只在這個分頁裡處理。手機上第一次按下時先說明，上一次頁面重新載入過（記憶體不夠）時不再提供，
@@ -21,14 +21,19 @@ import { useWorking } from "./working.ts";
 type Step = { step: "idle" | "asking" | "failed" | "noWasm" } | { step: "running"; progress: number | null } | { step: "done"; terms: ModelTerm[] };
 
 interface Props {
+  id?: string; // data-testid 與標題 id 的前綴，一頁只放一個
+  variant?: "text" | "transcript"; // 頁面重新載入時消失的是貼上的文字還是逐字稿，說明的寫法不同
   text: string;
   keep: readonly string[]; // 已經換上的代稱，裡面的字不列
   onReplace(word: string, alias: string): void;
+  beforeRun?(): void; // 開始之前，例如逐字稿先結束辨識用的 Worker，兩個模型不同時佔著記憶體
 }
 
 const occurrences = (text: string, term: string) => text.split(term).length - 1;
 
-export function StyleModel({ text, keep, onReplace }: Props) {
+export function StyleModel({ id = "style-model", variant = "text", text, keep, onReplace, beforeRun }: Props) {
+  const note = variant === "transcript" ? "style.model.noteTranscript" : "style.model.note";
+  const phoneNote = variant === "transcript" ? "style.model.phoneTranscript" : "style.model.phone";
   const [state, setState] = useState<Step>({ step: "idle" });
   const [download, setDownload] = useState<DetectDownload | null>(null);
   const [crashed] = useState(crashedBefore);
@@ -50,6 +55,7 @@ export function StyleModel({ text, keep, onReplace }: Props) {
   const run = async () => {
     if (!wasmAvailable()) return setState({ step: "noWasm" });
     if (!confirmed.current) return setState({ step: "asking" });
+    beforeRun?.();
     setState({ step: "running", progress: null });
     detector.current ??= piiDetector();
     const source = text;
@@ -89,17 +95,17 @@ export function StyleModel({ text, keep, onReplace }: Props) {
   const offer = state.step === "idle" || state.step === "asking" || state.step === "failed" || state.step === "done";
 
   return (
-    <section class="style-model" aria-labelledby="style-model-title" data-testid="style-model" aria-busy={running}>
-      <h3 id="style-model-title">{t("style.model.title")}</h3>
+    <section class="style-model" aria-labelledby={`${id}-title`} data-testid={id} aria-busy={running}>
+      <h3 id={`${id}-title`}>{t("style.model.title")}</h3>
       {crashed ? (
-        <p class="callout" data-testid="style-model-crashed">
+        <p class="callout" data-testid={`${id}-crashed`}>
           {t("style.model.crashed")}
         </p>
       ) : (
         <>
           {!phone && download?.pii ? (
-            <p class="hint" data-testid="style-model-note">
-              {t("style.model.note", { mb: download.pii })}
+            <p class="hint" data-testid={`${id}-note`}>
+              {t(note, { mb: download.pii })}
             </p>
           ) : (
             <p class="hint">{t("style.model.intro")}</p>
@@ -115,8 +121,8 @@ export function StyleModel({ text, keep, onReplace }: Props) {
             </div>
           ) : null}
           {state.step === "asking" ? (
-            <div class="redact-model-ask" data-testid="style-model-ask" role="group" aria-label={t("style.model.button")}>
-              <p>{t("style.model.phone", { mb: download?.pii || PII_MB })}</p>
+            <div class="redact-model-ask" data-testid={`${id}-ask`} role="group" aria-label={t("style.model.button")}>
+              <p>{t(phoneNote, { mb: download?.pii || PII_MB })}</p>
               <div class="buttons">
                 <button
                   type="button"
@@ -135,7 +141,7 @@ export function StyleModel({ text, keep, onReplace }: Props) {
             </div>
           ) : null}
           {status ? (
-            <p class={state.step === "failed" || state.step === "noWasm" ? "error" : "hint"} role="status" data-testid="style-model-status">
+            <p class={state.step === "failed" || state.step === "noWasm" ? "error" : "hint"} role="status" data-testid={`${id}-status`}>
               {status}
             </p>
           ) : null}
@@ -150,7 +156,7 @@ export function StyleModel({ text, keep, onReplace }: Props) {
             </>
           ) : null}
           {terms.length ? (
-            <ul class="style-examples" data-testid="style-model-terms">
+            <ul class="style-examples" data-testid={`${id}-terms`}>
               {terms.map((m) => {
                 const alias = nextAlias(text, aliasFormat(m.kind));
                 const n = occurrences(text, m.term);
