@@ -341,9 +341,9 @@ test("中繼憑證與時間戳記服務的撤銷狀態：說明與需要留意�
   const warnings = (extra: Partial<PdfSignatureCheck>) => summarize([{ index: 1, name: "a.pdf", format: "pdf", size: 1, evidence: evidence(extra) }]).warnings;
 
   const mid = (check: PdfSignatureCheck["revocation"]) => ({ chainRevocation: [{ subject: "CN=Mid CA", check: check! }] });
-  expect(lines(mid({ status: "good", source: "crl", checkedAt: "2026-10-01T00:00:00.000Z" }))).toContain("中繼憑證 CN=Mid CA：檔案裡附的撤銷資料（憑證撤銷清單，");
-  expect(lines(mid({ status: "not-checked" }))).toContain("中繼憑證 CN=Mid CA：檔案裡沒有附撤銷資料");
-  expect(lines(mid({ status: "revoked", source: "crl", revokedAt: "2026-10-01T00:00:00.000Z" }))).toContain("中繼憑證 CN=Mid CA 已被撤銷");
+  expect(lines(mid({ status: "good", source: "crl", checkedAt: "2026-10-01T00:00:00.000Z" }))).toContain("中繼憑證（介於簽署者與根憑證之間的簽發機構）CN=Mid CA：檔案裡附的撤銷資料（憑證撤銷清單，");
+  expect(lines(mid({ status: "not-checked" }))).toContain("中繼憑證（介於簽署者與根憑證之間的簽發機構）CN=Mid CA：檔案裡沒有附撤銷資料");
+  expect(lines(mid({ status: "revoked", source: "crl", revokedAt: "2026-10-01T00:00:00.000Z" }))).toContain("中繼憑證（介於簽署者與根憑證之間的簽發機構）CN=Mid CA 已被撤銷");
   expect(warnings(mid({ status: "revoked", source: "crl" }))).toContainEqual(expect.objectContaining({ code: "pdf-chain-revoked", value: "CN=Mid CA" }));
   expect(warnings(mid({ status: "revoked", source: "crl", afterTimestamp: true })).map((w) => w.code)).not.toContain("pdf-chain-revoked");
   expect(warnings(mid({ status: "good", source: "crl" })).map((w) => w.code)).not.toContain("pdf-chain-revoked");
@@ -353,7 +353,7 @@ test("中繼憑證與時間戳記服務的撤銷狀態：說明與需要留意�
   expect(lines(tsaRevoked)).toContain("時間戳記服務的憑證 CN=TSA 已被撤銷");
   expect(warnings(tsaRevoked)).toContainEqual(expect.objectContaining({ code: "pdf-chain-revoked", value: "CN=TSA" }));
   const tsaMidRevoked: Partial<PdfSignatureCheck> = { timestamp: { ...stamp, chainRevocation: [{ subject: "CN=TSA CA", check: { status: "revoked", source: "crl" } }] } };
-  expect(lines(tsaMidRevoked)).toContain("中繼憑證 CN=TSA CA 已被撤銷");
+  expect(lines(tsaMidRevoked)).toContain("中繼憑證（介於簽署者與根憑證之間的簽發機構）CN=TSA CA 已被撤銷");
   expect(warnings(tsaMidRevoked)).toContainEqual(expect.objectContaining({ code: "pdf-chain-revoked", value: "CN=TSA CA" }));
 });
 
@@ -382,7 +382,7 @@ test("撤銷狀態的說明與需要留意的地方", async () => {
   const lines = (r: PdfSignatureCheck["revocation"]) => traceLines(evidence(r)).join("\n");
   const codes = (r: PdfSignatureCheck["revocation"]) => summarize([{ index: 1, name: "a.pdf", format: "pdf", size: 1, evidence: evidence(r) }]).warnings.map((w) => w.code);
 
-  expect(lines({ status: "good", source: "ocsp", checkedAt: "2026-10-01T00:00:00.000Z" })).toContain("撤銷狀態（憑證有沒有被簽發單位宣告作廢）：檔案裡附的撤銷資料（OCSP 回應，");
+  expect(lines({ status: "good", source: "ocsp", checkedAt: "2026-10-01T00:00:00.000Z" })).toContain("撤銷狀態（憑證有沒有被簽發單位宣告作廢）：檔案裡附的撤銷資料（簽發單位的 OCSP 線上查詢回應，");
   expect(lines({ status: "revoked", source: "crl", revokedAt: "2026-10-01T00:00:00.000Z" })).toContain("憑證已被撤銷（簽發單位宣告它作廢）：檔案裡附的撤銷資料（憑證撤銷清單）寫著撤銷的時間是");
   expect(lines({ status: "revoked", source: "ocsp", revokedAt: "2026-10-01T00:00:00.000Z", afterTimestamp: true })).toContain("可信的時間戳記證明簽章在撤銷之前就已經存在");
   expect(lines({ status: "unverified", source: "ocsp" })).toContain("撤銷狀態沒有確認");
