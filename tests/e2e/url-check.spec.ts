@@ -19,7 +19,7 @@ test("出現在 165 清單的網址標成危險", async ({ page }) => {
 test("一般的網址：沒有命中、標出真正的網域、清除追蹤碼", async ({ page }) => {
   await page.goto("./url-check/");
   await page.getByLabel("要檢查的網址").fill("shopee.tw.login-verify.top/item?fbclid=abc&id=3");
-  await expect(page.getByText("沒有出現在 165 公布的停止解析清單（資料到 2026-09）")).toBeVisible();
+  await expect(page.getByText("沒有出現在 165 公布的涉詐網站清單（資料到 2026-09）")).toBeVisible();
   await expect(page.getByText("這個網址真正屬於 login-verify.top", { exact: false })).toBeVisible();
   await expect(page.getByText("「shopee」出現在子網域裡")).toBeVisible();
   await expect(page.getByText("Meta（Facebook、Instagram、Threads）的追蹤碼")).toBeVisible();

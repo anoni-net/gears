@@ -76,7 +76,7 @@ export function TrayList({ files, selected, onSelect, onPick, busy, failed, comp
   return (
     <section class={compact ? "tray compact" : "tray"} aria-labelledby="tray-title">
       <h2 id="tray-title">{t("tray.title")}</h2>
-      {busy ? <p class="hint" role="status">{t("tray.reading")}</p> : null}
+      {busy ? <p class="hint" role="status">{t("common.working")}</p> : null}
       {failed.length ? (
         <p class="error" role="alert">
           {t("tray.failed", { names: list(failed) })}
