@@ -20,7 +20,7 @@ test("從照片讀出網址，再交給網址檢查", async ({ page }) => {
   await page.getByRole("button", { name: "用網址檢查" }).click();
   await expect(page).toHaveURL(/\/gears\/url-check\/$/);
   await expect(page.getByLabel("要檢查的網址")).toHaveValue("https://scam-shop.cc/login?utm_source=sms");
-  await expect(page.getByRole("alert")).toContainText("出現在 165 公布的停止解析涉詐網站清單");
+  await expect(page.getByRole("alert")).toContainText("出現在 165 公布的涉詐網站清單上");
 });
 
 test("Wi-Fi 的 QR code 拆成網路名稱與密碼", async ({ page }) => {

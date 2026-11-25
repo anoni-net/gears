@@ -61,7 +61,7 @@ test("逐字稿列出每個模型的原始來源、授權與下載的位置", as
   // 標點建議的模型：原始模型連到 Horizon-Labs，社群重新量化，轉檔紀錄是 assets.anoni.net 的 README.txt
   await expect(details.locator('a[href="https://huggingface.co/Horizon-Labs/multilingual-punctuation-truecase-small"]')).toHaveCount(1);
   await expect(details.locator('a[href="https://assets.anoni.net/gears/models/horizon-punct-a527b62/README.txt"]')).toHaveCount(1);
-  await expect(details).toContainText("重新量化成 8 位元");
+  await expect(details).toContainText("量化成 8 位元");
   await expect(details).toContainText("下載：Hugging Face，選了這個模型才直接下載");
   await expect(details).toContainText("下載：anoni.net，跟工作台同一個網站");
   await details.getByRole("button", { name: "所有授權全文" }).click();
