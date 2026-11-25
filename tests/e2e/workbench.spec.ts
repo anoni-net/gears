@@ -224,6 +224,18 @@ test("清空暫存區的確認幾秒內沒有再按就恢復，檔案留著", as
   await expect(page.getByText("notes.txt").first()).toBeVisible();
 });
 
+// useTray 原本在 useEffect 裡訂閱暫存區，Preact 的 useEffect 在畫面更新之後才由計時器執行。電腦忙的時候，
+// 讀者選好檔案比訂閱早，暫存區已經有檔案、畫面卻一直是空的（上一項在本機跑整套測試時偶爾逾時就是這樣）。
+// 這裡把時間停住，useEffect 一直不執行，確認畫好的當下就接上
+test("暫存區在畫面畫好、計時器還沒執行之前加入檔案，照樣顯示", async ({ page }) => {
+  await page.clock.install({ time: new Date("2026-01-01T00:00:00") });
+  await page.clock.pauseAt(new Date("2026-01-01T00:00:01"));
+  await page.goto("./");
+  await page.getByTestId("file-input").setInputFiles({ name: "notes.txt", mimeType: "text/plain", buffer: Buffer.from("hello") });
+  await expect(page.getByRole("button", { name: "清空暫存區" })).toBeVisible();
+  await expect(page.getByText("notes.txt").first()).toBeVisible();
+});
+
 test("PNG：文字欄位與 eXIf 一起拿掉", async ({ page }) => {
   const png = insertIntoPng(await canvasImage(page, "image/png"), ...metadataChunks());
   await addFile(page, "screenshot.png", "image/png", png);
