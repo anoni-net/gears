@@ -227,6 +227,10 @@ test("標點建議：上一次做到一半頁面重新載入了，說明原因�
   await expect(page.getByTestId("punct-crashed")).toContainText("記憶體不夠");
   await expect(page.getByTestId("transcript")).toBeVisible();
   await expect(page.getByRole("button", { name: "建議標點" })).toHaveCount(0);
+  // 開始轉逐字稿與關掉畫面時沒有在執行標點，記號留著，同一個分頁之後打開逐字稿也不提供按鈕
+  expect(await page.evaluate(() => sessionStorage.getItem("gears-punct"))).toBe("1");
+  await page.getByRole("button", { name: "取消" }).click();
+  expect(await page.evaluate(() => sessionStorage.getItem("gears-punct"))).toBe("1");
 });
 
 test("標點建議：下載途中按停止或關掉逐字稿，不會被當成記憶體不夠", async ({ page }) => {

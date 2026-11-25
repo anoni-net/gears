@@ -61,8 +61,11 @@ export interface PunctRunner {
 // WebKit 第二次用同一個網址建立 Worker 時，會被 Cross-Origin-Embedder-Policy 擋下（同逐字稿）
 export function punctRunner(): PunctRunner {
   let current: { worker: Worker; stop: (error: Error) => void } | null = null;
+  // 沒有進行中的 Worker 時不動記號：上一次當機留下的記號要留著，關掉再打開逐字稿、重新轉一次之後
+  // 才不會又出現按鈕（同 dino-detect.ts）
   const finish = () => {
-    current?.worker.terminate();
+    if (!current) return;
+    current.worker.terminate();
     current = null;
     mark(false);
   };

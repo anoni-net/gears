@@ -88,11 +88,12 @@ export function piiDetector(): PiiDetector {
         mark(false);
       }
     },
+    // 記號只在進行中時清：stop 讓 find 結束，由 find 的 finally 清掉。沒有進行中的那一次時不動記號，
+    // 上一次當機留下的記號要留著，關掉再打開遮蔽才不會又出現按鈕（同 dino-detect.ts）
     dispose() {
       worker?.terminate();
       worker = null;
       stop?.(new Error("disposed"));
-      mark(false);
     },
   };
 }
