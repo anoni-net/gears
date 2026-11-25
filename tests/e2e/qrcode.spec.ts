@@ -111,7 +111,7 @@ test("每個工具都有自己的網址，可以直接打開，也可以用上�
   await expect(page).toHaveTitle("清除照片、文件與影音的中繼資料 | Gears 檔案工作台");
   await expect(page.locator('meta[name="description"]')).toHaveAttribute("content", /拍攝位置/);
   await expect(page.getByRole("heading", { name: "清除中繼資料" })).toBeVisible();
-  await expect(page.getByText("也可以從暫存區選一個已經加入的檔案。")).toBeVisible();
+  await expect(page.getByText("也可以從暫存區選一個已經放進來的檔案。")).toBeVisible();
 
   await page.getByRole("button", { name: "回到桌面" }).click();
   await expect(page).toHaveURL(/\/gears\/$/);
