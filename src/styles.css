@@ -3417,6 +3417,17 @@ button.link {
   max-width: 20rem;
 }
 
+/* 用開源本機模型找人名、地址與單位（src/ui/StyleModel.tsx）：接在自行指定的表單後面，同樣用分隔線隔開 */
+.style-model {
+  border-top: 1px solid var(--line);
+  padding-top: var(--sp-3);
+  margin-bottom: var(--sp-4);
+}
+
+.style-model .buttons {
+  margin: var(--sp-2) 0;
+}
+
 /* 線索清單的項目常換行，勾選框對齊第一行 */
 .style-clues .check {
   align-items: flex-start;

@@ -2,7 +2,7 @@ import { LLM_CACHE } from "../core/storage.ts";
 import { assetsUrl } from "../core/models.ts";
 import type { Box } from "../tools/redact/index.ts";
 import { type LineText, pad } from "../tools/redact/pii.ts";
-import { type ModelMatch, PII_MODEL, chunkLines, joinLines, spanBoxes } from "../tools/redact/pii-model.ts";
+import { type ModelMatch, PII_MODEL, type PiiSpan, chunkLines, chunkText, joinLines, spanBoxes } from "../tools/redact/pii-model.ts";
 import type { PiiReply, PiiRequest } from "./pii.worker.ts";
 import workerUrl from "./pii.worker.ts?worker&url";
 
@@ -51,6 +51,8 @@ export interface PiiDetector {
   // lines 是文字辨識讀出的每一行或 PDF 文字層的每一行（字與字框），width、height 是圖片或頁面畫布的大小。
   // onProgress：下載時是 0 到 1，載入與辨識時是 null
   find(lines: LineText[], width: number, height: number, onProgress?: (p: number | null) => void): Promise<ModelMatch[]>;
+  // 一段文字（寫作習慣檢查）：回傳找到的範圍在原文的位置
+  findText(text: string, onProgress?: (p: number | null) => void): Promise<PiiSpan[]>;
   dispose(): void;
 }
 
@@ -60,36 +62,53 @@ export function piiDetector(): PiiDetector {
   let worker: Worker | null = null;
   // 進行中的那一次，關掉編輯畫面時讓它結束，記號跟著清掉（不然下次打開會被當成記憶體不夠）
   let stop: ((error: Error) => void) | null = null;
+  // 把幾段文字交給 Worker，每段回傳一份範圍。進行中在 sessionStorage 記下，做完、失敗或取消時清掉
+  const run = async (texts: string[], onProgress?: (p: number | null) => void): Promise<PiiSpan[][]> => {
+    worker ??= new Worker(`${workerUrl}?n=${++workers}`, { type: "module" });
+    mark(true);
+    try {
+      const reply = await new Promise<PiiReply & { type: "result" }>((resolve, reject) => {
+        stop = reject;
+        worker!.onmessage = ({ data }: MessageEvent<PiiReply>) => {
+          // 經過壓縮的檔案收到的位元組可能比標示的大小多，進度夾在 1 以內
+          if (data.type === "download") onProgress?.(data.total ? Math.min(1, data.loaded / data.total) : null);
+          else if (data.type === "loaded") onProgress?.(null);
+          else if (data.type === "result") resolve(data);
+          else reject(new Error(data.message));
+        };
+        worker!.onerror = (event) => reject(new Error(event.message || "worker"));
+        worker!.postMessage({ texts } satisfies PiiRequest);
+      });
+      return reply.spans;
+    } finally {
+      stop = null;
+      mark(false);
+    }
+  };
   return {
     async find(lines, width, height, onProgress) {
       // 沒有讀到文字就不必下載模型
       if (!lines.some((line) => line.text.trim())) return [];
-      worker ??= new Worker(`${workerUrl}?n=${++workers}`, { type: "module" });
       const chunks = chunkLines(lines).map((chunk) => ({ chunk, ...joinLines(chunk) }));
-      mark(true);
-      try {
-        const spans = await new Promise<PiiReply & { type: "result" }>((resolve, reject) => {
-          stop = reject;
-          worker!.onmessage = ({ data }: MessageEvent<PiiReply>) => {
-            // 經過壓縮的檔案收到的位元組可能比標示的大小多，進度夾在 1 以內
-            if (data.type === "download") onProgress?.(data.total ? Math.min(1, data.loaded / data.total) : null);
-            else if (data.type === "loaded") onProgress?.(null);
-            else if (data.type === "result") resolve(data);
-            else reject(new Error(data.message));
-          };
-          worker!.onerror = (event) => reject(new Error(event.message || "worker"));
-          worker!.postMessage({ texts: chunks.map((c) => c.text) } satisfies PiiRequest);
-        });
-        return chunks.flatMap(({ chunk, at }, i) =>
-          spanBoxes(chunk, at, spans.spans[i] ?? [])
-            .map((m) => ({ ...m, box: pad(m.box, 0.15, width, height) as Box }))
-            // PDF 的文字可能畫在頁面外，限制在頁面裡之後沒有範圍的不算
-            .filter((m) => m.box.w > 0 && m.box.h > 0),
-        );
-      } finally {
-        stop = null;
-        mark(false);
-      }
+      const spans = await run(
+        chunks.map((c) => c.text),
+        onProgress,
+      );
+      return chunks.flatMap(({ chunk, at }, i) =>
+        spanBoxes(chunk, at, spans[i] ?? [])
+          .map((m) => ({ ...m, box: pad(m.box, 0.15, width, height) as Box }))
+          // PDF 的文字可能畫在頁面外，限制在頁面裡之後沒有範圍的不算
+          .filter((m) => m.box.w > 0 && m.box.h > 0),
+      );
+    },
+    async findText(text, onProgress) {
+      const chunks = chunkText(text);
+      if (!chunks.length) return [];
+      const spans = await run(
+        chunks.map((c) => c.text),
+        onProgress,
+      );
+      return chunks.flatMap(({ offset }, i) => (spans[i] ?? []).map((span) => ({ ...span, start: span.start + offset, end: span.end + offset })));
     },
     // 記號只在進行中時清：stop 讓 find 結束，由 find 的 finally 清掉。沒有進行中的那一次時不動記號，
     // 上一次當機留下的記號要留著，關掉再打開遮蔽才不會又出現按鈕（同 dino-detect.ts）

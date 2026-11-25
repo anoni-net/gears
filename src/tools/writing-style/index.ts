@@ -491,3 +491,44 @@ export function replaceInParts<T extends { text: string }>(parts: T[], term: str
   });
   return { parts: count ? next : parts, count };
 }
+
+// 個資辨識模型（#143）找到的人名、地址與單位，換成讀者可以逐項確認的清單：同樣的字只列一次。
+// 電話、Email 這類規則找得到的不列（已經是寫作習慣裡的個資），已經換上的代稱（keep）
+// 裡面的不列。spans 的位置是原文的 UTF-16 位置，kind 是模型的類別
+export interface ModelTerm {
+  kind: AliasKind;
+  term: string;
+}
+
+const MODEL_ALIAS: Partial<Record<string, AliasKind>> = { person: "person", org: "org", address: "place" };
+
+export function modelTerms(text: string, spans: readonly { kind: string; start: number; end: number }[], keep: readonly string[] = []): ModelTerm[] {
+  const kept: { start: number; end: number }[] = [];
+  for (const k of keep) {
+    if (!k) continue;
+    for (let i = text.indexOf(k); i !== -1; i = text.indexOf(k, i + k.length)) kept.push({ start: i, end: i + k.length });
+  }
+  // 緊接在一起、其中一段只有一個字的接成一個詞：模型有時把「新竹科學園區」切成「新竹科學園」與「區」兩段、
+  // 類別還不同，類別取比較長的那一段。兩段都比較長時是不同的東西（地址後面接著單位名稱），不接
+  const chars = (start: number, end: number) => [...text.slice(start, end)].length;
+  const merged: { kind: string; start: number; end: number; longest: number }[] = [];
+  for (const span of [...spans].sort((a, b) => a.start - b.start)) {
+    const last = merged.at(-1);
+    const tiny = last && (chars(span.start, span.end) <= 1 || chars(last.start, last.end) <= 1);
+    if (last && tiny && span.start <= last.end && span.start >= last.start) {
+      if (span.end - span.start > last.longest) Object.assign(last, { kind: span.kind, longest: span.end - span.start });
+      last.end = Math.max(last.end, span.end);
+    } else merged.push({ ...span, longest: span.end - span.start });
+  }
+  const out = new Map<string, ModelTerm>();
+  for (const span of merged) {
+    const kind = MODEL_ALIAS[span.kind];
+    if (!kind) continue;
+    const term = text.slice(span.start, span.end).trim();
+    // 只有一個字的不列：換掉時其他詞裡的同一個字也會一起被換掉
+    if ([...term].length < 2 || kept.some((r) => r.start < span.end && r.end > span.start)) continue;
+    const key = `${kind}\u0000${term}`;
+    if (!out.has(key)) out.set(key, { kind, term });
+  }
+  return [...out.values()];
+}

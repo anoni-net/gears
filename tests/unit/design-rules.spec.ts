@@ -49,7 +49,8 @@ const OWNERS: Record<string, string[]> = {
   url: ["UrlCheckTool.tsx", "EmailTool.tsx"],
   // 從截圖讀出網址：網址檢查的入口與檔案畫面的「畫面上的網址」共用同一份列表
   urlocr: ["UrlFromScreenshot.tsx", "OcrUrlList.tsx", "ScreenCheck.tsx"],
-  style: ["WritingStyleTool.tsx"],
+  // 寫作習慣檢查的「找人名、地址與單位」另外放在一個元件
+  style: ["WritingStyleTool.tsx", "StyleModel.tsx"],
   software: ["SoftwareVerifyTool.tsx"],
   nearby: ["NearbyTool.tsx"],
   remote: ["RemoteTool.tsx"],

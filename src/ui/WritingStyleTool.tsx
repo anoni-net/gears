@@ -5,6 +5,7 @@ import { CLUES, FIXABLE, HABIT_CODES, type Habit, type HabitCode, applyHabits, f
 import { AliasForm, aliasMessage, allAliases } from "./AliasForm.tsx";
 import { useDoneOnce } from "./analytics.ts";
 import { CopyButton } from "./CopyButton.tsx";
+import { StyleModel } from "./StyleModel.tsx";
 import type { CreateToolProps } from "./types.ts";
 
 // 寫作習慣檢查：貼上要匿名交出去的文字，標出表情符號、語助詞、中英夾雜、地區用語這類
@@ -117,6 +118,8 @@ export function WritingStyleTool(_: CreateToolProps) {
   // 每次修正或套用前的文字，復原時一步一步退回。讀者自己打字之後清空
   const [history, setHistory] = useState<string[]>([]);
   const [note, setNote] = useState("");
+  // 讀者自己打字時，模型找到的清單跟著清掉（換一個元件）。換上代稱、修正與套用不清
+  const [typed, setTyped] = useState(0);
   const locale = getLocale();
   const tags = useMemo(() => Object.fromEntries(PII_KINDS.map((kind) => [kind, tDynamic(`style.piiTag.${kind}`)])) as Record<PiiKind, string>, [locale]);
   // 讀者自己指定的代稱（〔人名 A〕），所有可能的寫法都列出來，換上之後不再被標成寫作習慣
@@ -161,6 +164,7 @@ export function WritingStyleTool(_: CreateToolProps) {
             setText(e.currentTarget.value);
             setHistory([]);
             setNote("");
+            setTyped((n) => n + 1);
           }}
         />
       </label>
@@ -186,6 +190,7 @@ export function WritingStyleTool(_: CreateToolProps) {
           </div>
 
           <AliasForm id="style-alias" text={text} hint={t("alias.hint")} onReplace={replace} />
+          <StyleModel key={typed} text={text} keep={keep} onReplace={replace} />
 
           {habits.length ? (
             <>
