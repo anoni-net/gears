@@ -20,7 +20,7 @@ async function audit(page: Page) {
   return result.violations.map((v) => `${v.id}: ${v.help} (${v.nodes.map((n) => n.target.join(" ")).slice(0, 3).join(" | ")})`);
 }
 
-for (const path of ["./", "./en/", "./qrcode/", "./url-check/", "./passphrase/", "./age-keygen/", "./text-crypt/", "./qr-read/", "./redact/", "./pdf-pages/", "./strip-metadata/", "./verify/", "./email-check/", "./writing-style/", "./video-frames/", "./nearby/", "./remote/", "./licenses/", "./bench/", "./feedback/", "./samples/", "./remote-server/", "./storage/", "./privacy/", "./testing/", "./about/", "./en/about/"]) {
+for (const path of ["./", "./en/", "./qrcode/", "./url-check/", "./passphrase/", "./age-keygen/", "./text-crypt/", "./qr-read/", "./redact/", "./pdf-pages/", "./strip-metadata/", "./verify/", "./email-check/", "./writing-style/", "./video-frames/", "./nearby/", "./remote/", "./licenses/", "./bench/", "./feedback/", "./samples/", "./remote-server/", "./storage/", "./privacy/", "./testing/", "./about/", "./en/about/", "./why/", "./en/why/"]) {
   test(`${path} 沒有無障礙問題`, async ({ page }) => {
     await page.goto(path);
     await page.waitForLoadState("networkidle");
@@ -150,7 +150,7 @@ test("工具以外的頁面的左欄，暫存區有檔案時深淺色都沒有�
   await page.goto("./");
   await page.getByTestId("file-input").setInputFiles({ name: "a.txt", mimeType: "text/plain", buffer: Buffer.from("x") });
   await expect(page.locator(".tray .item")).toHaveCount(1);
-  for (const id of ["licenses", "bench", "feedback", "samples", "remote-server", "storage", "privacy", "testing", "about"]) {
+  for (const id of ["licenses", "bench", "feedback", "samples", "remote-server", "storage", "privacy", "testing", "about", "why"]) {
     await page.evaluate((id) => {
       history.pushState(null, "", `/gears/${id}/`);
       dispatchEvent(new Event("gears:navigate"));

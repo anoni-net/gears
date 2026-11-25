@@ -115,12 +115,12 @@ test("手機上模型表每一列排成一張小卡，最長的模型名稱不�
   expect(scroll).toBeLessThanOrEqual(client);
 });
 
-test("延伸閱讀連到隱私說明、授權與來源、已下載的模型、協助測試與原始碼", async ({ page }) => {
+test("延伸閱讀連到為什麼做 Gears、隱私說明、授權與來源、已下載的模型、協助測試與原始碼", async ({ page }) => {
   await page.goto("./about/");
   const more = page.getByTestId("about-more").getByRole("link");
-  await expect(more).toHaveText(["隱私說明", "授權與來源", "已下載的模型", "協助測試", "原始碼（GitHub）"]);
+  await expect(more).toHaveText(["為什麼做 Gears", "隱私說明", "授權與來源", "已下載的模型", "協助測試", "原始碼（GitHub）"]);
   await expect(more.last()).toHaveAttribute("href", "https://github.com/anoni-net/gears");
-  await more.nth(3).click();
+  await more.nth(4).click();
   await expect(page).toHaveURL(/\/testing\/$/);
 });
 

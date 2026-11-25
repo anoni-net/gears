@@ -4259,6 +4259,125 @@ button.link {
   }
 }
 
+/* 為什麼做 Gears（src/ui/WhyPage.tsx）：沿用設計原則頁的 .about 排版。三組不用分類色（分類色只用在桌面與工具的標題），
+   跟 Gears 的關係用主色外框的小標記，同類工具一項一段，中間一條細線 */
+.why-situations {
+  display: grid;
+  gap: var(--sp-3);
+  margin: var(--sp-3) 0 0;
+}
+
+.why-situations > div {
+  background: var(--fill);
+  border-radius: var(--radius);
+  padding: var(--sp-3) var(--sp-4);
+}
+
+.why-situations dt {
+  font-weight: 600;
+}
+
+.why-situations dd {
+  margin: var(--sp-1) 0 0;
+}
+
+.why-situations dd p {
+  margin: 0;
+}
+
+.why-situations dd p + p {
+  margin-top: var(--sp-1);
+}
+
+.why ul.why-peers,
+.why ul.why-ai {
+  list-style: none;
+  padding-left: 0;
+}
+
+.why-peers > li {
+  padding: var(--sp-3) 0;
+  border-bottom: 1px solid var(--hair);
+}
+
+.why .why-peers > li + li {
+  margin-top: 0;
+}
+
+.why-peers p {
+  margin: 0;
+}
+
+.why-peers p + p {
+  margin-top: var(--sp-1);
+}
+
+.why-peer-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--sp-2);
+}
+
+.why-peer-who,
+.why-peer-form {
+  color: var(--muted);
+  font-size: var(--fs-sm);
+}
+
+.why-peer-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-1) var(--sp-2);
+}
+
+.why-rel {
+  font-size: var(--fs-xs);
+  padding: 0 var(--sp-2);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--link);
+  color: var(--link);
+  white-space: nowrap;
+}
+
+.why .why-ai > li + li {
+  margin-top: var(--sp-2);
+}
+
+.why-pairs {
+  margin: var(--sp-3) 0 0;
+}
+
+.why-pairs > div {
+  padding: var(--sp-2) 0;
+  border-bottom: 1px solid var(--hair);
+}
+
+.why-pairs dt {
+  font-weight: 600;
+}
+
+.why-pairs dd {
+  margin: var(--sp-1) 0 0;
+  line-height: 1.6;
+}
+
+.about-table tr.why-gears {
+  background: var(--fill);
+}
+
+.about-table tr.why-gears th {
+  font-weight: 600;
+}
+
+/* 手機上對照表照模型表排成小卡（.about-table），涵蓋與檔案經過誰各占一整行，形式放在右上 */
+@media (max-width: 39.99rem) {
+  .about-table .why-wide {
+    grid-column: 1 / -1;
+  }
+}
+
 .about-status {
   margin: var(--sp-3) 0 0;
   border: 1px solid var(--line);

@@ -49,7 +49,7 @@ test.describe("寬螢幕的左欄", () => {
     const pages = page.getByTestId("aside-pages");
     await expect(pages.getByRole("link", { name: "協助測試" })).toHaveAttribute("aria-current", "page");
     await expect(pages.locator('[aria-current="page"]')).toHaveCount(1);
-    await expect(pages.getByRole("link")).toHaveText(["設計原則", "範例", "建議與回饋", "協助測試", "已下載的模型", "裝置量測（實驗）", "授權與來源", "隱私說明"]);
+    await expect(pages.getByRole("link")).toHaveText(["設計原則", "為什麼做 Gears", "範例", "建議與回饋", "協助測試", "已下載的模型", "裝置量測（實驗）", "授權與來源", "隱私說明"]);
 
     await pages.getByRole("link", { name: "已下載的模型" }).click();
     await expect(page).toHaveURL(/\/storage\/$/);
