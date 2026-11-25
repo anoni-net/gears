@@ -2,11 +2,12 @@ import { expect, test } from "@playwright/test";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { AI_NOTES, LINKS, PEERS } from "../../src/ui/why-peers.ts";
-import { LOGOS, SIZE } from "../../scripts/make-peer-logos.mjs";
+import peerLogos from "../../scripts/peer-logos.json" with { type: "json" };
 
 // 為什麼做 Gears 的同類工具圖示（public/peers/）：頁面用到的、產生的腳本、資料夾裡的檔案與
 // licenses/peer-logos.txt 列的要是同一批，每個都是 64 × 64 的小 PNG
 
+const { logos: LOGOS, size: SIZE } = peerLogos;
 const dir = join(import.meta.dirname, "../../public/peers");
 const used = new Set([...PEERS.flatMap((p) => p.names), ...AI_NOTES.flatMap((n) => n.names)].flatMap((n) => (n.logo ? [n.logo] : [])).concat(LINKS.flatMap((l) => l.logos)));
 const files = readdirSync(dir).filter((f) => !f.startsWith("."));

@@ -4,7 +4,7 @@
 // 頁面只從自己的網域載入，不連到各專案的網站（CSP 的 img-src 只有 'self'）。
 // SVG 也畫成 PNG：第三方的 SVG 從自己的網域送出，直接打開時裡面的程式會執行。
 //
-// 來源、授權與商標的說明寫在 licenses/peer-logos.txt，改了這裡的清單要一起改。
+// 來源、授權與商標的說明寫在 licenses/peer-logos.txt，改了清單（scripts/peer-logos.json）要一起改。
 //
 //   node scripts/make-peer-logos.mjs
 //
@@ -12,37 +12,13 @@
 // 裁完再拿掉四周透明的邊。
 
 import { chromium } from "playwright";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { join } from "node:path";
 
-const GH = (repo, commit, path) => `https://raw.githubusercontent.com/${repo}/${commit}/${path}`;
-
-export const LOGOS = [
-  { id: "metadatacleaner", url: "https://dl.flathub.org/media/fr/romainvigier/MetadataCleaner/b6488b7260afea8141f8c0856e297993/icons/128x128/fr.romainvigier.MetadataCleaner.png" },
-  { id: "mat2", url: GH("jvoisin/mat2", "5098533876135a7547b7a922ff408d749c29455e", "data/mat2.png") },
-  { id: "imagescrubber", url: GH("everestpipkin/image-scrubber", "390b166cfc61326476ed9d6cb376291f87e35c23", "scrubber_logo.png") },
-  { id: "dface", url: GH("vframeio/dface", "b9fbf7ffa36f2fe54f9c37d01f5479c0c5ae0151", "public/assets/img/favicon/android-icon-192x192.png") },
-  { id: "obscuracam", url: GH("guardianproject/ObscuraCam", "638f156500798616aec0ff2715abd392f683354b", "app/src/main/res/drawable/ic_launcher_ssc.png") },
-  { id: "atrain", url: GH("BANDAS-Center/aTrain", "69d087b9e3123e8bb9a0c71a8e2dcac8e93c985b", "logo.png") },
-  { id: "noscribe", url: GH("kaixxx/noScribe", "1e146c3bd8a00218fdda3fea090a1c79a62faab3", "img/noScribeLogo.png") },
-  { id: "anonymouth", url: GH("psal/anonymouth", "7bd8e24b661f587facf8715a1de345dffde9734e", "src/edu/drexel/psal/resources/graphics/anonymouth_LOGO.png") },
-  { id: "onionshare", url: GH("onionshare/onionshare", "17a58b35b508b08414003d1d454d6bbf229e66a5", "cli/onionshare_cli/resources/static/img/logo.png") },
-  { id: "pairdrop", url: GH("schlagmichdoch/PairDrop", "1b0c9c9d903c3cfc706df1303dc75c3b54d04c77", "public/images/logo_blue_512x512.png") },
-  { id: "wormhole", url: "https://wormhole.app/apple-touch-icon.png" },
-  { id: "dangerzone", url: GH("freedomofpress/dangerzone", "f97310cad237d2f96a58df3ab004c241628a39dd", "share/icon.png") },
-  { id: "invid", url: GH("AFP-Medialab/verification-plugin", "da8b93a43645bc22a29dbb5e4903f6cb964aba7c", "src/assets/icon-128.png") },
-  { id: "c2pa", url: GH("contentauth/verify-site", "a09c33de417c4ed8f6ab4c621f0f802168dc910f", "assets/svg/color/cr-icon-fill.svg") },
-  { id: "tella", url: GH("Horizontal-org/Tella-Android-FOSS", "2caf0177f98fe5f1106d04190270a5cda70ae7e1", "fastlane/metadata/android/en-US/images/icon.png") },
-  { id: "proofmode", url: GH("guardianproject/proofmode-android", "0ccd61a4e36ac8921545422dee8918b0e05891c3", "app/src/main/ic_launcher-playstore.png") },
-  { id: "cyberchef", url: GH("gchq/CyberChef", "44e2433722b44456bfd4cccdb9b986d047d2c2e2", "src/web/static/images/logo/cyberchef.svg") },
-  { id: "autoarchiver", url: GH("bellingcat/auto-archiver", "ceef7213eb36539978065dcd49ba162315e98b70", "docs/source/bc.png"), crop: [0, 0.2] },
-  { id: "cofacts", url: GH("cofacts/rumors-site", "4d10bbc8550bdce0330925fd318c16d1a5d09af7", "components/AppLayout/images/logo-mobile.svg"), crop: [0, 0.3] },
-  { id: "whoscall", url: "https://whoscall.com/favicon.ico" },
-  { id: "g0v", url: GH("cofacts/rumors-site", "4d10bbc8550bdce0330925fd318c16d1a5d09af7", "components/ReportPage/images/logos/g0v.svg"), crop: [0.37, 0.64] },
-];
-
-export const SIZE = 64;
+// 清單在 scripts/peer-logos.json：測試也讀它（tests/unit/why-logos.spec.ts），放在 JSON 才有型別。
+// GitHub 上的檔案網址寫成 raw.githubusercontent.com/<repo>/<commit>/<路徑>，鎖定 commit
+const { size: SIZE, logos: LOGOS } = JSON.parse(await readFile(join(import.meta.dirname, "peer-logos.json"), "utf8"));
 
 const MIME = { png: "image/png", svg: "image/svg+xml", ico: "image/x-icon" };
 
@@ -105,4 +81,4 @@ async function main() {
   await browser.close();
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) await main();
+await main();

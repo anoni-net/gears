@@ -658,7 +658,7 @@ ProofMode（Guardian Project 給人權紀錄者的 Android App）拍照時不改
     - 圖示放在固定的白底小方塊上，深色模式也看得到深色的 logo。名稱就在旁邊，`alt` 留空
     - 找不到官方圖示的（目前只有麥騙）放中性的圖示佔位（`.why-logo.none`），不自己畫一個。2026-11-25 一度以為 mat2 與 DFACE.app 沒有 logo，看了完整的檔案清單才找到，判斷之前列出 repo 全部的圖檔
     - 來源、授權與商標的說明在 `licenses/peer-logos.txt`（授權頁「圖示與資料」的同類工具的圖示）：每個檔案的來源與來源 repo 的授權，MIT 的版權聲明與 Apache-2.0、GPL-3.0、AGPL-3.0、LGPL-3.0 的全文。圖示是獨立的檔案，跟 Gears 的程式分開散布，照「模型的授權」對 copyleft 的做法。Wormhole 與 Whoscall 取自網站，沒有標示授權。也寫明只用來指出是哪個專案、不代表對方認可，對方不希望出現時寫信來就拿掉
-    - 新增同類工具時：在 `make-peer-logos.mjs` 的 `LOGOS` 加一筆、執行一次，`why-peers.ts` 填上 `logo`，`licenses/peer-logos.txt` 加上來源與授權。`tests/unit/why-logos.spec.ts` 比對四邊列的是同一批、每個都是 64 × 64 且不超過 16 KB，`tests/e2e/why.spec.ts` 確認每個圖示在正式建置的 CSP 底下載得到
+    - 新增同類工具時：在 `scripts/peer-logos.json` 加一筆、執行一次 `make-peer-logos.mjs`，`why-peers.ts` 填上 `logo`，`licenses/peer-logos.txt` 加上來源與授權。`tests/unit/why-logos.spec.ts` 比對四邊列的是同一批、每個都是 64 × 64 且不超過 16 KB，`tests/e2e/why.spec.ts` 確認每個圖示在正式建置的 CSP 底下載得到
 - 瀏覽器測試在 `tests/e2e/why.spec.ts`：從使用者區打開、工具數與模型數、每一項同類工具與對照表的列數、外部連結開新分頁、連到設計原則的模型表，以及三個語系沒有露出字串的鍵。無障礙在 `a11y.spec.ts`
 
 ## 裝置量測（實驗頁）
