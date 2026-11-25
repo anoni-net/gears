@@ -100,7 +100,7 @@ test.describe("寬螢幕的左欄", () => {
     await page.goto("./licenses/");
     await expect(page.getByRole("heading", { level: 2 })).toHaveText(["工作台本身", "模型與執行環境", "讀寫檔案的程式", "驗證簽章與憑證", "圖示與資料"]);
     const toc = page.getByTestId("aside-toc");
-    await expect(toc.getByRole("link")).toHaveCount(5 + 14);
+    await expect(toc.getByRole("link")).toHaveCount(5 + 15);
     await expect(toc.locator("li:not(.sub) a")).toHaveText(["工作台本身", "模型與執行環境", "讀寫檔案的程式", "驗證簽章與憑證", "圖示與資料"]);
     await expect(toc.locator("li.sub a").nth(0)).toHaveText("檔案工作台");
     await expect(toc.locator("li.sub a").nth(1)).toHaveText("逐字稿");
@@ -110,7 +110,7 @@ test.describe("寬螢幕的左欄", () => {
     // 裝置量測的內容用到時才載入，小標題在第一次讀的時候還不在
     await page.goto("./bench/");
     const toc = page.getByTestId("aside-toc");
-    await expect(toc.getByRole("link")).toHaveCount(5);
+    await expect(toc.getByRole("link")).toHaveCount(6);
     await expect(toc.getByRole("link").first()).toHaveText(await page.locator("#bench-ocr-title").innerText());
 
     await page.goto("./testing/");
@@ -131,7 +131,7 @@ test.describe("寬螢幕的左欄", () => {
     expect(await aside.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);
     await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
     const current = page.getByTestId("aside-toc").locator('[aria-current="location"]');
-    await expect(current).toHaveText("密語的字詞表");
+    await expect(current).toHaveText("裝置量測的範例錄音");
     await expect(current).toBeInViewport();
   });
 
