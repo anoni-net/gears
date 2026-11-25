@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { PDFDocument, StandardFonts } from "pdf-lib";
 import { assetsUrl } from "../../src/core/models.ts";
 import { PII_MODEL } from "../../src/tools/redact/pii-model.ts";
 import { type Guard, expect, test } from "./guard.ts";
@@ -28,6 +29,23 @@ async function screenshot(page: Page) {
     return Array.from(new Uint8Array(await b.arrayBuffer()));
   });
   return Buffer.from(data);
+}
+
+// 有文字層的 PDF，內容跟上面的截圖相同（Helvetica 只有英文與數字）
+async function contactPdf(): Promise<Buffer> {
+  const doc = await PDFDocument.create();
+  const font = await doc.embedFont(StandardFonts.Helvetica);
+  const pdfPage = doc.addPage([400, 200]);
+  pdfPage.drawText("Meet Kevin Lin tomorrow", { x: 40, y: 160, size: 14, font });
+  pdfPage.drawText("He works at Acme Trading Co.", { x: 40, y: 130, size: 14, font });
+  pdfPage.drawText("Call 0912-345-678", { x: 40, y: 100, size: 14, font });
+  return Buffer.from(await doc.save());
+}
+
+async function openRedactPdf(page: Page) {
+  await page.goto("./redact/");
+  await page.getByTestId("file-input").setInputFiles({ name: "contact.pdf", mimeType: "application/pdf", buffer: await contactPdf() });
+  await expect(page.getByTestId("redact-canvas")).toBeVisible();
 }
 
 async function openRedact(page: Page) {
@@ -142,6 +160,39 @@ test("找人名、地址與單位：辨識文字之後交給模型，人名與�
   await page.getByRole("button", { name: "取消" }).click();
   await page.goto("./storage/");
   await expect(page.getByText("找人名、地址與單位的模型")).toBeVisible();
+  forgetRouted(guard);
+});
+
+test("找人名、地址與單位：PDF 讀文字層交給模型，不下載辨識模型，模型的內容對不上時停下來", async ({ page, guard }) => {
+  test.setTimeout(120_000);
+  const asked: string[] = [];
+  let ocr = false;
+  page.on("request", (r) => {
+    if (/models\/ppocr\//.test(r.url())) ocr = true;
+  });
+  await page.context().route(`${DIR}**`, (route) => {
+    asked.push(route.request().url());
+    return route.fulfill({ status: 200, body: "not the model" });
+  });
+  await openRedactPdf(page);
+  await startModel(page);
+  await expect(page.getByTestId("redact-auto-status")).toHaveText("沒有辦法執行自動尋找，請手動框選。", { timeout: 90_000 });
+  // 文字層有字，所以真的去下載了模型，文字層之外沒有圖片，不必辨識
+  expect(asked.length).toBeGreaterThan(0);
+  expect(ocr).toBe(false);
+  forgetRouted(guard);
+});
+
+test("找人名、地址與單位：PDF 的人名與公司另外加上框", async ({ page, guard, browserName }) => {
+  test.skip(browserName !== "chromium", "真的模型只在 Chromium 載入");
+  test.skip(process.env.GEARS_PII_MODEL !== "1", "真的下載模型（約 200 MB）要設 GEARS_PII_MODEL=1");
+  test.setTimeout(240_000);
+  await openRedactPdf(page);
+  await startModel(page);
+  const status = page.getByTestId("redact-auto-status");
+  await expect(status).toHaveText(/^加了 \d+ 個框/, { timeout: 200_000 });
+  const n = Number((await status.textContent())!.match(/加了 (\d+) 個框/)![1]);
+  expect(n).toBeGreaterThanOrEqual(3);
   forgetRouted(guard);
 });
 

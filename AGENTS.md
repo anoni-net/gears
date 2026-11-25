@@ -193,7 +193,7 @@ CI（`.github/workflows/ci.yml`）依瀏覽器拆開，每個瀏覽器再用 Pla
 
 ### 個資辨識模型
 
-規則找不到的人名、地址與單位，用個資辨識模型 nym-pii 補上（#187，2026-11-21 起，模型與下載見下方「裝置量測」的「個資辨識」）。第一版只做圖片，2026-11-25 接上檢查畫面內容（見下方「檢查畫面內容」），PDF、寫作習慣檢查與逐字稿之後接上。社群工作區的評測（`research/gears-ocr/` 的 `pipeline.mjs`）在 196 張合成截圖上，規則加上模型蓋住 74% 的個資，規則本身 15%，每張多框 0.10 處。
+規則找不到的人名、地址與單位，用個資辨識模型 nym-pii 補上（#187，2026-11-21 起，模型與下載見下方「裝置量測」的「個資辨識」）。第一版只做圖片，2026-11-25 接上檢查畫面內容（見下方「檢查畫面內容」）與 PDF 的遮蔽，寫作習慣檢查與逐字稿之後接上。社群工作區的評測（`research/gears-ocr/` 的 `pipeline.mjs`）在 196 張合成截圖上，規則加上模型蓋住 74% 的個資，規則本身 15%，每張多框 0.10 處。
 
 - 按鈕「找人名、地址與單位」前面帶著大腦圖示（開源本機模型的標籤）。還沒辨識過文字時先辨識，規則找到的電話、Email 一起加上，模型找到的框跟規則的框一次加上，重疊的只留一個（`addFound` 讀的是上一次畫面更新時的框，連續呼叫兩次會漏算）。框直接加上、讀者逐一確認，評測裡每張只多框 0.10 處，不另外畫「可能是」的虛線
 - 流程（`src/ui/pii-detect.ts`）：文字辨識讀出的每一行（`findText` 的 `texts`，`pii.ts` 的 `lineTexts`）留著，再按一次不必重新辨識。`chunkLines` 依行分塊（每塊不超過 3,000 字，模型一次最多讀 8,192 個詞元，超過的部分會被截掉、不會報錯），`joinLines` 接成一段、行與行之間放換行，字與字之間補上的空白只在兩邊都是英數時留著，跟評測的做法相同。Worker（`src/ui/pii.worker.ts`）找到的範圍由 `spanBoxes` 換回字框，往外多留 15%，跟規則的框一樣
@@ -203,7 +203,7 @@ CI（`.github/workflows/ci.yml`）依瀏覽器拆開，每個瀏覽器再用 Pla
 - 關掉 WebAssembly 時說明原因、不下載模型，讀不到 canvas 時照其他自動尋找的做法
 - 「已下載的模型」把它列成獨立的一列（`storage.item.pii`，`classify` 依網址裡的模型目錄分出來），刪語言模型時不會一起刪掉
 - 授權與來源寫在 `licenses/redact-detect.txt`
-- 瀏覽器測試在 `tests/e2e/redact-model.spec.ts`：攔下模型的請求、回內容不對的檔案時停下來，記號還在時不提供按鈕，關掉 WebAssembly 的情況在 `wasm-unavailable.spec.ts`。真的下載與載入只在本機設了 `GEARS_PII_MODEL=1` 時執行（`GEARS_PII_MODEL=1 npx playwright test tests/e2e/redact-model.spec.ts --project=chromium`），請求直接經過 Cloudflare 的快取到 assets.anoni.net：從測試裡攔下再回 194 MB 的檔案太慢，200 秒還在下載。CI 不執行這一項，assets.anoni.net 連不上時會擋住部署（2026-11-21 決定），改模型或流程時在本機執行一次。2026-11-21 在 M5 Pro 的 Chromium（正式建置、還沒有快取）下載加辨識約 12 秒，英文的截圖裡人名、公司與電話都框到
+- 瀏覽器測試在 `tests/e2e/redact-model.spec.ts`：攔下模型的請求、回內容不對的檔案時停下來（圖片與有文字層的 PDF，PDF 不下載辨識模型），記號還在時不提供按鈕，關掉 WebAssembly 的情況在 `wasm-unavailable.spec.ts`。真的下載與載入只在本機設了 `GEARS_PII_MODEL=1` 時執行（`GEARS_PII_MODEL=1 npx playwright test tests/e2e/redact-model.spec.ts --project=chromium`），請求直接經過 Cloudflare 的快取到 assets.anoni.net：從測試裡攔下再回 194 MB 的檔案太慢，200 秒還在下載。CI 不執行這一項，assets.anoni.net 連不上時會擋住部署（2026-11-21 決定），改模型或流程時在本機執行一次。2026-11-21 在 M5 Pro 的 Chromium（正式建置、還沒有快取）下載加辨識約 12 秒，英文的截圖裡人名、公司與電話都框到
 
 ## 檢查畫面內容
 
@@ -274,6 +274,7 @@ CI（`.github/workflows/ci.yml`）依瀏覽器拆開，每個瀏覽器再用 Pla
 - 沒有文字層（掃描檔、字形畫成路徑），或兩成以上是私用區字元與 `U+FFFD`（缺少 ToUnicode，讀出來是亂碼）時，整頁辨識，跟圖片一樣
 - 頁面上的圖片從 `getOperatorList()` 追蹤座標變換，算出畫在畫布上的範圍（`imageRegions`），只辨識那幾塊，結果跟文字層合在一起，重疊的框只留一個。邊長不到 16 像素的不算，蓋住六成以上的頁面時整頁辨識，算不出位置的畫法（`paintInlineImageXObjectGroup`）也是
 - 只讀文字層時不讀 canvas，也不需要 WebAssembly：Tor Browser 不必先允許，鎖定模式照樣找得到。需要辨識時才檢查，關掉 WebAssembly 時圖片裡的字略過
+- 「找人名、地址與單位」（2026-11-25 起，見上方「個資辨識模型」）對目前這一頁執行：`findPdfText` 的 `texts` 是文字層的每一行（`TextLine` 跟 `LineText` 同一種格式），頁面上的圖片辨識出來的行接在後面，掃描檔與亂碼的頁面是整頁辨識的結果。有文字層時不下載辨識模型，換頁時清掉。文字畫在頁面外時，框限制在頁面裡之後沒有範圍的不算（`pii-detect.ts`）。全形英數照原樣交給模型，只有規則的比對換成半形
 
 測試（`tests/e2e/redact-pdf.spec.ts`）用 pdf-lib 組出兩頁、有文字與作者的 PDF，遮蔽之後確認檔案裡沒有原本的文字、作者與字型，每一頁都是 JPEG，框起來的地方是黑的。中文字型在本機另外驗證過兩種：LibreOffice 轉出、內嵌 Noto Serif CJK 的 PDF，以及引用未內嵌字型 `MSung-Light`、編碼 `UniCNS-UCS2-H` 的 PDF（要靠 CMap），Chromium、WebKit、Firefox 都畫得出字，自動找個資也找得到電話與 Email。改讀文字層之後，瀏覽器測試另外確認有文字層的 PDF 不下載辨識模型、框蓋住原本的文字，貼在頁面上的圖片另外辨識（`tests/helpers/text-pdf.ts`），以及關掉 WebAssembly、讀不到 canvas 時照樣找得到。2026-10-21 在本機用 LibreOffice 匯出的中文 PDF（電話、市話、Email、@帳號、表格裡的身分證與帳號）、`MSung-Light` 的橫書與直書（全形數字）、`/Rotate 90` 的頁面，在三種瀏覽器核心截圖確認框的位置。
 
