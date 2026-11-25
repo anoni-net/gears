@@ -43,7 +43,8 @@ export type WarningCode =
   | "c2pa-revoked"
   | "pdf-signature-invalid"
   | "pdf-timestamp-invalid"
-  | "pdf-signature-revoked";
+  | "pdf-signature-revoked"
+  | "pdf-chain-revoked";
 
 export interface Warning {
   code: WarningCode;
@@ -141,6 +142,12 @@ function fileWarnings(f: CaseFile): Warning[] {
   // 撤銷的時間晚於可信的時間戳記時，簽章在撤銷之前就已經存在，不列
   const revoked = ev.signatures.find((s) => s.check?.revocation?.status === "revoked" && !s.check.revocation.afterTimestamp);
   if (revoked) out.push({ code: "pdf-signature-revoked", files: [f.index], value: revoked.check!.signer });
+  // 憑證鏈上的中繼憑證，或時間戳記服務的憑證被撤銷。value 是那張憑證的主體
+  const chainRevoked = ev.signatures.flatMap((s) => [
+    ...(s.check?.chainRevocation ?? []).filter((c) => c.check.status === "revoked" && !c.check.afterTimestamp).map((c) => c.subject),
+    ...(s.check?.timestamp?.revocation?.status === "revoked" ? [s.check.timestamp.tsa ?? ""] : []),
+  ]);
+  if (chainRevoked.length) out.push({ code: "pdf-chain-revoked", files: [f.index], value: chainRevoked[0] });
   if (ev.revisions.length) out.push({ code: "pdf-revisions", files: [f.index], value: String(ev.revisions.length + 1) });
   if (ev.docCheck?.connect) out.push({ code: "doc-connects", files: [f.index], value: String(ev.docCheck.connect) });
   else if (ev.docCheck?.code) out.push({ code: "doc-code", files: [f.index] });
