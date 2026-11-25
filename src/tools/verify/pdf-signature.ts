@@ -44,6 +44,7 @@ export interface TimestampCheck {
   chain: "trusted" | "untrusted";
   root?: string;
   revocation?: RevocationCheck; // 時間戳記服務的憑證，憑證鏈接到內建的根憑證時才有
+  chainRevocation?: { subject: string; check: RevocationCheck }[]; // 時間戳記服務憑證鏈上的中繼憑證（#229）
 }
 
 export interface RevocationCheck {
@@ -356,12 +357,16 @@ async function chainRevocations(lib: Lib, path: Pkijs.Certificate[], data: Revoc
   return out;
 }
 
-// 時間戳記服務的憑證：簽發者是鏈上的下一張。被撤銷的時間戳記服務，它證明的時間不能採信
+// 時間戳記服務的憑證與它憑證鏈上的中繼憑證（#229）：簽發者是鏈上的下一張。任何一張被撤銷，
+// 時間戳記證明的時間都不能採信，不分撤銷的時間（私鑰外洩時，撤銷之前產生的時間戳記也可能是偽造的）
 async function tsaRevocation(lib: Lib, result: TokenResult, data: Revocations): Promise<boolean> {
-  const issuer = result.path?.[1];
-  if (!issuer) return true;
-  result.check.revocation = await revocationOf(lib, result.path![0]!, issuer, data);
-  return result.check.revocation.status !== "revoked";
+  const path = result.path;
+  const issuer = path?.[1];
+  if (!path || !issuer) return true;
+  result.check.revocation = await revocationOf(lib, path[0]!, issuer, data);
+  const chain = await chainRevocations(lib, path, data);
+  if (chain.length) result.check.chainRevocation = chain;
+  return result.check.revocation.status !== "revoked" && !chain.some((c) => c.check.status === "revoked");
 }
 
 export async function verifyPdfSignature(bytes: Uint8Array, input: PdfSignatureInput, trust: TrustStore): Promise<PdfSignatureCheck> {
