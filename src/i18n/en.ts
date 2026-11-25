@@ -1856,7 +1856,7 @@ export const en: Record<MessageKey, string> = {
   "email.howTo": "How to get the original message",
   "email.howTo.gmail": "Gmail: open the email, click ⋮ at the top right, choose Show original, then Copy to clipboard.",
   "email.howTo.outlook": "Outlook on the web: open the email, press “⋯” (More actions), then under “View” choose “View message details” (some versions call it “View message source”).",
-  "email.howTo.apple": "Mail on Mac: open the email and choose View, Message, Raw Source from the menu bar. Showing only all headers leaves out the body of the email.",
+  "email.howTo.apple": "Mail on Mac: select the email and press Option-Command-U (⌥⌘U) to open its full original source. You can also choose View, Message, Raw Source from the menu bar. Showing only all headers leaves out the body of the email.",
   "email.howTo.thunderbird": "Thunderbird: open the email and press Ctrl+U (⌘+U on Mac).",
   "email.howTo.proton": "Proton Mail: open the email and choose Download from the more options (⋯) menu to save an .eml file.",
   "email.howTo.mobile": "Most phone mail apps cannot show the original message, so use the web version on a computer.",
