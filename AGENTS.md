@@ -74,7 +74,7 @@ npm run build:server # 轉送服務打包成 dist-server/relay.mjs，node script
 
 第一次執行瀏覽器測試前要下載核心：`npx playwright install chromium webkit firefox`。Linux 上的 WebKit 另外需要系統函式庫，有 sudo 權限時用 `npx playwright install-deps webkit` 安裝，CI 用 `--with-deps` 一併處理。
 
-CI（`.github/workflows/ci.yml`）依瀏覽器拆成四台機器同時執行：Chromium（加上單元測試與型別檢查）、Firefox、WebKit、iPhone。GitHub 的機器只有 4 核心，Playwright 只開 2 個 worker，全部放在一台要 6 分鐘左右。四台都通過才算通過，部署（`deploy.yml`）等的就是它。每台的上限是 30 分鐘：GitHub 機器的 apt 有時很慢，2026-11-19 安裝 ffmpeg 與瀏覽器的相依套件就花掉 10 分鐘以上，原本 15 分鐘的上限讓測試還沒執行完就被中止，部署跟著停住。新增 Playwright 的 project 時，矩陣也要加一列。兩個 workflow 都設了 `ONNXRUNTIME_NODE_INSTALL=skip`：onnxruntime-node（Transformers.js 的相依套件）安裝時會從 nuget.org 另外下載 Linux 的 CUDA 檔案，GitHub 的機器連不上時 `npm ci` 整個失敗（2026-11-20 遇到兩次），網頁與單元測試都用不到。
+CI（`.github/workflows/ci.yml`）依瀏覽器拆開，每個瀏覽器再用 Playwright 的 `--shard` 分成幾片，十台機器同時執行：Chromium、Firefox 各兩片，WebKit、iPhone 各三片，單元測試、型別檢查、轉送服務與 onion 版放在 Chromium 的第一片。2026-11-25 以前一個瀏覽器一台，GitHub 的機器只有 4 核心，Playwright 只開 2 個 worker，測試本身要 5 到 10 分鐘，iPhone 與 WebKit 最慢。分片照測試的數量切、不照時間，逐字稿這類重的測試排在後面，所以 WebKit 與 iPhone 多切一片。#222 先試 WebKit 兩片，第二片的測試要 6 分鐘，成為整次 CI 最慢的一台（7.3 分鐘），iPhone 三片每片約 3 分鐘，之後 WebKit 改成三片。改成三片之後整次 CI 5.1 分鐘，每台 3 到 5 分鐘，最慢的是多做單元測試與 onion 版的 Chromium 第一片。單元測試另外執行一次 playwright，跟 Chromium 一起分片的話，第一片會分到全部的單元測試，兩片很不平均。每一片都通過才算通過，部署（`deploy.yml`）等的就是它。同一個 PR 推了新的 commit 時，前一次還在執行的 CI 會取消（`concurrency`）。main 的每一筆用 commit 分組，不取消也不排隊：同一組裡只能一個在執行、一個在等，用分支分組的話，接連合併時後面的要排隊，中間的還會被取消。GitHub Free 的 organization 同時最多 20 個 job，一次 CI 是 10 個，PR 與 main 的 CI 重疊時剛好 20 個，加片之前先算一下會不會超過。每台的上限是 30 分鐘：GitHub 機器的 apt 有時很慢，2026-11-19 安裝 ffmpeg 與瀏覽器的相依套件就花掉 10 分鐘以上，原本 15 分鐘的上限讓測試還沒執行完就被中止，部署跟著停住。新增 Playwright 的 project 時，矩陣也要加上它的每一片。兩個 workflow 都設了 `ONNXRUNTIME_NODE_INSTALL=skip`：onnxruntime-node（Transformers.js 的相依套件）安裝時會從 nuget.org 另外下載 Linux 的 CUDA 檔案，GitHub 的機器連不上時 `npm ci` 整個失敗（2026-11-20 遇到兩次），網頁與單元測試都用不到。
 
 開發伺服器沒有 CSP，瀏覽器測試用的是 `vite preview` 提供的正式建置，CSP 會一起生效。
 
@@ -862,7 +862,7 @@ ProofMode（Guardian Project 給人權紀錄者的 Android App）拍照時不改
 
 - 頁面只連自己的網域，以及建議與回饋的送出網址（onion 的表單伺服器，見上方「建議與回饋」）。使用統計在建置時整段拿掉，頁尾寫明不記錄。社群轉檔的模型改由 onion 網站的 `/models/assets/` 提供，m6 的 nginx 指到 `assets.anoni.net` 的同一份檔案。分享卡片的圖片放在 clearnet，不放。逐字稿的 large-v3-turbo 仍然在讀者選擇之後從 Hugging Face 下載，經過 Tor 網路
 - 頁尾連到 onion 的社群首頁
-- `node scripts/check-site.mjs dist-onion / --onion` 檢查頁面、程式、樣式與 manifest 沒有連到 clearnet 的 anoni.net（授權說明的文字檔會寫到出處，不算）。`npm run test:onion` 建置之後在根目錄執行冒煙測試（`tests/onion/`），CI 在 Chromium 那台執行
+- `node scripts/check-site.mjs dist-onion / --onion` 檢查頁面、程式、樣式與 manifest 沒有連到 clearnet 的 anoni.net（授權說明的文字檔會寫到出處，不算）。`npm run test:onion` 建置之後在根目錄執行冒煙測試（`tests/onion/`），CI 在 Chromium 的第一片執行
 - 部署：`deploy.yml` 建置兩份，onion 版推到 `build` 分支的 `onion/`，標頭是 `deploy/nginx-headers-onion.conf`，m6 的拉取腳本換到 `/etc/nginx/snippets/gears-onion-headers.conf`。nginx 的 server block 與快取的對照（`$gears_onion_cache_control`）在 `tools/nginx-gears.conf`
 
 Tor Browser 15.0（Firefox 140 ESR）一般安全等級的實測結果：
