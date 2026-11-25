@@ -141,7 +141,8 @@ export function RedactEditor({ blob, format, found, onDone, onCancel }: FileEdit
   } | null>(() => (preset ? { kind: "check", state: "done", n: preset.boxes.length } : null));
   const [textLines, setTextLines] = useState<Box[]>([]);
   // 個資辨識模型（#187，src/ui/pii-detect.ts）：文字辨識讀出的每一行留著，按「找人名、地址與單位」時不必重新辨識。
-  // 只做圖片，PDF 之後接上。上一次用模型時頁面被重新載入（多半是記憶體不夠）的話，這個分頁不再提供
+  // PDF 讀這一頁的文字層，頁面上的圖片與掃描檔才辨識（findPdfText），換頁時清掉。
+  // 上一次用模型時頁面被重新載入（多半是記憶體不夠）的話，這個分頁不再提供
   const texts = useRef<LineText[] | null>(null);
   const detector = useMemo(() => piiDetector(), []);
   useEffect(() => () => detector.dispose(), [detector]);
@@ -203,6 +204,7 @@ export function RedactEditor({ blob, format, found, onDone, onCancel }: FileEdit
     setAuto(null);
     setMaybe([]);
     setTextLines([]);
+    texts.current = null;
     setCursor(null);
     setCorner(null);
     pdf
@@ -406,7 +408,7 @@ export function RedactEditor({ blob, format, found, onDone, onCancel }: FileEdit
       } else {
         const { pii, lines, texts: read } = pdf ? await findPdfText(pdf, pageIndex, bitmap, onProgress, wasm) : await findText(bitmap, onProgress);
         setTextLines(lines);
-        if (!pdf) texts.current = read;
+        texts.current = read;
         const found = kind === "lines" ? lines : pii.map((m) => m.box);
         setAuto({ kind, state: "done", n: addFound(found) || found.length });
       }
@@ -423,7 +425,7 @@ export function RedactEditor({ blob, format, found, onDone, onCancel }: FileEdit
   // 用開源本機模型找人名、地址與單位。還沒辨識過文字時先辨識，規則找到的電話、Email 一起加上。
   // 框一次加上（addFound 讀的是上一次畫面更新時的框，連續呼叫兩次會漏算）
   const runModel = async (confirmed = phoneAsk === "ok") => {
-    if (!bitmap || pdf) return;
+    if (!bitmap) return;
     if (!wasmAvailable()) {
       trackFail("redact", "wasm-unavailable");
       setAuto({ kind: "model", state: "noWasm", n: 0 });
@@ -442,9 +444,10 @@ export function RedactEditor({ blob, format, found, onDone, onCancel }: FileEdit
       let rules: Box[] = [];
       if (!lines) {
         setAuto({ kind: "text", state: "running", n: 0, progress: null });
-        assertCanvasReadable();
-        const { findText } = await import("./redact-detect.ts");
-        const read = await findText(bitmap, progressOf("text"));
+        // PDF 讀文字層時不讀 canvas，需要辨識時由 findPdfText 檢查
+        if (!pdf) assertCanvasReadable();
+        const { findPdfText, findText } = await import("./redact-detect.ts");
+        const read = pdf ? await findPdfText(pdf, pageIndex, bitmap, progressOf("text")) : await findText(bitmap, progressOf("text"));
         setTextLines(read.lines);
         texts.current = lines = read.texts;
         rules = read.pii.map((m) => m.box);
@@ -473,7 +476,7 @@ export function RedactEditor({ blob, format, found, onDone, onCancel }: FileEdit
     return t(download.stored ? "redact.download.first" : "redact.download.always", { list: list(parts) });
   })();
   // 找人名、地址與單位只做圖片。模型還沒下載時寫下載量與手機記憶體的提醒
-  const modelAvailable = !isPdf && !crashed;
+  const modelAvailable = !crashed;
 
   const autoMessage = (a: typeof auto): string => {
     // 圖片還在解碼時也顯示在這裡，不另佔一行，解碼完圖片不會往上跳
@@ -542,7 +545,7 @@ export function RedactEditor({ blob, format, found, onDone, onCancel }: FileEdit
           </p>
         ) : null}
       </EditorHelp>
-      {crashed && !isPdf ? (
+      {crashed ? (
         <p class="callout" data-testid="redact-model-crashed">
           {t("redact.model.crashed")}
         </p>

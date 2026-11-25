@@ -108,7 +108,7 @@ function logFaces(bitmap: ImageBitmap, found: Detection[], faces: Box[], maybe: 
 export interface TextResult {
   pii: PiiMatch[];
   lines: Box[]; // 每一行文字的範圍，讀者想把文字全部框起來時用
-  texts: LineText[]; // 每一行的文字與每個字的框，個資辨識模型讀這一份（pii-detect.ts），PDF 的文字層沒有
+  texts: LineText[]; // 每一行的文字與每個字的框，個資辨識模型讀這一份（pii-detect.ts）。PDF 是文字層的每一行，加上頁面上圖片的辨識結果
   // 照辨識原文的每一行（不補空白，ppocr.ts 的 ocrLineText），從截圖讀出網址與複製讀出的文字用。PDF 的文字層沒有
   ocr: LineText[];
 }
@@ -166,13 +166,14 @@ export async function findPdfText(pages: PdfPages, index: number, bitmap: ImageB
   const lines = textLines(runs);
   const pii = findPiiInLines(lines, width, height).map((m) => ({ ...m, box: pad(m.box, 0.15, width, height) }));
   const spans = lineBoxes(lines, width, height).map((box) => pad(box, 0.1, width, height));
-  if (!ocr || (images !== "page" && !images.length)) return { pii, lines: spans, texts: [], ocr: [] };
+  if (!ocr || (images !== "page" && !images.length)) return { pii, lines: spans, texts: lines, ocr: [] };
   assertCanvasReadable();
   const found = await findText(bitmap, onProgress, images === "page" ? undefined : images);
   return {
     pii: [...pii, ...found.pii.filter((m) => !pii.some((p) => overlaps(p.box, m.box)))],
     lines: [...spans, ...found.lines.filter((box) => !spans.some((s) => overlaps(s, box)))],
-    texts: [],
+    // 圖片裡的字接在文字層後面交給模型，各自一行，不跟文字層的行接在一起
+    texts: [...lines, ...found.texts],
     ocr: [],
   };
 }

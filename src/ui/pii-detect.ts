@@ -6,8 +6,8 @@ import { type ModelMatch, PII_MODEL, chunkLines, joinLines, spanBoxes } from "..
 import type { PiiReply, PiiRequest } from "./pii.worker.ts";
 import workerUrl from "./pii.worker.ts?worker&url";
 
-// 遮蔽的「用開源本機模型找人名、地址與單位」（#187）：文字辨識讀出的每一行交給個資辨識模型（Worker 是 pii.worker.ts），
-// 找到的範圍換回圖片上的框。模型約 200 MB，第一次用到時下載，存在 transformers-cache，量測頁用同一份。
+// 遮蔽的「用開源本機模型找人名、地址與單位」（#187）：文字辨識讀出的每一行（PDF 是文字層的每一行）交給個資辨識模型
+// （Worker 是 pii.worker.ts），找到的範圍換回圖片上的框。模型約 200 MB，第一次用到時下載，存在 transformers-cache，量測頁用同一份。
 //
 // 手機的記憶體不夠時，系統會把分頁重新載入，暫存區與畫到一半的框都會不見。開始之前在 sessionStorage 記下，
 // 做完、失敗或取消時清掉。打開遮蔽時記號還在，代表上一次做到一半被重新載入，畫面說明原因，同一個分頁
@@ -48,7 +48,7 @@ export async function piiStored(): Promise<boolean> {
 let workers = 0;
 
 export interface PiiDetector {
-  // lines 是文字辨識讀出的每一行（字與字框），width、height 是圖片的大小。
+  // lines 是文字辨識讀出的每一行或 PDF 文字層的每一行（字與字框），width、height 是圖片或頁面畫布的大小。
   // onProgress：下載時是 0 到 1，載入與辨識時是 null
   find(lines: LineText[], width: number, height: number, onProgress?: (p: number | null) => void): Promise<ModelMatch[]>;
   dispose(): void;
@@ -81,7 +81,10 @@ export function piiDetector(): PiiDetector {
           worker!.postMessage({ texts: chunks.map((c) => c.text) } satisfies PiiRequest);
         });
         return chunks.flatMap(({ chunk, at }, i) =>
-          spanBoxes(chunk, at, spans.spans[i] ?? []).map((m) => ({ ...m, box: pad(m.box, 0.15, width, height) as Box })),
+          spanBoxes(chunk, at, spans.spans[i] ?? [])
+            .map((m) => ({ ...m, box: pad(m.box, 0.15, width, height) as Box }))
+            // PDF 的文字可能畫在頁面外，限制在頁面裡之後沒有範圍的不算
+            .filter((m) => m.box.w > 0 && m.box.h > 0),
         );
       } finally {
         stop = null;
