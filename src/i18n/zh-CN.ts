@@ -923,7 +923,7 @@ export const zhCN: Record<MessageKey, string> = {
   "url.warn.userinfo": "网址里有 @，前面的「{detail}」只是用户名，真正连到的是 @ 后面的域名",
   "url.warn.port": "网址指定了端口 {detail}（域名后面冒号接着的数字），一般网站不会这样写",
   "url.warn.http": "没有加密（http），连接过程中的内容可能被看到或修改",
-  "url.warn.ip": "直接用 IP 地址（{detail}），一般网站会用域名名称",
+  "url.warn.ip": "直接用 IP 地址（{detail}），一般网站会用域名",
   "url.warn.idn": "域名含有非英文字母，实际显示成 {detail}",
   "url.warn.mixedScript": "「{detail}」混用了拉丁字母与长得很像的其他字母，常见于冒充的域名",
   "url.warn.wholeScript": "「{detail}」全部由长得像英文字母的西里尔字母组成，看起来跟英文域名一模一样",
