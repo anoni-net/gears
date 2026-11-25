@@ -73,7 +73,7 @@ export function KeygenTool({ onCreate }: CreateToolProps) {
       ) : null}
       <div class="buttons">
         <button type="button" class={pair ? "" : "primary"} disabled={!available || busy} onClick={generate}>
-          {busy ? t("keygen.busy") : pair ? t("keygen.again") : t("keygen.generate")}
+          {busy ? t("common.working") : pair ? t("keygen.again") : t("keygen.generate")}
         </button>
       </div>
       {failed ? (
