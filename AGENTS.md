@@ -1248,4 +1248,5 @@ iPhone 預設拍出來的是 HEIC，在網頁上選照片時交出來的也是�
 - 查證驗證 PDF 數位簽章用 [pkijs](https://github.com/PeculiarVentures/PKI.js) 3.4.2（BSD-3-Clause）與它相依的 asn1js 等套件，內建台灣政府憑證總管理中心公開的根憑證與下屬憑證機構的憑證，見 `licenses/pkijs.txt`
 - 查證驗證內容憑證用 [c2pa-web](https://github.com/contentauth/c2pa-js) 0.15.4（MIT，裡面是 [c2pa-rs](https://github.com/contentauth/c2pa-rs) 編成的 WebAssembly），內建 C2PA 的正式信任清單（CC BY 4.0）與過渡信任清單（Apache-2.0），見 `licenses/c2pa.txt`
 - QR code 以外的條碼用 [zxing-wasm](https://github.com/Sec-ant/zxing-wasm) 3.1.4（MIT），它是 [ZXing-C++](https://github.com/zxing-cpp/zxing-cpp)（Apache-2.0）編譯成的 WebAssembly，見 `licenses/zxing.txt`
+- 裝置量測的範例錄音（`public/models/bench/asr-zh.wav`）取自 Google 的 [FLEURS](https://huggingface.co/datasets/google/fleurs) 資料集（CC BY 4.0），華語測試集的三句朗讀接成一段、補上靜音、轉成 16 位元，授權頁與量測頁都寫明出處與修改
 - 165 反詐騙清單見上方，部署時下載，不進版控

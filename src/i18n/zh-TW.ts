@@ -1945,7 +1945,7 @@ export const zhTW = {
   "verify.checkDocument": "開啟前檢查",
   "meta.licenses.description": "檔案工作台用到的第三方程式、模型與資料，以及它們的授權全文。",
   "meta.bench.title": "裝置量測（實驗頁） | Gears 檔案工作台",
-  "meta.bench.description": "在這台裝置的瀏覽器裡量測文字辨識與小型語言模型的速度。給社群收集手機、平板與電腦的數字，決定模型的預設值。",
+  "meta.bench.description": "在這台裝置的瀏覽器裡量測文字辨識、逐字稿與小型語言模型的速度。給社群收集手機、平板與電腦的數字，決定模型的預設值。",
   "meta.feedback.title": "建議與回饋 | Gears 檔案工作台",
   "meta.feedback.description": "許願新功能、回報問題，告訴匿名網路社群 anoni.net 你想在 Gears 檔案工作台看到的工具、功能或檔案格式。",
   "meta.remote-server.title": "遠端傳送的伺服器 | Gears 檔案工作台",
@@ -2403,7 +2403,7 @@ export const zhTW = {
   "feedback.error.other": "送出失敗，填好的內容還在，請稍後再試一次。",
   "bench.title": "裝置量測",
   "bench.desk": "裝置量測（實驗）",
-  "bench.pageIntro": "Gears 的文字辨識、個資辨識與語言模型都在讀者的瀏覽器裡執行，速度取決於裝置。目前手上的數字幾乎都來自同一台電腦，邀請你用自己的手機、平板或舊電腦量測一次，社群會依這些數字決定模型與預設值。量測只用內建的範例，不讀暫存區的檔案。量完可以在最下面送給社群，或按「複製結果」保留下來。",
+  "bench.pageIntro": "Gears 的文字辨識、個資辨識、逐字稿與語言模型都在讀者的瀏覽器裡執行，速度取決於裝置。目前手上的數字幾乎都來自同一台電腦，邀請你用自己的手機、平板或舊電腦量測一次，社群會依這些數字決定模型與預設值。量測只用內建的範例，不讀暫存區的檔案。量完可以在最下面送給社群，或按「複製結果」保留下來。",
   "bench.memory": "瀏覽器回報的記憶體約 {gb} GB。",
   "bench.insecure": "這個網址不是 HTTPS，瀏覽器不提供顯示卡（WebGPU）與多執行緒，只能量 CPU 單執行緒，「複製結果」也不能用。用 https:// 開頭的網址打開，才量得到這兩項。",
   "bench.pii.title": "個資辨識",
@@ -2436,6 +2436,8 @@ export const zhTW = {
   "bench.asr.noWasm": "瀏覽器關掉了 WebAssembly（例如鎖定模式），逐字稿不能用，這一項不能量。",
   "bench.asr.fallback": "拿不到顯示卡，改用 CPU",
   "bench.asr.energy": "語音偵測退回音量判斷",
+  "bench.asr.cached": "模型已在快取裡",
+  "bench.asr.withDownload": "含下載 {s} 秒",
   "bench.asr.col.first": "第一次辨識",
   "bench.asr.col.again": "第二次辨識",
   "bench.asr.col.speed": "速度",
@@ -2575,6 +2577,8 @@ export const zhTW = {
   "licenses.data-165.desc": "網址檢查比對的「遭停止解析涉詐網站」清單，政府資料開放平台資料集 176455，內政部警政署，政府資料開放授權條款第 1 版。",
   "licenses.data-diceware": "密語的字詞表",
   "licenses.data-diceware.desc": "asian-diceware v0.4.0，CC BY 4.0。",
+  "licenses.data-fleurs": "裝置量測的範例錄音",
+  "licenses.data-fleurs.desc": "Google 的 FLEURS 資料集，CC BY 4.0。取華語測試集的三句朗讀（1890、1965、1903）接成一段，句子之間補上 0.6 秒的靜音，存成 16 kHz、16 位元的 WAV。",
 } as const;
 
 export type MessageKey = keyof typeof zhTW;

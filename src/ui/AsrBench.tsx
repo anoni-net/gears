@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "preact/hooks";
+import { isCached } from "../core/models.ts";
 import { t } from "../i18n/index.ts";
 import { ASR_SAMPLE, asrCer } from "../tools/bench/asr.ts";
 import type { Device, GpuInfo } from "../tools/transcribe/device.ts";
@@ -38,8 +39,9 @@ export interface AsrRun extends AsrConfig {
   id: number;
   threads: number;
   used: Device | null; // 實際用的裝置：拿不到顯示卡時 Worker 改用 CPU
-  load: number | null; // 從建立 Worker 到模型載入完成，毫秒
-  bytes: number | null; // 這次實際下載的位元組，已經在快取裡時是 0
+  load: number | null; // 從建立 Worker 到模型載入完成，毫秒，包含下載
+  download: number | null; // 其中下載模型的時間（到最後一次回報下載進度為止），毫秒
+  cached: boolean | null; // 開始之前模型已經在這個瀏覽器的快取裡。從快取讀出也會回報下載進度，所以要另外記
   silero: boolean | null; // 語音偵測用 Silero，false 是退回音量判斷
   ms: number[]; // 每一次辨識的時間
   pieces: number | null; // 送進模型的片段數
@@ -60,6 +62,13 @@ const bytesOf = (c: AsrConfig) => (c.device === "webgpu" ? MODELS[c.model].webgp
 const mb = (bytes: number) => Math.round(bytes / 1e6);
 const label = (c: AsrConfig) => t("bench.asr.config", { model: `Whisper ${c.model}`, device: c.device === "webgpu" ? t("bench.webgpu") : "CPU" });
 const sec = (ms: number) => (ms / 1000).toFixed(2);
+
+// 模型有沒有在快取裡，照逐字稿判斷「已下載」的做法：看那個裝置用的最後一個檔案，解碼器最後才下載
+function modelCached(c: AsrConfig): Promise<boolean> {
+  const files = c.device === "webgpu" ? MODELS[c.model].webgpu.files : MODELS[c.model].files;
+  const file = Object.keys(files).at(-1)!;
+  return isCached(`${BASE}models/whisper/${MODELS[c.model].dir}/${file}`).catch(() => false);
+}
 
 const marked = (): AsrConfig | null => (history.state as Record<string, AsrConfig> | null)?.[MARK] ?? null;
 const mark = (config: AsrConfig | null) => history.replaceState({ ...(history.state as object | null), [MARK]: config }, "");
@@ -112,22 +121,22 @@ export function AsrBench({ env, runs, setRuns, busy, setBusy }: Props) {
     mark(null);
     setRuns((all) => [
       ...all,
-      { ...last, id: ++runIds, threads: DEFAULT_THREADS, used: null, load: null, bytes: null, silero: null, ms: [], pieces: null, cer: null, crashed: true },
+      { ...last, id: ++runIds, threads: DEFAULT_THREADS, used: null, load: null, download: null, cached: null, silero: null, ms: [], pieces: null, cer: null, crashed: true },
     ]);
     setStatus(t("bench.asr.crashed", { config: label(last) }));
   }, []);
   useEffect(() => () => worker.current?.terminate(), []);
 
-  const runOne = (config: AsrConfig, sample: Float32Array) =>
+  const runOne = (config: AsrConfig, sample: Float32Array, cached: boolean) =>
     new Promise<void>((resolve) => {
       const id = ++runIds;
-      setRuns((all) => [...all, { ...config, id, threads: DEFAULT_THREADS, used: null, load: null, bytes: null, silero: null, ms: [], pieces: null, cer: null }]);
+      setRuns((all) => [...all, { ...config, id, threads: DEFAULT_THREADS, used: null, load: null, download: null, cached: null, silero: null, ms: [], pieces: null, cer: null }]);
       const update = (change: (run: AsrRun) => Partial<AsrRun>) => setRuns((all) => all.map((r) => (r.id === id ? { ...r, ...change(r) } : r)));
       const w = new Worker(`${workerUrl}?n=${++workers}`, { type: "module" });
       worker.current = w;
       mark(config);
       const started = performance.now();
-      let downloaded = 0;
+      let downloaded: number | null = null;
       let used: Device = config.device;
       let round = 0;
       let sent = 0;
@@ -149,12 +158,12 @@ export function AsrBench({ env, runs, setRuns, busy, setBusy }: Props) {
       setStatus(t("bench.asr.loading", { config: label(config) }));
       w.onmessage = ({ data }: MessageEvent<Reply>) => {
         if (data.type === "download") {
-          downloaded = data.loaded;
+          downloaded = performance.now() - started;
           setStatus(t("bench.asr.downloading", { config: label(config), loaded: mb(data.loaded), total: mb(data.total) }));
         } else if (data.type === "device") used = data.device;
         else if (data.type === "vad") update(() => ({ silero: data.silero }));
         else if (data.type === "ready") {
-          update(() => ({ load: performance.now() - started, bytes: downloaded, used }));
+          update(() => ({ load: performance.now() - started, download: downloaded, cached, used }));
           recognize();
         } else if (data.type === "segments") {
           text += data.segments.map((s: Segment) => s.text).join("");
@@ -190,7 +199,7 @@ export function AsrBench({ env, runs, setRuns, busy, setBusy }: Props) {
       const sample = await loadSample();
       for (const config of chosen) {
         if (stopped.current) break;
-        await runOne(config, sample);
+        await runOne(config, sample, await modelCached(config));
       }
       if (!stopped.current && !failed.current) setStatus(t("bench.asr.done"));
     } catch (error) {
@@ -298,7 +307,10 @@ export function AsrBench({ env, runs, setRuns, busy, setBusy }: Props) {
                       {run.crashed ? <small>{t("bench.pii.crashedShort")}</small> : null}
                       {run.error ? <small>{t("bench.failed", { message: run.error })}</small> : null}
                     </td>
-                    <td>{run.load !== null ? `${sec(run.load)} s` : pending}</td>
+                    <td>
+                      {run.load !== null ? `${sec(run.load)} s` : pending}
+                      {run.cached ? <small>{t("bench.asr.cached")}</small> : run.download ? <small>{t("bench.asr.withDownload", { s: sec(run.download) })}</small> : null}
+                    </td>
                     <td>{run.ms[0] !== undefined ? `${sec(run.ms[0])} s` : pending}</td>
                     <td>{run.ms[1] !== undefined ? `${sec(run.ms[1])} s` : pending}</td>
                     <td>{x !== null ? `${x.toFixed(2)}×` : pending}</td>

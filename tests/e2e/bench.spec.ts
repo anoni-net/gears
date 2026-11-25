@@ -1,7 +1,13 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import models from "../../src/tools/llm-bench/models.json" with { type: "json" };
+import whisper from "../../src/tools/transcribe/models.json" with { type: "json" };
 import { assetsUrl } from "../../src/core/models.ts";
 import { PII_MODEL } from "../../src/tools/redact/pii-model.ts";
 import { expect, test } from "./guard.ts";
+
+// 逐字稿的區塊用 base 的 CPU 版辨識，CI 有下載（.github/workflows/ci.yml 的 fetch-whisper）
+const BASE_MODEL = join(import.meta.dirname, "../../public/models/whisper", whisper.base.dir, "onnx/decoder_model_merged_quantized.onnx");
 
 test("裝置量測：實驗頁說明下載來源，不進 sitemap，搜尋引擎不收錄", async ({ page, request }) => {
   await page.goto("./bench/");
@@ -187,6 +193,7 @@ test("裝置量測：個資辨識量到一半頁面重新載入時，結果記�
 test("裝置量測：逐字稿用範例錄音量出載入、兩次辨識的時間與字錯率，結果的 JSON 不含辨識出來的文字", async ({ page, browserName }) => {
   // 流程在各核心都一樣，CI 只在 Chromium 實際辨識（base 的 CPU 版，CI 有下載）
   test.skip(browserName !== "chromium", "辨識只在 Chromium 執行");
+  test.skip(!existsSync(BASE_MODEL), "沒有下載 base 模型（node scripts/fetch-whisper.mjs base --no-webgpu）");
   test.setTimeout(240_000);
   await page.goto("./bench/");
   await expect(page.getByTestId("bench-env")).toContainText("核心");
@@ -208,6 +215,9 @@ test("裝置量測：逐字稿用範例錄音量出載入、兩次辨識的時�
   expect(run).toMatchObject({ model: "base", device: "wasm", used: "wasm", dtype: "q8", silero: true });
   expect(run.ms).toHaveLength(2);
   expect(run.load).toBeGreaterThan(0);
+  // 測試擋掉 service worker，模型不在快取裡，載入時間包含下載
+  expect(run.cached).toBe(false);
+  expect(run.download).toBeGreaterThanOrEqual(0);
   expect(run.pieces).toBeGreaterThan(0);
   // base 在華語朗讀的字錯率不低，只確認真的辨識出了接近的內容
   expect(run.cer).toBeLessThan(0.6);
