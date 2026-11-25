@@ -205,7 +205,7 @@ test("C2PA 內容憑證：身分聲明的帳號與 AI 訓練的標示，影片�
   // 驗證簽發者要連線取得 did:web 的金鑰，頁面的 CSP 擋下，內容憑證本身照樣有效
   await expect(identity.getByText("身分聲明的簽發者要連線才能確認，這裡不連線，列出的帳號沒有經過驗證")).toBeVisible();
   await expect(identity.getByText("C2PA 內容憑證：驗證沒有通過")).toHaveCount(0);
-  await expect(card("training.jpg").getByText("創作者對 AI 使用的標示：不允許用於 AI 推論、不允許用於生成式 AI 訓練")).toBeVisible({ timeout: 30000 });
+  await expect(card("training.jpg").getByText("創作者對 AI 使用的標示：不允許用於 AI 推論（把內容交給 AI 模型產生結果）、不允許用於生成式 AI 訓練")).toBeVisible({ timeout: 30000 });
   await expect(card("clip.mp4").getByText("C2PA 內容憑證：簽章有效，但簽署者不在信任清單裡，無法確認是誰簽的")).toBeVisible({ timeout: 30000 });
 });
 
