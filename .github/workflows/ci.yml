@@ -14,32 +14,44 @@ permissions:
 env:
   ONNXRUNTIME_NODE_INSTALL: skip
 
+# 同一個 PR 推了新的 commit，前一次還在執行的就取消。main 的每一筆自成一組，互不等待也不取消：
+# 同一組裡只能一個在執行、一個在等，接連合併時後面的要排隊，中間的還會被取消
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
-  # 依瀏覽器拆成四台機器同時跑。GitHub 的機器是 4 核心，Playwright 只開 2 個 worker，
-  # 全部放在一台要 6 分鐘左右。單元測試與型別檢查很快，跟 Chromium 放在同一台。
-  # 四台都通過，這個 workflow 才算通過，deploy.yml 等的就是它
+  # 瀏覽器測試依瀏覽器拆開，每個瀏覽器再用 Playwright 的 --shard 分成幾片，各自一台機器同時執行。
+  # 公開 repo 的 GitHub 機器是 4 核心、16 GB，Playwright 開 2 個 worker，原本一個瀏覽器一台時
+  # 測試本身要 5 到 10 分鐘，iPhone 最慢。分片照測試的數量切，不照時間，逐字稿的測試排在後面，
+  # 所以 iPhone 切三片。2026-11-25 用一次 CI 的每項時間估算，最慢的一片連同安裝約 5 到 6 分鐘，
+  # 原本最慢的一台是 8 到 11 分鐘。
+  # 單元測試、型別檢查、轉送服務與 onion 版只做一次，放在 Chromium 的第一片。單元測試另外執行一次
+  # playwright，跟 Chromium 一起分片的話，第一片會分到全部的單元測試（數量多但很快），兩片很不平均。
+  # 每一片都通過，這個 workflow 才算通過，deploy.yml 等的就是它。
+  # Free 方案的 organization 同時最多 20 個 job，這裡一次是 9 個，PR 與 main 的 CI 重疊時仍在上限以內
   test:
-    name: test (${{ matrix.name }})
+    name: test (${{ matrix.name }} ${{ matrix.shard }}/${{ matrix.total }})
     runs-on: ubuntu-latest
-    # 測試本身約 6 分鐘，但 GitHub 機器的 apt 有時很慢，安裝 ffmpeg 與瀏覽器的相依套件
-    # 就花掉 10 分鐘以上（2026-11-19 連續好幾次），15 分鐘的上限會讓還沒執行完的測試被中止
+    # 每片的測試估計 2 到 5 分鐘，但 GitHub 機器的 apt 有時很慢，安裝 ffmpeg 與瀏覽器的相依套件
+    # 就花掉 10 分鐘以上（2026-11-19 連續好幾次），上限留寬
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
         include:
-          - name: chromium
-            projects: --project=unit --project=chromium
-            browser: chromium
-          - name: firefox
-            projects: --project=firefox
-            browser: firefox
-          - name: webkit
-            projects: --project=webkit
-            browser: webkit
-          - name: iphone
-            projects: --project=iphone
-            browser: webkit
+          - { name: chromium, project: chromium, browser: chromium, shard: 1, total: 2 }
+          - { name: chromium, project: chromium, browser: chromium, shard: 2, total: 2 }
+          - { name: firefox, project: firefox, browser: firefox, shard: 1, total: 2 }
+          - { name: firefox, project: firefox, browser: firefox, shard: 2, total: 2 }
+          - { name: webkit, project: webkit, browser: webkit, shard: 1, total: 2 }
+          - { name: webkit, project: webkit, browser: webkit, shard: 2, total: 2 }
+          - { name: iphone, project: iphone, browser: webkit, shard: 1, total: 3 }
+          - { name: iphone, project: iphone, browser: webkit, shard: 2, total: 3 }
+          - { name: iphone, project: iphone, browser: webkit, shard: 3, total: 3 }
+    env:
+      # 只做一次的步驟放在 Chromium 的第一片
+      FIRST: ${{ matrix.name == 'chromium' && matrix.shard == 1 }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -49,10 +61,10 @@ jobs:
       - run: npm ci
       # 瀏覽器測試用 pillow-heif 產生真的 HEIC（tests/global-setup.ts）
       - uses: astral-sh/setup-uv@v10.3.0
-      - if: matrix.name == 'chromium'
+      - if: env.FIRST == 'true'
         run: npm run typecheck
       # 遠端傳送的轉送服務打包成單一個檔案，確認跑得起來（開房、配對、轉送）
-      - if: matrix.name == 'chromium'
+      - if: env.FIRST == 'true'
         run: npm run build:server && node scripts/check-relay.mjs
       # 逐字稿的瀏覽器測試要 Whisper base、分辨說話者的 CAM++ 與 sherpa-onnx 的 WebAssembly（約 80、28、14 MB），
       # 遮蔽的自動尋找要 PP-OCR（約 26 MB），逐字稿的語音偵測要 Silero VAD（約 1.2 MB），都不進 repo，依清單快取
@@ -70,13 +82,15 @@ jobs:
       # 影片的關鍵影格的測試影片（H.264 MP4、VP8 WebM）由 tests/global-setup.ts 用 ffmpeg 產生，
       # GitHub 的 ubuntu 機器沒有預裝
       - run: sudo apt-get install -y --no-install-recommends ffmpeg
-      - run: npx playwright test ${{ matrix.projects }}
+      - if: env.FIRST == 'true'
+        run: npx playwright test --project=unit
+      - run: npx playwright test --project=${{ matrix.project }} --shard=${{ matrix.shard }}/${{ matrix.total }}
       # onion 版（GEARS_TARGET=onion）建得起來、沒有連到 clearnet，網站放在根目錄也打得開
-      - if: matrix.name == 'chromium'
+      - if: env.FIRST == 'true'
         run: npm run test:onion
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
-          name: playwright-results-${{ matrix.name }}
+          name: playwright-results-${{ matrix.name }}-${{ matrix.shard }}
           path: test-results/
           retention-days: 7
