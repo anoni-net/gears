@@ -1879,7 +1879,7 @@ export const zhTW = {
   "email.howTo": "如何取得原始郵件",
   "email.howTo.gmail": "Gmail：開啟信件，按右上角的「⋮」，選「顯示原始郵件」，再按「複製到剪貼簿」（英文介面是 Show original、Copy to clipboard）。",
   "email.howTo.outlook": "Outlook 網頁版：開啟信件，按「⋯」（其他動作），在「檢視」裡選「檢視郵件詳細資料」，有些版本叫「檢視郵件來源」。",
-  "email.howTo.apple": "Mac 的郵件：開啟信件，在選單列的「顯示方式」選「郵件」，再選會顯示整封原始內容的那一項（英文介面叫 Raw Source）。只選「所有標頭」的話，看不到信的內文。",
+  "email.howTo.apple": "Mac 的郵件：選取信件之後按 Option-Command-U（⌥⌘U），就會打開整封信的原始內容，不管介面是什麼語言都一樣。也可以在選單列的「顯示方式」選「郵件」，再選顯示原始內容的那一項（英文介面叫 Raw Source）。只選「所有標頭」的話，看不到信的內文。",
   "email.howTo.thunderbird": "Thunderbird：開啟信件，按 Ctrl+U（Mac 是 ⌘+U）。",
   "email.howTo.proton": "Proton Mail：開啟信件，在更多選項（⋯）裡選擇下載，存成 .eml 檔。",
   "email.howTo.mobile": "手機的郵件 App 多半看不到原始郵件，請改用電腦上的網頁版。",

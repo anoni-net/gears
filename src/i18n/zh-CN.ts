@@ -1857,7 +1857,7 @@ export const zhCN: Record<MessageKey, string> = {
   "email.howTo": "如何取得原始邮件",
   "email.howTo.gmail": "Gmail：打开邮件，按右上角的「⋮」，选「显示原始邮件」，再按「复制到剪贴板」（英文界面是 Show original、Copy to clipboard）。",
   "email.howTo.outlook": "Outlook 网页版：打开邮件，按「⋯」（更多操作），在「查看」里选「查看邮件详细信息」，有些版本叫「查看邮件源」。",
-  "email.howTo.apple": "Mac 的邮件：打开邮件，在菜单栏的查看菜单（英文界面叫 View）里选邮件（Message），再选会显示整封原始内容的那一项（英文界面叫 Raw Source）。只显示所有标头的话，看不到邮件的正文。",
+  "email.howTo.apple": "Mac 的邮件：选中邮件之后按 Option-Command-U（⌥⌘U），就会打开整封邮件的原始内容，不管界面是什么语言都一样。也可以在菜单栏的查看菜单（英文界面叫 View）里选邮件（Message），再选显示原始内容的那一项（英文界面叫 Raw Source）。只显示所有标头的话，看不到邮件的正文。",
   "email.howTo.thunderbird": "Thunderbird：打开邮件，按 Ctrl+U（Mac 是 ⌘+U）。",
   "email.howTo.proton": "Proton Mail：打开邮件，在更多选项（⋯）里选择下载，存成 .eml 文件。",
   "email.howTo.mobile": "手机的邮件 App 多半看不到原始邮件，请改用电脑上的网页版。",
