@@ -4,6 +4,7 @@ import { tray } from "../state.ts";
 import { MODELS, MODEL_IDS, type ModelId, SAMPLE_RATE, type Segment, clock, mergeSegments, toSrt, toTxt } from "../tools/transcribe/segments.ts";
 import { replaceInParts } from "../tools/writing-style/index.ts";
 import { AliasForm, aliasMessage, allAliases } from "./AliasForm.tsx";
+import { StyleModel } from "./StyleModel.tsx";
 import { type Device, type GpuInfo, gpuUsable } from "../tools/transcribe/device.ts";
 import { LANGUAGES, type Language, modelsFor, preferredModel } from "../tools/transcribe/languages.ts";
 import { type Insert, PUNCT_MB, PUNCT_MODEL, applyInserts, punctAvailable, splitForDisplay } from "../tools/transcribe/punct.ts";
@@ -302,6 +303,16 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
       setPhase({ kind: remote ? "remoteFailed" : stalled ? "stalled" : "failed" });
       trackFail("transcribe", remote ? "network" : stalled ? "stalled" : "other");
     }
+  };
+
+  // 換上代稱：自行指定的表單與模型找到的清單共用，名字被切在兩段之間時換不到
+  const replaceAlias = (word: string, alias: string) => {
+    const result = replaceInParts(segments, word, alias, allAliases());
+    if (result.count) {
+      setHistory([...history, segments]);
+      setSegments(result.parts);
+    }
+    setAliasNote(aliasMessage(word, alias, result.count));
   };
 
   // 標點建議：整份逐字稿交給標點模型，建議分回各段，讀者接受之後才換上
@@ -659,13 +670,22 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
               text={segments.map((seg) => seg.text).join("\n")}
               hint={t("transcribe.alias.hint")}
               message={aliasNote}
-              onReplace={(word, alias) => {
-                const result = replaceInParts(segments, word, alias, allAliases());
-                if (result.count) {
-                  setHistory([...history, segments]);
-                  setSegments(result.parts);
-                }
-                setAliasNote(aliasMessage(word, alias, result.count));
+              onReplace={replaceAlias}
+            />
+          ) : null}
+          {/* 用個資辨識模型找人名、地址與單位（#143），逐項換成代稱，跟上面的表單同一套。每轉一次換一個元件，清單跟著清掉 */}
+          {!busy && segments.length ? (
+            <StyleModel
+              key={run.current}
+              id="transcribe-model"
+              variant="transcript"
+              text={segments.map((seg) => seg.text).join("\n")}
+              keep={allAliases()}
+              onReplace={replaceAlias}
+              beforeRun={() => {
+                // 辨識用的 Worker 先結束，Whisper 與個資辨識模型不同時佔著記憶體（同標點建議）
+                worker.current?.instance.terminate();
+                worker.current = null;
               }}
             />
           ) : null}
