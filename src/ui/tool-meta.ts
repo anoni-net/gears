@@ -24,7 +24,7 @@ const ICONS: Record<string, { icon: IconName; tags?: TagId[] }> = {
   blend: { icon: "image-size-select-large" },
   "email-check": { icon: "email-search-outline" },
   "software-verify": { icon: "package-variant-closed-check" },
-  "writing-style": { icon: "text-box-edit-outline" },
+  "writing-style": { icon: "text-box-edit-outline", tags: ["model"] },
   "video-frames": { icon: "movie-search-outline" },
   nearby: { icon: "cellphone-link", tags: ["camera"] },
   remote: { icon: "send-lock-outline", tags: ["camera", "server"] },

@@ -117,7 +117,8 @@ test("桌面的圖示標籤：卡片上的圖示帶著補充說明，最下方�
   await expect(page.getByRole("img", { name: "相機：視訊通話時用相機與麥克風" })).toBeVisible();
   await expect(page.getByRole("link", { name: /^網址檢查 開源本機模型：從截圖讀出網址時用到/ })).toBeVisible();
   await expect(page.getByRole("link", { name: /^查證檔案 開源本機模型：比對裁切、加字之後的相近圖片時用到/ })).toBeVisible();
-  await expect(page.locator(".tool-rows .tool-tag")).toHaveCount(8);
+  await expect(page.getByRole("link", { name: /^寫作習慣檢查 開源本機模型：找人名、地址與單位時用到/ })).toBeVisible();
+  await expect(page.locator(".tool-rows .tool-tag")).toHaveCount(9);
 
   const legend = page.getByTestId("tag-legend");
   await expect(legend.locator("dt")).toHaveText(["開源本機模型", "相機", "經過伺服器"]);

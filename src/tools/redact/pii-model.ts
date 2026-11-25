@@ -221,6 +221,37 @@ export function chunkLines(lines: LineText[], max = CHUNK_CHARS): LineText[][] {
   return out;
 }
 
+// 一段文字（寫作習慣檢查貼上的文字）依行分塊，每塊不超過 max 個字，offset 是這一塊在原文的位置。
+// 比 max 長的一行在句尾（。！？.!?）或空白處切開，都沒有時硬切，模型才不會截掉後半段
+export function chunkText(text: string, max = CHUNK_CHARS): { text: string; offset: number }[] {
+  const pieces: { start: number; end: number }[] = [];
+  let at = 0;
+  for (const line of text.split(/(?<=\n)/)) {
+    let start = at;
+    const end = at + line.length;
+    while (end - start > max) {
+      const window = text.slice(start, start + max);
+      const cut = Math.max(window.search(/[。！？.!?][^。！？.!?]*$/), window.search(/\s\S*$/));
+      const stop = cut > max / 2 ? start + cut + 1 : start + max;
+      pieces.push({ start, end: stop });
+      start = stop;
+    }
+    if (end > start) pieces.push({ start, end });
+    at = end;
+  }
+  const out: { text: string; offset: number }[] = [];
+  let chunk: { start: number; end: number } | null = null;
+  for (const piece of pieces) {
+    if (chunk && piece.end - chunk.start <= max) chunk.end = piece.end;
+    else {
+      if (chunk) out.push({ text: text.slice(chunk.start, chunk.end), offset: chunk.start });
+      chunk = { ...piece };
+    }
+  }
+  if (chunk) out.push({ text: text.slice(chunk.start, chunk.end), offset: chunk.start });
+  return out.filter((c) => c.text.trim());
+}
+
 export interface ModelMatch {
   kind: PiiModelKind;
   text: string;
