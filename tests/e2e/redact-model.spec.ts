@@ -82,6 +82,12 @@ test("找人名、地址與單位：上一次做到一半頁面重新載入了�
   await expect(page.getByTestId("redact-model-crashed")).toContainText("記憶體不夠");
   await expect(page.getByRole("button", { name: "找人名、地址與單位" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "找電話、Email 等個資" })).toBeVisible();
+  // 關掉遮蔽（沒有執行模型）不會清掉記號，從檔案畫面再打開一次，按鈕仍然不出現
+  await page.getByRole("button", { name: "取消" }).click();
+  expect(await page.evaluate(() => sessionStorage.getItem("gears-pii-redact"))).toBe("1");
+  await page.getByRole("button", { name: "打開遮蔽" }).click();
+  await expect(page.getByTestId("redact-model-crashed")).toContainText("記憶體不夠");
+  await expect(page.getByRole("button", { name: "找人名、地址與單位" })).toHaveCount(0);
 });
 
 test("找人名、地址與單位：下載途中按取消，不會被當成記憶體不夠", async ({ page, guard }) => {
