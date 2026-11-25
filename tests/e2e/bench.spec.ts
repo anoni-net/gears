@@ -16,7 +16,9 @@ test("裝置量測：實驗頁說明下載來源，不進 sitemap，搜尋引擎
   await expect(page.getByRole("heading", { name: "語言模型" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "個資辨識" })).toBeVisible();
   await expect(page.getByTestId("bench-pii-remote")).toContainText("從社群的 assets.anoni.net 下載");
-  await expect(page.getByTestId("bench-remote")).toContainText("Hugging Face 看得到你的 IP 位址");
+  await expect(page.getByTestId("bench-remote")).toContainText("模型從 Hugging Face 下載");
+  // 可得知的資訊不寫在量測頁，連到隱私說明
+  await expect(page.getByTestId("bench-remote").getByTestId("privacy-link")).toHaveAttribute("href", "/gears/privacy/#privacy-models");
   await expect(page.getByTestId("bench-env")).toContainText("核心");
   // localhost 算安全的連線，不出現要用 HTTPS 的說明
   await expect(page.getByTestId("bench-insecure")).toHaveCount(0);

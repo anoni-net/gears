@@ -67,7 +67,11 @@ test("large-v3-turbo 從 Hugging Face 下載：先說明，SHA-256 對不上就�
   await open(page, "talk.wav", wav(2));
   await page.getByLabel(/^large-v3-turbo：最準確/).check();
   await expect(page.getByText(`從 Hugging Face 下載約 ${Math.round(models.turbo.bytes / 1e6)} MB`)).toBeVisible();
-  await expect(page.getByTestId("transcribe-remote")).toContainText("Hugging Face 會看到你的 IP 位址");
+  await expect(page.getByTestId("transcribe-remote")).toContainText("這個模型從 Hugging Face 下載");
+  // Hugging Face 可得知什麼寫在隱私說明，畫面上只連過去、開新分頁
+  const privacyLink = page.getByTestId("transcribe-remote").getByTestId("privacy-link");
+  await expect(privacyLink).toHaveAttribute("href", "/gears/privacy/#privacy-models");
+  await expect(privacyLink).toHaveAttribute("target", "_blank");
   // 選了模型還不會連線，按下按鈕才下載
   expect(served).toEqual([]);
   await page.getByRole("button", { name: "從 Hugging Face 下載並開始" }).click();

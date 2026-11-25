@@ -5,8 +5,8 @@ import { Icon } from "./Icon.tsx";
 import { TAGS } from "./tool-tags.ts";
 
 // 桌面最上方的兩段說明，寫出 Gears 的定位（AGENTS.md「定位」）：每個工具在瀏覽器裡就能完成，
-// 標著大腦圖示（開源本機模型）的工具可以再用這台裝置的算力執行開源模型。「檔案在你的瀏覽器裡處理」在桌面上
-// 只寫在這裡，暫存區的說明改用 tray.hint.home。工具頁沒有這兩段，暫存區仍用 tray.hint 寫這一句（AGENTS.md「介面文字」）
+// 標著大腦圖示（開源本機模型）的工具可以再用這台裝置的算力執行開源模型。這是 Gears 的定位，
+// 「檔案在你的瀏覽器裡處理」只寫在這裡，工具畫面與暫存區不再重複（AGENTS.md「介面文字」）
 //
 // 每一段後面的「了解更多」連到設計原則頁（src/ui/AboutPage.tsx）的對應段落，捲動由 src/app.tsx 的 scrollToHash 負責。
 // 兩個連結的文字相同，讀螢幕軟體另外唸出是哪一段（desk.intro.moreLabel）

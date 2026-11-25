@@ -91,9 +91,9 @@ test("桌面的裝置狀況：顯示卡可以用時寫可以加速", async ({ pa
   await expect(page.getByTestId("desk-device")).toContainText("這台裝置可以用顯示卡加速模型");
 });
 
-test("工具頁的暫存區仍寫「檔案在你的瀏覽器裡處理」", async ({ page }) => {
+test("工具頁的暫存區只寫操作，不重複「檔案在你的瀏覽器裡處理」", async ({ page }) => {
   await page.goto("./strip-metadata/");
-  await expect(page.locator(".tray .hint")).toContainText("檔案在你的瀏覽器裡處理");
+  await expect(page.locator(".tray .hint")).toHaveText("可以一次選多個，選好之後會列出能用的工具，任何檔案都可以加密。");
 });
 
 test("桌面點處理檔案的工具只換到工具頁，不自動打開選檔案的視窗，讀者按下選擇檔案才打開", async ({ page }) => {

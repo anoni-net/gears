@@ -3745,15 +3745,9 @@ button.link {
   font-size: var(--fs-lg);
 }
 
+/* 遠端傳送的畫面只留使用的限制與連到伺服器說明頁的連結，路線圖與對照表在伺服器說明頁（RemoteServerPage.tsx） */
 .remote-privacy {
   margin-top: var(--sp-4);
-  padding: var(--sp-3) var(--sp-4);
-  border-left: 3px solid var(--cat-secure);
-  background: var(--surface);
-}
-
-.remote-privacy p {
-  margin: 0 0 var(--sp-2);
 }
 
 /* 傳送的路線：一排方塊加上箭頭，兩端是你與對方，中繼伺服器用類別色標出來 */
@@ -3854,11 +3848,6 @@ button.link {
 
 .remote-who td.sees {
   color: var(--muted);
-}
-
-.remote-privacy ul {
-  margin: var(--sp-2) 0 0;
-  padding-left: var(--sp-5);
 }
 
 /* 桌面工具名稱後面的圖示標籤（src/ui/tool-tags.ts），顏色用 --link：淺色與深色模式都有足夠的對比 */
@@ -4504,10 +4493,6 @@ button.link {
 
 /* 320px 這類最窄的手機：對照表的字與間距縮小，最左邊的項目才不會一行只剩兩個字 */
 @media (max-width: 359px) {
-  .remote-privacy {
-    padding: var(--sp-3);
-  }
-
   .remote-who,
   .remote-route {
     font-size: var(--fs-xs);

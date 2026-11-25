@@ -15,7 +15,7 @@ export async function startSender(page: Page): Promise<string> {
   await page.getByRole("button", { name: "回到桌面" }).click();
   await page.getByRole("link", { name: /^遠端傳送 / }).click();
   await page.getByRole("button", { name: "送出暫存區的檔案" }).click();
-  await expect(page.getByTestId("remote-privacy")).toContainText("Cloudflare");
+  await expect(page.getByTestId("remote-privacy")).toContainText("兩端要同時開著頁面");
   await page.getByRole("button", { name: "產生連結（2 個檔案）" }).click();
   await expect(page.getByTestId("remote-status")).toContainText("等對方打開連結");
   return page.getByTestId("remote-link").inputValue();

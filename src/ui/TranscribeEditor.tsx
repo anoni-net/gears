@@ -26,6 +26,7 @@ import type { FileEditorProps } from "./types.ts";
 import { Icon } from "./Icon.tsx";
 import { track, trackFail } from "./analytics.ts";
 import { useWorking } from "./working.ts";
+import { PrivacyLink } from "./PrivacyLink.tsx";
 import { ProgressBar } from "./ProgressBar.tsx";
 
 // 逐字稿：把錄音或影片的聲音轉成帶時間的段落。解碼在這裡（Web Audio 只能在主執行緒用），
@@ -468,7 +469,7 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
       </fieldset>
       {remote ? (
         <p class="callout" data-testid="transcribe-remote">
-          {t("transcribe.remote.note")}
+          {t("transcribe.remote.note")} <PrivacyLink section="models" label="common.privacyHf" />
         </p>
       ) : !downloaded[model] ? (
         <p class="hint">{t("transcribe.firstTime")}</p>
