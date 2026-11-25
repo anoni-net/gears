@@ -12,135 +12,135 @@
   "lastmod": "2026-11-25"
  },
  "strip-metadata": {
-  "sha": "ad6a0d41edd69719",
-  "lastmod": ""
+  "sha": "6df216292e5d43f3",
+  "lastmod": "2026-11-25"
  },
  "zh-cn/strip-metadata": {
-  "sha": "5469358a1797d3c7",
-  "lastmod": ""
+  "sha": "dd769a5464504809",
+  "lastmod": "2026-11-25"
  },
  "en/strip-metadata": {
-  "sha": "27a7800b4b863048",
-  "lastmod": ""
+  "sha": "38e1ecfc7f57fda4",
+  "lastmod": "2026-11-25"
  },
  "redact": {
-  "sha": "6032b7417d0e3512",
-  "lastmod": ""
+  "sha": "8f82415ba608bc11",
+  "lastmod": "2026-11-25"
  },
  "zh-cn/redact": {
-  "sha": "ad509bd6ce268e58",
-  "lastmod": ""
+  "sha": "4011e7f1718ec7f7",
+  "lastmod": "2026-11-25"
  },
  "en/redact": {
-  "sha": "dc4e4b00c818c0e5",
-  "lastmod": ""
+  "sha": "24769f28d1a1b80f",
+  "lastmod": "2026-11-25"
  },
  "heic-to-jpeg": {
-  "sha": "0866d354fe9154b3",
-  "lastmod": ""
+  "sha": "040cde139a443db0",
+  "lastmod": "2026-11-25"
  },
  "zh-cn/heic-to-jpeg": {
-  "sha": "abe04f8176cc6db1",
-  "lastmod": ""
+  "sha": "db01e8de31380b89",
+  "lastmod": "2026-11-25"
  },
  "en/heic-to-jpeg": {
-  "sha": "d5bf8ad02e6c502f",
-  "lastmod": ""
+  "sha": "2c13e4f48db0a3a6",
+  "lastmod": "2026-11-25"
  },
  "pdf-pages": {
-  "sha": "8a7508d8b4296080",
-  "lastmod": ""
+  "sha": "c82555947138b748",
+  "lastmod": "2026-11-25"
  },
  "zh-cn/pdf-pages": {
-  "sha": "42a539980b4c2a6a",
+  "sha": "a2f9629d38642a36",
   "lastmod": "2026-11-25"
  },
  "en/pdf-pages": {
-  "sha": "2f597adcef9933d5",
-  "lastmod": ""
+  "sha": "dc023a199d3a55e4",
+  "lastmod": "2026-11-25"
  },
  "encrypt": {
-  "sha": "04a447e544f489ee",
+  "sha": "1e1ac0910f3b994c",
   "lastmod": "2026-11-25"
  },
  "zh-cn/encrypt": {
-  "sha": "0964b5f6b43deb9f",
+  "sha": "b1cb0680c7d5d69a",
   "lastmod": "2026-11-25"
  },
  "en/encrypt": {
-  "sha": "22e53a50c5021ff0",
+  "sha": "faa184fb6393a2cf",
   "lastmod": "2026-11-25"
  },
  "decrypt": {
-  "sha": "962d30fa941b8a15",
+  "sha": "1b85ebf9400f3dda",
   "lastmod": "2026-11-25"
  },
  "zh-cn/decrypt": {
-  "sha": "358ce097afbcc756",
+  "sha": "b721f8b554f45f16",
   "lastmod": "2026-11-25"
  },
  "en/decrypt": {
-  "sha": "f89bc936ea7decee",
+  "sha": "fa93dc7e53f7876f",
   "lastmod": "2026-11-25"
  },
  "transcribe": {
-  "sha": "535b3752e5627e5d",
-  "lastmod": ""
+  "sha": "488047dd5ad5830b",
+  "lastmod": "2026-11-25"
  },
  "zh-cn/transcribe": {
-  "sha": "54be959f12aa74cd",
-  "lastmod": ""
+  "sha": "4e6e21ee9bf67a34",
+  "lastmod": "2026-11-25"
  },
  "en/transcribe": {
-  "sha": "50d1a33ca3c5e5b4",
-  "lastmod": ""
+  "sha": "593b91eeb7363f06",
+  "lastmod": "2026-11-25"
  },
  "blend": {
-  "sha": "474fc89e7497a2fa",
+  "sha": "5e2429d8349de66d",
   "lastmod": "2026-11-25"
  },
  "zh-cn/blend": {
-  "sha": "7ab274ab3c6ea954",
+  "sha": "950918946c735182",
   "lastmod": "2026-11-25"
  },
  "en/blend": {
-  "sha": "9bcba5b430e78a2b",
+  "sha": "e532ccd6ba45925f",
   "lastmod": "2026-11-25"
  },
  "print-dots": {
-  "sha": "39ddf0af38af88e7",
-  "lastmod": ""
+  "sha": "2d04ea145aa77dfe",
+  "lastmod": "2026-11-25"
  },
  "zh-cn/print-dots": {
-  "sha": "ee839c8f474b4a28",
+  "sha": "62ccf94460c4e932",
   "lastmod": "2026-11-25"
  },
  "en/print-dots": {
-  "sha": "1a40d3a611de98fa",
-  "lastmod": ""
+  "sha": "419bda2267bdf209",
+  "lastmod": "2026-11-25"
  },
  "video-frames": {
-  "sha": "1581bdd2062e5f3b",
+  "sha": "9e433b6f2ddb63d4",
   "lastmod": "2026-11-25"
  },
  "zh-cn/video-frames": {
-  "sha": "d198e4c67b2d90c3",
+  "sha": "63753c52e9536f18",
   "lastmod": "2026-11-25"
  },
  "en/video-frames": {
-  "sha": "b764021eec8d9270",
+  "sha": "95c74bc3ecf38c09",
   "lastmod": "2026-11-25"
  },
  "doc-check": {
-  "sha": "5a3df784706be361",
+  "sha": "0416f7baaeb00b6b",
   "lastmod": "2026-11-25"
  },
  "zh-cn/doc-check": {
-  "sha": "fde0883bdccfdfec",
+  "sha": "de335937abfe0a0d",
   "lastmod": "2026-11-25"
  },
  "en/doc-check": {
-  "sha": "84596f2e6d40510c",
+  "sha": "9fc5ce438d5f04bb",
   "lastmod": "2026-11-25"
  },
  "qrcode": {
