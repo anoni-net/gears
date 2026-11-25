@@ -184,3 +184,15 @@ test("接收端的頁面已經開著，打開送出端的網址（只有 # 後�
   await expect(receiver.getByTestId("nearby-status")).toContainText("讓送出端的鏡頭掃這個 QR code");
   await context.close();
 });
+
+test("暫存區是空的時候，傳送工具裡有自己的「選擇檔案」，手機上收起空的暫存區也選得到", async ({ page }) => {
+  for (const tool of ["nearby", "remote"]) {
+    await page.goto(`./${tool}/`);
+    const send = page.getByRole("button", { name: "送出暫存區的檔案" });
+    await expect(send).toBeDisabled();
+    await expect(page.getByRole("button", { name: "選擇檔案" }).last()).toBeVisible();
+    await page.getByTestId("transfer-input").setInputFiles({ name: "notes.txt", mimeType: "text/plain", buffer: Buffer.from("hello") });
+    await expect(send).toBeEnabled();
+    await expect(page.getByTestId("transfer-input")).toHaveCount(0);
+  }
+});

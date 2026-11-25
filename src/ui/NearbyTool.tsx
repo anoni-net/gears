@@ -22,7 +22,7 @@ import {
   rtcAvailable,
 } from "./nearby.ts";
 import { decodeQrFromVideo } from "./qr-scan.ts";
-import { size, useOutgoing, useWakeLock } from "./transfer-ui.tsx";
+import { EmptyTrayPicker, size, useOutgoing, useWakeLock } from "./transfer-ui.tsx";
 import type { CreateToolProps } from "./types.ts";
 import { useWorking } from "./working.ts";
 import { ProgressBar } from "./ProgressBar.tsx";
@@ -372,7 +372,7 @@ export function NearbyTool(_props: CreateToolProps) {
   let body = null;
   let actions = null;
   if (mode === "choose") {
-    body = !state.files.length ? <p class="hint">{t("nearby.emptyTray")}</p> : null;
+    body = !state.files.length ? <EmptyTrayPicker note={t("nearby.emptyTray")} /> : null;
     actions = (
       <>
         <button type="button" class="primary" disabled={!state.files.length} onClick={() => setMode("send")}>
