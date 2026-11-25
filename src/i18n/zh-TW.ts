@@ -1887,7 +1887,7 @@ export const zhTW = {
   "email.verdict.fail.title": "寄件驗證沒有通過",
   "email.verdict.fail.detail": "收件的伺服器檢查之後，這封信不像是 {domain} 寄出的，寄件人可能被冒用。不要點信裡的連結，也不要回信，請用其他管道向對方確認。",
   "email.verdict.unclear.title": "寄件驗證的結果不明確",
-  "email.verdict.unclear.detail": "收件的伺服器沒有確認這封信來自 {domain}。可能是寄件的網域沒有設定驗證，也可能是經過轉寄。向對方確認之前，不要點信裡的連結、打開附件或付款，請用電話或其他管道向對方確認。",
+  "email.verdict.unclear.detail": "收件的伺服器沒有確認這封信來自 {domain}，可能是寄件的網域沒有設定驗證，也可能是經過轉寄。信裡要你點連結、打開附件或付款時，先用電話或其他管道向對方確認。",
   "email.verdict.unrecorded.title": "看不到寄件驗證的結果",
   "email.verdict.unrecorded.detail": "貼上的內容裡沒有收件伺服器記下的驗證結果。請確認貼上的是完整的原始郵件，要包含最上面的標頭（以 Received:、From:、To: 這類開頭的那幾行）。有些郵件服務也不會記下驗證結果。",
   "email.note.reply-to.title": "回覆地址跟寄件地址不同",

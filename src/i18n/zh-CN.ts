@@ -1865,7 +1865,7 @@ export const zhCN: Record<MessageKey, string> = {
   "email.verdict.fail.title": "发件验证没有通过",
   "email.verdict.fail.detail": "收件的服务器检查之后，这封信不像是 {domain} 寄出的，发件人可能被冒用。不要点信里的链接，也不要回信，请用其他渠道向对方确认。",
   "email.verdict.unclear.title": "发件验证的结果不明确",
-  "email.verdict.unclear.detail": "收件的服务器没有确认这封信来自 {domain}。可能是发件的域名没有设置验证，也可能是经过转发。向对方确认之前，不要点信里的链接、打开附件或付款，请用电话或其他渠道向对方确认。",
+  "email.verdict.unclear.detail": "收件的服务器没有确认这封信来自 {domain}，可能是发件的域名没有设置验证，也可能是经过转发。信里要你点链接、打开附件或付款时，先用电话或其他渠道向对方确认。",
   "email.verdict.unrecorded.title": "看不到发件验证的结果",
   "email.verdict.unrecorded.detail": "粘贴的内容里没有收件服务器记下的验证结果。请确认粘贴的是完整的原始邮件，要包含最上面的标头（以 Received:、From:、To: 这类开头的那几行）。有些邮件服务也不会记下验证结果。",
   "email.note.reply-to.title": "回复地址跟发件地址不同",
