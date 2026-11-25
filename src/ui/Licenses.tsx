@@ -51,6 +51,7 @@ const GROUPS: { id: string; entries: Entry[] }[] = [
       // 資料：授權寫在說明裡，沒有獨立的授權檔
       { id: "data-165" },
       { id: "data-diceware" },
+      { id: "data-fleurs" },
     ],
   },
 ];

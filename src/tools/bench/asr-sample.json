@@ -1,0 +1,23 @@
+{
+  "file": "models/bench/asr-zh.wav",
+  "sha256": "fd89e3beaff48709f7b18f867e2b728d54512d9c794863160015903f5b6e7552",
+  "bytes": 929324,
+  "seconds": 29.04,
+  "language": "zh",
+  "source": {
+    "dataset": "google/fleurs",
+    "split": "test",
+    "config": "cmn_hans_cn",
+    "ids": [
+      1890,
+      1965,
+      1903
+    ],
+    "license": "CC-BY-4.0"
+  },
+  "lines": [
+    "大多數現代科研望遠鏡都是巨型設施，位於大氣條件優良的偏遠地區。",
+    "這裡幾乎都是沙灘，游泳很安全，大部分地方都有紐西蘭聖誕樹的樹蔭。",
+    "當所有可用的資源在一個組織的職能部門之間得到有效利用時，創造力和獨創性就會發生。"
+  ]
+}

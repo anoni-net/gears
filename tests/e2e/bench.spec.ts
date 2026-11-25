@@ -1,7 +1,13 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import models from "../../src/tools/llm-bench/models.json" with { type: "json" };
+import whisper from "../../src/tools/transcribe/models.json" with { type: "json" };
 import { assetsUrl } from "../../src/core/models.ts";
 import { PII_MODEL } from "../../src/tools/redact/pii-model.ts";
 import { expect, test } from "./guard.ts";
+
+// 逐字稿的區塊用 base 的 CPU 版辨識，CI 有下載（.github/workflows/ci.yml 的 fetch-whisper）
+const BASE_MODEL = join(import.meta.dirname, "../../public/models/whisper", whisper.base.dir, "onnx/decoder_model_merged_quantized.onnx");
 
 test("裝置量測：實驗頁說明下載來源，不進 sitemap，搜尋引擎不收錄", async ({ page, request }) => {
   await page.goto("./bench/");
@@ -64,7 +70,7 @@ test("裝置量測：文字辨識用範例截圖量出時間與字錯率，結�
 
   await page.getByText("看複製的內容", { exact: true }).click();
   const report = JSON.parse((await page.getByTestId("bench-report").textContent())!);
-  expect(report.schema).toBe(2);
+  expect(report.schema).toBe(3);
   expect(report.env.canvas).toBe(true);
   expect(report.ocr).toHaveLength(1);
   expect(report.ocr[0]).toMatchObject({ threads: 1, webgpu: false });
@@ -164,7 +170,7 @@ test("裝置量測：個資辨識從 assets.anoni.net 下載，內容對不上 S
   // 結果的 JSON 帶著這一筆，格式是第 2 版
   await page.getByText("看複製的內容", { exact: true }).click();
   const report = JSON.parse((await page.getByTestId("bench-report").textContent())!);
-  expect(report.schema).toBe(2);
+  expect(report.schema).toBe(3);
   expect(report.pii[0].error).toBeTruthy();
   expect(report.pii[0].model).toContain(PII_MODEL.repo);
   guard.requests = guard.requests.filter((url) => !url.startsWith(dir));
@@ -182,4 +188,51 @@ test("裝置量測：個資辨識量到一半頁面重新載入時，結果記�
   await page.getByText("看複製的內容", { exact: true }).click();
   const report = JSON.parse((await page.getByTestId("bench-report").textContent())!);
   expect(report.pii).toEqual([expect.objectContaining({ threads: 1, webgpu: false, crashed: true })]);
+});
+
+test("裝置量測：逐字稿用範例錄音量出載入、兩次辨識的時間與字錯率，結果的 JSON 不含辨識出來的文字", async ({ page, browserName }) => {
+  // 流程在各核心都一樣，CI 只在 Chromium 實際辨識（base 的 CPU 版，CI 有下載）
+  test.skip(browserName !== "chromium", "辨識只在 Chromium 執行");
+  test.skip(!existsSync(BASE_MODEL), "沒有下載 base 模型（node scripts/fetch-whisper.mjs base --no-webgpu）");
+  test.setTimeout(240_000);
+  await page.goto("./bench/");
+  await expect(page.getByTestId("bench-env")).toContainText("核心");
+  const section = page.locator('section[aria-labelledby="bench-asr-title"]');
+  // 沒有實體顯示卡時，顯示卡的設定不能勾選
+  for (const box of await section.getByRole("checkbox").all()) if ((await box.isEnabled()) && (await box.isChecked())) await box.uncheck();
+  await section.getByLabel("Whisper base，CPU").check();
+  await section.getByRole("button", { name: "量測逐字稿" }).click();
+  await expect(page.getByTestId("bench-asr-status")).toHaveText("逐字稿量測完成。", { timeout: 200_000 });
+
+  const row = page.getByTestId("bench-asr-table").locator("tbody tr");
+  await expect(row).toHaveCount(1);
+  await expect(row).toContainText("Whisper base，CPU");
+  await page.getByText("看複製的內容", { exact: true }).click();
+  const report = JSON.parse((await page.getByTestId("bench-report").textContent())!);
+  expect(report.schema).toBe(3);
+  expect(report.asr).toHaveLength(1);
+  const run = report.asr[0];
+  expect(run).toMatchObject({ model: "base", device: "wasm", used: "wasm", dtype: "q8", silero: true });
+  expect(run.ms).toHaveLength(2);
+  expect(run.load).toBeGreaterThan(0);
+  // 測試擋掉 service worker，模型不在快取裡，載入時間包含下載
+  expect(run.cached).toBe(false);
+  expect(run.download).toBeGreaterThanOrEqual(0);
+  expect(run.pieces).toBeGreaterThan(0);
+  // base 在華語朗讀的字錯率不低，只確認真的辨識出了接近的內容
+  expect(run.cer).toBeLessThan(0.6);
+  // 辨識出來的文字不放進結果
+  expect(JSON.stringify(report)).not.toContain("望遠鏡");
+});
+
+test("裝置量測：逐字稿量到一半頁面重新載入時，結果記成 crashed", async ({ page }) => {
+  await page.goto("./bench/");
+  await expect(page.getByTestId("bench-env")).toContainText("核心");
+  await page.evaluate(() => history.replaceState({ ...(history.state ?? {}), gearsAsrBench: { model: "small", device: "wasm" } }, ""));
+  await page.reload();
+  await expect(page.getByTestId("bench-asr-status")).toContainText("頁面重新載入了");
+  await expect(page.getByTestId("bench-asr-table")).toContainText("Whisper small，CPU");
+  await page.getByText("看複製的內容", { exact: true }).click();
+  const report = JSON.parse((await page.getByTestId("bench-report").textContent())!);
+  expect(report.asr).toEqual([expect.objectContaining({ model: "small", device: "wasm", crashed: true })]);
 });

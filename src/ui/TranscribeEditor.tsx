@@ -12,7 +12,8 @@ import { IS_ONION } from "../site.ts";
 import speakerModel from "../tools/transcribe/speaker-model.json" with { type: "json" };
 import vadModel from "../tools/transcribe/vad-model.json" with { type: "json" };
 import { navigate, onRouteClick, routeUrl } from "../router.ts";
-import { THREAD_OPTIONS, defaultThreads } from "../tools/transcribe/threads.ts";
+import { THREAD_OPTIONS } from "../tools/transcribe/threads.ts";
+import { DEFAULT_THREADS, FIREFOX, ISOLATED } from "./thread-default.ts";
 import { type AudioStream, TooLargeError, openAudio } from "./audio-stream.ts";
 import { detectGpu } from "./gpu.ts";
 import { wasmAvailable } from "./wasm.ts";
@@ -56,20 +57,8 @@ const modelBytes = (id: ModelId, device: Device) => (device === "webgpu" ? MODEL
 // 同時使用的 CPU 核心數，讀者自己選，預設值的判斷見 src/tools/transcribe/threads.ts。
 // 多執行緒要頁面在 cross-origin isolation 底下，沒有時只能用 1 個
 const THREADS = THREAD_OPTIONS;
-const ISOLATED = typeof crossOriginIsolated !== "undefined" && crossOriginIsolated;
 // 辨識全部靠 WebAssembly。瀏覽器關掉時（鎖定模式）打開就說明，開始的按鈕不能按（見 wasm.ts）
 const NO_WASM = !wasmAvailable();
-const FIREFOX = /Firefox\//.test(navigator.userAgent);
-const DEFAULT_THREADS = ISOLATED
-  ? defaultThreads({
-      firefox: FIREFOX,
-      reported: navigator.hardwareConcurrency || 0,
-      brave: "brave" in navigator,
-      // Safari 的 UA 有 Safari 沒有 Chrome；iPad 的 Safari 偽裝成 Mac，用觸控點數分辨
-      safari: /Safari/.test(navigator.userAgent) && !/Chrome|Chromium|Edg/.test(navigator.userAgent),
-      mobileApple: /iPhone|iPad/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1),
-    })
-  : 1;
 
 // 模型有沒有存在這台裝置的瀏覽器裡（service worker 的快取，大模型由 Worker 存進同一個快取）。
 // 看那個裝置用的最後一個檔案，解碼器最後才下載

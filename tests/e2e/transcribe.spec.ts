@@ -256,8 +256,15 @@ test("建置產物裡沒有其他檔案匯入 Worker 的進入點", ({ browserNa
   // WebKit 會把被匯入的 Worker 進入點當成另一份模組再執行一次，蓋掉 onmessage（src/ui/speaker-embed.ts）。
   // 只看建置產物，一種瀏覽器檢查一次就夠
   test.skip(browserName !== "chromium");
+  // Worker 的進入點認內容（有 onmessage），不認檔名：逐字稿與裝置量測共用 Worker 的網址時，放網址的小 chunk
+  // 也會以 transcribe.worker 命名，那一份不是進入點，匯入它沒有問題
   const assets = join(import.meta.dirname, "../../dist/assets");
-  const offenders = readdirSync(assets).filter((f) => f.endsWith(".js") && !f.startsWith("transcribe.worker-") && /["/]transcribe\.worker-[\w-]+\.js"/.test(readFileSync(join(assets, f), "utf8")));
+  const js = readdirSync(assets).filter((f) => f.endsWith(".js"));
+  const read = (f: string) => readFileSync(join(assets, f), "utf8");
+  const entries = js.filter((f) => f.startsWith("transcribe.worker-") && /onmessage/.test(read(f)));
+  expect(entries).toHaveLength(1);
+  const entry = entries[0]!.replace(/[.-]/g, "\\$&");
+  const offenders = js.filter((f) => f !== entries[0] && new RegExp(`(from|import)\\s*\\(?\\s*["'\`][^"'\`]*/${entry}["'\`]`).test(read(f)));
   expect(offenders).toEqual([]);
 });
 
