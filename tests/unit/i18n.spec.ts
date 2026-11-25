@@ -10,7 +10,7 @@ import qrSamples from "../../src/tools/qr-read/samples.json" with { type: "json"
 import { MODEL_CATALOG } from "../../src/core/model-catalog.ts";
 import { USER_PAGES } from "../../src/ui/tool-meta.ts";
 import { pageIds } from "../../src/pages.ts";
-import { AI_NOTES, GAPS, LINK_IDS, PEERS, RELATIONS } from "../../src/ui/why-peers.ts";
+import { AI_NOTES, GAPS, LINKS, PEERS, RELATIONS } from "../../src/ui/why-peers.ts";
 
 // 介面上有些字串的鍵是組出來的（finding.location、tool.qrcode.desc），漏了翻譯不會
 // 在型別檢查時被抓到，畫面上會直接露出鍵名。
@@ -44,7 +44,7 @@ test("每個代碼與工具都有正體中文的字串", () => {
     ...PEERS.flatMap((p) => [`why.peer.${p.id}.who`, `why.peer.${p.id}.form`, `why.peer.${p.id}.body`, ...(p.covers?.length ? [`why.peer.${p.id}.path`] : [])]),
     ...RELATIONS.map((r) => `why.rel.${r}`),
     ...AI_NOTES.map((n) => `why.ai.${n.id}`),
-    ...LINK_IDS.flatMap((id) => [`why.links.${id}.title`, `why.links.${id}.body`]),
+    ...LINKS.flatMap(({ id }) => [`why.links.${id}.title`, `why.links.${id}.body`]),
     ...Array.from({ length: GAPS }, (_, i) => [`why.gaps.${i + 1}.title`, `why.gaps.${i + 1}.body`]).flat(),
     ...TOOL_GROUPS.map((g) => `why.situation.${g.id}`),
   ];

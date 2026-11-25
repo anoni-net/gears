@@ -1,0 +1,101 @@
+{
+  "size": 64,
+  "logos": [
+    {
+      "id": "metadatacleaner",
+      "url": "https://dl.flathub.org/media/fr/romainvigier/MetadataCleaner/b6488b7260afea8141f8c0856e297993/icons/128x128/fr.romainvigier.MetadataCleaner.png"
+    },
+    {
+      "id": "mat2",
+      "url": "https://raw.githubusercontent.com/jvoisin/mat2/5098533876135a7547b7a922ff408d749c29455e/data/mat2.png"
+    },
+    {
+      "id": "imagescrubber",
+      "url": "https://raw.githubusercontent.com/everestpipkin/image-scrubber/390b166cfc61326476ed9d6cb376291f87e35c23/scrubber_logo.png"
+    },
+    {
+      "id": "dface",
+      "url": "https://raw.githubusercontent.com/vframeio/dface/b9fbf7ffa36f2fe54f9c37d01f5479c0c5ae0151/public/assets/img/favicon/android-icon-192x192.png"
+    },
+    {
+      "id": "obscuracam",
+      "url": "https://raw.githubusercontent.com/guardianproject/ObscuraCam/638f156500798616aec0ff2715abd392f683354b/app/src/main/res/drawable/ic_launcher_ssc.png"
+    },
+    {
+      "id": "atrain",
+      "url": "https://raw.githubusercontent.com/BANDAS-Center/aTrain/69d087b9e3123e8bb9a0c71a8e2dcac8e93c985b/logo.png"
+    },
+    {
+      "id": "noscribe",
+      "url": "https://raw.githubusercontent.com/kaixxx/noScribe/1e146c3bd8a00218fdda3fea090a1c79a62faab3/img/noScribeLogo.png"
+    },
+    {
+      "id": "anonymouth",
+      "url": "https://raw.githubusercontent.com/psal/anonymouth/7bd8e24b661f587facf8715a1de345dffde9734e/src/edu/drexel/psal/resources/graphics/anonymouth_LOGO.png"
+    },
+    {
+      "id": "onionshare",
+      "url": "https://raw.githubusercontent.com/onionshare/onionshare/17a58b35b508b08414003d1d454d6bbf229e66a5/cli/onionshare_cli/resources/static/img/logo.png"
+    },
+    {
+      "id": "pairdrop",
+      "url": "https://raw.githubusercontent.com/schlagmichdoch/PairDrop/1b0c9c9d903c3cfc706df1303dc75c3b54d04c77/public/images/logo_blue_512x512.png"
+    },
+    {
+      "id": "wormhole",
+      "url": "https://wormhole.app/apple-touch-icon.png"
+    },
+    {
+      "id": "dangerzone",
+      "url": "https://raw.githubusercontent.com/freedomofpress/dangerzone/f97310cad237d2f96a58df3ab004c241628a39dd/share/icon.png"
+    },
+    {
+      "id": "invid",
+      "url": "https://raw.githubusercontent.com/AFP-Medialab/verification-plugin/da8b93a43645bc22a29dbb5e4903f6cb964aba7c/src/assets/icon-128.png"
+    },
+    {
+      "id": "c2pa",
+      "url": "https://raw.githubusercontent.com/contentauth/verify-site/a09c33de417c4ed8f6ab4c621f0f802168dc910f/assets/svg/color/cr-icon-fill.svg"
+    },
+    {
+      "id": "tella",
+      "url": "https://raw.githubusercontent.com/Horizontal-org/Tella-Android-FOSS/2caf0177f98fe5f1106d04190270a5cda70ae7e1/fastlane/metadata/android/en-US/images/icon.png"
+    },
+    {
+      "id": "proofmode",
+      "url": "https://raw.githubusercontent.com/guardianproject/proofmode-android/0ccd61a4e36ac8921545422dee8918b0e05891c3/app/src/main/ic_launcher-playstore.png"
+    },
+    {
+      "id": "cyberchef",
+      "url": "https://raw.githubusercontent.com/gchq/CyberChef/44e2433722b44456bfd4cccdb9b986d047d2c2e2/src/web/static/images/logo/cyberchef.svg"
+    },
+    {
+      "id": "autoarchiver",
+      "url": "https://raw.githubusercontent.com/bellingcat/auto-archiver/ceef7213eb36539978065dcd49ba162315e98b70/docs/source/bc.png",
+      "crop": [
+        0,
+        0.2
+      ]
+    },
+    {
+      "id": "cofacts",
+      "url": "https://raw.githubusercontent.com/cofacts/rumors-site/4d10bbc8550bdce0330925fd318c16d1a5d09af7/components/AppLayout/images/logo-mobile.svg",
+      "crop": [
+        0,
+        0.3
+      ]
+    },
+    {
+      "id": "whoscall",
+      "url": "https://whoscall.com/favicon.ico"
+    },
+    {
+      "id": "g0v",
+      "url": "https://raw.githubusercontent.com/cofacts/rumors-site/4d10bbc8550bdce0330925fd318c16d1a5d09af7/components/ReportPage/images/logos/g0v.svg",
+      "crop": [
+        0.37,
+        0.64
+      ]
+    }
+  ]
+}

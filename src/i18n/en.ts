@@ -2560,6 +2560,8 @@ export const en: Record<MessageKey, string> = {
   "licenses.zxing.desc": "zxing-wasm 3.1.4 (ZXing-C++ compiled to WebAssembly), MIT and Apache-2.0, reads barcodes other than QR codes. Bundled as a separate file.",
   "licenses.material-design-icons": "Tool icons",
   "licenses.material-design-icons.desc": "Material Design Icons, Pictogrammers Free License.",
+  "licenses.peer-logos": "Similar tools' icons",
+  "licenses.peer-logos.desc": "Each project's icon on the Why Gears page, taken from its repository or website. The icons belong to those projects and are used only to identify them. Sources and licenses are in the file.",
   "licenses.data-165": "165 anti-fraud list",
   "licenses.data-165.desc": "The list of domains suspended for fraud that the URL check compares against, dataset 176455 on Taiwan's open government data platform, National Police Agency, Open Government Data License version 1.0.",
   "licenses.data-diceware": "Passphrase word lists",

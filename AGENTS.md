@@ -652,6 +652,13 @@ ProofMode（Guardian Project 給人權紀錄者的 Android App）拍照時不改
 - 其他工具的說法只寫查得到出處的：2026-11-25 用網頁搜尋整理，每一項都對過專案自己的頁面或報導，沒有逐一安裝測試，頁面最後寫明。第一版有幾處沒有根據，發布前拿掉或改寫：PairDrop 的新版說明有比對安全碼，Whoscall 的網址資料來自數位發展部，另外有在瀏覽器裡自動遮蔽人臉的開源工具（DFACE.app），所以不寫「只有 Gears」這類說法。個人開發者寫角色（軟體藝術家、個人開發者），不寫名字
 - 工具多半會變：更新、停止維護或出現新的同類工具。半年左右重新查一次，改了資料或說法時更新 `why.updated` 的日期。還沒查的寫在範圍與限制：台灣事實查核中心與 MyGoPen 自己的工具，以及香港、中國公民團體的同類工具
 - 三組不用分類色（分類色只用在桌面與工具的標題，見「Logo、圖示與配色」），跟 Gears 的關係是主色外框的小標記（`.why-rel`）。對照表沿用設計原則頁模型表的 `.about-table`，手機上每一列排成小卡，所以每一層明寫 `role`
+- 每個提到的工具名稱前面放該專案的圖示（2026-11-25 起）：同類工具的清單、對照表的列標題、其他工具用 AI 的方式，以及參考與銜接的專案的標題，對照表的 Gears 那一列用自己的網站圖示。圖示是 `public/peers/<id>.png`，`why-peers.ts` 的 `PeerName.logo` 與 `LINKS` 指定，`src/ui/WhyPage.tsx` 的 `Logo` 畫出來
+    - 從各專案自己的 repo（鎖定 commit）或網站下載，由 `node scripts/make-peer-logos.mjs` 用瀏覽器畫成 64 × 64 的 PNG，進版控。SVG 也畫成 PNG：第三方的 SVG 從自己的網域送出，直接打開時裡面的程式會執行。只有橫式「圖示加文字」的 logo 時用 `crop` 裁出圖示（Auto Archiver、Cofacts、g0v）
+    - 只從自己的網域載入（CSP 的 `img-src` 只有 `'self'`），不連到各專案的網站，讀者的 IP 不會交給第三方。一共不到 100 KB，跟其他頁面資源一起預先存下，離線也看得到
+    - 圖示放在固定的白底小方塊上，深色模式也看得到深色的 logo。名稱就在旁邊，`alt` 留空
+    - 找不到官方圖示的（目前只有麥騙）放中性的圖示佔位（`.why-logo.none`），不自己畫一個。2026-11-25 一度以為 mat2 與 DFACE.app 沒有 logo，看了完整的檔案清單才找到，判斷之前列出 repo 全部的圖檔
+    - 來源、授權與商標的說明在 `licenses/peer-logos.txt`（授權頁「圖示與資料」的同類工具的圖示）：每個檔案的來源與來源 repo 的授權，MIT 的版權聲明與 Apache-2.0、GPL-3.0、AGPL-3.0、LGPL-3.0 的全文。圖示是獨立的檔案，跟 Gears 的程式分開散布，照「模型的授權」對 copyleft 的做法。Wormhole 與 Whoscall 取自網站，沒有標示授權。也寫明只用來指出是哪個專案、不代表對方認可，對方不希望出現時寫信來就拿掉
+    - 新增同類工具時：在 `scripts/peer-logos.json` 加一筆、執行一次 `make-peer-logos.mjs`，`why-peers.ts` 填上 `logo`，`licenses/peer-logos.txt` 加上來源與授權。`tests/unit/why-logos.spec.ts` 比對四邊列的是同一批、每個都是 64 × 64 且不超過 16 KB，`tests/e2e/why.spec.ts` 確認每個圖示在正式建置的 CSP 底下載得到
 - 瀏覽器測試在 `tests/e2e/why.spec.ts`：從使用者區打開、工具數與模型數、每一項同類工具與對照表的列數、外部連結開新分頁、連到設計原則的模型表，以及三個語系沒有露出字串的鍵。無障礙在 `a11y.spec.ts`
 
 ## 裝置量測（實驗頁）
@@ -1096,7 +1103,7 @@ node scripts/fetch-165.mjs   # 下載並整理成 public/data/165.txt
 
 ## 測試用的檔案
 
-照片與圖檔不進 repo，品牌圖示（`public/icons/`）例外。單元測試用 `tests/helpers/fixtures.ts` 組出結構完整的檔案。瀏覽器測試先用 canvas 產生一張可以解碼的圖，再塞進中繼資料。影片的測試檔見上方「影片的關鍵影格」。
+照片與圖檔不進 repo，品牌圖示（`public/icons/`）與「為什麼做 Gears」的同類工具圖示（`public/peers/`，見「為什麼做 Gears」）例外。單元測試用 `tests/helpers/fixtures.ts` 組出結構完整的檔案。瀏覽器測試先用 canvas 產生一張可以解碼的圖，再塞進中繼資料。影片的測試檔見上方「影片的關鍵影格」。
 
 HEIC 有兩種測試檔。單元測試在測試裡組出結構完整、不能解碼的檔案。能解碼的真 HEIC 由 `tests/global-setup.ts` 在瀏覽器測試開始前呼叫 `scripts/make-test-images.py`，用 pillow-heif 產生到 `tests/.generated/`（不進版控）。有 `uv` 就用 `uv run --with pillow-heif==1.8.1`，CI 用 `astral-sh/setup-uv` 安裝。產生不了時，用到真 HEIC 的測試會略過。
 
@@ -1234,12 +1241,13 @@ iPhone 預設拍出來的是 HEIC，在網頁上選照片時交出來的也是�
 
 ## 第三方資料
 
-讀者從頁尾的「授權與來源」打開授權頁（`/gears/licenses/`，`src/ui/Licenses.tsx`，頁面清單在 `src/pages.ts`）。頁面依用途分成五組，每組一個 `<h2>`、每一項一個 `<h3>`，左欄的本頁目錄照這些小標題產生（2026-11-21 起，原本十三項排成一張清單，沒有小標題）：工作台本身、模型與執行環境（逐字稿、遮蔽的自動尋找、查證的相似圖片）、讀寫檔案的程式（pdf.js、pdf-lib、libheif、zxing-wasm）、驗證簽章與憑證（OpenPGP.js、c2pa-web、pkijs）、圖示與資料（Material Design Icons、165 反詐騙清單、密語的字詞表）。`licenses/` 底下的授權全文用 `?url` 匯入，跟著建置一起輸出（檔名帶雜湊），service worker 也會存起來，離線也能看。工作台自己的 `LICENSE` 沒有副檔名，伺服器會當成二進位檔，所以直接展開在頁面上。新增 `licenses/` 的檔案時，在 `Licenses.tsx` 的 `GROUPS` 對應的那一組加一筆，三個語系加上 `licenses.<id>` 與 `licenses.<id>.desc`，`tests/e2e/licenses.spec.ts` 會比對每份授權全文。
+讀者從頁尾的「授權與來源」打開授權頁（`/gears/licenses/`，`src/ui/Licenses.tsx`，頁面清單在 `src/pages.ts`）。頁面依用途分成五組，每組一個 `<h2>`、每一項一個 `<h3>`，左欄的本頁目錄照這些小標題產生（2026-11-21 起，原本十三項排成一張清單，沒有小標題）：工作台本身、模型與執行環境（逐字稿、遮蔽的自動尋找、查證的相似圖片）、讀寫檔案的程式（pdf.js、pdf-lib、libheif、zxing-wasm）、驗證簽章與憑證（OpenPGP.js、c2pa-web、pkijs）、圖示與資料（Material Design Icons、同類工具的圖示、165 反詐騙清單、密語的字詞表）。`licenses/` 底下的授權全文用 `?url` 匯入，跟著建置一起輸出（檔名帶雜湊），service worker 也會存起來，離線也能看。工作台自己的 `LICENSE` 沒有副檔名，伺服器會當成二進位檔，所以直接展開在頁面上。新增 `licenses/` 的檔案時，在 `Licenses.tsx` 的 `GROUPS` 對應的那一組加一筆，三個語系加上 `licenses.<id>` 與 `licenses.<id>.desc`，`tests/e2e/licenses.spec.ts` 會比對每份授權全文。
 
 逐字稿畫面最下面另有收起來的「使用的模型與授權」，每個模型分三行：原始模型與授權（`source`、`license`）、誰轉成 ONNX 檔（`repo`）、從哪裡下載（`host`）。`repo` 跟原始模型是同一個時當成社群自己轉檔，連到 assets.anoni.net 那個目錄的 `README.txt`，不同時連到轉檔者的 repo。新增模型時填好這幾欄就會出現。
 
 - 密語的字詞表來自 [asian-diceware](https://github.com/anoni-net/asian-diceware) `v0.4.0`，CC BY 4.0，畫面上標示出處
 - 工具的圖示來自 [Material Design Icons](https://pictogrammers.com/library/mdi/)，Pictogrammers Free License
+- 「為什麼做 Gears」的同類工具圖示取自各專案的 repo 或網站，屬於各專案或組織，只用來指出提到的是哪個專案，來源與授權見 `licenses/peer-logos.txt`
 - HEIC 解碼器來自 [libheif-js](https://github.com/catdad-experiments/libheif-js) 1.23.5（libheif 與 libde265，LGPL-3.0），見 `licenses/libheif.txt`
 - PDF 的解析與寫出用 [pdf-lib](https://github.com/Hopding/pdf-lib) 1.17.1（MIT），見 `licenses/pdf-lib.txt`
 - PDF 的遮蔽用 [pdf.js](https://github.com/mozilla/pdf.js)（pdfjs-dist 6.4.299，Apache-2.0）與它附帶的 CMap、標準字型與解碼器，見 `licenses/pdfjs.txt`

@@ -100,7 +100,7 @@ test.describe("寬螢幕的左欄", () => {
     await page.goto("./licenses/");
     await expect(page.getByRole("heading", { level: 2 })).toHaveText(["工作台本身", "模型與執行環境", "讀寫檔案的程式", "驗證簽章與憑證", "圖示與資料"]);
     const toc = page.getByTestId("aside-toc");
-    await expect(toc.getByRole("link")).toHaveCount(5 + 15);
+    await expect(toc.getByRole("link")).toHaveCount(5 + 16);
     await expect(toc.locator("li:not(.sub) a")).toHaveText(["工作台本身", "模型與執行環境", "讀寫檔案的程式", "驗證簽章與憑證", "圖示與資料"]);
     await expect(toc.locator("li.sub a").nth(0)).toHaveText("檔案工作台");
     await expect(toc.locator("li.sub a").nth(1)).toHaveText("逐字稿");

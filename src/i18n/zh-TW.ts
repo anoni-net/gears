@@ -2583,6 +2583,8 @@ export const zhTW = {
   "licenses.zxing.desc": "zxing-wasm 3.1.4（ZXing-C++ 的 WebAssembly 版），MIT 與 Apache-2.0，讀 QR code 以外的條碼，打包成獨立的檔案。",
   "licenses.material-design-icons": "工具的圖示",
   "licenses.material-design-icons.desc": "Material Design Icons，Pictogrammers Free License。",
+  "licenses.peer-logos": "同類工具的圖示",
+  "licenses.peer-logos.desc": "「為什麼做 Gears」裡各專案的圖示，取自各專案的 repo 或網站，屬於各專案或組織，只用來指出提到的是哪個專案。來源、授權與全文見授權檔。",
   "licenses.data-165": "165 反詐騙清單",
   "licenses.data-165.desc": "網址檢查比對的「遭停止解析涉詐網站」清單，政府資料開放平台資料集 176455，內政部警政署，政府資料開放授權條款第 1 版。",
   "licenses.data-diceware": "密語的字詞表",

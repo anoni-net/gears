@@ -48,6 +48,8 @@ const GROUPS: { id: string; entries: Entry[] }[] = [
     id: "data",
     entries: [
       { id: "material-design-icons", url: fileUrl("material-design-icons") },
+      // 為什麼做 Gears 的同類工具圖示（public/peers/，scripts/make-peer-logos.mjs）
+      { id: "peer-logos", url: fileUrl("peer-logos") },
       // 資料：授權寫在說明裡，沒有獨立的授權檔
       { id: "data-165" },
       { id: "data-diceware" },
