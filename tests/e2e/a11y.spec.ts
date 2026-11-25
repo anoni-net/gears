@@ -8,6 +8,8 @@ import { encodeQr, qrPng } from "../../src/tools/qrcode/index.ts";
 import { existsSync, readFileSync } from "node:fs";
 import { SCENES_WEBM } from "../global-setup.ts";
 import { similarImage } from "../helpers/similar.ts";
+import { assetsUrl } from "../../src/core/models.ts";
+import { PII_MODEL } from "../../src/tools/redact/pii-model.ts";
 import { expect, test } from "./guard.ts";
 
 // 用 axe-core 檢查 WCAG 2.1 AA。只在 Chromium 跑，結果跟瀏覽器無關
@@ -245,4 +247,40 @@ test("查證的相近的圖片：分組與模型的說明，深淺色都沒有�
   expect(await audit(page)).toEqual([]);
   await page.emulateMedia({ colorScheme: "dark" });
   expect(await audit(page)).toEqual([]);
+});
+
+test("檢查畫面內容的找人名、地址與單位：下載中與失敗之後，深淺色都沒有無障礙問題", async ({ page, guard }) => {
+  test.setTimeout(120_000);
+  const dir = assetsUrl(PII_MODEL.dir, "");
+  // 按停止之前的請求一直不回應（停在下載中），之後回內容不對的檔案
+  let hang = true;
+  await page.context().route(`${dir}**`, (route) => (hang ? undefined : route.fulfill({ status: 200, body: "not the model" })));
+  await page.goto("./");
+  const png = await page.evaluate(async () => {
+    const c = document.createElement("canvas");
+    c.width = 900;
+    c.height = 200;
+    const g = c.getContext("2d")!;
+    g.fillStyle = "#fff";
+    g.fillRect(0, 0, c.width, c.height);
+    g.fillStyle = "#000";
+    g.font = "48px sans-serif";
+    g.fillText("Call 0912-345-678", 40, 110);
+    const b = await new Promise<Blob>((r) => c.toBlob((x) => r(x!), "image/png"));
+    return Array.from(new Uint8Array(await b.arrayBuffer()));
+  });
+  await page.getByTestId("file-input").setInputFiles({ name: "chat.png", mimeType: "image/png", buffer: Buffer.from(png) });
+  await page.getByRole("button", { name: "檢查畫面內容" }).click();
+  await expect(page.getByRole("button", { name: "找人名、地址與單位" })).toBeVisible({ timeout: 90_000 });
+  await page.getByRole("button", { name: "找人名、地址與單位" }).click();
+  await expect(page.getByTestId("screen-model").getByRole("progressbar")).toBeVisible();
+  expect(await audit(page)).toEqual([]);
+  await page.getByRole("button", { name: "停止" }).click();
+  hang = false;
+  await page.getByRole("button", { name: "找人名、地址與單位" }).click();
+  await expect(page.getByTestId("screen-model-status")).toHaveText(/沒有辦法執行開源本機模型/, { timeout: 90_000 });
+  expect(await audit(page)).toEqual([]);
+  await page.emulateMedia({ colorScheme: "dark" });
+  expect(await audit(page)).toEqual([]);
+  guard.requests = guard.requests.filter((url) => !url.startsWith(dir));
 });
