@@ -10,7 +10,7 @@ import qrSamples from "../../src/tools/qr-read/samples.json" with { type: "json"
 import { MODEL_CATALOG } from "../../src/core/model-catalog.ts";
 import { USER_PAGES } from "../../src/ui/tool-meta.ts";
 import { pageIds } from "../../src/pages.ts";
-import { AI_NOTES, GAPS, LINKS, PEERS, RELATIONS } from "../../src/ui/why-peers.ts";
+import { BUILT_ON, BUILT_SECTIONS, PEERS } from "../../src/ui/why-peers.ts";
 
 // 介面上有些字串的鍵是組出來的（finding.location、tool.qrcode.desc），漏了翻譯不會
 // 在型別檢查時被抓到，畫面上會直接露出鍵名。
@@ -40,12 +40,10 @@ test("每個代碼與工具都有正體中文的字串", () => {
     // 工具以外的頁面：標題與搜尋結果的描述，使用者區的頁面另外要有桌面上的名稱
     ...pageIds.flatMap((id) => [`${id}.title`, `meta.${id}.title`, `meta.${id}.description`]),
     ...USER_PAGES.map((id) => `${id}.title`),
-    // 為什麼做 Gears 的同類工具（src/ui/why-peers.ts）：列進對照表的另外要有「檔案經過誰」
-    ...PEERS.flatMap((p) => [`why.peer.${p.id}.who`, `why.peer.${p.id}.form`, `why.peer.${p.id}.body`, ...(p.covers?.length ? [`why.peer.${p.id}.path`] : [])]),
-    ...RELATIONS.map((r) => `why.rel.${r}`),
-    ...AI_NOTES.map((n) => `why.ai.${n.id}`),
-    ...LINKS.flatMap(({ id }) => [`why.links.${id}.title`, `why.links.${id}.body`]),
-    ...Array.from({ length: GAPS }, (_, i) => [`why.gaps.${i + 1}.title`, `why.gaps.${i + 1}.body`]).flat(),
+    // 為什麼做 Gears（src/ui/why-peers.ts）：用到的開源成果與其他也在做的工具
+    ...BUILT_ON.flatMap((b) => [`why.built.${b.id}`, `why.built.${b.id}.by`]),
+    ...BUILT_SECTIONS.flatMap((section) => [`why.built.${section}.title`, `why.built.${section}.intro`]),
+    ...PEERS.flatMap((p) => [`why.peer.${p.id}.who`, `why.peer.${p.id}.form`, `why.peer.${p.id}.body`]),
     ...TOOL_GROUPS.map((g) => `why.situation.${g.id}`),
   ];
   expect(expected.filter((k) => !keys.has(k))).toEqual([]);

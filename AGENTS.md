@@ -645,23 +645,25 @@ ProofMode（Guardian Project 給人權紀錄者的 Android App）拍照時不改
 
 ## 為什麼做 Gears
 
-`/gears/why/`（`src/ui/WhyPage.tsx`，2026-11-25 起）寫 Gears 要處理的三種情況，以及國內外已經在做同類工具的組織與專案、跟 Gears 的關係。設計原則頁回答 Gears 怎麼設計，這一頁回答為什麼要做、跟其他工具差在哪裡，對外介紹 Gears 時連到這裡。
+`/gears/why/`（`src/ui/WhyPage.tsx`，2026-11-25 起）寫給讀者的介紹：Gears 要處理的三種情況，以及 Gears 建立在哪些開源成果上。工作台的功能幾乎都不是從零寫起的，用的是其他人訂的規格、寫的程式、訓練的模型，清除中繼資料與文件轉換也參考了先做過的專案。設計原則頁回答 Gears 怎麼設計，這一頁讓讀者知道 Gears 整合了誰的成果、還有哪些工具可以用，對外介紹 Gears 時連到這裡。
 
-- 段落與 id：三種情況（`situations`）、開源本機模型（`models`，底下是其他工具用 AI 的方式 `models-others`）、已經有人在做的工具（`peers`，三組各一個 h3：`peers-handover` 這類）、台灣的工具（`taiwan`）、工具對照（`matrix`）、Gears 參考與銜接的專案（`links`）、Gears 補上的部分（`gaps`）、整理的範圍與限制（`scope`）
+- 寫成介紹，不寫成報告（2026-11-26 改版）。第一版有對照表、跟 Gears 的關係標記（參考、相近、互補）與「Gears 補上的部分」，讀起來像比較報告，讀者看不出 Gears 是靠這些專案才做得出來。改版拿掉對照表與標記，順序改成：三種情況（`situations`）、Gears 用到的開源成果（`built`，四段 h3：`built-specs`、`built-code`、`built-models`、`built-data`）、其他也在做的工具（`peers`，三組與台灣各一段 h3：`peers-handover`、`peers-taiwan` 這類）、Gears 自己做的部分（`own`）、一起參與（`join`）
 - 入口：使用者區（`USER_PAGES`，排在設計原則後面，圖示 `compass-outline`）、寬螢幕的左欄、設計原則頁的延伸閱讀。不是實驗頁，搜尋引擎可以收錄
-- 同類工具的資料在 `src/ui/why-peers.ts` 的 `PEERS`：名稱與連結（三個語系相同）、列在哪一段、跟 Gears 的關係（參考、相近、互補）、對照表裡涵蓋哪幾組。誰做的、形式、說明與「檔案經過誰」寫在 `why.peer.<id>.*`，`tests/unit/i18n.spec.ts` 會檢查。沒有涵蓋任何一組的不列進對照表，名稱由程式寫進表格下面的說明
-- 跟其他頁面重複的事只寫重點：工具數從 `TOOL_GROUPS`、模型數從 `MODEL_CATALOG` 算，每個模型的用途、授權與下載量不重寫一份，連到設計原則頁的模型表（`#models-list`）。改了下列 Gears 的行為時，三個語系的 `why.*` 一起看：清除中繼資料參考 mat2 的範圍、文件開啟前檢查把 PDF 畫成圖片、查證用 c2pa-rs 與讀 ProofMode、onion 版建議 OnionShare、網址檢查每週下載 165 清單、遠端傳送不保存檔案、面對面傳送不經過中繼、新增模型的門檻
+- 資料在 `src/ui/why-peers.ts`，名稱與連結三個語系相同，說明寫在字串，`tests/unit/i18n.spec.ts` 會檢查：
+    - `BUILT_ON`：用到的規格、程式、模型與資料，誰做的寫在 `why.built.<id>.by`，用在哪裡寫在 `why.built.<id>`。程式照 `package.json` 的執行期相依套件，模型照 `src/core/model-catalog.ts`，新增、換掉套件或模型時一起改。個人維護的專案寫「開源社群」，不寫個人的名字
+    - `PEERS`：其他也在做的工具，誰做的、形式與介紹寫在 `why.peer.<id>.*`。介紹寫它做什麼、什麼情況比 Gears 合適，不比高下
+- 跟其他頁面重複的事只寫重點：工具數從 `TOOL_GROUPS` 算，每個模型的用途、授權與下載量不重寫一份，連到設計原則頁的模型表（`#models-list`），每個專案的授權連到授權與來源。改了下列 Gears 的行為時，三個語系的 `why.*` 一起看：清除中繼資料參考 mat2 的範圍、文件開啟前檢查把 PDF 畫成圖片、查證用 c2pa-rs 與讀 ProofMode、onion 版建議 OnionShare、網址檢查每週下載 165 清單、遠端傳送不保存檔案、面對面傳送不經過中繼
 - 其他工具的說法只寫查得到出處的：2026-11-25 用網頁搜尋整理，每一項都對過專案自己的頁面或報導，沒有逐一安裝測試，頁面最後寫明。第一版有幾處沒有根據，發布前拿掉或改寫：PairDrop 的新版說明有比對安全碼，Whoscall 的網址資料來自數位發展部，另外有在瀏覽器裡自動遮蔽人臉的開源工具（DFACE.app），所以不寫「只有 Gears」這類說法。個人開發者寫角色（軟體藝術家、個人開發者），不寫名字
-- 工具多半會變：更新、停止維護或出現新的同類工具。半年左右重新查一次，改了資料或說法時更新 `why.updated` 的日期。還沒查的寫在範圍與限制：台灣事實查核中心與 MyGoPen 自己的工具，以及香港、中國公民團體的同類工具
-- 三組不用分類色（分類色只用在桌面與工具的標題，見「Logo、圖示與配色」），跟 Gears 的關係是主色外框的小標記（`.why-rel`）。對照表沿用設計原則頁模型表的 `.about-table`，手機上每一列排成小卡，所以每一層明寫 `role`
-- 每個提到的工具名稱前面放該專案的圖示（2026-11-25 起）：同類工具的清單、對照表的列標題、其他工具用 AI 的方式，以及參考與銜接的專案的標題，對照表的 Gears 那一列用自己的網站圖示。圖示是 `public/peers/<id>.png`，`why-peers.ts` 的 `PeerName.logo` 與 `LINKS` 指定，`src/ui/WhyPage.tsx` 的 `Logo` 畫出來
-    - 從各專案自己的 repo（鎖定 commit）或網站下載，由 `node scripts/make-peer-logos.mjs` 用瀏覽器畫成 64 × 64 的 PNG，進版控。SVG 也畫成 PNG：第三方的 SVG 從自己的網域送出，直接打開時裡面的程式會執行。只有橫式「圖示加文字」的 logo 時用 `crop` 裁出圖示（Auto Archiver、Cofacts、g0v）
+- 工具多半會變：更新、停止維護或出現新的同類工具。半年左右重新查一次，改了資料或說法時更新 `why.updated` 的日期。還沒查的寫在一起參與的最後：台灣事實查核中心與 MyGoPen 自己的工具，以及香港、中國公民團體的同類工具
+- 三組不用分類色（分類色只用在桌面與工具的標題，見「Logo、圖示與配色」）
+- 其他也在做的工具，名稱前面放該專案的圖示（2026-11-25 起）。Gears 用到的開源成果只列名稱：那一段多是函式庫與規格，很多沒有官方的圖示。圖示是 `public/peers/<id>.png`，`why-peers.ts` 的 `PeerName.logo` 指定，`src/ui/WhyPage.tsx` 的 `Logo` 畫出來
+    - 從各專案自己的 repo（鎖定 commit）或網站下載，由 `node scripts/make-peer-logos.mjs` 用瀏覽器畫成 64 × 64 的 PNG，進版控，清單在 `scripts/peer-logos.json`。SVG 也畫成 PNG：第三方的 SVG 從自己的網域送出，直接打開時裡面的程式會執行。只有橫式「圖示加文字」的 logo 時用 `crop` 裁出圖示（Auto Archiver、Cofacts、g0v）
     - 只從自己的網域載入（CSP 的 `img-src` 只有 `'self'`），不連到各專案的網站，讀者的 IP 不會交給第三方。一共不到 100 KB，跟其他頁面資源一起預先存下，離線也看得到
     - 圖示放在固定的白底小方塊上，深色模式也看得到深色的 logo。名稱就在旁邊，`alt` 留空
     - 找不到官方圖示的（目前只有麥騙）放中性的圖示佔位（`.why-logo.none`），不自己畫一個。2026-11-25 一度以為 mat2 與 DFACE.app 沒有 logo，看了完整的檔案清單才找到，判斷之前列出 repo 全部的圖檔
     - 來源、授權與商標的說明在 `licenses/peer-logos.txt`（授權頁「圖示與資料」的同類工具的圖示）：每個檔案的來源與來源 repo 的授權，MIT 的版權聲明與 Apache-2.0、GPL-3.0、AGPL-3.0、LGPL-3.0 的全文。圖示是獨立的檔案，跟 Gears 的程式分開散布，照「模型的授權」對 copyleft 的做法。Wormhole 與 Whoscall 取自網站，沒有標示授權。也寫明只用來指出是哪個專案、不代表對方認可，對方不希望出現時寫信來就拿掉
-    - 新增同類工具時：在 `scripts/peer-logos.json` 加一筆、執行一次 `make-peer-logos.mjs`，`why-peers.ts` 填上 `logo`，`licenses/peer-logos.txt` 加上來源與授權。`tests/unit/why-logos.spec.ts` 比對四邊列的是同一批、每個都是 64 × 64 且不超過 16 KB，`tests/e2e/why.spec.ts` 確認每個圖示在正式建置的 CSP 底下載得到
-- 瀏覽器測試在 `tests/e2e/why.spec.ts`：從使用者區打開、工具數與模型數、每一項同類工具與對照表的列數、外部連結開新分頁、連到設計原則的模型表，以及三個語系沒有露出字串的鍵。無障礙在 `a11y.spec.ts`
+    - 新增其他也在做的工具時：在 `scripts/peer-logos.json` 加一筆、執行一次 `make-peer-logos.mjs`，`why-peers.ts` 填上 `logo`，`licenses/peer-logos.txt` 加上來源與授權。`tests/unit/why-logos.spec.ts` 比對四邊列的是同一批、每個都是 64 × 64 且不超過 16 KB，`tests/e2e/why.spec.ts` 確認每個圖示在正式建置的 CSP 底下載得到
+- 瀏覽器測試在 `tests/e2e/why.spec.ts`：從使用者區打開、工具數、用到的開源成果與其他也在做的工具每一項都列出來、外部連結開新分頁、連到設計原則的模型表，以及三個語系沒有露出字串的鍵。無障礙在 `a11y.spec.ts`
 
 ## 裝置量測（實驗頁）
 
