@@ -4290,7 +4290,7 @@ button.link {
 }
 
 .why ul.why-peers,
-.why ul.why-ai {
+.why ul.why-built {
   list-style: none;
   padding-left: 0;
 }
@@ -4356,63 +4356,27 @@ button.link {
   margin-left: var(--sp-1);
 }
 
-.why-peer-who,
-.why-peer-form {
+.why-peer-who {
   color: var(--muted);
   font-size: var(--fs-sm);
 }
 
-.why-peer-meta {
+/* Gears 用到的開源成果：一項一行，名稱、誰做的，下一行是用在哪裡 */
+.why-built > li {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: var(--sp-1) var(--sp-2);
-}
-
-.why-rel {
-  font-size: var(--fs-xs);
-  padding: 0 var(--sp-2);
-  border-radius: var(--radius-pill);
-  border: 1px solid var(--link);
-  color: var(--link);
-  white-space: nowrap;
-}
-
-.why .why-ai > li + li {
-  margin-top: var(--sp-2);
-}
-
-.why-pairs {
-  margin: var(--sp-3) 0 0;
-}
-
-.why-pairs > div {
+  align-items: baseline;
+  gap: 0 var(--sp-2);
   padding: var(--sp-2) 0;
   border-bottom: 1px solid var(--hair);
 }
 
-.why-pairs dt {
-  font-weight: 600;
+.why .why-built > li + li {
+  margin-top: 0;
 }
 
-.why-pairs dd {
-  margin: var(--sp-1) 0 0;
-  line-height: 1.6;
-}
-
-.about-table tr.why-gears {
-  background: var(--fill);
-}
-
-.about-table tr.why-gears th {
-  font-weight: 600;
-}
-
-/* 手機上對照表照模型表排成小卡（.about-table），涵蓋與檔案經過誰各占一整行，形式放在右上 */
-@media (max-width: 39.99rem) {
-  .about-table .why-wide {
-    grid-column: 1 / -1;
-  }
+.why-built-use {
+  flex-basis: 100%;
 }
 
 .about-status {
