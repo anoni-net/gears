@@ -15,6 +15,7 @@ const REQUESTS = [
   { id: "vad", who: 3, steps: 5, page: "transcribe", issue: 196 },
   { id: "punct", who: 3, steps: 5, page: "transcribe", issue: 199 },
   { id: "similar", who: 3, steps: 5, page: "verify", issue: 129 },
+  { id: "plain", who: 2, steps: 5, page: "samples", issue: 249 },
 ] as const;
 
 const ISSUES = "https://github.com/anoni-net/gears/issues/";

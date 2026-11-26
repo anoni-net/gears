@@ -69,7 +69,7 @@ test.describe("寬螢幕的左欄", () => {
     await page.goto("./testing/");
     const toc = page.getByTestId("aside-toc");
     // 每一項底下重複的「需要的裝置」與步驟的小標題沒有 id，不列進來
-    await expect(toc.getByRole("link")).toHaveText(["手機上的模型量測", "逐字稿的語音偵測", "逐字稿的標點建議", "查證的相似圖片", "使用時遇到的問題"]);
+    await expect(toc.getByRole("link")).toHaveText(["手機上的模型量測", "逐字稿的語音偵測", "逐字稿的標點建議", "查證的相似圖片", "照著畫面操作看看", "使用時遇到的問題"]);
     await expect(page.getByRole("navigation", { name: "本頁目錄" })).toBeVisible();
 
     await mark(page);
