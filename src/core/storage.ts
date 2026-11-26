@@ -3,6 +3,8 @@ import { PII_MODEL } from "../tools/redact/pii-model.ts";
 import { PUNCT_MODEL } from "../tools/transcribe/punct.ts";
 import { DINO_MODEL } from "../tools/verify/dino-model.ts";
 import ppocr from "../tools/redact/ppocr-models.json" with { type: "json" };
+import llm from "../tools/llm-bench/models.json" with { type: "json" };
+import { MODEL_CATALOG } from "./model-catalog.ts";
 import { MODEL_CACHE } from "./models.ts";
 
 // 已下載的模型（src/ui/StoragePage.tsx）：Gears 存在這個瀏覽器裡的模型與程式，依用途分成一列一列，
@@ -100,6 +102,23 @@ export interface StorageRow {
   key: StorageKey;
   bytes: number;
   entries: [cache: string, request: Request][];
+}
+
+// 這一列存的是哪個模型（已下載的模型那一頁寫在用途的下面）。名稱照設計原則頁的模型表（MODEL_CATALOG），
+// 找人臉與辨識文字的分組名稱跟模型表的 id 不同。裝置量測的語言模型合成一列，依網址列出實際存著的那幾個。
+// 執行模型的程式、pdf.js 與 c2pa 不是模型，名稱已經寫在用途裡，回傳空陣列
+const CATALOG_ID: Partial<Record<StorageGroup, string>> = { faces: "yunet", ocr: "ppocr", speaker: "speaker", vad: "vad", punct: "punct", pii: "pii", dino: "dino" };
+
+export function modelNames(key: StorageKey, urls: readonly string[] = []): string[] {
+  const id = key.group === "transcribe" ? key.model : CATALOG_ID[key.group];
+  if (id) {
+    const found = MODEL_CATALOG.find((m) => m.id === id);
+    return found ? [found.name] : [];
+  }
+  if (key.group !== "llm") return [];
+  return Object.values(llm)
+    .filter((m) => urls.some((u) => u.includes(`/${m.repo}/`) || ("dir" in m && u.includes(`/${m.dir}/`))))
+    .map((m) => m.name);
 }
 
 // 讀三個快取，依用途分列。已下載的模型（src/ui/StoragePage.tsx）與設計原則頁的即時檢查（src/ui/AboutPage.tsx）共用。

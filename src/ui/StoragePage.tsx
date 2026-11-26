@@ -1,6 +1,6 @@
 import { useEffect, useState } from "preact/hooks";
-import { type StorageKey, type StorageRow, formatSize, keyId, scanStorage } from "../core/storage.ts";
-import { t, tDynamic } from "../i18n/index.ts";
+import { type StorageKey, type StorageRow, formatSize, keyId, modelNames, scanStorage } from "../core/storage.ts";
+import { list, t, tDynamic } from "../i18n/index.ts";
 import { WIDE, useMedia } from "./hooks.ts";
 import { IconCircle } from "./Icon.tsx";
 import { STORAGE_CHANGED, StorageQuota } from "./StorageQuota.tsx";
@@ -66,12 +66,13 @@ export function StoragePage() {
           <ul class="storage-list" data-testid="storage-list">
             {rows.map((row) => {
               const name = nameOf(row.key);
-              const used = usedBy(row.key);
+              // 用途下面一行寫模型的名稱與用在哪個工具，例如「YuNet · 遮蔽」
+              const detail = [list(modelNames(row.key, row.entries.map(([, r]) => r.url))), usedBy(row.key)].filter(Boolean).join(" · ");
               return (
                 <li key={keyId(row.key)}>
                   <span class="storage-name">
                     {name}
-                    {used ? <small>{used}</small> : null}
+                    {detail ? <small>{detail}</small> : null}
                   </span>
                   <span class="storage-size">{formatSize(row.bytes)}</span>
                   <button type="button" disabled={busy} aria-label={t("storage.deleteItem", { name })} onClick={() => void del([row], t("storage.deleted", { name }))}>

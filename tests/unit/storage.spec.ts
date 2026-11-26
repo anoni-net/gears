@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { KEEP_CACHE, LLM_CACHE, OCR_MB, RUNTIME_MB, classify, compareKeys, redactDownload } from "../../src/core/storage.ts";
+import { KEEP_CACHE, LLM_CACHE, OCR_MB, RUNTIME_MB, classify, compareKeys, modelNames, redactDownload } from "../../src/core/storage.ts";
 import { MODEL_CACHE } from "../../src/core/models.ts";
 import whisper from "../../src/tools/transcribe/models.json" with { type: "json" };
 
@@ -66,4 +66,16 @@ test("遮蔽的自動尋找還要下載多少：執行環境兩者共用，文�
   expect(need(["https://anoni.net/gears/assets/ort-wasm-simd-threaded-Tjs00002.wasm"])).toEqual({ faces: RUNTIME_MB, text: RUNTIME_MB + OCR_MB });
   // onion 版的路徑在根目錄
   expect(redactDownload(["http://x.onion/assets/ort-wasm-a.wasm"], "/", "/assets/ort-wasm-a.wasm")).toEqual({ faces: 0, text: OCR_MB });
+});
+
+test("每一列寫出模型的名稱，語言模型依網址列出存著的那幾個", () => {
+  expect(modelNames({ group: "faces" })).toEqual(["YuNet"]);
+  expect(modelNames({ group: "ocr" })).toEqual(["PP-OCRv5 mobile、PP-OCRv6 small"]);
+  expect(modelNames({ group: "transcribe", model: "base" })).toEqual(["Whisper base"]);
+  expect(modelNames({ group: "vad" })[0]).toMatch(/^Silero VAD /);
+  for (const group of ["speaker", "punct", "pii", "dino"] as const) expect(modelNames({ group })).toHaveLength(1);
+  for (const group of ["runtime", "pdf", "c2pa", "other"] as const) expect(modelNames({ group })).toEqual([]);
+  const urls = ["https://huggingface.co/onnx-community/Qwen3-0.6B-ONNX/resolve/abc/onnx/model.onnx", "https://assets.anoni.net/gears/models/qwen3-1.7b-3231b52/config.json"];
+  expect(modelNames({ group: "llm" }, urls).sort()).toEqual(["Qwen3 0.6B", "Qwen3 1.7B"]);
+  expect(modelNames({ group: "llm" })).toEqual([]);
 });
