@@ -841,6 +841,13 @@ export function TranscribeEditor({ blob, format, onCancel }: FileEditorProps) {
             {t("transcribe.models.all")}
           </button>
         </p>
+        {/* 已下載的模型開新分頁：還沒下載的逐字稿換頁之後就不見了 */}
+        <p class="hint">
+          <a href={routeUrl("storage")} target="_blank" rel="noopener" data-testid="tool-models-storage">
+            {t("toolmodels.manage")}
+          </a>
+          {t("toolmodels.manageNote")}
+        </p>
       </details>
     </div>
   );

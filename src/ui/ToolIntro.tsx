@@ -3,6 +3,7 @@ import { Icon, IconCircle } from "./Icon.tsx";
 import { HOWTO_ICONS } from "./howto-icons.ts";
 import { SampleLink } from "./SamplesPage.tsx";
 import { TOOL_META } from "./tool-meta.ts";
+import { ToolModels } from "./ToolModels.tsx";
 
 // 使用方式的步驟數，每個工具三步（howto.<工具 id>.<n>）
 export const HOWTO_STEPS = [1, 2, 3] as const;
@@ -48,6 +49,7 @@ export function ToolIntro({ id, onPick, onSamples }: { id: string; onPick(): voi
         </button>
       </p>
       <p class="hint">{t("intro.orTray")}</p>
+      <ToolModels id={id} />
     </section>
   );
 }

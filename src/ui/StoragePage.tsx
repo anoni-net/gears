@@ -1,6 +1,7 @@
 import { useEffect, useState } from "preact/hooks";
-import { type StorageKey, type StorageRow, formatSize, keyId, scanStorage } from "../core/storage.ts";
-import { t, tDynamic } from "../i18n/index.ts";
+import { toolsUsing } from "../core/model-catalog.ts";
+import { type StorageKey, type StorageRow, catalogId, formatSize, keyId, modelNames, scanStorage } from "../core/storage.ts";
+import { list, t, tDynamic } from "../i18n/index.ts";
 import { WIDE, useMedia } from "./hooks.ts";
 import { IconCircle } from "./Icon.tsx";
 import { STORAGE_CHANGED, StorageQuota } from "./StorageQuota.tsx";
@@ -18,7 +19,12 @@ async function remove(rows: StorageRow[]) {
 
 // 這一列的名稱與用在哪裡。設計原則頁的即時檢查也用這個名稱
 export const nameOf = ({ group, model }: StorageKey) => (model ? tDynamic(`transcribe.model.${model}`) : tDynamic(`storage.item.${group}`));
-const usedBy = ({ group }: StorageKey) => (group === "transcribe" || group === "speaker" || group === "vad" || group === "punct" ? t("tool.transcribe") : group === "faces" || group === "ocr" || group === "pii" ? t("tool.redact") : group === "c2pa" || group === "dino" ? t("tool.verify") : group === "other" ? "" : tDynamic(`storage.used.${group}`));
+// 用在哪幾個工具：模型照 TOOL_MODELS，驗證內容憑證是查證，執行模型的程式這類共用的寫 storage.used.*
+const usedBy = (key: StorageKey) => {
+  const id = catalogId(key);
+  if (id) return list(toolsUsing(id).map((tool) => tDynamic(`tool.${tool}`)));
+  return key.group === "c2pa" ? t("tool.verify") : key.group === "other" ? "" : tDynamic(`storage.used.${key.group}`);
+};
 
 export function StoragePage() {
   // undefined 是還在計算
@@ -66,12 +72,13 @@ export function StoragePage() {
           <ul class="storage-list" data-testid="storage-list">
             {rows.map((row) => {
               const name = nameOf(row.key);
-              const used = usedBy(row.key);
+              // 用途下面一行寫模型的名稱與用在哪個工具，例如「YuNet · 遮蔽」
+              const detail = [list(modelNames(row.key, row.entries.map(([, r]) => r.url))), usedBy(row.key)].filter(Boolean).join(" · ");
               return (
                 <li key={keyId(row.key)}>
                   <span class="storage-name">
                     {name}
-                    {used ? <small>{used}</small> : null}
+                    {detail ? <small>{detail}</small> : null}
                   </span>
                   <span class="storage-size">{formatSize(row.bytes)}</span>
                   <button type="button" disabled={busy} aria-label={t("storage.deleteItem", { name })} onClick={() => void del([row], t("storage.deleted", { name }))}>

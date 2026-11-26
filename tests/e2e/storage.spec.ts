@@ -31,11 +31,15 @@ test("已下載的模型：依用途列出大小，可以逐列刪除與全部�
   const rows = page.getByTestId("storage-list").locator("li");
   await expect(rows).toHaveCount(4);
   await expect(rows.nth(0)).toContainText("base：比較快");
+  await expect(rows.nth(0)).toContainText("Whisper base · 逐字稿");
   await expect(rows.nth(0)).toContainText("2 MB");
   await expect(rows.nth(1)).toContainText("找人臉的模型");
+  await expect(rows.nth(1)).toContainText("YuNet · 遮蔽");
   await expect(rows.nth(1)).toContainText("230 KB");
   await expect(rows.nth(2)).toContainText("辨識文字的模型");
+  await expect(rows.nth(2)).toContainText("PP-OCRv5 mobile、PP-OCRv6 small · 遮蔽、網址檢查");
   await expect(rows.nth(3)).toContainText("裝置量測的語言模型");
+  await expect(rows.nth(3)).toContainText("Qwen3 0.6B · 實驗頁");
   await expect(page.getByText("合計 7 MB")).toBeVisible();
 
   await page.getByRole("button", { name: "刪除找人臉的模型" }).click();

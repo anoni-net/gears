@@ -67,3 +67,18 @@ export function catalogRange(models: readonly CatalogModel[] = MODEL_CATALOG): {
   const sorted = [...models].sort((a, b) => a.bytes - b.bytes);
   return { min: sorted[0]!, max: sorted.at(-1)! };
 }
+
+// 每個標了開源本機模型（TOOL_META 的 model 標籤）的工具用到哪些模型，依畫面上的排列順序。
+// 工具頁最下面的「用到的開源模型」（src/ui/ToolModels.tsx）與已下載的模型那一頁的「用在哪個工具」都讀這一份。
+// 照程式實際用到的寫：網址檢查的從截圖讀出網址只用文字辨識，逐字稿的「找人名、地址與單位」也用個資辨識模型。
+// tests/unit/tool-models.spec.ts 檢查標了 model 的工具都有一筆、每個 id 都在 MODEL_CATALOG 裡
+export const TOOL_MODELS: Readonly<Record<string, readonly string[]>> = {
+  redact: ["yunet", "ppocr", "pii"],
+  "url-check": ["ppocr"],
+  transcribe: ["vad", ...Object.keys(whisper), "speaker", "punct", "pii"],
+  verify: ["dino"],
+  "writing-style": ["pii"],
+};
+
+// 用到這個模型的工具
+export const toolsUsing = (model: string) => Object.keys(TOOL_MODELS).filter((tool) => TOOL_MODELS[tool]!.includes(model));
