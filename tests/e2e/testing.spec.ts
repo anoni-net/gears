@@ -58,3 +58,17 @@ test("協助測試：英文版", async ({ page }) => {
   await expect(page.getByRole("heading", { level: 1, name: "Help us test" })).toBeVisible();
   await expect(page.getByTestId("testing")).not.toContainText("testing.");
 });
+
+test("協助測試：照著畫面操作看看，按鈕打開範例，步驟引用的按鈕都找得到", async ({ page }) => {
+  await page.goto("./testing/");
+  const plain = page.getByTestId("testing-plain");
+  await expect(plain.getByRole("heading", { name: "照著畫面操作看看" })).toBeVisible();
+  await expect(plain.locator("ul li")).toHaveCount(2);
+  await expect(plain.locator("ol li")).toHaveCount(5);
+  await expect(plain.getByRole("link", { name: "討論與整理的結果：anoni-net/gears#249" })).toHaveAttribute("href", "https://github.com/anoni-net/gears/issues/249");
+  await plain.getByRole("link", { name: "打開範例" }).click();
+  await expect(page).toHaveURL(/\/samples\/$/);
+  // 第二步：範例照片用清除中繼資料打開，工具頁上方有使用方式
+  await page.getByRole("button", { name: "用「清除中繼資料」打開" }).first().click();
+  await expect(page.getByRole("button", { name: "清除", exact: true })).toBeVisible();
+});
