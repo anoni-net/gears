@@ -109,8 +109,11 @@ export interface StorageRow {
 // 執行模型的程式、pdf.js 與 c2pa 不是模型，名稱已經寫在用途裡，回傳空陣列
 const CATALOG_ID: Partial<Record<StorageGroup, string>> = { faces: "yunet", ocr: "ppocr", speaker: "speaker", vad: "vad", punct: "punct", pii: "pii", dino: "dino" };
 
+// 這一列在模型表（MODEL_CATALOG）裡的 id，不是單一模型的列是 undefined
+export const catalogId = (key: StorageKey) => (key.group === "transcribe" ? key.model : CATALOG_ID[key.group]);
+
 export function modelNames(key: StorageKey, urls: readonly string[] = []): string[] {
-  const id = key.group === "transcribe" ? key.model : CATALOG_ID[key.group];
+  const id = catalogId(key);
   if (id) {
     const found = MODEL_CATALOG.find((m) => m.id === id);
     return found ? [found.name] : [];

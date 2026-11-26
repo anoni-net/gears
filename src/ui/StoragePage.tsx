@@ -1,5 +1,6 @@
 import { useEffect, useState } from "preact/hooks";
-import { type StorageKey, type StorageRow, formatSize, keyId, modelNames, scanStorage } from "../core/storage.ts";
+import { toolsUsing } from "../core/model-catalog.ts";
+import { type StorageKey, type StorageRow, catalogId, formatSize, keyId, modelNames, scanStorage } from "../core/storage.ts";
 import { list, t, tDynamic } from "../i18n/index.ts";
 import { WIDE, useMedia } from "./hooks.ts";
 import { IconCircle } from "./Icon.tsx";
@@ -18,7 +19,12 @@ async function remove(rows: StorageRow[]) {
 
 // 這一列的名稱與用在哪裡。設計原則頁的即時檢查也用這個名稱
 export const nameOf = ({ group, model }: StorageKey) => (model ? tDynamic(`transcribe.model.${model}`) : tDynamic(`storage.item.${group}`));
-const usedBy = ({ group }: StorageKey) => (group === "transcribe" || group === "speaker" || group === "vad" || group === "punct" ? t("tool.transcribe") : group === "faces" || group === "ocr" || group === "pii" ? t("tool.redact") : group === "c2pa" || group === "dino" ? t("tool.verify") : group === "other" ? "" : tDynamic(`storage.used.${group}`));
+// 用在哪幾個工具：模型照 TOOL_MODELS，驗證內容憑證是查證，執行模型的程式這類共用的寫 storage.used.*
+const usedBy = (key: StorageKey) => {
+  const id = catalogId(key);
+  if (id) return list(toolsUsing(id).map((tool) => tDynamic(`tool.${tool}`)));
+  return key.group === "c2pa" ? t("tool.verify") : key.group === "other" ? "" : tDynamic(`storage.used.${key.group}`);
+};
 
 export function StoragePage() {
   // undefined 是還在計算

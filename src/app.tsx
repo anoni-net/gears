@@ -10,6 +10,7 @@ import { FileView } from "./ui/FileView.tsx";
 import { Licenses } from "./ui/Licenses.tsx";
 import { NOT_FOUND, pageIds } from "./pages.ts";
 import { ToolHeader, ToolIntro } from "./ui/ToolIntro.tsx";
+import { ToolModels } from "./ui/ToolModels.tsx";
 import { LocaleHint } from "./ui/LocaleHint.tsx";
 import { TrayList } from "./ui/TrayList.tsx";
 import { isReloading, useOffline } from "./ui/offline.ts";
@@ -313,6 +314,7 @@ export function App() {
           onCreate={(file) => void addFiles([file], route)}
           onOpenTool={openTool}
         />
+        <ToolModels id={route} />
       </section>
     );
   } else if (route === "licenses") {

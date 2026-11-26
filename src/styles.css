@@ -3268,6 +3268,39 @@ button.link {
   font-size: var(--fs-sm);
 }
 
+/* 工具頁最下面的「用到的開源模型」（src/ui/ToolModels.tsx）：骨架的第五塊，字比內文小一號，用細線跟上面的工具隔開。
+   每個模型一列：名稱（連到來源）、在這個工具裡做什麼，下一行是授權與下載量 */
+.tool-models {
+  margin-top: var(--sp-6);
+  padding-top: var(--sp-4);
+  border-top: 1px solid var(--hair);
+  font-size: var(--fs-sm);
+}
+
+.tool-models h2 {
+  margin: 0 0 var(--sp-2);
+  font-size: var(--fs-md);
+}
+
+.tool-models ul {
+  margin: var(--sp-2) 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tool-models li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--sp-2);
+  padding: var(--sp-2) 0;
+  overflow-wrap: anywhere;
+}
+
+.tool-models li small {
+  flex-basis: 100%;
+  color: var(--muted);
+}
+
 /* 已下載的模型：一列一個用途，名稱、大小、刪除。窄螢幕上名稱占滿一行，大小與按鈕並排在下一行 */
 .storage-list {
   list-style: none;
@@ -3285,6 +3318,7 @@ button.link {
 
 .storage-name {
   min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 @media (max-width: 36rem) {

@@ -37,6 +37,7 @@ test("每個代碼與工具都有正體中文的字串", () => {
     ...qrSamples.flatMap((sample) => [`qrread.sample.${sample.id}`, `qrread.samples.${sample.group}`]),
     // 設計原則頁的模型表：每個模型用在哪個工具（src/core/model-catalog.ts）
     ...MODEL_CATALOG.map((m) => `about.use.${m.id}`),
+    ...MODEL_CATALOG.map((m) => `toolmodels.use.${m.id}`),
     // 工具以外的頁面：標題與搜尋結果的描述，使用者區的頁面另外要有桌面上的名稱
     ...pageIds.flatMap((id) => [`${id}.title`, `meta.${id}.title`, `meta.${id}.description`]),
     ...USER_PAGES.map((id) => `${id}.title`),
