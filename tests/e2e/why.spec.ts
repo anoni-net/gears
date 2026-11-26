@@ -50,6 +50,19 @@ test("每個提到的工具前面都有圖示，從自己的網域載入，找�
   await expect(why.getByTestId("why-matrix").locator('tr[data-peer="gears"] img')).toHaveAttribute("src", /favicon\.svg$/);
 });
 
+test("手機上對照表排成小卡，Gears 那一列的文字跟底色的邊留有距離", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("./why/");
+  const row = page.getByTestId("why-matrix").locator('tr[data-peer="gears"]');
+  const box = (await row.boundingBox())!;
+  // 每一格的文字都在色塊裡，左右至少留 8 px
+  for (const cell of await row.locator("th, td").all()) {
+    const c = (await cell.boundingBox())!;
+    expect(c.x - box.x, await cell.innerText()).toBeGreaterThanOrEqual(8);
+    expect(box.x + box.width - (c.x + c.width), await cell.innerText()).toBeGreaterThanOrEqual(8);
+  }
+});
+
 test("模型表連到設計原則頁的那一段，設計原則的延伸閱讀也連回來", async ({ page }) => {
   await page.goto("./why/");
   await page.getByRole("link", { name: "設計原則的模型表" }).click();

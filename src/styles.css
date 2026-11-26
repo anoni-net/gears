@@ -4408,10 +4408,16 @@ button.link {
   font-weight: 600;
 }
 
-/* 手機上對照表照模型表排成小卡（.about-table），涵蓋與檔案經過誰各占一整行，形式放在右上 */
+/* 手機上對照表照模型表排成小卡（.about-table），涵蓋與檔案經過誰各占一整行，形式放在右上。
+   小卡只有上下的間距，Gears 那一列有底色，左右也要留白，文字才不會貼著色塊的邊 */
 @media (max-width: 39.99rem) {
   .about-table .why-wide {
     grid-column: 1 / -1;
+  }
+
+  .about-table tbody tr.why-gears {
+    padding: var(--sp-3);
+    border-radius: var(--radius);
   }
 }
 
