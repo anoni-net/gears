@@ -3934,6 +3934,13 @@ button.link {
   height: 1rem;
 }
 
+/* 按鈕裡的圖示標籤（遮蔽、檢查畫面內容、寫作習慣檢查、逐字稿與查證的模型按鈕）跟文字隔開，
+   按鈕是 inline-flex，標籤後面的空白會被吃掉 */
+button > .tool-tag,
+.button > .tool-tag {
+  margin-inline-end: var(--sp-2);
+}
+
 /* 桌面最下面的圖示說明，跟範例、建議與回饋放在同一區，一個標籤一行 */
 .tag-legend {
   scroll-margin-top: 1rem;
