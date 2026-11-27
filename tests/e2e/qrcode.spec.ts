@@ -108,7 +108,7 @@ test("內容太長時說明原因，不顯示 QR code", async ({ page }) => {
 
 test("每個工具都有自己的網址，可以直接打開，也可以用上一頁回去", async ({ page }) => {
   await page.goto("./strip-metadata/");
-  await expect(page).toHaveTitle("清除照片、文件與影音的中繼資料 | Gears 檔案工作台");
+  await expect(page).toHaveTitle("移除照片的拍攝位置與 metadata（中繼資料） | Gears 檔案工作台");
   await expect(page.locator('meta[name="description"]')).toHaveAttribute("content", /拍攝位置/);
   await expect(page.getByRole("heading", { name: "清除中繼資料" })).toBeVisible();
   await expect(page.getByText("也可以從暫存區選一個已經放進來的檔案。")).toBeVisible();
