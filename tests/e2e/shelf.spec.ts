@@ -76,3 +76,16 @@ test("下載的檔案與簽章檔：從暫存區打開下載的軟體驗證，�
   await item(page, "下載的軟體驗證").getByRole("button", { name: "打開下載的軟體驗證" }).click();
   await expect(page.getByTestId("software-verdict")).toContainText("簽章正確");
 });
+
+test("判斷不出格式的 CSV 不列下載的軟體驗證，安裝檔照樣列出", async ({ page }) => {
+  await page.goto("./");
+  await page.getByTestId("file-input").setInputFiles([
+    { name: "名單.csv", mimeType: "text/csv", buffer: Buffer.from("姓名,電話\n王小明,0912-345-678\n") },
+    { name: "setup.exe", mimeType: "application/octet-stream", buffer: Buffer.from([0x4d, 0x5a, 0x90, 0x00, 0x03, 0x00, 0x00, 0x00]) },
+  ]);
+  await page.locator(".tray .item", { hasText: "名單.csv" }).click();
+  await expect(item(page, "查證檔案")).toBeVisible();
+  await expect(item(page, "下載的軟體驗證")).toHaveCount(0);
+  await page.locator(".tray .item", { hasText: "setup.exe" }).click();
+  await expect(item(page, "下載的軟體驗證")).toBeVisible();
+});
