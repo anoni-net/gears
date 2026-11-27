@@ -14,6 +14,7 @@ export interface Signals {
   docCheck?: { connect: number; code: number }; // 文件打開時會連線的位址與會執行的程式
   pdfRevisions?: number; // PDF 裡的舊版本
   signature?: boolean; // 這個檔案是 OpenPGP 簽章
+  text?: boolean; // 判斷不出格式、開頭看起來是純文字（TXT、CSV 這類），不是安裝檔
 }
 
 // 建議的理由。key 是 shelf.reason.* 的字串，findings 是要列出的資訊
@@ -60,7 +61,9 @@ function createAccepts(id: string, file: TrayFile, current: Version, signals: Si
     case "email-check":
       return current.format === "eml" && !current.large;
     case "software-verify":
-      return !!signals.signature || signaturePair || current.format === "unknown";
+      // 判斷不出格式的檔案多半是安裝檔、映像檔，列出來讓讀者驗證。純文字的 TXT、CSV 也判斷不出格式，
+      // 2026-11-27 以前一樣列出下載的軟體驗證，跟讀者的需求無關（#255）。簽章檔本身也是文字，由 signature 判斷
+      return !!signals.signature || signaturePair || (current.format === "unknown" && !signals.text);
     default:
       return false;
   }

@@ -3,6 +3,7 @@ import type { Format } from "../../src/core/bytes.ts";
 import type { Finding } from "../../src/core/tool.ts";
 import type { Intent, TrayFile } from "../../src/core/tray.ts";
 import { type Signals, buildShelf } from "../../src/ui/shelf.ts";
+import { looksLikeText } from "../../src/ui/shelf-signals.ts";
 
 let id = 1;
 function file(name: string, format: Format, findings: Finding["code"][] = [], intent?: Intent, extra: { tools?: string[] } = {}): TrayFile {
@@ -63,6 +64,36 @@ test("下載的檔案與簽章檔：兩邊都建議下載的軟體驗證", () =>
   expect(ids(shelf(sig, { others: [exe, sig], signals: { signature: true } }))).toEqual(["check: software-verify(signature-file) verify", "send: encrypt"]);
   // 一般的 zip 沒有簽章檔時不列
   expect(shelf(file("a.zip", "zip")).flatMap((g) => g.entries.map((e) => e.id))).not.toContain("software-verify");
+});
+
+test("判斷不出格式的純文字（TXT、CSV）不列下載的軟體驗證，簽章檔與有簽章檔的文字照樣列出", () => {
+  const listed = (f: TrayFile, opts: Parameters<typeof shelf>[1] = {}) => shelf(f, opts).flatMap((g) => g.entries.map((e) => e.id));
+  expect(listed(file("名單.csv", "unknown"), { signals: { text: true } })).not.toContain("software-verify");
+  expect(ids(shelf(file("notes.txt", "unknown"), { signals: { text: true } }))).toEqual(["send: encrypt", "check: verify"]);
+  // 安裝檔照樣列出，訊號還沒算好時也是
+  expect(listed(file("setup.exe", "unknown"), { signals: { text: false } })).toContain("software-verify");
+  expect(listed(file("setup.exe", "unknown"))).toContain("software-verify");
+  // 簽章檔本身也是文字
+  const sig = file("tails.img.sig", "unknown");
+  expect(ids(shelf(sig, { signals: { signature: true, text: true } }))[0]).toBe("check: software-verify(signature-file) verify");
+  // Tor Browser 的 sha256sums 是文字，旁邊有簽章檔時要驗證
+  const sums = file("sha256sums-signed-build.txt", "unknown");
+  const sumsSig = file("sha256sums-signed-build.txt.asc", "unknown");
+  expect(listed(sums, { others: [sums, sumsSig], signals: { text: true } })).toContain("software-verify");
+});
+
+test("純文字的判斷：沒有 0 這個位元組、控制字元很少，UTF-16 靠 BOM 認出", () => {
+  const enc = (s: string) => new TextEncoder().encode(s);
+  expect(looksLikeText(enc("姓名,電話\n王小明,0912-345-678\r\n"))).toBe(true);
+  expect(looksLikeText(enc("a\tb\fc\x1b[0m"))).toBe(true);
+  // Big5 的「姓名」
+  expect(looksLikeText(new Uint8Array([0xa9, 0x6d, 0xa6, 0x57, 0x2c, 0x0a]))).toBe(true);
+  // UTF-16LE 的「ab」，前面有 BOM
+  expect(looksLikeText(new Uint8Array([0xff, 0xfe, 0x61, 0x00, 0x62, 0x00]))).toBe(true);
+  // Windows 的安裝檔與其他二進位的資料
+  expect(looksLikeText(new Uint8Array([0x4d, 0x5a, 0x90, 0x00, 0x03, 0x00]))).toBe(false);
+  expect(looksLikeText(new Uint8Array(Array.from({ length: 200 }, (_, i) => (i % 10 === 0 ? 0x01 : 0x41))))).toBe(false);
+  expect(looksLikeText(new Uint8Array())).toBe(false);
 });
 
 test("最多兩個建議；處理過的不再建議", () => {
