@@ -2,7 +2,7 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
     <loc>https://anoni.net/gears/</loc>
-    <lastmod>2026-11-25</lastmod>
+    <lastmod>2026-11-27</lastmod>
     <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/" />
     <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/" />
     <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/" />
@@ -10,7 +10,7 @@
   </url>
   <url>
     <loc>https://anoni.net/gears/zh-cn/</loc>
-    <lastmod>2026-11-25</lastmod>
+    <lastmod>2026-11-27</lastmod>
     <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/" />
     <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/" />
     <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/" />
@@ -18,7 +18,7 @@
   </url>
   <url>
     <loc>https://anoni.net/gears/en/</loc>
-    <lastmod>2026-11-25</lastmod>
+    <lastmod>2026-11-27</lastmod>
     <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/" />
     <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/" />
     <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/" />
@@ -26,7 +26,7 @@
   </url>
   <url>
     <loc>https://anoni.net/gears/strip-metadata/</loc>
-    <lastmod>2026-11-25</lastmod>
+    <lastmod>2026-11-27</lastmod>
     <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/strip-metadata/" />
     <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/strip-metadata/" />
     <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/strip-metadata/" />
@@ -34,7 +34,7 @@
   </url>
   <url>
     <loc>https://anoni.net/gears/zh-cn/strip-metadata/</loc>
-    <lastmod>2026-11-25</lastmod>
+    <lastmod>2026-11-27</lastmod>
     <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/strip-metadata/" />
     <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/strip-metadata/" />
     <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/strip-metadata/" />
@@ -42,7 +42,7 @@
   </url>
   <url>
     <loc>https://anoni.net/gears/en/strip-metadata/</loc>
-    <lastmod>2026-11-25</lastmod>
+    <lastmod>2026-11-27</lastmod>
     <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/strip-metadata/" />
     <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/strip-metadata/" />
     <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/strip-metadata/" />
@@ -50,7 +50,7 @@
   </url>
   <url>
     <loc>https://anoni.net/gears/redact/</loc>
-    <lastmod>2026-11-25</lastmod>
+    <lastmod>2026-11-27</lastmod>
     <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/redact/" />
     <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/redact/" />
     <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/redact/" />
@@ -58,7 +58,7 @@
   </url>
   <url>
     <loc>https://anoni.net/gears/zh-cn/redact/</loc>
-    <lastmod>2026-11-25</lastmod>
+    <lastmod>2026-11-27</lastmod>
     <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/redact/" />
     <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/redact/" />
     <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/redact/" />
@@ -66,7 +66,7 @@
   </url>
   <url>
     <loc>https://anoni.net/gears/en/redact/</loc>
-    <lastmod>2026-11-25</lastmod>
+    <lastmod>2026-11-27</lastmod>
     <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/redact/" />
     <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/redact/" />
     <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/redact/" />
@@ -74,7 +74,7 @@
   </url>
   <url>
     <loc>https://anoni.net/gears/heic-to-jpeg/</loc>
-    <lastmod>2026-11-25</lastmod>
+    <lastmod>2026-11-27</lastmod>
     <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/heic-to-jpeg/" />
     <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/heic-to-jpeg/" />
     <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/heic-to-jpeg/" />
@@ -82,7 +82,7 @@
   </url>
   <url>
     <loc>https://anoni.net/gears/zh-cn/heic-to-jpeg/</loc>
-    <lastmod>2026-11-25</lastmod>
+    <lastmod>2026-11-27</lastmod>
     <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/heic-to-jpeg/" />
     <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/heic-to-jpeg/" />
     <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/heic-to-jpeg/" />
@@ -90,7 +90,7 @@
   </url>
   <url>
     <loc>https://anoni.net/gears/en/heic-to-jpeg/</loc>
-    <lastmod>2026-11-25</lastmod>
+    <lastmod>2026-11-27</lastmod>
     <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/heic-to-jpeg/" />
     <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/heic-to-jpeg/" />
     <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/heic-to-jpeg/" />
@@ -98,7 +98,7 @@
   </url>
   <url>
     <loc>https://anoni.net/gears/pdf-pages/</loc>
-    <lastmod>2026-11-25</lastmod>
+    <lastmod>2026-11-27</lastmod>
     <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/pdf-pages/" />
     <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/pdf-pages/" />
     <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/pdf-pages/" />
@@ -106,7 +106,7 @@
   </url>
   <url>
     <loc>https://anoni.net/gears/zh-cn/pdf-pages/</loc>
-    <lastmod>2026-11-25</lastmod>
+    <lastmod>2026-11-27</lastmod>
     <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/pdf-pages/" />
     <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/pdf-pages/" />
     <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/pdf-pages/" />
@@ -114,7 +114,7 @@
   </url>
   <url>
     <loc>https://anoni.net/gears/en/pdf-pages/</loc>
-    <lastmod>2026-11-25</lastmod>
+    <lastmod>2026-11-27</lastmod>
     <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/pdf-pages/" />
     <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/pdf-pages/" />
     <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/pdf-pages/" />
@@ -170,7 +170,7 @@
   </url>
   <url>
     <loc>https://anoni.net/gears/transcribe/</loc>
-    <lastmod>2026-11-25</lastmod>
+    <lastmod>2026-11-27</lastmod>
     <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/transcribe/" />
     <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/transcribe/" />
     <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/transcribe/" />
@@ -178,7 +178,7 @@
   </url>
   <url>
     <loc>https://anoni.net/gears/zh-cn/transcribe/</loc>
-    <lastmod>2026-11-25</lastmod>
+    <lastmod>2026-11-27</lastmod>
     <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/transcribe/" />
     <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/transcribe/" />
     <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/transcribe/" />
@@ -186,7 +186,7 @@
   </url>
   <url>
     <loc>https://anoni.net/gears/en/transcribe/</loc>
-    <lastmod>2026-11-25</lastmod>
+    <lastmod>2026-11-27</lastmod>
     <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/transcribe/" />
     <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/transcribe/" />
     <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/transcribe/" />
@@ -242,7 +242,7 @@
   </url>
   <url>
     <loc>https://anoni.net/gears/video-frames/</loc>
-    <lastmod>2026-11-25</lastmod>
+    <lastmod>2026-11-27</lastmod>
     <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/video-frames/" />
     <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/video-frames/" />
     <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/video-frames/" />
@@ -250,7 +250,7 @@
   </url>
   <url>
     <loc>https://anoni.net/gears/zh-cn/video-frames/</loc>
-    <lastmod>2026-11-25</lastmod>
+    <lastmod>2026-11-27</lastmod>
     <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/video-frames/" />
     <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/video-frames/" />
     <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/video-frames/" />
@@ -258,7 +258,7 @@
   </url>
   <url>
     <loc>https://anoni.net/gears/en/video-frames/</loc>
-    <lastmod>2026-11-25</lastmod>
+    <lastmod>2026-11-27</lastmod>
     <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/video-frames/" />
     <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/video-frames/" />
     <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/video-frames/" />
@@ -266,7 +266,7 @@
   </url>
   <url>
     <loc>https://anoni.net/gears/doc-check/</loc>
-    <lastmod>2026-11-25</lastmod>
+    <lastmod>2026-11-27</lastmod>
     <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/doc-check/" />
     <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/doc-check/" />
     <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/doc-check/" />
@@ -274,7 +274,7 @@
   </url>
   <url>
     <loc>https://anoni.net/gears/zh-cn/doc-check/</loc>
-    <lastmod>2026-11-25</lastmod>
+    <lastmod>2026-11-27</lastmod>
     <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/doc-check/" />
     <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/doc-check/" />
     <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/doc-check/" />
@@ -282,7 +282,7 @@
   </url>
   <url>
     <loc>https://anoni.net/gears/en/doc-check/</loc>
-    <lastmod>2026-11-25</lastmod>
+    <lastmod>2026-11-27</lastmod>
     <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/doc-check/" />
     <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/doc-check/" />
     <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/doc-check/" />
@@ -314,7 +314,7 @@
   </url>
   <url>
     <loc>https://anoni.net/gears/url-check/</loc>
-    <lastmod>2026-11-25</lastmod>
+    <lastmod>2026-11-27</lastmod>
     <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/url-check/" />
     <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/url-check/" />
     <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/url-check/" />
@@ -322,7 +322,7 @@
   </url>
   <url>
     <loc>https://anoni.net/gears/zh-cn/url-check/</loc>
-    <lastmod>2026-11-25</lastmod>
+    <lastmod>2026-11-27</lastmod>
     <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/url-check/" />
     <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/url-check/" />
     <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/url-check/" />
@@ -330,7 +330,7 @@
   </url>
   <url>
     <loc>https://anoni.net/gears/en/url-check/</loc>
-    <lastmod>2026-11-25</lastmod>
+    <lastmod>2026-11-27</lastmod>
     <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/url-check/" />
     <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/url-check/" />
     <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/url-check/" />
@@ -434,7 +434,7 @@
   </url>
   <url>
     <loc>https://anoni.net/gears/verify/</loc>
-    <lastmod>2026-11-25</lastmod>
+    <lastmod>2026-11-27</lastmod>
     <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/verify/" />
     <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/verify/" />
     <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/verify/" />
@@ -442,7 +442,7 @@
   </url>
   <url>
     <loc>https://anoni.net/gears/zh-cn/verify/</loc>
-    <lastmod>2026-11-25</lastmod>
+    <lastmod>2026-11-27</lastmod>
     <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/verify/" />
     <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/verify/" />
     <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/verify/" />
@@ -450,7 +450,7 @@
   </url>
   <url>
     <loc>https://anoni.net/gears/en/verify/</loc>
-    <lastmod>2026-11-25</lastmod>
+    <lastmod>2026-11-27</lastmod>
     <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/verify/" />
     <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/verify/" />
     <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/verify/" />
@@ -458,7 +458,7 @@
   </url>
   <url>
     <loc>https://anoni.net/gears/email-check/</loc>
-    <lastmod>2026-11-25</lastmod>
+    <lastmod>2026-11-27</lastmod>
     <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/email-check/" />
     <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/email-check/" />
     <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/email-check/" />
@@ -466,7 +466,7 @@
   </url>
   <url>
     <loc>https://anoni.net/gears/zh-cn/email-check/</loc>
-    <lastmod>2026-11-25</lastmod>
+    <lastmod>2026-11-27</lastmod>
     <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/email-check/" />
     <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/email-check/" />
     <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/email-check/" />
@@ -474,7 +474,7 @@
   </url>
   <url>
     <loc>https://anoni.net/gears/en/email-check/</loc>
-    <lastmod>2026-11-25</lastmod>
+    <lastmod>2026-11-27</lastmod>
     <xhtml:link rel="alternate" hreflang="zh-Hant-TW" href="https://anoni.net/gears/email-check/" />
     <xhtml:link rel="alternate" hreflang="zh-Hans" href="https://anoni.net/gears/zh-cn/email-check/" />
     <xhtml:link rel="alternate" hreflang="en" href="https://anoni.net/gears/en/email-check/" />
