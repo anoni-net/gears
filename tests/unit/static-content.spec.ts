@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { LOCALES, messagesOf } from "../../src/i18n/index.ts";
 import { NOT_FOUND, labIds, pageIds } from "../../src/pages.ts";
 import { staticContent } from "../../src/static-content.ts";
-import { toolIds } from "../../src/tools/index.ts";
+import { editorTools, fileTools, toolIds } from "../../src/tools/index.ts";
 
 // 建置時寫進每一頁 HTML 的內容（src/static-content.ts，#164），給不執行 JavaScript 的搜尋引擎看
 
@@ -60,4 +60,21 @@ test("英文的頁面描述不超過 160 個字元", () => {
   const en = messagesOf("en") as Record<string, string>;
   const long = Object.entries(en).filter(([key, value]) => /^meta\.[^.]+\.description$/.test(key) && value.length > 160);
   expect(long.map(([key, value]) => `${key} ${value.length}`)).toEqual([]);
+});
+
+// 首頁與處理檔案的工具，搜尋描述的前半段寫「檔案不用上傳」（#255，AGENTS.md 的「介面文字」）。
+// 摘要放不下整段描述，寫在最後會被截掉。遠端傳送的檔案經過轉送服務，不在這份清單裡
+test("首頁與處理檔案的工具的搜尋描述，前半段寫「檔案不用上傳」", () => {
+  const PHRASE = { "zh-TW": ["檔案不用上傳", 65], "zh-CN": ["文件不用上传", 65], en: ["No upload needed", 120] } as const;
+  const ids = ["home", ...fileTools.map((tool) => tool.id), ...editorTools.map((tool) => tool.id), "verify"];
+  for (const { id: locale } of LOCALES) {
+    const messages = messagesOf(locale) as Record<string, string>;
+    const [phrase, within] = PHRASE[locale];
+    const wrong = ids.filter((id) => {
+      const at = messages[`meta.${id}.description`]!.indexOf(phrase);
+      return at < 0 || at > within;
+    });
+    expect(wrong, locale).toEqual([]);
+    expect(messages["meta.remote.description"], locale).not.toContain(phrase);
+  }
 });
