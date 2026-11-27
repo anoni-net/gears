@@ -965,6 +965,10 @@ node scripts/fetch-165.mjs   # 下載並整理成 public/data/165.txt
 
 英文的 `meta.<id>.description` 不超過 160 個字元，搜尋結果的摘要超過就截斷，`tests/unit/static-content.spec.ts` 會檢查。
 
+age 金鑰產生器的英文頁是 Gears 搜尋流量最多的一頁，帶進來的查詢詞卻幾乎都是 k-ID 的 AgeKey（遊戲與社群平台年齡驗證用的憑證，「age key generator」、「fake agekey」這類）：2026-10-28 到 11-24 的 Search Console 報表裡，這一頁 151 次點擊，真的在找 age 加密的查詢只有一兩次。2026-11-27 起三個語系的說明與搜尋結果的描述寫明跟 AgeKey 無關，英文的網頁標題改成 `age encryption key generator`，搜錯的讀者在搜尋結果就分得出來。這一頁的點擊與 `tool-done` 不能拿來代表 Gears 的讀者，分析時分開看。
+
+`assets/` 底下的授權文字檔（`licenses/` 用 `?url` 匯入的那幾份）也被收錄過，nginx 對 `/gears/assets/*.txt` 送 `X-Robots-Tag: noindex`（`tools/nginx-gears.conf` 的 `$gears_robots`）。這個標頭寫在 location 裡，不放進建置產生的 `deploy/nginx-headers.conf`：那份由拉取腳本自動換上，用到 m6 上還沒定義的 map 時 `nginx -t` 會失敗。
+
 分享卡片（`og:image`）由 `node scripts/make-og.mjs <輸出目錄>` 產生，不進 repo，上傳到 m6 的 `/srv/images-anoni-net/gears/og/`，網址填進 `src/og-images.json`。檔名帶內容雜湊，改了卡片上的文字或樣式就重新產生一次。
 
 首頁描述（`meta.home.description`）要涵蓋三組工具，新增或改名工具時一起看一次。網頁標題用名詞片語寫出這一頁能做什麼，不必跟桌面上的工具名稱一字不差。
