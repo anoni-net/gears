@@ -60,7 +60,7 @@ export const zhTW = {
   "meta.qr-read.title": "QR code 與條碼讀取 | Gears 檔案工作台",
   "meta.qr-read.description": "用相機或照片讀出 QR code、登機證與商品條碼，打開網址、付款或分享照片之前先看清楚內容。",
   "meta.age-keygen.title": "age 金鑰產生器 | Gears 檔案工作台",
-  "meta.age-keygen.description": "產生一組 age（一種開放的加密格式）金鑰：公鑰給別人加密檔案給你，私鑰留著解密。金鑰檔可以直接給 age 命令列工具使用。",
+  "meta.age-keygen.description": "產生一組 age（一種開放的加密格式）金鑰：公鑰給別人加密檔案給你，私鑰留著解密。金鑰檔可以直接給 age 命令列工具使用。跟遊戲與社群平台年齡驗證用的 AgeKey 無關。",
   "meta.passphrase.title": "密語與密碼產生器 | Gears 檔案工作台",
   "meta.passphrase.description": "產生好記又夠強的 Diceware 密語（從字詞表隨機挑出幾個詞）或隨機密碼，可以調整字數、長度與分隔符號，並顯示強度。",
 
@@ -384,7 +384,7 @@ export const zhTW = {
   "tool.qr-read": "QR code 與條碼讀取",
   "tool.qr-read.desc": "用相機或照片讀出 QR code 與條碼，打開網址、付款或分享之前先看清楚。",
   "tool.age-keygen": "age 金鑰產生器",
-  "tool.age-keygen.desc": "產生一組公鑰與私鑰，別人用你的公鑰加密的檔案只有你能打開。",
+  "tool.age-keygen.desc": "產生一組公鑰與私鑰，別人用你的公鑰加密的檔案只有你能打開。這是加密檔案用的金鑰，跟年齡驗證用的 AgeKey 無關。",
   "tool.passphrase": "密語與密碼產生器",
   "tool.passphrase.desc": "產生好記又夠強的密語，或一串隨機密碼。",
 
